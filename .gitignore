@@ -1,0 +1,30 @@
+# Markdown documents
+*.md
+
+# Secrets and local environment
+.env
+.env.*
+server/.env
+server/.env.*
+client/.env
+client/.env.*
+
+# Dependencies and generated output
+node_modules/
+client/node_modules/
+server/node_modules/
+dist/
+dist-ssr/
+client/dist/
+server/dist/
+
+# Logs and runtime files
+logs/
+*.log
+*.err
+server/uploads/
+
+# Local automation/workspace artifacts
+.codex/
+.agents/
+/auth-*-check.png

@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-gray-900 text-gray-100 min-h-screen antialiased;
+  }
+}
+
+@layer components {
+  .hero-media {
+    object-position: var(--hero-position-mobile, center center);
+  }
+
+  @media (min-width: 640px) {
+    .hero-media {
+      object-position: var(--hero-position-tablet, var(--hero-position-mobile, center center));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .hero-media {
+      object-position: var(--hero-position-desktop, var(--hero-position-tablet, center center));
+    }
+  }
+}

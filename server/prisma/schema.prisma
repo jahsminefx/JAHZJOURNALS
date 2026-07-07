@@ -1,0 +1,690 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  TRADER
+  MENTOR
+  ADMIN
+}
+
+enum Direction {
+  BUY
+  SELL
+}
+
+enum TradeResult {
+  WIN
+  LOSS
+  BREAKEVEN
+  OPEN
+}
+
+enum TradeStatus {
+  PLANNED
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+enum TradingSession {
+  ASIAN
+  LONDON
+  NEW_YORK
+  LONDON_NEW_YORK_OVERLAP
+  OTHER
+}
+
+enum TradeGrade {
+  A_PLUS
+  A
+  B
+  C
+  D
+  MISTAKE
+}
+
+enum ScreenshotType {
+  HIGHER_TIMEFRAME_ANALYSIS
+  BEFORE_ENTRY
+  ENTRY
+  DURING_TRADE
+  EXIT
+  POST_ANALYSIS
+  MARKED_CHART
+}
+
+enum EmotionStage {
+  BEFORE_TRADE
+  DURING_TRADE
+  AFTER_TRADE
+}
+
+enum Emotion {
+  CALM
+  CONFIDENT
+  ANXIOUS
+  GREEDY
+  FEARFUL
+  ANGRY
+  FOMO
+  REVENGE_MINDSET
+  DISCIPLINED
+  REGRETFUL
+  FRUSTRATED
+}
+
+enum ViolationSeverity {
+  MINOR
+  MODERATE
+  MAJOR
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PRO
+  MENTOR
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum AccountCategory {
+  REGULAR
+  PROP_FIRM
+}
+
+enum PropFirmMarketType {
+  FOREX_CFD
+  FUTURES
+  OTHER
+}
+
+enum EvaluationType {
+  ONE_STEP
+  TWO_STEP
+  THREE_STEP
+  INSTANT_FUNDED
+  ALREADY_FUNDED
+  FREE_TRIAL
+  DEMO_EVALUATION
+}
+
+enum PropFirmAccountStatus {
+  NOT_STARTED
+  ACTIVE
+  PASSED
+  FAILED
+  BREACHED
+  FUNDED
+  SUSPENDED
+  RESET
+  EXPIRED
+}
+
+enum DrawdownType {
+  STATIC
+  TRAILING
+  END_OF_DAY_TRAILING
+  INTRADAY_TRAILING
+  ABSOLUTE
+}
+
+enum PropFirmPhaseStatus {
+  NOT_STARTED
+  ACTIVE
+  PASSED
+  FAILED
+  RESET
+}
+
+model User {
+  id           String @id @default(uuid())
+  name         String
+  email        String @unique
+  passwordHash String
+  role         Role   @default(TRADER)
+
+  country           String?
+  timezone          String?
+  phoneNumber       String?
+  tradingExperience String?
+  mainTradingPairs  String[]
+  mainSession       String?
+  tradingStyle      String?
+
+  subscriptionPlan           SubscriptionPlan   @default(FREE)
+  subscriptionStatus         SubscriptionStatus @default(ACTIVE)
+  onboardingCompleted        Boolean            @default(false)
+  isDisabled                 Boolean            @default(false)
+  emailVerified              Boolean            @default(false)
+  emailVerificationTokenHash String?
+  emailVerificationExpiresAt DateTime?
+  passwordResetTokenHash     String?
+  passwordResetExpiresAt     DateTime?
+  passwordResetUsedAt        DateTime?
+
+  avatarUrl      String?
+  avatarPublicId String?
+
+  tradingAccounts    TradingAccount[]
+  tradeRules         TradeRule[]
+  importedTradeFiles ImportedTradeFile[]
+  weeklyReviews      WeeklyReview[]
+  reportExports      ReportExport[]
+  subscriptions      Subscription[]
+  payments           Payment[]
+  contactMessages    ContactMessage[]
+  mentorGroups       MentorStudent[]     @relation("StudentGroups")
+  ownedMentorGroups  MentorGroup[]       @relation("MentorGroups")
+  mentorFeedbacks    MentorFeedback[]    @relation("FeedbacksGiven")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([timezone])
+}
+
+model TradingAccount {
+  id                  String  @id @default(uuid())
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String
+  name                String
+  accountCategory     AccountCategory @default(REGULAR)
+  brokerName          String?
+  accountType         String?
+  startingBalance     Float
+  currentBalance      Float
+  currency            String  @default("USD")
+  platform            String?
+  defaultRiskPercent  Float?
+  riskPerTradePercent Float?
+  maxDailyLossPercent Float?
+  maxTradesPerDay     Int?
+  maxLossesPerDay     Int?
+  notes               String?
+  isPropFirmAccount   Boolean @default(false)
+  propFirmName        String?
+  profitTarget        Float?
+  maxDrawdown         Float?
+  dailyDrawdown       Float?
+  minimumTradingDays  Int?
+
+  trades          Trade[]
+  weeklyReviews   WeeklyReview[]
+  propFirmAccount PropFirmAccount?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([userId, accountCategory])
+}
+
+model PropFirmAccount {
+  id                          String                  @id @default(uuid())
+  tradingAccount              TradingAccount          @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
+  tradingAccountId            String                  @unique
+  firmName                    String
+  customFirmName              String?
+  programmeName               String
+  marketType                  PropFirmMarketType
+  evaluationType              EvaluationType
+  accountStatus               PropFirmAccountStatus   @default(NOT_STARTED)
+  platform                    String?
+  brokerServer                String?
+  challengeFee                Float?
+  startDate                   DateTime?
+  currentPhaseNumber          Int?
+  dailyLossEnabled            Boolean                 @default(true)
+  dailyLossPercent            Float?
+  dailyLossAmount             Float?
+  maximumLossPercent          Float?
+  maximumLossAmount           Float?
+  drawdownType                DrawdownType?
+  dailyLossCalculationBasis   String?
+  overallLossCalculationBasis String?
+  includeFloatingPnl          Boolean                 @default(true)
+  includeCommissions          Boolean                 @default(true)
+  includeSwaps                Boolean                 @default(true)
+  dailyResetTime              String?
+  dailyResetTimezone          String?
+  maxRiskPerTradePercent      Float?
+  maxRiskPerTradeIdea         Float?
+  maxOpenPositions            Int?
+  maxLotSize                  Float?
+  stopAfterLosses             Int?
+  consistencyRuleEnabled      Boolean                 @default(false)
+  consistencyRuleType         String?
+  consistencyThreshold        Float?
+  maximumBestDayPercent       Float?
+  minimumProfitableDays       Int?
+  profitableDayMinimum        Float?
+  newsTradingAllowed          Boolean?
+  weekendHoldingAllowed       Boolean?
+  overnightHoldingAllowed     Boolean?
+  expertAdvisorsAllowed       Boolean?
+  copyTradingAllowed          Boolean?
+  hedgingAllowed              Boolean?
+  scalpingAllowed             Boolean?
+  cryptoTradingAllowed        Boolean?
+  restrictedSymbols           String[]
+  restrictedNewsBeforeMinutes Int?
+  restrictedNewsAfterMinutes  Int?
+  maximumInactivityDays       Int?
+  prohibitedStrategies        String?
+  customRules                 String?
+  profitSplitPercent          Float?
+  firstPayoutDate             DateTime?
+  payoutFrequency             String?
+  minimumPayoutAmount         Float?
+  payoutCycleStartDate        DateTime?
+  scalingPlanEnabled          Boolean                 @default(false)
+  nextScalingTarget           Float?
+  maximumAllocation           Float?
+
+  phases            PropFirmPhase[]
+  progressSnapshots PropFirmProgressSnapshot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tradingAccountId])
+  @@index([firmName])
+  @@index([accountStatus])
+}
+
+model PropFirmPhase {
+  id                    String              @id @default(uuid())
+  propFirmAccount       PropFirmAccount     @relation(fields: [propFirmAccountId], references: [id], onDelete: Cascade)
+  propFirmAccountId     String
+  phaseNumber           Int
+  name                  String
+  profitTargetPercent   Float?
+  profitTargetAmount    Float?
+  minimumTradingDays    Int?
+  minimumProfitableDays Int?
+  maximumTradingDays    Int?
+  timeLimitType         String?
+  timeLimitDays         Int?
+  status                PropFirmPhaseStatus @default(NOT_STARTED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([propFirmAccountId, phaseNumber])
+  @@index([propFirmAccountId])
+}
+
+model PropFirmProgressSnapshot {
+  id                   String          @id @default(uuid())
+  propFirmAccount      PropFirmAccount @relation(fields: [propFirmAccountId], references: [id], onDelete: Cascade)
+  propFirmAccountId    String
+  balance              Float
+  equity               Float?
+  dailyProfitLoss      Float?
+  overallProfitLoss    Float?
+  completedTradingDays Int             @default(0)
+  profitableDays       Int             @default(0)
+  bestDayProfit        Float?
+  recordedAt           DateTime        @default(now())
+
+  @@index([propFirmAccountId, recordedAt])
+}
+
+model Trade {
+  id                String          @id @default(uuid())
+  tradingAccount    TradingAccount  @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
+  tradingAccountId  String
+  pair              String
+  direction         Direction
+  entryPrice        Float?
+  stopLoss          Float?
+  takeProfit        Float?
+  exitPrice         Float?
+  lotSize           Float?
+  riskAmount        Float?
+  rewardAmount      Float?
+  profitLossAmount  Float?
+  profitLossPercent Float?
+  riskRewardRatio   Float?
+  pips              Float?
+  result            TradeResult     @default(OPEN)
+  status            TradeStatus     @default(PLANNED)
+  session           TradingSession?
+  setupType         String?
+  strategyName      String?
+  higherTimeframe   String?
+  entryTimeframe    String?
+  htfBias           String?
+  entryReason       String?
+  exitReason        String?
+  notesBefore       String?
+  notesAfter        String?
+  followedPlan      Boolean?
+  isAPlusSetup      Boolean?
+  newsRelated       Boolean?
+  grade             TradeGrade?
+  entryTime         DateTime?
+  exitTime          DateTime?
+
+  screenshots          TradeScreenshot[]
+  ruleViolations       TradeRuleViolation[]
+  emotionLogs          EmotionLog[]
+  aiReviews            AiTradeReview[]
+  mentorFeedbacks      MentorFeedback[]
+  bestInWeeklyReviews  WeeklyReview[]       @relation("WeeklyReviewBestTrade")
+  worstInWeeklyReviews WeeklyReview[]       @relation("WeeklyReviewWorstTrade")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tradingAccountId])
+  @@index([tradingAccountId, entryTime])
+  @@index([entryTime])
+  @@index([exitTime])
+  @@index([pair])
+  @@index([result])
+  @@index([session])
+  @@index([setupType])
+  @@index([strategyName])
+  @@index([direction])
+  @@index([entryTimeframe])
+  @@index([followedPlan])
+  @@index([isAPlusSetup])
+  @@index([newsRelated])
+}
+
+model TradeScreenshot {
+  id             String         @id @default(uuid())
+  trade          Trade          @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeId        String
+  screenshotType ScreenshotType
+  imageUrl       String
+  publicId       String?
+  width          Int?
+  height         Int?
+  format         String?
+  fileSize       Int?
+  note           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tradeId])
+}
+
+model TradeRule {
+  id          String  @id @default(uuid())
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  name        String
+  description String?
+  active      Boolean @default(true)
+
+  violations TradeRuleViolation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, active])
+}
+
+model TradeRuleViolation {
+  id          String            @id @default(uuid())
+  trade       Trade             @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeId     String
+  tradeRule   TradeRule         @relation(fields: [tradeRuleId], references: [id], onDelete: Cascade)
+  tradeRuleId String
+  severity    ViolationSeverity
+  note        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tradeId])
+  @@index([tradeRuleId])
+}
+
+model EmotionLog {
+  id        String       @id @default(uuid())
+  trade     Trade        @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeId   String
+  stage     EmotionStage
+  emotion   Emotion
+  intensity Int // 1 to 10
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tradeId])
+  @@index([emotion])
+  @@index([stage])
+}
+
+model ImportedTradeFile {
+  id           String       @id @default(uuid())
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  source       String
+  fileName     String
+  filePath     String
+  fileType     String
+  status       ImportStatus @default(PENDING)
+  processedAt  DateTime?
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WeeklyReview {
+  id                            String          @id @default(uuid())
+  user                          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                        String
+  tradingAccount                TradingAccount? @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
+  tradingAccountId              String?
+  scopeKey                      String          @default("all")
+  weekStartDate                 DateTime
+  weekEndDate                   DateTime
+  totalTrades                   Int             @default(0)
+  wins                          Int             @default(0)
+  losses                        Int             @default(0)
+  breakevens                    Int             @default(0)
+  winRate                       Float           @default(0)
+  netProfitLoss                 Float           @default(0)
+  grossProfit                   Float           @default(0)
+  grossLoss                     Float           @default(0)
+  profitFactor                  Float?
+  expectancy                    Float?
+  averageWin                    Float?
+  averageLoss                   Float?
+  averageRiskReward             Float?
+  bestTrade                     Trade?          @relation("WeeklyReviewBestTrade", fields: [bestTradeId], references: [id], onDelete: SetNull)
+  bestTradeId                   String?
+  worstTrade                    Trade?          @relation("WeeklyReviewWorstTrade", fields: [worstTradeId], references: [id], onDelete: SetNull)
+  worstTradeId                  String?
+  bestPair                      String?
+  worstPair                     String?
+  bestSession                   String?
+  worstSession                  String?
+  bestSetup                     String?
+  worstSetup                    String?
+  biggestMistake                String?
+  mostCommonEmotion             String?
+  mostBrokenRule                String?
+  mainLesson                    String?
+  mainMistake                   String?
+  personalLesson                String?
+  nextWeekFocus                 String?
+  generalReflection             String?
+  additionalNotes               String?
+  aPlusSetupWinRate             Float?
+  newsRelatedWinRate            Float?
+  planFollowingRate             Float?
+  disciplineScore               Int?
+  disciplineScoreFormulaVersion String?
+  disciplineScoreComponents     Json?
+  aiSummary                     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, scopeKey, weekStartDate])
+  @@index([userId])
+  @@index([weekStartDate])
+  @@index([userId, weekStartDate])
+  @@index([tradingAccountId, weekStartDate])
+}
+
+model ReportExport {
+  id          String    @id @default(uuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  reportType  String
+  periodStart DateTime?
+  periodEnd   DateTime?
+  fileName    String
+  filePath    String
+  status      String    @default("PENDING")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AiTradeReview {
+  id                 String    @id @default(uuid())
+  trade              Trade     @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeId            String
+  summary            String?
+  mistakes           String?
+  strengths          String?
+  ruleFeedback       String?
+  psychologyFeedback String?
+  riskFeedback       String?
+  recommendation     String?
+  disciplineScore    Int?
+  rawResponse        String?
+  provider           String?
+  modelUsed          String?
+  promptVersion      String?
+  generatedAt        DateTime?
+  inputSnapshot      Json?
+  structuredOutput   Json?
+  tokenUsage         Json?
+  reviewStatus       String    @default("COMPLETED")
+  errorMessage       String?
+  retryCount         Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tradeId])
+}
+
+model MentorGroup {
+  id          String  @id @default(uuid())
+  mentor      User    @relation("MentorGroups", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentorId    String
+  name        String
+  description String?
+
+  students MentorStudent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MentorStudent {
+  id            String      @id @default(uuid())
+  mentorGroup   MentorGroup @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
+  mentorGroupId String
+  student       User        @relation("StudentGroups", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId     String
+  status        String      @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MentorFeedback {
+  id             String  @id @default(uuid())
+  mentor         User    @relation("FeedbacksGiven", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentorId       String
+  trade          Trade   @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeId        String
+  feedback       String
+  grade          String?
+  recommendation String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  plan      SubscriptionPlan
+  status    SubscriptionStatus @default(ACTIVE)
+  startedAt DateTime           @default(now())
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payment {
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  amount    Float
+  currency  String    @default("USD")
+  provider  String
+  reference String    @unique
+  status    String
+  paidAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContactMessage {
+  id      String  @id @default(uuid())
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId  String?
+  name    String
+  email   String
+  subject String
+  message String
+  status  String  @default("NEW")
+  ipHash  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId])
+}
