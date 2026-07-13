@@ -30,6 +30,9 @@ const {
   logEmotion,
   updateEmotion,
   deleteEmotion,
+  logViolation,
+  updateViolation,
+  deleteViolation,
   createAiTradeReview,
   getAiTradeReview,
 } = require('../controllers/miscController');
@@ -52,6 +55,10 @@ router.patch('/rules/:id/status', protect, updateRuleStatus);
 router.post('/trades/:id/emotions', protect, logEmotion);
 router.put('/emotions/:id', protect, updateEmotion);
 router.delete('/emotions/:id', protect, deleteEmotion);
+
+router.post('/trades/:id/violations', protect, logViolation);
+router.put('/violations/:id', protect, updateViolation);
+router.delete('/violations/:id', protect, deleteViolation);
 
 router.delete('/screenshots/:id', protect, deleteScreenshot);
 

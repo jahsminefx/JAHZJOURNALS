@@ -20,4 +20,34 @@ const api = axios.create({
   },
 });
 
+const mutatingMethods = new Set(['post', 'put', 'patch', 'delete']);
+const dashboardRefreshPaths = [
+  '/accounts',
+  '/trades',
+  '/screenshots',
+  '/emotions',
+  '/rules',
+  '/users/trading-goals',
+  '/weekly-reviews',
+];
+
+const shouldNotifyDashboard = (config = {}) => {
+  const method = String(config.method || '').toLowerCase();
+  const url = String(config.url || '');
+
+  return mutatingMethods.has(method) && dashboardRefreshPaths.some((path) => url.startsWith(path));
+};
+
+api.interceptors.response.use((response) => {
+  if (typeof window !== 'undefined' && shouldNotifyDashboard(response.config)) {
+    const timestamp = String(Date.now());
+    window.localStorage.setItem('jahzjournal:data-version', timestamp);
+    window.dispatchEvent(new CustomEvent('jahzjournal:data-changed', {
+      detail: { version: timestamp },
+    }));
+  }
+
+  return response;
+});
+
 export default api;

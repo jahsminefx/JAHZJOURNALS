@@ -25,20 +25,24 @@ const protect = async (req, res, next) => {
       const decoded = jwt.verify(token, getJwtSecret());
       req.user = await prisma.user.findUnique({
         where: { id: decoded.userId },
-        select: { id: true, name: true, email: true, role: true, isDisabled: true }
+        select: { id: true, name: true, email: true, role: true, isDisabled: true, tokenVersion: true }
       });
 
       if (!req.user || req.user.isDisabled) {
-        return res.status(401).json({ message: 'Not authorized, user not found' });
+        return res.status(401).json({ message: 'We couldn\'t recognize your credentials.' });
+      }
+
+      if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== req.user.tokenVersion) {
+        return res.status(401).json({ message: 'Your session has been invalidated from another device. Please log in again.' });
       }
 
       next();
     } catch (error) {
       console.error(error);
-      res.status(401).json({ message: 'Not authorized, token failed' });
+      res.status(401).json({ message: 'Your secure session has expired. Please log in again.' });
     }
   } else {
-    res.status(401).json({ message: 'Not authorized, no token' });
+    res.status(401).json({ message: 'Please log in to access this space.' });
   }
 };
 

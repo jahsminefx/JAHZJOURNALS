@@ -18,7 +18,7 @@ const groups = [
 ];
 
 const Features = () => (
-  <div className="min-h-screen bg-gray-950 text-gray-100">
+  <div className="min-h-screen bg-background text-foreground">
     <Navbar />
     <main>
       <PageHeader

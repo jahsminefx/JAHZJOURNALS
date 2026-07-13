@@ -12,7 +12,7 @@ const MobileNav = () => {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 pb-safe z-50">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-muted border-t border-border pb-safe z-50">
       <div className="flex justify-around items-center h-16">
         {navItems.map((item, id) => (
           <NavLink
@@ -20,7 +20,7 @@ const MobileNav = () => {
             to={item.path}
             className={({ isActive }) =>
               `flex flex-col items-center justify-center w-full h-full transition-colors ${
-                isActive && item.name !== 'New Trade' ? 'text-green-400' : 'text-gray-400 hover:text-gray-100'
+                isActive && item.name !== 'New Trade' ? 'text-green-400' : 'text-muted hover:text-foreground'
               }`
             }
           >

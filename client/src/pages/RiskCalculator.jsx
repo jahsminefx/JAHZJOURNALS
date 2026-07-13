@@ -26,37 +26,37 @@ const RiskCalculator = () => {
 
   return (
     <div className="max-w-xl mx-auto space-y-6 font-sans">
-      <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
-        <div className="flex items-center space-x-3 border-b border-gray-700 pb-4 mb-6">
+      <div className="bg-surface-muted p-6 rounded-xl shadow-lg border border-border">
+        <div className="flex items-center space-x-3 border-b border-border pb-4 mb-6">
           <div className="p-2 bg-green-500/20 rounded-lg text-green-400">
             <Calculator size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-100">Risk Calculator</h2>
-            <p className="text-sm text-gray-400">Determine your exact position size before executing.</p>
+            <h2 className="text-xl font-bold text-foreground">Risk Calculator</h2>
+            <p className="text-sm text-muted">Determine your exact position size before executing.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300">Account Balance ($)</label>
-              <input type="number" step="0.01" {...register('balance')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 text-gray-300 focus:outline-none focus:border-green-500" />
+              <label className="block text-sm font-medium text-muted">Account Balance ($)</label>
+              <input type="number" step="0.01" {...register('balance')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 text-muted focus:outline-none focus:border-green-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300">Risk (%)</label>
-              <input type="number" step="0.1" {...register('riskPercent')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 text-gray-300 focus:outline-none focus:border-green-500" />
+              <label className="block text-sm font-medium text-muted">Risk (%)</label>
+              <input type="number" step="0.1" {...register('riskPercent')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 text-muted focus:outline-none focus:border-green-500" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300">Stop Loss (Pips)</label>
-              <input type="number" step="0.1" {...register('stopLossPips')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 text-gray-300 focus:outline-none focus:border-green-500" />
+              <label className="block text-sm font-medium text-muted">Stop Loss (Pips)</label>
+              <input type="number" step="0.1" {...register('stopLossPips')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 text-muted focus:outline-none focus:border-green-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300">Pair Type</label>
-              <select {...register('pairType')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 text-gray-300 focus:outline-none focus:border-green-500">
+              <label className="block text-sm font-medium text-muted">Pair Type</label>
+              <select {...register('pairType')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 text-muted focus:outline-none focus:border-green-500">
                 <option value="forex">Forex (Standard USD)</option>
                 <option value="jpy">JPY Pair</option>
                 <option value="indices">Indices</option>
@@ -71,15 +71,15 @@ const RiskCalculator = () => {
       </div>
 
       {results && (
-        <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-green-500/50">
-           <h3 className="text-lg font-bold text-gray-100 mb-4 border-b border-gray-700 pb-2">Calculation Results</h3>
+        <div className="bg-surface-muted p-6 rounded-xl shadow-lg border border-green-500/50">
+           <h3 className="text-lg font-bold text-foreground mb-4 border-b border-border pb-2">Calculation Results</h3>
            <div className="grid grid-cols-2 gap-6 text-center">
-             <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
-                <p className="text-sm text-gray-400 mb-1">Capital at Risk</p>
+             <div className="bg-surface p-4 rounded-lg border border-border">
+                <p className="text-sm text-muted mb-1">Capital at Risk</p>
                 <p className="text-2xl font-bold text-red-400">${results.riskAmount}</p>
              </div>
-             <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
-                <p className="text-sm text-gray-400 mb-1">Suggested Lot Size</p>
+             <div className="bg-surface p-4 rounded-lg border border-border">
+                <p className="text-sm text-muted mb-1">Suggested Lot Size</p>
                 <p className="text-2xl font-bold text-green-400">{results.lotSize}</p>
              </div>
            </div>

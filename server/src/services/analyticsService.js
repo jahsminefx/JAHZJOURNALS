@@ -9,6 +9,7 @@ const SUPPORTED_GROUPS = new Set([
   'emotion',
   'ruleViolation',
 ]);
+const { normalizeTradeResult } = require('../utils/tradeCalculations');
 
 const hasValue = (value) => value !== undefined && value !== null && value !== '';
 const round = (value, places = 2) => Number((Number(value) || 0).toFixed(places));
@@ -69,10 +70,10 @@ const getWeekday = (date, timezone = 'UTC') => {
 };
 
 const calculateSummary = (trades = []) => {
-  const closedTrades = trades.filter((trade) => trade.result !== 'OPEN');
-  const wins = closedTrades.filter((trade) => trade.result === 'WIN');
-  const losses = closedTrades.filter((trade) => trade.result === 'LOSS');
-  const breakevens = closedTrades.filter((trade) => trade.result === 'BREAKEVEN');
+  const closedTrades = trades.filter((trade) => normalizeTradeResult(trade) !== 'OPEN');
+  const wins = closedTrades.filter((trade) => normalizeTradeResult(trade) === 'WIN');
+  const losses = closedTrades.filter((trade) => normalizeTradeResult(trade) === 'LOSS');
+  const breakevens = closedTrades.filter((trade) => normalizeTradeResult(trade) === 'BREAKEVEN');
   const profitLossValues = trades.map((trade) => Number(trade.profitLossAmount || 0));
   const grossProfit = profitLossValues
     .filter((value) => value > 0)

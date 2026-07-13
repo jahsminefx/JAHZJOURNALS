@@ -16,10 +16,10 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
 
   const linkClass = ({ isActive }) =>
-    `text-sm font-medium transition-colors ${isActive ? 'text-emerald-300' : 'text-gray-300 hover:text-white'}`;
+    `text-sm font-medium transition-colors ${isActive ? 'text-emerald-300' : 'text-muted hover:text-white'}`;
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-gray-950/80 backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur-xl">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <BrandLogo />
 
@@ -47,7 +47,7 @@ const Navbar = () => {
       </nav>
 
       {open && (
-        <div className="border-t border-white/10 bg-gray-950 px-4 py-4 lg:hidden">
+        <div className="border-t border-white/10 bg-background px-4 py-4 lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-3">
             {links.map((link) => (
               <NavLink
@@ -55,7 +55,7 @@ const Navbar = () => {
                 to={link.to}
                 onClick={() => setOpen(false)}
                 className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? 'bg-emerald-400/10 text-emerald-300' : 'text-gray-300 hover:bg-white/5'}`
+                  `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? 'bg-emerald-400/10 text-emerald-300' : 'text-muted hover:bg-white/5'}`
                 }
               >
                 {link.label}

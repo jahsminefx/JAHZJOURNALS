@@ -14,11 +14,11 @@ const PricingCard = ({ name, price, description, features, highlighted = false, 
       </div>
     )}
     <h3 className="text-xl font-bold text-white">{name}</h3>
-    <p className="mt-2 text-sm leading-6 text-gray-400">{description}</p>
+    <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
     <div className="mt-6 text-3xl font-bold text-white">{price}</div>
     <ul className="mt-6 flex-1 space-y-3">
       {features.map((feature) => (
-        <li key={feature} className="flex gap-3 text-sm text-gray-300">
+        <li key={feature} className="flex gap-3 text-sm text-muted">
           <Check size={18} className="mt-0.5 shrink-0 text-emerald-300" />
           <span>{feature}</span>
         </li>

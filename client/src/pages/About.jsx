@@ -8,7 +8,7 @@ import CTASection from '../components/CTASection';
 const values = ['Built for real traders', 'Built for discipline', 'Built for screenshots and review', 'Built for mobile-first traders', 'Built for African and global forex communities'];
 
 const About = () => (
-  <div className="min-h-screen bg-gray-950 text-gray-100">
+  <div className="min-h-screen bg-background text-foreground">
     <Navbar />
     <main>
       <PageHeader
@@ -22,7 +22,7 @@ const About = () => (
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr]">
           <SectionHeader align="left" eyebrow="Founder-led focus" title="Serious traders need evidence, not hype." />
-          <div className="space-y-5 text-base leading-8 text-gray-300">
+          <div className="space-y-5 text-base leading-8 text-muted">
             <p>
               JAHZJOURNALS was created from the combination of forex trading experience and software development skill. It is built for traders who want to review their process honestly instead of guessing why an account is growing or shrinking.
             </p>
@@ -38,7 +38,7 @@ const About = () => (
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-5">
           {values.map((value) => (
-            <div key={value} className="rounded-xl border border-white/10 bg-white/[0.04] p-5 text-sm font-semibold text-white">
+            <div key={value} className="rounded-xl border border-white/10 bg-white/[0.04] p-5 text-sm font-semibold text-foreground">
               {value}
             </div>
           ))}

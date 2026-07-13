@@ -9,13 +9,7 @@ const {
   calculateRiskRewardDistribution,
   groupTrades,
 } = require('../services/analyticsService');
-
-const getTradeDate = (trade) => trade.entryTime || trade.createdAt;
-
-const formatDateLabel = (date) => new Intl.DateTimeFormat('en', {
-  month: 'short',
-  day: 'numeric',
-}).format(date);
+const { buildDashboardAnalytics } = require('../services/dashboardAnalyticsService');
 
 const getUserTimezone = async (userId) => {
   const user = await prisma.user.findUnique({
@@ -35,7 +29,7 @@ const validateAccountFilter = async (accountId, userId) => {
   });
 
   if (!account) {
-    const error = new Error('Account not found');
+    const error = new Error('We couldn\'t find your trading account');
     error.statusCode = 404;
     throw error;
   }
@@ -71,40 +65,11 @@ const handleAnalyticsError = (res, error, fallbackMessage) => {
 
 const getDashboardAnalytics = async (req, res) => {
   try {
-    const { trades } = await fetchAnalyticsTrades(req);
-    const summary = calculateSummary(trades);
-
-    let cumulativeProfit = 0;
-    const equityCurve = trades.map((trade) => {
-      cumulativeProfit += Number(trade.profitLossAmount || 0);
-      return {
-        name: formatDateLabel(getTradeDate(trade)),
-        profit: Number(cumulativeProfit.toFixed(2)),
-      };
-    });
-
-    const sessionStats = groupTrades(trades, 'session').map((session) => ({
-      name: session.label,
-      totalTrades: session.totalTrades,
-      wins: session.winningTrades,
-      netProfitLoss: session.netRealisedProfitLoss,
-      winRate: session.winRate,
-    }));
-
-    res.json({
-      totalTrades: summary.totalTrades,
-      wins: summary.winningTrades,
-      losses: summary.losingTrades,
-      breakevens: summary.breakEvenTrades,
-      winRate: summary.winRate,
-      netProfitLoss: summary.netRealisedProfitLoss,
-      equityCurve,
-      sessionStats,
-      profitFactor: summary.profitFactor,
-      expectancy: summary.expectancy,
-    });
+    const dashboard = await buildDashboardAnalytics({ userId: req.user.id, query: req.query });
+    res.set('Cache-Control', 'no-store');
+    res.json(dashboard);
   } catch (error) {
-    handleAnalyticsError(res, error, 'Failed to load dashboard analytics');
+    handleAnalyticsError(res, error, 'We couldn\'t assemble your dashboard.');
   }
 };
 
@@ -115,7 +80,7 @@ const getPerformanceAnalytics = async (req, res) => {
     if (!SUPPORTED_GROUPS.has(groupBy)) {
       return res.status(400).json({
         success: false,
-        message: 'Unsupported analytics groupBy value',
+        message: 'We can\'t group your analytics that way.',
         supportedGroupBy: [...SUPPORTED_GROUPS],
       });
     }
@@ -131,7 +96,7 @@ const getPerformanceAnalytics = async (req, res) => {
       data: groupTrades(trades, groupBy, timezone),
     });
   } catch (error) {
-    handleAnalyticsError(res, error, 'Failed to load performance analytics');
+    handleAnalyticsError(res, error, 'We couldn\'t assemble your performance analytics.');
   }
 };
 
@@ -152,7 +117,7 @@ const getSummaryAnalytics = async (req, res) => {
       },
     });
   } catch (error) {
-    handleAnalyticsError(res, error, 'Failed to load analytics summary');
+    handleAnalyticsError(res, error, 'We couldn\'t calculate your analytics summary.');
   }
 };
 
@@ -168,7 +133,7 @@ const getEquityCurve = async (req, res) => {
       data: calculateEquityCurve(trades, startingBalance),
     });
   } catch (error) {
-    handleAnalyticsError(res, error, 'Failed to load equity curve');
+    handleAnalyticsError(res, error, 'We hit a snag loading your equity curve.');
   }
 };
 
@@ -186,7 +151,7 @@ const getDrawdown = async (req, res) => {
       data: drawdown.data,
     });
   } catch (error) {
-    handleAnalyticsError(res, error, 'Failed to load drawdown analytics');
+    handleAnalyticsError(res, error, 'We hit a snag loading your drawdown analytics.');
   }
 };
 
@@ -201,7 +166,7 @@ const getRiskReward = async (req, res) => {
       data: calculateRiskRewardDistribution(trades),
     });
   } catch (error) {
-    handleAnalyticsError(res, error, 'Failed to load risk-reward analytics');
+    handleAnalyticsError(res, error, 'We hit a snag loading your risk-reward metrics.');
   }
 };
 

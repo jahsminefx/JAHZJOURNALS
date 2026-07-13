@@ -35,7 +35,7 @@ const getRules = async (req, res) => {
     res.json(rules);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch rules' });
+    res.status(500).json({ message: 'We couldn\'t retrieve your trading rules.' });
   }
 };
 
@@ -44,7 +44,7 @@ const createRule = async (req, res) => {
     const { name, description, active } = req.body;
 
     if (!name) {
-      return res.status(400).json({ message: 'Rule name is required' });
+      return res.status(400).json({ message: 'Please give your rule a name.' });
     }
 
     const rule = await prisma.tradeRule.create({
@@ -59,7 +59,7 @@ const createRule = async (req, res) => {
     res.status(201).json(rule);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to create rule' });
+    res.status(500).json({ message: 'We hit a snag saving your rule.' });
   }
 };
 
@@ -76,13 +76,13 @@ const getRuleById = async (req, res) => {
     });
 
     if (!rule) {
-      return res.status(404).json({ message: 'Rule not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that rule.' });
     }
 
     res.json(rule);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch rule' });
+    res.status(500).json({ message: 'Our servers hit a snag retrieving this rule.' });
   }
 };
 
@@ -96,13 +96,13 @@ const updateRule = async (req, res) => {
     });
 
     if (!rule) {
-      return res.status(404).json({ message: 'Rule not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that rule.' });
     }
 
     const { name, description, active } = req.body;
 
     if (name !== undefined && !String(name).trim()) {
-      return res.status(400).json({ message: 'Rule name is required' });
+      return res.status(400).json({ message: 'Please give your rule a name.' });
     }
 
     const updatedRule = await prisma.tradeRule.update({
@@ -117,7 +117,7 @@ const updateRule = async (req, res) => {
     res.json(updatedRule);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to update rule' });
+    res.status(500).json({ message: 'We hit a snag updating your rule.' });
   }
 };
 
@@ -131,11 +131,11 @@ const updateRuleStatus = async (req, res) => {
     });
 
     if (!rule) {
-      return res.status(404).json({ message: 'Rule not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that rule to update.' });
     }
 
     if (typeof req.body.active !== 'boolean' && typeof req.body.isActive !== 'boolean') {
-      return res.status(400).json({ message: 'Rule status must be a boolean' });
+      return res.status(400).json({ message: 'Invalid rule status format.' });
     }
 
     const active = typeof req.body.active === 'boolean' ? req.body.active : req.body.isActive;
@@ -147,7 +147,7 @@ const updateRuleStatus = async (req, res) => {
     res.json(updatedRule);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to update rule status' });
+    res.status(500).json({ message: 'We couldn\'t update this rule\'s status.' });
   }
 };
 
@@ -164,20 +164,20 @@ const deleteRule = async (req, res) => {
     });
 
     if (!rule) {
-      return res.status(404).json({ message: 'Rule not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that rule to delete.' });
     }
 
     if (rule._count.violations > 0) {
       return res.status(409).json({
-        message: 'This rule has historical violations. Disable it instead of deleting it to preserve journal history.',
+        message: 'You have trades violating this rule. Disable it instead of deleting to preserve your journal history.',
       });
     }
 
     await prisma.tradeRule.delete({ where: { id: rule.id } });
-    res.json({ message: 'Rule deleted successfully' });
+    res.json({ message: 'Rule removed from your sanctuary.' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to delete rule' });
+    res.status(500).json({ message: 'We couldn\'t remove that rule right now.' });
   }
 };
 
@@ -188,17 +188,17 @@ const logEmotion = async (req, res) => {
     const parsedIntensity = Number.parseInt(intensity, 10);
 
     if (!emotionStages.includes(stage) || !emotions.includes(emotion)) {
-      return res.status(400).json({ message: 'A valid stage and emotion are required' });
+      return res.status(400).json({ message: 'Please select both a stage and an emotion.' });
     }
 
     if (Number.isNaN(parsedIntensity) || parsedIntensity < 1 || parsedIntensity > 10) {
-      return res.status(400).json({ message: 'Emotion intensity must be between 1 and 10' });
+      return res.status(400).json({ message: 'Intensity feels best rated between 1 and 10.' });
     }
 
     const trade = await getUserTrade(id, req.user.id);
 
     if (!trade) {
-      return res.status(404).json({ message: 'Trade not found' });
+      return res.status(404).json({ message: 'We couldn\'t find the trade for this emotion.' });
     }
 
     const emotionLog = await prisma.emotionLog.create({
@@ -214,7 +214,7 @@ const logEmotion = async (req, res) => {
     res.status(201).json(emotionLog);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to log emotion' });
+    res.status(500).json({ message: 'We hit a snag logging your emotion.' });
   }
 };
 
@@ -224,11 +224,11 @@ const updateEmotion = async (req, res) => {
     const parsedIntensity = Number.parseInt(intensity, 10);
 
     if (!emotionStages.includes(stage) || !emotions.includes(emotion)) {
-      return res.status(400).json({ message: 'A valid stage and emotion are required' });
+      return res.status(400).json({ message: 'Please select both a stage and an emotion.' });
     }
 
     if (Number.isNaN(parsedIntensity) || parsedIntensity < 1 || parsedIntensity > 10) {
-      return res.status(400).json({ message: 'Emotion intensity must be between 1 and 10' });
+      return res.status(400).json({ message: 'Intensity feels best rated between 1 and 10.' });
     }
 
     const emotionLog = await prisma.emotionLog.findFirst({
@@ -243,7 +243,7 @@ const updateEmotion = async (req, res) => {
     });
 
     if (!emotionLog) {
-      return res.status(404).json({ message: 'Emotion log not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that emotion log.' });
     }
 
     const updatedEmotion = await prisma.emotionLog.update({
@@ -259,7 +259,7 @@ const updateEmotion = async (req, res) => {
     res.json(updatedEmotion);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to update emotion log' });
+    res.status(500).json({ message: 'We hit a snag updating your emotion log.' });
   }
 };
 
@@ -277,14 +277,14 @@ const deleteEmotion = async (req, res) => {
     });
 
     if (!emotionLog) {
-      return res.status(404).json({ message: 'Emotion log not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that emotion log.' });
     }
 
     await prisma.emotionLog.delete({ where: { id: emotionLog.id } });
-    res.json({ message: 'Emotion log deleted successfully' });
+    res.json({ message: 'Emotion log removed.' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to delete emotion log' });
+    res.status(500).json({ message: 'We couldn\'t remove that emotion log right now.' });
   }
 };
 
@@ -304,7 +304,7 @@ const createAiTradeReview = async (req, res) => {
     });
 
     if (!trade) {
-      return res.status(404).json({ message: 'Trade not found' });
+      return res.status(404).json({ message: 'We couldn\'t find the trade for this review.' });
     }
 
     const profitLoss = Number(trade.profitLossAmount || 0);
@@ -353,7 +353,7 @@ const createAiTradeReview = async (req, res) => {
     res.status(201).json(review);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to generate trade review' });
+    res.status(500).json({ message: 'We couldn\'t craft an AI review at this time.' });
   }
 };
 
@@ -363,7 +363,7 @@ const getAiTradeReview = async (req, res) => {
     const trade = await getUserTrade(tradeId, req.user.id);
 
     if (!trade) {
-      return res.status(404).json({ message: 'Trade not found' });
+      return res.status(404).json({ message: 'We couldn\'t find the trade for this review.' });
     }
 
     const review = await prisma.aiTradeReview.findFirst({
@@ -372,13 +372,92 @@ const getAiTradeReview = async (req, res) => {
     });
 
     if (!review) {
-      return res.status(404).json({ message: 'Review not found' });
+      return res.status(404).json({ message: 'We couldn\'t find a review for this trade.' });
     }
 
     res.json(review);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch trade review' });
+    res.status(500).json({ message: 'We couldn\'t retrieve the AI review.' });
+  }
+};
+
+const logViolation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tradeRuleId, severity, note } = req.body;
+
+    if (!['MINOR', 'MODERATE', 'MAJOR'].includes(severity)) {
+      return res.status(400).json({ message: 'Severity must be MINOR, MODERATE, or MAJOR.' });
+    }
+
+    const trade = await getUserTrade(id, req.user.id);
+    if (!trade) {
+      return res.status(404).json({ message: 'We couldn\'t find the trade for this violation.' });
+    }
+
+    const rule = await prisma.tradeRule.findFirst({ where: { id: tradeRuleId, userId: req.user.id } });
+    if (!rule) {
+      return res.status(404).json({ message: 'We couldn\'t find that rule.' });
+    }
+
+    const violation = await prisma.tradeRuleViolation.create({
+      data: { tradeId: id, tradeRuleId, severity, note: note || null },
+    });
+
+    res.status(201).json(violation);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'We hit a snag logging your rule violation.' });
+  }
+};
+
+const updateViolation = async (req, res) => {
+  try {
+    const { severity, note } = req.body;
+    
+    if (severity && !['MINOR', 'MODERATE', 'MAJOR'].includes(severity)) {
+      return res.status(400).json({ message: 'Severity must be MINOR, MODERATE, or MAJOR.' });
+    }
+
+    const violation = await prisma.tradeRuleViolation.findFirst({
+      where: { id: req.params.id, trade: { tradingAccount: { userId: req.user.id } } },
+    });
+
+    if (!violation) {
+      return res.status(404).json({ message: 'We couldn\'t find that rule violation.' });
+    }
+
+    const updatedViolation = await prisma.tradeRuleViolation.update({
+      where: { id: violation.id },
+      data: { 
+        ...(severity && { severity }),
+        note: note !== undefined ? note : violation.note 
+      },
+    });
+
+    res.json(updatedViolation);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'We hit a snag updating your rule violation.' });
+  }
+};
+
+const deleteViolation = async (req, res) => {
+  try {
+    const violation = await prisma.tradeRuleViolation.findFirst({
+      where: { id: req.params.id, trade: { tradingAccount: { userId: req.user.id } } },
+    });
+
+    if (!violation) {
+      return res.status(404).json({ message: 'We couldn\'t find that rule violation.' });
+    }
+
+    await prisma.tradeRuleViolation.delete({ where: { id: violation.id } });
+    res.json({ message: 'Rule violation removed.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'We couldn\'t remove that violation right now.' });
   }
 };
 
@@ -392,6 +471,9 @@ module.exports = {
   logEmotion,
   updateEmotion,
   deleteEmotion,
+  logViolation,
+  updateViolation,
+  deleteViolation,
   createAiTradeReview,
   getAiTradeReview,
 };

@@ -4,7 +4,8 @@ const cloudinary = require('../utils/cloudinary');
 const streamifier = require('streamifier');
 const {
   createScreenshotPublicId,
-  destroyCloudinaryImage,
+  saveLocalScreenshot,
+  destroyScreenshotAsset,
 } = require('../services/screenshotService');
 
 const screenshotTypes = [
@@ -18,6 +19,12 @@ const screenshotTypes = [
 ];
 
 const maxScreenshotsPerTrade = Number.parseInt(process.env.MAX_SCREENSHOTS_PER_TRADE || '6', 10);
+const useLocalScreenshotStorage = () => (
+  process.env.SCREENSHOT_STORAGE === 'local'
+  || (process.env.NODE_ENV !== 'production' && process.env.SCREENSHOT_STORAGE !== 'cloudinary')
+);
+const canFallbackToLocalStorage = () => process.env.NODE_ENV !== 'production';
+const getRequestBaseUrl = (req) => `${req.protocol}://${req.get('host')}`;
 
 const streamUpload = (file, options) => new Promise((resolve, reject) => {
   const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
@@ -34,7 +41,7 @@ const uploadScreenshot = async (req, res) => {
     const { screenshotType, note } = req.body;
 
     if (!req.file) {
-      return res.status(400).json({ message: 'No image file provided' });
+      return res.status(400).json({ message: 'Please select an image to upload.' });
     }
 
     // Verify trade belongs to user
@@ -43,22 +50,37 @@ const uploadScreenshot = async (req, res) => {
     });
 
     if (!trade) {
-      return res.status(404).json({ message: 'Trade not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that trade.' });
     }
 
     const screenshotCount = await prisma.tradeScreenshot.count({ where: { tradeId } });
     if (screenshotCount >= maxScreenshotsPerTrade) {
-      return res.status(400).json({ message: `A trade can have at most ${maxScreenshotsPerTrade} screenshots` });
+      return res.status(400).json({ message: `You can attach up to ${maxScreenshotsPerTrade} screenshots per trade.` });
     }
 
-    const publicId = createScreenshotPublicId(req.user.id, tradeId);
-    const result = await streamUpload(req.file, {
-      public_id: publicId,
-      resource_type: 'image',
-      overwrite: false,
-      use_filename: false,
-      unique_filename: false,
-    });
+    let result;
+
+    if (useLocalScreenshotStorage()) {
+      result = await saveLocalScreenshot(req.file, req.user.id, tradeId, getRequestBaseUrl(req));
+    } else {
+      const publicId = createScreenshotPublicId(req.user.id, tradeId);
+      try {
+        result = await streamUpload(req.file, {
+          public_id: publicId,
+          resource_type: 'image',
+          overwrite: false,
+          use_filename: false,
+          unique_filename: false,
+        });
+      } catch (error) {
+        if (!canFallbackToLocalStorage()) {
+          throw error;
+        }
+
+        console.warn(`Cloudinary upload failed; saving screenshot locally instead: ${error.message}`);
+        result = await saveLocalScreenshot(req.file, req.user.id, tradeId, getRequestBaseUrl(req));
+      }
+    }
 
     let screenshot;
     try {
@@ -67,7 +89,7 @@ const uploadScreenshot = async (req, res) => {
           tradeId,
           screenshotType: screenshotTypes.includes(screenshotType) ? screenshotType : 'MARKED_CHART',
           imageUrl: result.secure_url,
-          publicId: result.public_id,
+          publicId: result.public_id || null,
           format: result.format,
           width: result.width,
           height: result.height,
@@ -76,14 +98,17 @@ const uploadScreenshot = async (req, res) => {
         }
       });
     } catch (error) {
-      await destroyCloudinaryImage(result.public_id);
+      await destroyScreenshotAsset({
+        publicId: result.public_id || null,
+        imageUrl: result.secure_url,
+      });
       throw error;
     }
 
     res.status(201).json(screenshot);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to upload screenshot' });
+    res.status(500).json({ message: 'We hit a snag uploading your screenshot.' });
   }
 };
 
@@ -101,16 +126,16 @@ const deleteScreenshot = async (req, res) => {
     });
 
     if (!screenshot) {
-      return res.status(404).json({ message: 'Screenshot not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that screenshot.' });
     }
 
-    await destroyCloudinaryImage(screenshot.publicId);
+    await destroyScreenshotAsset(screenshot);
     await prisma.tradeScreenshot.delete({ where: { id: screenshot.id } });
 
-    res.json({ message: 'Screenshot deleted successfully' });
+    res.json({ message: 'Screenshot removed from your sanctuary.' });
   } catch (error) {
     console.error(error);
-    res.status(502).json({ message: 'Failed to delete screenshot asset. Please try again.' });
+    res.status(502).json({ message: 'We hit a snag removing this image. Please try again.' });
   }
 };
 

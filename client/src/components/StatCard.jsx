@@ -9,7 +9,7 @@ const StatCard = ({ label, value, tone = 'emerald' }) => {
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-gray-900/70 p-4">
+    <div className="rounded-xl border border-white/10 bg-surface/70 p-4">
       <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{label}</p>
       <p className={`mt-2 text-2xl font-bold ${tones[tone]}`}>{value}</p>
     </div>

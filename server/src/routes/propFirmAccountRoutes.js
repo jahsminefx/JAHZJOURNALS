@@ -5,6 +5,7 @@ const {
   createPropFirm,
   getPropFirm,
   updatePropFirm,
+  updatePropFirmAdvancedSettings,
   removePropFirm,
   addPhase,
   getProgress,
@@ -18,6 +19,9 @@ router.route('/:id')
   .get(protect, getPropFirm)
   .put(protect, updatePropFirm)
   .delete(protect, removePropFirm);
+
+router.route('/:id/advanced-settings')
+  .put(protect, updatePropFirmAdvancedSettings);
 
 router.route('/:id/phases')
   .post(protect, addPhase);

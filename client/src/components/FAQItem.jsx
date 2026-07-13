@@ -12,10 +12,10 @@ const FAQItem = ({ question, answer }) => {
         className="flex w-full items-center justify-between gap-4 p-5 text-left"
       >
         <span className="font-semibold text-white">{question}</span>
-        <ChevronDown size={20} className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={20} className={`shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <p className="border-t border-white/10 px-5 pb-5 pt-4 text-sm leading-6 text-gray-400">
+        <p className="border-t border-white/10 px-5 pb-5 pt-4 text-sm leading-6 text-muted">
           {answer}
         </p>
       )}

@@ -15,7 +15,7 @@ const upload = multer({
     if (allowedMimeTypes.has(file.mimetype) && allowedExtensions.has(extension)) {
       cb(null, true);
     } else {
-      const error = new Error('Only JPG, PNG, WEBP, or GIF images are allowed');
+      const error = new Error('Please upload a valid image file (JPG, PNG, WEBP, or GIF).');
       error.statusCode = 400;
       cb(error, false);
     }

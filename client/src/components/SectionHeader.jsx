@@ -14,7 +14,7 @@ const SectionHeader = ({ eyebrow, title, description, align = 'center' }) => {
         {title}
       </h2>
       {description && (
-        <p className="mt-4 text-base leading-7 text-gray-400 sm:text-lg">
+        <p className="mt-4 text-base leading-7 text-muted sm:text-lg">
           {description}
         </p>
       )}

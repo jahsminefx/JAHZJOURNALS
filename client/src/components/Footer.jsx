@@ -40,11 +40,11 @@ const groups = [
 ];
 
 const Footer = () => (
-  <footer className="border-t border-white/10 bg-gray-950 px-4 py-12 sm:px-6 lg:px-8">
+  <footer className="border-t border-white/10 bg-background px-4 py-12 sm:px-6 lg:px-8">
     <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.2fr_2fr]">
       <div>
         <BrandLogo />
-        <p className="mt-4 max-w-md text-sm leading-6 text-gray-400">
+        <p className="mt-4 max-w-md text-sm leading-6 text-muted">
           A mobile-first forex trading journal for traders who want structure, review, and discipline without hype.
         </p>
         <div className="mt-5 flex gap-3 text-sm text-gray-500">
@@ -61,7 +61,7 @@ const Footer = () => (
             <ul className="mt-4 space-y-3">
               {group.links.map(([label, to]) => (
                 <li key={label}>
-                  <Link to={to} className="text-sm text-gray-400 transition-colors hover:text-emerald-300">
+                  <Link to={to} className="text-sm text-muted transition-colors hover:text-emerald-300">
                     {label}
                   </Link>
                 </li>

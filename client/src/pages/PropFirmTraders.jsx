@@ -11,7 +11,7 @@ const pains = ['Daily drawdown mistakes', 'Overtrading', 'Revenge trading', 'Poo
 const helps = ['Track daily performance', 'Track max drawdown', 'Track profit target', 'Track trading days', 'Track rule violations', 'Review challenge discipline'];
 
 const PropFirmTraders = () => (
-  <div className="min-h-screen bg-gray-950 text-gray-100">
+  <div className="min-h-screen bg-background text-foreground">
     <Navbar />
     <main>
       <PageHeader
@@ -46,7 +46,7 @@ const PropFirmTraders = () => (
             {helps.map((item) => (
               <div key={item} className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-4">
                 <CheckCircle2 size={18} className="text-emerald-300" />
-                <span className="text-sm text-gray-300">{item}</span>
+                <span className="text-sm text-muted">{item}</span>
               </div>
             ))}
           </div>

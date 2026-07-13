@@ -1,119 +1,300 @@
-import React, { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Target, TrendingUp, Activity, AlertTriangle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Activity, ShieldAlert, Target, TrendingDown, TrendingUp, Trophy } from 'lucide-react';
 import api from '../utils/api';
+import DashboardHeader from '../components/dashboard/DashboardHeader';
+import MetricCard from '../components/dashboard/MetricCard';
+import PerformanceCurveChart from '../components/dashboard/EquityCurveChart';
+import SessionEdgeChart from '../components/dashboard/SessionEdgeChart';
+import TradingCalendar from '../components/dashboard/TradingCalendar';
+import PerformanceBreakdown from '../components/dashboard/PerformanceBreakdown';
+import TopWinningPairs from '../components/dashboard/TopWinningPairs';
+import TradeOutcomeChart from '../components/dashboard/TradeOutcomeChart';
+import WeeklyGoalProgress from '../components/dashboard/WeeklyGoalProgress';
+import RecentTrades from '../components/dashboard/RecentTrades';
+import UpgradeCard from '../components/dashboard/UpgradeCard';
+import DisciplineBanner from '../components/dashboard/DisciplineBanner';
+import DashboardSkeleton from '../components/dashboard/DashboardSkeleton';
+import DashboardEmptyState from '../components/dashboard/DashboardEmptyState';
+import DashboardErrorState from '../components/dashboard/DashboardErrorState';
+import { formatCurrency, formatNumber, formatPercent, getDateRange } from '../utils/dashboard';
+
+const getInitialRange = (searchParams) => {
+  if (searchParams.get('range')) return searchParams.get('range');
+  if (searchParams.get('startDate') || searchParams.get('endDate')) return 'custom';
+  return 'all';
+};
+
+const getInitialDates = (range, searchParams) => {
+  if (range === 'custom') {
+    return {
+      startDate: searchParams.get('startDate') || '',
+      endDate: searchParams.get('endDate') || '',
+    };
+  }
+
+  const dates = getDateRange(range);
+  return {
+    startDate: dates.startDate || '',
+    endDate: dates.endDate || '',
+  };
+};
+
+const formatRatio = (value) => Number(value || 0).toLocaleString(undefined, {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const plural = (count, singular, pluralLabel = `${singular}s`) => `${formatNumber(count, 0)} ${count === 1 ? singular : pluralLabel}`;
+
+
+
+const getProfitFactorDisplay = ({ closedTrades, grossProfit, grossLoss, profitFactor }) => {
+  if (!closedTrades || (!grossProfit && !grossLoss)) return '--';
+  if (grossProfit === 0 && grossLoss > 0) return '0.00';
+  if (grossLoss === 0 && grossProfit > 0) return '∞';
+  if (profitFactor === null || profitFactor === undefined) return '--';
+  return formatRatio(profitFactor);
+};
 
 const Dashboard = () => {
-  const [analytics, setAnalytics] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialRange = getInitialRange(searchParams);
+  const initialDates = getInitialDates(initialRange, searchParams);
+  const [accountId, setAccountId] = useState(searchParams.get('accountId') || '');
+  const [dateRange, setDateRange] = useState(initialRange);
+  const [startDate, setStartDate] = useState(initialDates.startDate);
+  const [endDate, setEndDate] = useState(initialDates.endDate);
+  const [dashboard, setDashboard] = useState(null);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
+    const nextParams = new URLSearchParams();
+    if (accountId) nextParams.set('accountId', accountId);
+    if (dateRange) nextParams.set('range', dateRange);
+    if (startDate) nextParams.set('startDate', startDate);
+    if (endDate) nextParams.set('endDate', endDate);
+    setSearchParams(nextParams, { replace: true });
+  }, [accountId, dateRange, endDate, setSearchParams, startDate]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchDashboard = async () => {
+      setLoading(true);
+      setError(null);
+      setDashboard(null);
+
       try {
-        const { data } = await api.get('/analytics/dashboard');
-        setAnalytics(data);
-      } catch (error) {
-        toast.error(error.response?.data?.message || 'Failed to load dashboard');
+        const params = {};
+        if (accountId) params.accountId = accountId;
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+        params._refresh = retryCount;
+
+        const { data } = await api.get('/analytics/dashboard', {
+          params,
+          signal: controller.signal,
+          headers: {
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache',
+          },
+        });
+
+        setDashboard(data);
+        setAccounts(data.accounts || []);
+      } catch (requestError) {
+        if (requestError.code === 'ERR_CANCELED' || requestError.name === 'CanceledError') return;
+        setError(requestError.response?.data?.message || 'We couldn\'t load your dashboard right now.');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
-    fetchAnalytics();
+    fetchDashboard();
+    return () => controller.abort();
+  }, [accountId, endDate, retryCount, startDate]);
+
+  useEffect(() => {
+    const refreshDashboard = () => setRetryCount((count) => count + 1);
+    const handleStorageChange = (event) => {
+      if (event.key === 'jahzjournal:data-version') refreshDashboard();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshDashboard();
+    };
+
+    window.addEventListener('jahzjournal:data-changed', refreshDashboard);
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', refreshDashboard);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('jahzjournal:data-changed', refreshDashboard);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', refreshDashboard);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
-  if (loading) {
-    return <div className="text-center py-12 text-gray-400">Loading dashboard...</div>;
-  }
+  const currency = dashboard?.currency || 'USD';
+  const summary = useMemo(() => dashboard?.summary || {}, [dashboard]);
+  const outcomes = useMemo(() => dashboard?.tradeOutcomes || {}, [dashboard]);
+  const performanceBreakdown = useMemo(() => dashboard?.performanceBreakdown || {}, [dashboard]);
 
-  const stats = analytics || {};
-  const equityCurve = stats.equityCurve?.length ? stats.equityCurve : [{ name: 'No trades', profit: 0 }];
-  const sessionStats = stats.sessionStats || [];
-  const netProfitLoss = Number(stats.netProfitLoss || 0);
+  const metricCards = useMemo(() => {
+    const totalTrades = Number(summary.totalTrades || 0);
+    const closedTrades = Number(summary.closedTrades || 0);
+    const openTrades = Math.max(totalTrades - closedTrades, 0);
+    const netProfitLoss = Number(summary.netProfitLoss || 0);
+    const wins = Number(outcomes.wins || 0);
+    const losses = Number(outcomes.losses || 0);
+    const breakevens = Number(outcomes.breakevens || 0);
+    const grossProfit = Number(performanceBreakdown.grossProfit || 0);
+    const grossLoss = Number(performanceBreakdown.grossLoss || 0);
+    const drawdownPercentage = Number(summary.maximumDrawdownPercentage || 0);
+    const noClosedTradeText = 'Log your first closed trade to unlock analytics.';
+    const netTone = netProfitLoss > 0 ? 'positive' : netProfitLoss < 0 ? 'negative' : 'neutral';
+    const netStatus = netProfitLoss > 0 ? 'Positive' : netProfitLoss < 0 ? 'Negative' : 'Breakeven';
+    const winRateText = closedTrades
+      ? `${plural(wins, 'win')} | ${plural(losses, 'loss', 'losses')} | ${formatNumber(breakevens, 0)} BE`
+      : noClosedTradeText;
+    const profitFactorValue = getProfitFactorDisplay({
+      closedTrades,
+      grossProfit,
+      grossLoss,
+      profitFactor: summary.profitFactor,
+    });
+    const profitFactorContext = !closedTrades
+      ? noClosedTradeText
+      : grossProfit === 0 && grossLoss > 0
+        ? 'No gross profit yet'
+        : grossLoss === 0 && grossProfit > 0
+          ? 'No gross loss yet'
+          : 'Gross profit / gross loss';
+
+    return [
+      {
+        label: 'Total Net P/L',
+        value: formatCurrency(netProfitLoss, currency, { signDisplay: netProfitLoss === 0 ? 'auto' : 'always' }),
+        accent: netTone,
+        valueTone: netTone,
+        status: netStatus,
+        statusTone: netTone,
+        supportingText: closedTrades ? `${plural(closedTrades, 'closed trade')} contributing` : noClosedTradeText,
+        icon: netProfitLoss < 0 ? TrendingDown : TrendingUp,
+      },
+      {
+        label: 'Win Rate',
+        value: closedTrades ? formatPercent(summary.winRate || 0) : '--',
+        accent: 'blue',
+        valueTone: closedTrades ? 'blue' : 'muted',
+        status: !closedTrades ? 'No data' : closedTrades < 3 ? 'Low sample' : null,
+        statusTone: 'neutral',
+        supportingText: winRateText,
+        icon: Target,
+      },
+      {
+        label: 'Total Trades',
+        value: formatNumber(totalTrades, 0),
+        accent: 'purple',
+        valueTone: 'purple',
+        supportingText: totalTrades
+          ? `${formatNumber(closedTrades, 0)} closed | ${formatNumber(openTrades, 0)} open`
+          : 'Log your first trade to start tracking.',
+        icon: Activity,
+      },
+      {
+        label: 'Profit Factor',
+        value: profitFactorValue,
+        accent: 'amber',
+        valueTone: profitFactorValue === '--' ? 'muted' : 'amber',
+        supportingText: profitFactorContext,
+        icon: Trophy,
+      },
+      {
+        label: 'Maximum Drawdown',
+        value: formatPercent(drawdownPercentage || 0),
+        accent: 'negative',
+        valueTone: drawdownPercentage > 0 ? 'negative' : 'neutral',
+        supportingText: 'Largest peak-to-trough decline',
+        icon: ShieldAlert,
+      },
+    ];
+  }, [currency, outcomes, performanceBreakdown, summary]);
+
+  const handleDateRangeChange = (nextRange) => {
+    setDateRange(nextRange);
+    if (nextRange === 'custom') return;
+
+    const dates = getDateRange(nextRange);
+    setStartDate(dates.startDate || '');
+    setEndDate(dates.endDate || '');
+  };
+
+  const handleCustomDateChange = (field, value) => {
+    setDateRange('custom');
+    if (field === 'startDate') setStartDate(value);
+    if (field === 'endDate') setEndDate(value);
+  };
 
   return (
-    <div className="space-y-6 font-sans">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-100">Performance Overview</h2>
-        <select className="bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block p-2.5">
-          <option>All Accounts</option>
-          <option>Main FTMO Challenge</option>
-        </select>
-      </div>
+    <div className="space-y-4 pb-6">
+      <DashboardHeader
+        accounts={accounts}
+        accountId={accountId}
+        dateRange={dateRange}
+        startDate={startDate}
+        endDate={endDate}
+        onAccountChange={setAccountId}
+        onDateRangeChange={handleDateRangeChange}
+        onCustomDateChange={handleCustomDateChange}
+      />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-400 mb-1">Total Net P/L</p>
-            <h3 className={`text-2xl font-bold ${netProfitLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {netProfitLoss >= 0 ? '+' : '-'}${Math.abs(netProfitLoss).toFixed(2)}
-            </h3>
-          </div>
-          <div className="p-3 bg-green-500/20 rounded-xl"><TrendingUp size={24} className="text-green-400" /></div>
-        </div>
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-400 mb-1">Win Rate</p>
-            <h3 className="text-2xl font-bold text-gray-100">{Number(stats.winRate || 0).toFixed(1)}%</h3>
-          </div>
-          <div className="p-3 bg-blue-500/20 rounded-xl"><Target size={24} className="text-blue-400" /></div>
-        </div>
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-400 mb-1">Total Trades</p>
-            <h3 className="text-2xl font-bold text-gray-100">{stats.totalTrades || 0}</h3>
-          </div>
-          <div className="p-3 bg-purple-500/20 rounded-xl"><Activity size={24} className="text-purple-400" /></div>
-        </div>
-        <div className="bg-gray-800 p-6 rounded-xl border border-red-500/30 shadow flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-400 mb-1">Losses</p>
-            <h3 className="text-lg font-bold text-red-500 leading-tight">{stats.losses || 0}</h3>
-          </div>
-          <div className="p-3 bg-red-500/20 rounded-xl"><AlertTriangle size={24} className="text-red-500" /></div>
-        </div>
-      </div>
+      {loading && <DashboardSkeleton />}
 
-      {/* Charts Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow">
-          <h3 className="text-lg font-bold text-gray-100 mb-6">Equity Curve</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={equityCurve}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-                <XAxis dataKey="name" stroke="#9ca3af" axisLine={false} tickLine={false} />
-                <YAxis stroke="#9ca3af" axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', borderRadius: '0.5rem' }} />
-                <Line type="monotone" dataKey="profit" stroke="#4ade80" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {!loading && error && (
+        <DashboardErrorState message={error} onRetry={() => setRetryCount((count) => count + 1)} />
+      )}
 
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow">
-          <h3 className="text-lg font-bold text-gray-100 mb-6">Execution Edge by Session</h3>
-          <div className="space-y-6">
-            {sessionStats.length === 0 ? (
-              <p className="text-gray-500 text-sm">No session data yet. Logged trades will appear here.</p>
-            ) : (
-              sessionStats.map((session) => (
-                <div key={session.name}>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-gray-300 font-medium">{session.name}</span>
-                    <span className="text-green-400 font-bold">{session.winRate.toFixed(1)}% Win</span>
-                  </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2.5">
-                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${session.winRate}%` }}></div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+      {!loading && !error && dashboard && (
+        <>
+          <section className="grid min-w-0 gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            {metricCards.map((card) => <MetricCard key={card.label} {...card} />)}
+          </section>
+
+          {accounts.length === 0 ? (
+            <DashboardEmptyState type="accounts" />
+          ) : Number(summary.totalTrades || 0) === 0 ? (
+            <DashboardEmptyState type="trades" />
+          ) : null}
+
+          <section className="grid gap-4 xl:grid-cols-12">
+            <PerformanceCurveChart
+              className="xl:col-span-6"
+              data={dashboard.performanceCurve || {}}
+              currency={currency}
+              activeRange={dateRange}
+              onRangeChange={handleDateRangeChange}
+              hasAccountSelection={accounts.length > 0 && (dashboard.selectedAccountIds || []).length > 0}
+            />
+            <SessionEdgeChart className="xl:col-span-3" data={dashboard.sessionPerformance || []} currency={currency} />
+            <TradingCalendar className="xl:col-span-3" data={dashboard.calendar || []} currency={currency} />
+            <PerformanceBreakdown className="xl:col-span-9" data={dashboard.performanceBreakdown || {}} currency={currency} />
+            <RecentTrades className="xl:col-span-3 xl:row-span-2" trades={dashboard.recentTrades || []} currency={currency} />
+            <TopWinningPairs className="xl:col-span-3" pairs={dashboard.topPairs || []} currency={currency} />
+            <TradeOutcomeChart className="xl:col-span-3" outcomes={dashboard.tradeOutcomes || {}} />
+            <WeeklyGoalProgress className="xl:col-span-3" goals={dashboard.weeklyGoals || []} currency={currency} />
+            <div className="md:hidden xl:col-span-3">
+              <UpgradeCard />
+            </div>
+          </section>
+
+          <DisciplineBanner />
+        </>
+      )}
     </div>
   );
 };

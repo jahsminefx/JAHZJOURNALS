@@ -150,7 +150,7 @@ const TradeForm = () => {
           }
         }
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Failed to load trade form');
+        toast.error(error.response?.data?.message || 'We couldn\'t load this trade for you.');
       } finally {
         setIsLoading(false);
       }
@@ -195,10 +195,10 @@ const TradeForm = () => {
         await uploadScreenshots(tradeId);
       }
 
-      toast.success(isEditMode ? 'Trade updated successfully' : 'Trade logged successfully');
+      toast.success(isEditMode ? 'Trade safely updated in your journal' : 'Trade safely logged in your journal');
       navigate(`/trades/${tradeId}`);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save trade');
+      toast.error(error.response?.data?.message || 'We hit a snag saving this trade.');
     } finally {
       setIsSaving(false);
     }
@@ -244,77 +244,77 @@ const TradeForm = () => {
   };
 
   const deleteExistingScreenshot = async (screenshotId) => {
-    if (!window.confirm('Delete this screenshot from the trade and Cloudinary?')) return;
+    if (!window.confirm('Are you sure you want to remove this piece of visual proof?')) return;
 
     setDeletingScreenshotId(screenshotId);
     try {
       await api.delete(`/screenshots/${screenshotId}`);
       setExistingScreenshots((current) => current.filter((screenshot) => screenshot.id !== screenshotId));
-      toast.success('Screenshot deleted');
+      toast.success('Visual proof removed');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete screenshot');
+      toast.error(error.response?.data?.message || 'We couldn\'t remove that screenshot.');
     } finally {
       setDeletingScreenshotId(null);
     }
   };
 
   if (isLoading) {
-    return <div className="text-center py-12 text-gray-400">Loading trade form...</div>;
+    return <div className="text-center py-12 text-muted">Preparing your journaling space...</div>;
   }
 
   return (
-    <div className="max-w-5xl mx-auto font-sans text-gray-100">
+    <div className="max-w-5xl mx-auto font-sans text-foreground">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-100">{isEditMode ? 'Edit Trade' : 'Log New Trade'}</h2>
-          <p className="text-sm text-gray-400">Record execution, risk, psychology, rules, and screenshots.</p>
+          <h2 className="text-2xl font-bold text-foreground">{isEditMode ? 'Refine This Trade' : 'Log a New Trade'}</h2>
+          <p className="text-sm text-muted">Capture the setup, psychology, and lessons from this session.</p>
         </div>
         {isEditMode && (
           <Link to={`/trades/${id}`} className="text-sm text-green-400 hover:text-green-300">Back to details</Link>
         )}
       </div>
 
-      <div className="bg-gray-800 p-6 sm:p-8 rounded-xl shadow-lg border border-gray-700">
+      <div className="bg-surface-muted p-6 sm:p-8 rounded-xl shadow-lg border border-border">
         {accounts.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-400 mb-4">Create a trading account before logging your first trade.</p>
+            <p className="text-muted mb-4">You'll need a trading account before logging your first trade.</p>
             <Link to="/accounts/new" className="inline-flex px-4 py-2 bg-green-500 text-gray-900 rounded-lg font-medium hover:bg-green-400 transition-colors">
-              Create Account
+              Set Up an Account
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             <section>
-              <h3 className="text-lg font-medium text-green-400 border-b border-gray-700 pb-2 mb-4">Execution</h3>
+              <h3 className="text-lg font-medium text-green-400 border-b border-border pb-2 mb-4">The Setup</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Account
-                  <select required {...register('tradingAccountId')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+                  <select required {...register('tradingAccountId')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
                     {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
                   </select>
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Pair / Instrument
-                  <input required {...register('pair')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500 uppercase" placeholder="EURUSD" />
+                  <input required {...register('pair')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 uppercase" placeholder="EURUSD" />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Direction
-                  <select required {...register('direction')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+                  <select required {...register('direction')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
                     <option value="BUY">Long / Buy</option>
                     <option value="SELL">Short / Sell</option>
                   </select>
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Strategy
-                  <input {...register('strategyName')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
+                  <input {...register('strategyName')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Setup
-                  <input {...register('setupType')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
+                  <input {...register('setupType')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Session
-                  <select {...register('session')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+                  <select {...register('session')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
                     <option value="">Unspecified</option>
                     <option value="ASIAN">Asian</option>
                     <option value="LONDON">London</option>
@@ -323,17 +323,17 @@ const TradeForm = () => {
                     <option value="OTHER">Other</option>
                   </select>
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Higher Timeframe
-                  <input {...register('higherTimeframe')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500" placeholder="4H" />
+                  <input {...register('higherTimeframe')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" placeholder="4H" />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Entry Timeframe
-                  <input {...register('entryTimeframe')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500" placeholder="15M" />
+                  <input {...register('entryTimeframe')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" placeholder="15M" />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Grade
-                  <select {...register('grade')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+                  <select {...register('grade')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
                     <option value="">Ungraded</option>
                     <option value="A_PLUS">A+</option>
                     <option value="A">A</option>
@@ -347,7 +347,7 @@ const TradeForm = () => {
             </section>
 
             <section>
-              <h3 className="text-lg font-medium text-green-400 border-b border-gray-700 pb-2 mb-4">Risk and Result</h3>
+              <h3 className="text-lg font-medium text-green-400 border-b border-border pb-2 mb-4">Risk & Outcome</h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                 {[
                   ['entryPrice', 'Entry Price', '0.00001'],
@@ -362,51 +362,51 @@ const TradeForm = () => {
                   ['profitLossAmount', 'Realised P/L', '0.01'],
                   ['profitLossPercent', 'P/L %', '0.01'],
                 ].map(([name, label, step]) => (
-                  <label key={name} className="text-sm text-gray-300">
+                  <label key={name} className="text-sm text-muted">
                     {label}
-                    <input type="number" step={step} {...register(name)} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
+                    <input type="number" step={step} {...register(name)} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
                   </label>
                 ))}
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Result
-                  <select {...register('result')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+                  <select {...register('result')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
                     <option value="OPEN">Open</option>
                     <option value="WIN">Win</option>
                     <option value="LOSS">Loss</option>
                     <option value="BREAKEVEN">Break-even</option>
                   </select>
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Status
-                  <select {...register('status')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+                  <select {...register('status')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
                     <option value="PLANNED">Planned</option>
                     <option value="ACTIVE">Active</option>
                     <option value="CLOSED">Closed</option>
                     <option value="CANCELLED">Cancelled</option>
                   </select>
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Entry Time
-                  <input type="datetime-local" {...register('entryTime')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
+                  <input type="datetime-local" {...register('entryTime')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Exit Time
-                  <input type="datetime-local" {...register('exitTime')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
+                  <input type="datetime-local" {...register('exitTime')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
                 </label>
               </div>
             </section>
 
             <section>
-              <h3 className="text-lg font-medium text-green-400 border-b border-gray-700 pb-2 mb-4">Process Quality</h3>
+              <h3 className="text-lg font-medium text-green-400 border-b border-border pb-2 mb-4">Process & Discipline</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {[
                   ['followedPlan', 'Followed Plan'],
                   ['isAPlusSetup', 'A+ Setup'],
                   ['newsRelated', 'News Related'],
                 ].map(([name, label]) => (
-                  <label key={name} className="text-sm text-gray-300">
+                  <label key={name} className="text-sm text-muted">
                     {label}
-                    <select {...register(name)} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+                    <select {...register(name)} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
                       <option value="">Unspecified</option>
                       <option value="true">Yes</option>
                       <option value="false">No</option>
@@ -417,45 +417,45 @@ const TradeForm = () => {
             </section>
 
             <section>
-              <h3 className="text-lg font-medium text-green-400 border-b border-gray-700 pb-2 mb-4">Notes</h3>
+              <h3 className="text-lg font-medium text-green-400 border-b border-border pb-2 mb-4">Reflections</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Entry Reason
-                  <textarea rows="4" {...register('entryReason')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
+                  <textarea rows="4" {...register('entryReason')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Exit Details
-                  <textarea rows="4" {...register('exitReason')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
+                  <textarea rows="4" {...register('exitReason')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Pre-Trade Notes
-                  <textarea rows="4" {...register('notesBefore')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
+                  <textarea rows="4" {...register('notesBefore')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted">
                   Post-Trade Notes
-                  <textarea rows="4" {...register('notesAfter')} className="mt-1 block w-full bg-gray-900 border border-gray-700 rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
+                  <textarea rows="4" {...register('notesAfter')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
                 </label>
               </div>
             </section>
 
             <section>
-              <div className="flex items-center justify-between border-b border-gray-700 pb-2 mb-4">
-                <h3 className="text-lg font-medium text-green-400">Rule Violations</h3>
-                <button type="button" onClick={addRuleViolation} className="px-3 py-1.5 rounded-lg bg-gray-700 text-sm hover:bg-gray-600">Add Rule</button>
+              <div className="flex items-center justify-between border-b border-border pb-2 mb-4">
+                <h3 className="text-lg font-medium text-green-400">Rules & Deviations</h3>
+                <button type="button" onClick={addRuleViolation} className="px-3 py-1.5 rounded-lg bg-gray-700 text-sm hover:bg-gray-600">Log Rule Event</button>
               </div>
               {ruleViolations.length === 0 ? (
-                <p className="text-sm text-gray-500">No rule violations recorded.</p>
+                <p className="text-sm text-muted">Your discipline was solid here.</p>
               ) : (
                 <div className="space-y-3">
                   {ruleViolations.map((violation, index) => (
-                    <div key={`${violation.tradeRuleId}-${index}`} className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr_1.4fr_auto] gap-3 rounded-lg border border-gray-700 bg-gray-900 p-3">
-                      <select value={violation.tradeRuleId} onChange={(event) => updateRuleViolation(index, 'tradeRuleId', event.target.value)} className="bg-gray-950 border border-gray-700 rounded-md py-2 px-3 text-sm">
+                    <div key={`${violation.tradeRuleId}-${index}`} className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr_1.4fr_auto] gap-3 rounded-lg border border-border bg-surface p-3">
+                      <select value={violation.tradeRuleId} onChange={(event) => updateRuleViolation(index, 'tradeRuleId', event.target.value)} className="bg-background border border-border rounded-md py-2 px-3 text-sm">
                         {rules.map((rule) => <option key={rule.id} value={rule.id}>{rule.name}{rule.active ? '' : ' (inactive)'}</option>)}
                       </select>
-                      <select value={violation.severity} onChange={(event) => updateRuleViolation(index, 'severity', event.target.value)} className="bg-gray-950 border border-gray-700 rounded-md py-2 px-3 text-sm">
+                      <select value={violation.severity} onChange={(event) => updateRuleViolation(index, 'severity', event.target.value)} className="bg-background border border-border rounded-md py-2 px-3 text-sm">
                         {severityOptions.map((severity) => <option key={severity} value={severity}>{severity}</option>)}
                       </select>
-                      <input value={violation.note} onChange={(event) => updateRuleViolation(index, 'note', event.target.value)} placeholder="Note" className="bg-gray-950 border border-gray-700 rounded-md py-2 px-3 text-sm" />
+                      <input value={violation.note} onChange={(event) => updateRuleViolation(index, 'note', event.target.value)} placeholder="Note" className="bg-background border border-border rounded-md py-2 px-3 text-sm" />
                       <button type="button" onClick={() => setRuleViolations((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-400 hover:text-red-300 justify-self-start">
                         <Trash2 size={18} />
                       </button>
@@ -466,24 +466,24 @@ const TradeForm = () => {
             </section>
 
             <section>
-              <div className="flex items-center justify-between border-b border-gray-700 pb-2 mb-4">
-                <h3 className="text-lg font-medium text-green-400">Emotions</h3>
-                <button type="button" onClick={() => setEmotionLogs((current) => [...current, emptyEmotion()])} className="px-3 py-1.5 rounded-lg bg-gray-700 text-sm hover:bg-gray-600">Add Emotion</button>
+              <div className="flex items-center justify-between border-b border-border pb-2 mb-4">
+                <h3 className="text-lg font-medium text-green-400">Emotional State</h3>
+                <button type="button" onClick={() => setEmotionLogs((current) => [...current, emptyEmotion()])} className="px-3 py-1.5 rounded-lg bg-gray-700 text-sm hover:bg-gray-600">Log Emotion</button>
               </div>
               {emotionLogs.length === 0 ? (
-                <p className="text-sm text-gray-500">No emotions recorded.</p>
+                <p className="text-sm text-muted">The mind was quiet.</p>
               ) : (
                 <div className="space-y-3">
                   {emotionLogs.map((emotion, index) => (
-                    <div key={`${emotion.emotion}-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_0.7fr_1.4fr_auto] gap-3 rounded-lg border border-gray-700 bg-gray-900 p-3">
-                      <select value={emotion.stage} onChange={(event) => updateEmotion(index, 'stage', event.target.value)} className="bg-gray-950 border border-gray-700 rounded-md py-2 px-3 text-sm">
+                    <div key={`${emotion.emotion}-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_0.7fr_1.4fr_auto] gap-3 rounded-lg border border-border bg-surface p-3">
+                      <select value={emotion.stage} onChange={(event) => updateEmotion(index, 'stage', event.target.value)} className="bg-background border border-border rounded-md py-2 px-3 text-sm">
                         {stageOptions.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
                       </select>
-                      <select value={emotion.emotion} onChange={(event) => updateEmotion(index, 'emotion', event.target.value)} className="bg-gray-950 border border-gray-700 rounded-md py-2 px-3 text-sm">
+                      <select value={emotion.emotion} onChange={(event) => updateEmotion(index, 'emotion', event.target.value)} className="bg-background border border-border rounded-md py-2 px-3 text-sm">
                         {emotionOptions.map((item) => <option key={item} value={item}>{item}</option>)}
                       </select>
-                      <input type="number" min="1" max="10" value={emotion.intensity} onChange={(event) => updateEmotion(index, 'intensity', event.target.value)} className="bg-gray-950 border border-gray-700 rounded-md py-2 px-3 text-sm" />
-                      <input value={emotion.note} onChange={(event) => updateEmotion(index, 'note', event.target.value)} placeholder="Note" className="bg-gray-950 border border-gray-700 rounded-md py-2 px-3 text-sm" />
+                      <input type="number" min="1" max="10" value={emotion.intensity} onChange={(event) => updateEmotion(index, 'intensity', event.target.value)} className="bg-background border border-border rounded-md py-2 px-3 text-sm" />
+                      <input value={emotion.note} onChange={(event) => updateEmotion(index, 'note', event.target.value)} placeholder="Note" className="bg-background border border-border rounded-md py-2 px-3 text-sm" />
                       <button type="button" onClick={() => setEmotionLogs((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-400 hover:text-red-300 justify-self-start">
                         <Trash2 size={18} />
                       </button>
@@ -494,14 +494,14 @@ const TradeForm = () => {
             </section>
 
             <section>
-              <h3 className="text-lg font-medium text-green-400 border-b border-gray-700 pb-2 mb-4">Screenshots</h3>
+              <h3 className="text-lg font-medium text-green-400 border-b border-border pb-2 mb-4">Visual Proof</h3>
               {existingScreenshots.length > 0 && (
                 <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   {existingScreenshots.map((screenshot) => (
-                    <div key={screenshot.id} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
-                      <img src={screenshot.imageUrl} alt={screenshot.note || screenshot.screenshotType} className="aspect-video w-full rounded-md object-cover border border-gray-700" />
+                    <div key={screenshot.id} className="rounded-lg border border-border bg-surface p-3">
+                      <img src={screenshot.imageUrl} alt={screenshot.note || screenshot.screenshotType} className="aspect-video w-full rounded-md object-cover border border-border" />
                       <div className="mt-3 flex items-center justify-between gap-3">
-                        <p className="text-xs text-gray-400">{screenshot.screenshotType}</p>
+                        <p className="text-xs text-muted">{screenshot.screenshotType}</p>
                         <button type="button" disabled={deletingScreenshotId === screenshot.id} onClick={() => deleteExistingScreenshot(screenshot.id)} className="text-xs text-red-400 hover:text-red-300 disabled:opacity-60">
                           {deletingScreenshotId === screenshot.id ? 'Deleting...' : 'Delete'}
                         </button>
@@ -510,32 +510,32 @@ const TradeForm = () => {
                   ))}
                 </div>
               )}
-              <input type="file" accept="image/*" multiple onChange={addScreenshotFile} className="block w-full text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-green-500 file:px-4 file:py-2 file:font-medium file:text-gray-900" />
+              <input type="file" accept="image/*" multiple onChange={addScreenshotFile} className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-green-500 file:px-4 file:py-2 file:font-medium file:text-gray-900" />
               {screenshotFiles.length > 0 && (
                 <div className="mt-4 space-y-3">
                   {screenshotFiles.map((screenshot, index) => (
-                    <div key={`${screenshot.file.name}-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 rounded-lg border border-gray-700 bg-gray-900 p-3">
+                    <div key={`${screenshot.file.name}-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 rounded-lg border border-border bg-surface p-3">
                       <div>
-                        <p className="text-sm font-medium text-gray-200">{screenshot.file.name}</p>
-                        <p className="text-xs text-gray-500">{Math.round(screenshot.file.size / 1024)} KB</p>
+                        <p className="text-sm font-medium text-foreground">{screenshot.file.name}</p>
+                        <p className="text-xs text-muted">{Math.round(screenshot.file.size / 1024)} KB</p>
                       </div>
-                      <select value={screenshot.screenshotType} onChange={(event) => updateScreenshotFile(index, 'screenshotType', event.target.value)} className="bg-gray-950 border border-gray-700 rounded-md py-2 px-3 text-sm">
+                      <select value={screenshot.screenshotType} onChange={(event) => updateScreenshotFile(index, 'screenshotType', event.target.value)} className="bg-background border border-border rounded-md py-2 px-3 text-sm">
                         {screenshotTypeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
                       </select>
                       <button type="button" onClick={() => setScreenshotFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-400 hover:text-red-300 justify-self-start">
                         <Trash2 size={18} />
                       </button>
-                      <input value={screenshot.note} onChange={(event) => updateScreenshotFile(index, 'note', event.target.value)} placeholder="Screenshot note" className="md:col-span-3 bg-gray-950 border border-gray-700 rounded-md py-2 px-3 text-sm" />
+                      <input value={screenshot.note} onChange={(event) => updateScreenshotFile(index, 'note', event.target.value)} placeholder="Screenshot note" className="md:col-span-3 bg-background border border-border rounded-md py-2 px-3 text-sm" />
                     </div>
                   ))}
                 </div>
               )}
             </section>
 
-            <div className="pt-4 flex items-center justify-end space-x-3 border-t border-gray-700">
-              <button type="button" onClick={() => navigate(-1)} className="px-5 py-2.5 border border-gray-600 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 transition">Cancel</button>
+            <div className="pt-4 flex items-center justify-end space-x-3 border-t border-border">
+              <button type="button" onClick={() => navigate(-1)} className="px-5 py-2.5 border border-gray-600 rounded-lg text-sm font-medium text-muted hover:bg-surface-muted transition">Go Back</button>
               <button type="submit" disabled={isSaving} className="px-5 py-2.5 bg-green-500 text-gray-900 rounded-lg text-sm font-bold shadow-md hover:bg-green-400 transition disabled:opacity-70">
-                {isSaving ? 'Saving...' : isEditMode ? 'Update Trade' : 'Log Trade'}
+                {isSaving ? 'Saving...' : isEditMode ? 'Update Journal' : 'Save to Journal'}
               </button>
             </div>
           </form>

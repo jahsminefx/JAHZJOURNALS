@@ -9,6 +9,27 @@
       content="Log trades, upload screenshots, track emotions, analyze performance, and discover your trading edge with JAHZJOURNALS."
     />
     <title>JAHZJOURNALS - Forex Trading Journal & Analytics Platform</title>
+    <script>
+      (() => {
+        try {
+          const savedTheme = localStorage.getItem("jahzjournals-theme");
+          const oldSettings = localStorage.getItem("user_settings");
+          let theme = savedTheme;
+          if (!theme && oldSettings) {
+            theme = JSON.parse(oldSettings)?.appearance?.theme;
+          }
+          theme = theme || "system";
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (theme === "dark" || (theme === "system" && prefersDark)) {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.add("light");
+          }
+        } catch (_) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

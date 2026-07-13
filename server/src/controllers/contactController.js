@@ -23,19 +23,19 @@ const createContactMessage = async (req, res) => {
     const website = cleanString(req.body.website, 200);
 
     if (website) {
-      return res.status(202).json({ message: 'Message received' });
+      return res.status(202).json({ message: 'Your message was received safely.' });
     }
 
     const errors = [];
-    if (!name) errors.push({ field: 'name', message: 'Name is required.' });
-    if (!emailPattern.test(email)) errors.push({ field: 'email', message: 'A valid email is required.' });
-    if (!subject) errors.push({ field: 'subject', message: 'Subject is required.' });
-    if (message.length < 10) errors.push({ field: 'message', message: 'Message must be at least 10 characters.' });
+    if (!name) errors.push({ field: 'name', message: 'Please tell us your name.' });
+    if (!emailPattern.test(email)) errors.push({ field: 'email', message: 'A valid email helps us reply.' });
+    if (!subject) errors.push({ field: 'subject', message: 'Please include a subject.' });
+    if (message.length < 10) errors.push({ field: 'message', message: 'Your message feels a bit short. Please let us know more.' });
 
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Unable to submit contact message.',
+        message: 'We couldn\'t submit your message.',
         errors,
       });
     }
@@ -54,12 +54,12 @@ const createContactMessage = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Message received successfully.',
+      message: 'Thank you. Your message has been received.',
       id: contactMessage.id,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to submit contact message' });
+    res.status(500).json({ message: 'We hit a snag sending your message.' });
   }
 };
 

@@ -57,7 +57,7 @@ const WeeklyReview = () => {
           setReflectionsFromReview(reviewsResponse.data.data[0]);
         }
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Failed to load weekly reviews');
+        toast.error(error.response?.data?.message || 'Couldn\'t pull in your weekly reviews right now.');
       } finally {
         setLoading(false);
       }
@@ -76,10 +76,10 @@ const WeeklyReview = () => {
       });
       setSelectedReview(data.data);
       setReflectionsFromReview(data.data);
-      toast.success(data.message || 'Weekly review generated');
+      toast.success(data.message || 'Review built—time to reflect.');
       await fetchReviews();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to generate weekly review');
+      toast.error(error.response?.data?.message || 'Failed to build your review. Try that again.');
     } finally {
       setGenerating(false);
     }
@@ -98,9 +98,9 @@ const WeeklyReview = () => {
       setSelectedReview(data);
       setReflectionsFromReview(data);
       await fetchReviews();
-      toast.success('Reflections saved');
+      toast.success('Thoughts saved.');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save reflections');
+      toast.error(error.response?.data?.message || 'Couldn\'t save your thoughts. Try once more.');
     } finally {
       setSaving(false);
     }
@@ -109,42 +109,42 @@ const WeeklyReview = () => {
   const components = selectedReview?.disciplineScoreComponents || {};
 
   return (
-    <div className="space-y-6 text-gray-100 font-sans">
-      <div className="rounded-xl border border-gray-700 bg-gray-800 p-6">
-        <h2 className="text-2xl font-bold">Weekly Review</h2>
-        <p className="mt-1 text-sm text-gray-400">Generate deterministic weekly stats from real trades, then add your written reflection.</p>
+    <div className="space-y-6 text-foreground font-sans">
+      <div className="rounded-xl border border-border bg-surface-muted p-6">
+        <h2 className="text-2xl font-bold">Weekly Reflection</h2>
+        <p className="mt-1 text-sm text-muted">Gather the week's data, find the lessons disguised as losses, and plan your next week.</p>
         <form onSubmit={generateReview} className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-[1fr_1fr_auto]">
-          <label className="text-sm text-gray-300">
+          <label className="text-sm text-muted">
             Account
-            <select value={form.accountId} onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))} className="mt-2 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2">
+            <select value={form.accountId} onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2">
               <option value="">All accounts</option>
               {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
             </select>
           </label>
-          <label className="text-sm text-gray-300">
+          <label className="text-sm text-muted">
             Week Start
-            <input type="date" value={form.weekStartDate} onChange={(event) => setForm((current) => ({ ...current, weekStartDate: event.target.value }))} className="mt-2 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2" />
+            <input type="date" value={form.weekStartDate} onChange={(event) => setForm((current) => ({ ...current, weekStartDate: event.target.value }))} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2" />
           </label>
           <button type="submit" disabled={generating} className="self-end rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">
-            {generating ? 'Generating...' : 'Generate Review'}
+            {generating ? 'Building...' : 'Build Review'}
           </button>
         </form>
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-gray-700 bg-gray-800 p-8 text-center text-gray-400">Loading weekly reviews...</div>
+        <div className="rounded-xl border border-border bg-surface-muted p-8 text-center text-muted">Loading your weeks...</div>
       ) : (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.8fr_1.4fr]">
-          <div className="rounded-xl border border-gray-700 bg-gray-800 overflow-hidden">
-            <div className="border-b border-gray-700 p-4 font-bold">Previous Reviews</div>
+          <div className="rounded-xl border border-border bg-surface-muted overflow-hidden">
+            <div className="border-b border-border p-4 font-bold">Previous Reviews</div>
             {reviews.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">No weekly reviews yet.</div>
+              <div className="p-8 text-center text-muted">No weekly reviews yet.</div>
             ) : (
               <div className="divide-y divide-gray-700">
                 {reviews.map((review) => (
                   <button key={review.id} type="button" onClick={() => selectReview(review)} className={`block w-full p-4 text-left hover:bg-gray-700/50 ${selectedReview?.id === review.id ? 'bg-gray-700/60' : ''}`}>
-                    <p className="font-semibold text-gray-100">{new Date(review.weekStartDate).toLocaleDateString()} - {new Date(review.weekEndDate).toLocaleDateString()}</p>
-                    <p className="text-sm text-gray-400">{review.tradingAccount?.name || 'All accounts'} | {review.totalTrades} trades | {Number(review.winRate || 0).toFixed(1)}% win</p>
+                    <p className="font-semibold text-foreground">{new Date(review.weekStartDate).toLocaleDateString()} - {new Date(review.weekEndDate).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted">{review.tradingAccount?.name || 'All accounts'} | {review.totalTrades} trades | {Number(review.winRate || 0).toFixed(1)}% win</p>
                   </button>
                 ))}
               </div>
@@ -152,7 +152,7 @@ const WeeklyReview = () => {
           </div>
 
           {!selectedReview ? (
-            <div className="rounded-xl border border-gray-700 bg-gray-800 p-8 text-center text-gray-500">Select or generate a weekly review.</div>
+            <div className="rounded-xl border border-border bg-surface-muted p-8 text-center text-muted">Pick a past week, or build a new one to reflect on.</div>
           ) : (
             <div className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -162,56 +162,56 @@ const WeeklyReview = () => {
                   ['Net P/L', `$${Number(selectedReview.netProfitLoss || 0).toFixed(2)}`],
                   ['Discipline', selectedReview.disciplineScore === null ? 'N/A' : `${selectedReview.disciplineScore}/100`],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-xl border border-gray-700 bg-gray-800 p-5">
-                    <p className="text-sm text-gray-400">{label}</p>
-                    <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+                  <div key={label} className="rounded-xl border border-border bg-surface-muted p-5">
+                    <p className="text-sm text-muted">{label}</p>
+                    <p className="mt-2 text-2xl font-bold text-foreground">{value}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="rounded-xl border border-gray-700 bg-gray-800 p-6">
-                <h3 className="mb-4 text-lg font-bold text-green-400">Calculated Review</h3>
+              <div className="rounded-xl border border-border bg-surface-muted p-6">
+                <h3 className="mb-4 text-lg font-bold text-green-400">The Hard Truth</h3>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <p className="text-sm text-gray-300">Profit factor: <span className="font-semibold text-white">{selectedReview.profitFactor === null ? 'N/A' : Number(selectedReview.profitFactor || 0).toFixed(2)}</span></p>
-                  <p className="text-sm text-gray-300">Expectancy: <span className="font-semibold text-white">${Number(selectedReview.expectancy || 0).toFixed(2)}</span></p>
-                  <p className="text-sm text-gray-300">Average win: <span className="font-semibold text-white">${Number(selectedReview.averageWin || 0).toFixed(2)}</span></p>
-                  <p className="text-sm text-gray-300">Average loss: <span className="font-semibold text-white">${Number(selectedReview.averageLoss || 0).toFixed(2)}</span></p>
-                  <p className="text-sm text-gray-300">Most broken rule: <span className="font-semibold text-white">{selectedReview.mostBrokenRule || 'None'}</span></p>
-                  <p className="text-sm text-gray-300">Most common emotion: <span className="font-semibold text-white">{selectedReview.mostCommonEmotion || 'None'}</span></p>
-                  <p className="text-sm text-gray-300">Plan-following rate: <span className="font-semibold text-white">{selectedReview.planFollowingRate === null ? 'N/A' : `${Number(selectedReview.planFollowingRate || 0).toFixed(1)}%`}</span></p>
-                  <p className="text-sm text-gray-300">A+ setup win rate: <span className="font-semibold text-white">{Number(selectedReview.aPlusSetupWinRate || 0).toFixed(1)}%</span></p>
+                  <p className="text-sm text-muted">Profit factor: <span className="font-semibold text-foreground">{selectedReview.profitFactor === null ? 'N/A' : Number(selectedReview.profitFactor || 0).toFixed(2)}</span></p>
+                  <p className="text-sm text-muted">Expectancy: <span className="font-semibold text-foreground">${Number(selectedReview.expectancy || 0).toFixed(2)}</span></p>
+                  <p className="text-sm text-muted">Average win: <span className="font-semibold text-foreground">${Number(selectedReview.averageWin || 0).toFixed(2)}</span></p>
+                  <p className="text-sm text-muted">Average loss: <span className="font-semibold text-foreground">${Number(selectedReview.averageLoss || 0).toFixed(2)}</span></p>
+                  <p className="text-sm text-muted">Most broken rule: <span className="font-semibold text-foreground">{selectedReview.mostBrokenRule || 'None'}</span></p>
+                  <p className="text-sm text-muted">Most common emotion: <span className="font-semibold text-foreground">{selectedReview.mostCommonEmotion || 'None'}</span></p>
+                  <p className="text-sm text-muted">Plan-following rate: <span className="font-semibold text-foreground">{selectedReview.planFollowingRate === null ? 'N/A' : `${Number(selectedReview.planFollowingRate || 0).toFixed(1)}%`}</span></p>
+                  <p className="text-sm text-muted">A+ setup win rate: <span className="font-semibold text-foreground">{Number(selectedReview.aPlusSetupWinRate || 0).toFixed(1)}%</span></p>
                   {selectedReview.bestTradeId && <Link to={`/trades/${selectedReview.bestTradeId}`} className="text-sm text-green-400 hover:text-green-300">Open best trade</Link>}
                   {selectedReview.worstTradeId && <Link to={`/trades/${selectedReview.worstTradeId}`} className="text-sm text-red-400 hover:text-red-300">Open worst trade</Link>}
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-700 bg-gray-800 p-6">
+              <div className="rounded-xl border border-border bg-surface-muted p-6">
                 <h3 className="text-lg font-bold text-green-400">Discipline Score Explanation</h3>
-                <p className="mt-2 text-sm text-gray-400">Formula version: {selectedReview.disciplineScoreFormulaVersion || components.formulaVersion || 'discipline-v1'}</p>
+                <p className="mt-2 text-sm text-muted">Formula version: {selectedReview.disciplineScoreFormulaVersion || components.formulaVersion || 'discipline-v1'}</p>
                 {components.reason ? (
-                  <p className="mt-3 text-sm text-gray-500">{components.reason}</p>
+                  <p className="mt-3 text-sm text-muted">{components.reason}</p>
                 ) : (
                   <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <p className="text-sm text-gray-300">Plan-following: {components.planFollowingRate ?? 0}%</p>
-                    <p className="text-sm text-gray-300">Violations/trade: {components.ruleViolationsPerTrade ?? 0}</p>
-                    <p className="text-sm text-gray-300">Post-trade notes: {components.postTradeNoteCompletionRate ?? 0}%</p>
-                    <p className="text-sm text-gray-300">High emotion logs/trade: {components.highIntensityEmotionLogsPerTrade ?? 0}</p>
+                    <p className="text-sm text-muted">Plan-following: {components.planFollowingRate ?? 0}%</p>
+                    <p className="text-sm text-muted">Violations/trade: {components.ruleViolationsPerTrade ?? 0}</p>
+                    <p className="text-sm text-muted">Post-trade notes: {components.postTradeNoteCompletionRate ?? 0}%</p>
+                    <p className="text-sm text-muted">High emotion logs/trade: {components.highIntensityEmotionLogsPerTrade ?? 0}</p>
                   </div>
                 )}
               </div>
 
-              <div className="rounded-xl border border-gray-700 bg-gray-800 p-6">
+              <div className="rounded-xl border border-border bg-surface-muted p-6">
                 <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-green-400">Trader Reflection</h3>
+                  <h3 className="text-lg font-bold text-green-400">Your Reflection</h3>
                   <button type="button" onClick={saveReflections} disabled={saving} className="rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">
                     {saving ? 'Saving...' : 'Save Reflection'}
                   </button>
                 </div>
                 <div className="space-y-4">
                   {reflectionFields.map(([field, label]) => (
-                    <label key={field} className="block text-sm text-gray-300">
+                    <label key={field} className="block text-sm text-muted">
                       {label}
-                      <textarea value={reflections[field] || ''} onChange={(event) => setReflections((current) => ({ ...current, [field]: event.target.value }))} rows="3" className="mt-2 w-full resize-none rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white outline-none focus:border-green-400" />
+                      <textarea value={reflections[field] || ''} onChange={(event) => setReflections((current) => ({ ...current, [field]: event.target.value }))} rows="3" className="mt-2 w-full resize-none rounded-lg border border-border bg-surface px-4 py-3 text-foreground outline-none focus:border-green-400" />
                     </label>
                   ))}
                 </div>

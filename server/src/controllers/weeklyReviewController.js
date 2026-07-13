@@ -93,7 +93,7 @@ const getWeeklyReviews = async (req, res) => {
       const account = await prisma.tradingAccount.findFirst({
         where: { id: req.query.accountId, userId: req.user.id },
       });
-      if (!account) return res.status(404).json({ message: 'Account not found' });
+      if (!account) return res.status(404).json({ message: 'We couldn\'t find that trading account.' });
       where.tradingAccountId = req.query.accountId;
     }
 
@@ -117,7 +117,7 @@ const getWeeklyReviews = async (req, res) => {
     res.json({ success: true, page, limit, total, data: reviews });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch weekly reviews' });
+    res.status(500).json({ message: 'We couldn\'t retrieve your weekly reflections.' });
   }
 };
 
@@ -128,12 +128,12 @@ const generateWeeklyReview = async (req, res) => {
     const range = getUtcWeekRange(weekStartDate, timezone);
 
     if (!range) {
-      return res.status(400).json({ message: 'A valid weekStartDate is required' });
+      return res.status(400).json({ message: 'Please provide a valid start date for this week.' });
     }
 
     if (accountId) {
       const account = await prisma.tradingAccount.findFirst({ where: { id: accountId, userId: req.user.id } });
-      if (!account) return res.status(404).json({ message: 'Account not found' });
+      if (!account) return res.status(404).json({ message: 'We couldn\'t find that trading account.' });
     }
 
     const trades = await prisma.trade.findMany({
@@ -226,7 +226,7 @@ const generateWeeklyReview = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to generate weekly review' });
+    res.status(500).json({ message: 'We couldn\'t generate your weekly summary right now.' });
   }
 };
 
@@ -241,13 +241,13 @@ const getWeeklyReviewById = async (req, res) => {
     });
 
     if (!review) {
-      return res.status(404).json({ message: 'Weekly review not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that weekly reflection.' });
     }
 
     res.json(review);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch weekly review' });
+    res.status(500).json({ message: 'We hit a snag finding your weekly reflection.' });
   }
 };
 
@@ -261,7 +261,7 @@ const updateWeeklyReview = async (req, res) => {
     });
 
     if (!review) {
-      return res.status(404).json({ message: 'Weekly review not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that weekly reflection.' });
     }
 
     const data = {};
@@ -280,7 +280,7 @@ const updateWeeklyReview = async (req, res) => {
     res.json(updatedReview);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to update weekly review' });
+    res.status(500).json({ message: 'We hit a snag saving your reflections.' });
   }
 };
 

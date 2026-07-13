@@ -7,8 +7,8 @@ const ProtectedRoute = () => {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-gray-400">
-        Checking your session...
+      <div className="min-h-screen flex items-center justify-center bg-surface text-muted">
+        Preparing your space...
       </div>
     );
   }

@@ -11,7 +11,7 @@ const problems = ['Students do not journal properly', 'Screenshots are scattered
 const solutions = ['Student journals', 'Trade screenshots', 'Mentor comments', 'Discipline scores', 'Group analytics', 'Weekly progress reviews'];
 
 const Mentors = () => (
-  <div className="min-h-screen bg-gray-950 text-gray-100">
+  <div className="min-h-screen bg-background text-foreground">
     <Navbar />
     <main>
       <PageHeader
@@ -46,7 +46,7 @@ const Mentors = () => (
             {solutions.map((solution) => (
               <div key={solution} className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-4">
                 <CheckCircle2 size={18} className="text-emerald-300" />
-                <span className="text-sm text-gray-300">{solution}</span>
+                <span className="text-sm text-muted">{solution}</span>
               </div>
             ))}
           </div>

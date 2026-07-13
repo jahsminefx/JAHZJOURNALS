@@ -4,6 +4,7 @@ import { Home, LineChart, Briefcase, PlusCircle, Calculator, Compass, Settings, 
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/useAuth';
 import BrandLogo from './BrandLogo';
+import UpgradeCard from './dashboard/UpgradeCard';
 
 const Sidebar = () => {
   const { logout } = useAuth();
@@ -24,16 +25,16 @@ const Sidebar = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      toast.success('Logged out successfully');
+      toast.success('Your session is securely closed.');
       navigate('/login', { replace: true });
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to log out');
+      toast.error(error.response?.data?.message || 'We couldn\'t close your session safely.');
     }
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-gray-800 border-r border-gray-700 min-h-screen">
-      <div className="p-4 border-b border-gray-700 flex items-center justify-center">
+    <aside className="hidden md:flex flex-col w-64 shrink-0 bg-white border-r border-gray-200 dark:bg-background dark:border-border h-full overflow-y-auto">
+      <div className="p-4 border-b border-border flex items-center justify-center">
         <BrandLogo to="/dashboard" size="sm" />
       </div>
       <nav className="flex-1 py-6 px-3 space-y-1">
@@ -43,7 +44,7 @@ const Sidebar = () => {
             to={item.path}
             className={({ isActive }) =>
               `flex items-center px-4 py-3 rounded-lg transition-colors ${
-                isActive ? 'bg-gray-700 text-green-400' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-100'
+                isActive ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'text-muted hover:bg-gray-100 hover:text-gray-900 dark:text-muted dark:hover:bg-surface-muted dark:hover:text-foreground'
               }`
             }
           >
@@ -52,11 +53,12 @@ const Sidebar = () => {
           </NavLink>
         ))}
       </nav>
-      <div className="p-4 border-t border-gray-700">
+      <div className="space-y-4 p-4 border-t border-border">
+        <UpgradeCard compact />
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center w-full px-4 py-2 text-gray-400 hover:text-red-400 transition-colors"
+          className="flex items-center w-full px-4 py-2 text-muted hover:text-red-500 dark:text-muted dark:hover:text-red-400 transition-colors"
         >
           <LogOut size={20} className="mr-3" />
           <span className="font-medium">Logout</span>

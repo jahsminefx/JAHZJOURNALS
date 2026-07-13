@@ -6,17 +6,17 @@ const PropFirmPhaseForm = ({ phase, index, canMoveUp, canMoveDown, onChange, onR
   const update = (field, value) => onChange(index, { ...phase, [field]: value });
 
   return (
-    <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
+    <div className="rounded-xl border border-border bg-surface p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h3 className="font-bold text-gray-100">Phase {phase.phaseNumber || index + 1}</h3>
-          <p className="text-sm text-gray-500">Enter exact rules from the official programme agreement.</p>
+          <h3 className="font-bold text-foreground">Phase {phase.phaseNumber || index + 1}</h3>
+          <p className="text-sm text-muted">Enter exact rules from the official programme agreement.</p>
         </div>
         <div className="flex gap-2">
-          <button type="button" disabled={!canMoveUp} onClick={() => onMove(index, -1)} className="rounded-lg border border-gray-700 p-2 text-gray-300 hover:bg-gray-800 disabled:opacity-40">
+          <button type="button" disabled={!canMoveUp} onClick={() => onMove(index, -1)} className="rounded-lg border border-border p-2 text-muted hover:bg-surface-muted disabled:opacity-40">
             <ArrowUp size={16} />
           </button>
-          <button type="button" disabled={!canMoveDown} onClick={() => onMove(index, 1)} className="rounded-lg border border-gray-700 p-2 text-gray-300 hover:bg-gray-800 disabled:opacity-40">
+          <button type="button" disabled={!canMoveDown} onClick={() => onMove(index, 1)} className="rounded-lg border border-border p-2 text-muted hover:bg-surface-muted disabled:opacity-40">
             <ArrowDown size={16} />
           </button>
           <button type="button" onClick={() => onRemove(index)} className="rounded-lg border border-red-500/40 p-2 text-red-300 hover:bg-red-500/10">

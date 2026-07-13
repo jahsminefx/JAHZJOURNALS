@@ -13,6 +13,12 @@ enum Role {
   ADMIN
 }
 
+enum ThemePreference {
+  light
+  dark
+  system
+}
+
 enum Direction {
   BUY
   SELL
@@ -106,6 +112,12 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum GoalPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 enum AccountCategory {
   REGULAR
   PROP_FIRM
@@ -180,6 +192,7 @@ model User {
   passwordResetTokenHash     String?
   passwordResetExpiresAt     DateTime?
   passwordResetUsedAt        DateTime?
+  tokenVersion               Int                @default(0)
 
   avatarUrl      String?
   avatarPublicId String?
@@ -188,6 +201,7 @@ model User {
   tradeRules         TradeRule[]
   importedTradeFiles ImportedTradeFile[]
   weeklyReviews      WeeklyReview[]
+  tradingGoals       TradingGoal[]
   reportExports      ReportExport[]
   subscriptions      Subscription[]
   payments           Payment[]
@@ -195,12 +209,99 @@ model User {
   mentorGroups       MentorStudent[]     @relation("StudentGroups")
   ownedMentorGroups  MentorGroup[]       @relation("MentorGroups")
   mentorFeedbacks    MentorFeedback[]    @relation("FeedbacksGiven")
+  userSettings       UserSettings?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([timezone])
 }
+
+model UserSettings {
+  id                          String   @id @default(uuid())
+  user                        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                      String   @unique
+
+  theme                       ThemePreference @default(system)
+  dashboardDensity            String   @default("comfortable")
+  tradeTableDensity           String   @default("comfortable")
+  chartAnimations             Boolean  @default(true)
+  preferredDateFormat         String?  @default("DD/MM/YYYY")
+  preferredNumberFormat       String?  @default("1,234.56")
+
+  defaultTradingAccountId     String?
+  defaultRiskPercent          Float?
+  minimumRiskRewardRatio      Float?
+  defaultHigherTimeframe      String?
+  defaultEntryTimeframe       String?
+  mainStrategy                String?
+  mainPairs                   String?
+  preferredSession            String?
+  maxTradesPerDay             Int?
+  maxLossesPerDay             Int?
+  dailyLossLimit              Float?
+
+  defaultTradeGrade                 String?
+  requireScreenshotBeforeCompletion Boolean  @default(false)
+  requirePostTradeNotes             Boolean  @default(false)
+  requireEmotionTracking            Boolean  @default(false)
+  requireRuleChecklist              Boolean  @default(false)
+  showOpenTradesFirst               Boolean  @default(true)
+  defaultTradeListView              String   @default("table")
+  defaultAnalyticsPeriod            String   @default("30d")
+  requiredTradeFields               String[] @default(["pair", "direction", "entryPrice", "stopLoss", "takeProfit"])
+
+  defaultScreenshotType             String   @default("MARKED_CHART")
+  defaultScreenshotQuality          String   @default("high")
+  maximumScreenshotsPerTrade        Int      @default(6)
+  automaticallyCompressImages       Boolean  @default(true)
+  keepOriginalImage                 Boolean  @default(false)
+  deleteCloudinaryImagesWithTrade   Boolean  @default(true)
+
+  enableAiTradeReviews              Boolean  @default(false)
+  generateReviewAfterClose          Boolean  @default(false)
+  includeEmotions                   Boolean  @default(true)
+  includeRuleViolations             Boolean  @default(true)
+  includeScreenshots                Boolean  @default(false)
+  weeklyAiSummary                   Boolean  @default(false)
+  coachingTone                      String   @default("analytical")
+
+  assignedMentor                    String?
+  shareTradesWithMentor             Boolean  @default(false)
+  shareScreenshots                  Boolean  @default(false)
+  shareEmotions                     Boolean  @default(false)
+  shareWeeklyReviews                Boolean  @default(false)
+  allowMentorComments               Boolean  @default(true)
+
+  weeklyReviewReminders             Boolean  @default(false)
+  dailyJournalingReminders          Boolean  @default(false)
+  tradeFollowUpReminders            Boolean  @default(false)
+  riskLimitWarnings                 Boolean  @default(false)
+  propFirmDrawdownWarnings          Boolean  @default(false)
+  mentorFeedbackNotifications       Boolean  @default(false)
+  productUpdates                    Boolean  @default(false)
+  emailNotifications                Boolean  @default(false)
+  inAppNotifications                Boolean  @default(true)
+
+  riskPerTrade                      Float?
+  dailyDrawdownLimit                Float?
+  weeklyDrawdownLimit               Float?
+  maximumOpenTrades                 Int?
+  stopAfterLosses                   Int?
+  warnRiskAboveLimit                Boolean  @default(false)
+  warnRiskRewardBelowMinimum        Boolean  @default(false)
+
+  loginAlerts                       Boolean  @default(false)
+
+  billingEmail                      String?
+  renewalReminders                  Boolean  @default(false)
+
+  allowAiUseOfJournalData           Boolean  @default(false)
+
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
 
 model TradingAccount {
   id                  String  @id @default(uuid())
@@ -230,6 +331,7 @@ model TradingAccount {
   trades          Trade[]
   weeklyReviews   WeeklyReview[]
   propFirmAccount PropFirmAccount?
+  tradingGoals    TradingGoal[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -348,6 +450,26 @@ model PropFirmProgressSnapshot {
   recordedAt           DateTime        @default(now())
 
   @@index([propFirmAccountId, recordedAt])
+}
+
+model TradingGoal {
+  id               String         @id @default(cuid())
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  tradingAccount   TradingAccount? @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
+  tradingAccountId String?
+  periodType       GoalPeriod
+  profitTarget     Decimal?
+  tradeCountTarget Int?
+  winRateTarget    Decimal?
+  maxLossTarget    Decimal?
+  active           Boolean        @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, active, periodType])
+  @@index([tradingAccountId])
 }
 
 model Trade {

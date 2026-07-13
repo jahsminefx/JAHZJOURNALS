@@ -8,6 +8,10 @@ const {
   getUserProfile,
   requestPasswordReset,
   resetPassword,
+  requestEmailVerification,
+  verifyEmail,
+  changePassword,
+  logoutAllDevices,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -25,5 +29,11 @@ router.post('/logout', logoutUser);
 router.get('/me', protect, getUserProfile);
 router.post('/password-reset/request', requestPasswordReset);
 router.post('/password-reset/confirm', resetPassword);
+
+router.post('/verify-email/request', protect, requestEmailVerification);
+router.post('/verify-email/confirm', verifyEmail);
+
+router.post('/password/change', protect, changePassword);
+router.post('/logout-all', protect, logoutAllDevices);
 
 module.exports = router;

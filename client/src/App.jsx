@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { ThemeProvider } from './context/ThemeProvider';
 import { AuthProvider } from './context/AuthProvider';
 import { useAuth } from './context/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -20,8 +21,10 @@ const AccountsList = lazy(() => import('./pages/AccountsList'));
 const AccountForm = lazy(() => import('./pages/AccountForm'));
 const AccountDetail = lazy(() => import('./pages/AccountDetail'));
 const PropFirmAccountForm = lazy(() => import('./pages/PropFirmAccountForm'));
+const PropFirmAdvancedSettingsPage = lazy(() => import('./pages/PropFirmAdvancedSettingsPage'));
 const TradesList = lazy(() => import('./pages/TradesList'));
-const TradeForm = lazy(() => import('./pages/TradeForm'));
+const QuickTradePage = lazy(() => import('./pages/QuickTradePage'));
+const TradeReviewPage = lazy(() => import('./pages/TradeReviewPage'));
 const TradeDetail = lazy(() => import('./pages/TradeDetail'));
 const RiskCalculator = lazy(() => import('./pages/RiskCalculator'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -29,6 +32,8 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const WeeklyReview = lazy(() => import('./pages/WeeklyReview'));
 const RulesPage = lazy(() => import('./pages/RulesPage'));
 const Settings = lazy(() => import('./pages/Settings'));
+const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
+const Legal = lazy(() => import('./pages/Legal'));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-900 text-gray-400">
@@ -48,8 +53,9 @@ const RequireOnboarding = ({ children }) => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <Toaster position="top-right" />
         <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -62,9 +68,13 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/terms" element={<Legal type="terms" />} />
+            <Route path="/privacy" element={<Legal type="privacy" />} />
+            <Route path="/disclaimer" element={<Legal type="disclaimer" />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/mentor-workspace" element={<MentorDashboard />} />
               <Route
                 element={(
                   <RequireOnboarding>
@@ -79,9 +89,13 @@ function App() {
                 <Route path="/accounts/:id" element={<AccountDetail />} />
                 <Route path="/accounts/:id/edit" element={<AccountForm />} />
                 <Route path="/accounts/:id/prop-firm/edit" element={<PropFirmAccountForm />} />
+                <Route path="/accounts/:id/prop-firm/edit-account" element={<PropFirmAccountForm editSection="account" />} />
+                <Route path="/accounts/:id/prop-firm/edit-challenge-rules" element={<PropFirmAccountForm editSection="challenge" />} />
+                <Route path="/accounts/:id/prop-firm/advanced-settings" element={<PropFirmAdvancedSettingsPage />} />
                 <Route path="/trades" element={<TradesList />} />
-                <Route path="/trades/new" element={<TradeForm />} />
-                <Route path="/trades/:id/edit" element={<TradeForm />} />
+                <Route path="/trades/new" element={<QuickTradePage />} />
+                <Route path="/trades/:id/edit" element={<QuickTradePage />} />
+                <Route path="/trades/:id/review" element={<TradeReviewPage />} />
                 <Route path="/trades/:id" element={<TradeDetail />} />
                 <Route path="/rules" element={<RulesPage />} />
                 <Route path="/analytics" element={<Analytics />} />
@@ -92,8 +106,9 @@ function App() {
             </Route>
           </Routes>
         </Suspense>
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

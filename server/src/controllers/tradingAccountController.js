@@ -28,7 +28,7 @@ const getAccounts = async (req, res) => {
     });
     res.json(accounts);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch accounts' });
+    res.status(500).json({ message: 'We couldn\'t retrieve your trading accounts.' });
   }
 };
 
@@ -67,7 +67,7 @@ const createAccount = async (req, res) => {
 
     res.status(201).json(account);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create account' });
+    res.status(500).json({ message: 'We hit a snag creating your account.' });
   }
 };
 
@@ -98,10 +98,10 @@ const getAccountById = async (req, res) => {
     if (account) {
       res.json(account);
     } else {
-      res.status(404).json({ message: 'Account not found' });
+      res.status(404).json({ message: 'We couldn\'t find that trading account.' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Our servers encountered an issue.' });
   }
 };
 
@@ -120,11 +120,11 @@ const updateAccount = async (req, res) => {
     });
 
     if (!account) {
-      return res.status(404).json({ message: 'Account not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that trading account.' });
     }
 
     if (account.accountCategory === 'PROP_FIRM' || account.isPropFirmAccount) {
-      return res.status(400).json({ message: 'Use the prop-firm account endpoint to edit prop-firm rules' });
+      return res.status(400).json({ message: 'This is a prop-firm account. Please use its specific editing flow.' });
     }
 
     const parsed = updateRegularAccountSchema.safeParse(req.body);
@@ -157,7 +157,7 @@ const updateAccount = async (req, res) => {
 
     res.json(updatedAccount);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to update account' });
+    res.status(500).json({ message: 'We hit a snag updating your account.' });
   }
 };
 
@@ -176,7 +176,7 @@ const deleteAccount = async (req, res) => {
     });
 
     if (!account) {
-      return res.status(404).json({ message: 'Account not found' });
+      return res.status(404).json({ message: 'We couldn\'t find that trading account.' });
     }
 
     const screenshots = account.trades.flatMap((trade) => trade.screenshots);
@@ -186,9 +186,9 @@ const deleteAccount = async (req, res) => {
       where: { id: req.params.id }
     });
 
-    res.json({ message: 'Account deleted successfully' });
+    res.json({ message: 'Account removed from your sanctuary.' });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to delete account' });
+    res.status(500).json({ message: 'We couldn\'t remove that account right now.' });
   }
 };
 

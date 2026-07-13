@@ -72,15 +72,15 @@ const AccountForm = () => {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-6 rounded-xl border border-gray-700 bg-gray-800 p-6">
+      <div className="mb-6 rounded-xl border border-border bg-surface-muted p-6">
         <p className="text-xs font-bold uppercase tracking-[0.22em] text-green-400">Regular trading account</p>
-        <h2 className="mt-2 text-2xl font-bold text-gray-100">{isEditMode ? 'Edit Regular Account' : 'Create Regular Account'}</h2>
-        <p className="mt-2 text-sm text-gray-400">Track a personal, demo, broker, or live trading account.</p>
+        <h2 className="mt-2 text-2xl font-bold text-foreground">{isEditMode ? 'Edit Regular Account' : 'Create Regular Account'}</h2>
+        <p className="mt-2 text-sm text-muted">Track a personal, demo, broker, or live trading account.</p>
       </div>
 
-      <div className="rounded-xl border border-gray-700 bg-gray-800 p-6 shadow-lg">
+      <div className="rounded-xl border border-border bg-surface-muted p-6 shadow-lg">
         {isFetching ? (
-          <div className="py-12 text-center text-gray-400">Loading account...</div>
+          <div className="py-12 text-center text-muted">Loading account...</div>
         ) : (
           <RegularAccountForm
             initialValues={initialValues}

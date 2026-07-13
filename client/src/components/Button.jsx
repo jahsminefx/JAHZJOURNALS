@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 const variants = {
   primary: 'bg-emerald-400 text-gray-950 hover:bg-emerald-300 shadow-[0_0_28px_rgba(52,211,153,0.22)]',
   secondary: 'border border-white/10 bg-white/5 text-white hover:bg-white/10',
-  ghost: 'text-gray-300 hover:text-white hover:bg-white/5',
+  ghost: 'text-muted hover:text-white hover:bg-white/5',
 };
 
 const sizes = {

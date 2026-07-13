@@ -5,6 +5,8 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
+const path = require('path');
+const { startSchedulers } = require('./cron/scheduler');
 
 dotenv.config();
 
@@ -36,8 +38,13 @@ app.use(cors({
   credentials: true
 }));
 app.use(morgan('dev'));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use((req, res, next) => {
   if (!unsafeMethods.has(req.method)) {
@@ -74,15 +81,22 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/users/settings', require('./routes/settingsRoutes'));
 app.use('/api/accounts', require('./routes/tradingAccountRoutes'));
 app.use('/api/prop-firm-phases', require('./routes/propFirmPhaseRoutes'));
 app.use('/api/trades', require('./routes/tradeRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
+app.use('/api/mentors', require('./routes/mentorRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
 app.use('/api', require('./routes/miscRoutes'));
 
 // Error handlers
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 app.use(notFound);
 app.use(errorHandler);
+
+startSchedulers();
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

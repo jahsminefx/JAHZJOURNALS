@@ -44,7 +44,7 @@ const RegularAccountForm = ({ initialValues, isSaving, onSubmit, onCancel, submi
           <option value="OTHER">Other</option>
         </SelectInput>
         <CurrencyInput label="Starting balance" required {...register('startingBalance')} placeholder="1000" />
-        <CurrencyInput label="Current balance" {...register('currentBalance')} placeholder="Leave empty to match starting balance" />
+        <CurrencyInput label="Current balance" {...register('currentBalance')} placeholder="Leave empty if it matches your starting balance" />
         <SelectInput label="Currency" {...register('currency')}>
           <option value="USD">USD</option>
           <option value="EUR">EUR</option>
@@ -68,14 +68,14 @@ const RegularAccountForm = ({ initialValues, isSaving, onSubmit, onCancel, submi
         <TextInput type="number" min="0" label="Maximum trades per day" {...register('maxTradesPerDay')} />
         <TextInput type="number" min="0" label="Maximum losses per day" {...register('maxLossesPerDay')} />
         <div className="md:col-span-2">
-          <label className="block text-sm text-gray-300">
-            <span className="font-medium text-gray-200">Notes</span>
-            <textarea rows="4" {...register('notes')} className="mt-2 block w-full resize-none rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-gray-100 outline-none transition focus:border-green-400" />
+          <label className="block text-sm text-muted">
+            <span className="font-medium text-foreground">Notes</span>
+            <textarea rows="4" {...register('notes')} className="mt-2 block w-full resize-none rounded-lg border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition focus:border-green-400" />
           </label>
         </div>
       </div>
-      <div className="flex items-center justify-end gap-3 border-t border-gray-700 pt-5">
-        <button type="button" onClick={onCancel} className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">Cancel</button>
+      <div className="flex items-center justify-end gap-3 border-t border-border pt-5">
+        <button type="button" onClick={onCancel} className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-muted hover:bg-surface-muted">Go Back</button>
         <button type="submit" disabled={isSaving} className="rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">
           {isSaving ? 'Saving...' : submitLabel}
         </button>

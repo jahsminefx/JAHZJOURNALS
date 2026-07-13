@@ -10,6 +10,7 @@ const {
 const makeTrade = (overrides) => ({
   id: overrides.id,
   result: overrides.result,
+  status: overrides.status,
   profitLossAmount: overrides.profitLossAmount,
   riskRewardRatio: overrides.riskRewardRatio,
   pair: overrides.pair || 'EURUSD',
@@ -35,6 +36,24 @@ test('calculateSummary uses closed trades with breakevens in win-rate denominato
   assert.equal(summary.winRate, 33.3);
   assert.equal(summary.profitFactor, 2);
   assert.equal(summary.expectancy, 20);
+});
+
+test('calculateSummary treats explicitly closed trades with stale open result as closed', () => {
+  const summary = calculateSummary([
+    makeTrade({
+      id: 'closed-open',
+      status: 'CLOSED',
+      result: 'OPEN',
+      profitLossAmount: -40,
+      riskRewardRatio: 1,
+      entryTime: '2026-01-05T10:00:00Z',
+    }),
+  ]);
+
+  assert.equal(summary.totalTrades, 1);
+  assert.equal(summary.closedTrades, 1);
+  assert.equal(summary.losingTrades, 1);
+  assert.equal(summary.netRealisedProfitLoss, -40);
 });
 
 test('equity curve and drawdown are chronological and finite', () => {

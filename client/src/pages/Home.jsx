@@ -85,7 +85,7 @@ const disciplineData = {
 };
 
 const DisciplineMetric = ({ label, value }) => (
-  <div className="rounded-xl border border-white/10 bg-gray-950/55 p-4">
+  <div className="rounded-xl border border-white/10 bg-background/55 p-4">
     <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-500">{label}</p>
     <p className="mt-2 text-2xl font-black text-emerald-300">{value}</p>
   </div>
@@ -98,10 +98,10 @@ const DisciplineTrend = ({ trend, weeklyChange }) => {
   }));
 
   return (
-    <div className="mt-5 rounded-xl border border-white/10 bg-gray-950/55 p-4">
+    <div className="mt-5 rounded-xl border border-white/10 bg-background/55 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-white">Discipline trend</h3>
+          <h3 className="font-semibold text-foreground">Discipline trend</h3>
           <p className="mt-1 text-sm text-gray-500">Last 7 trading days</p>
         </div>
         <p className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm font-bold text-emerald-300">
@@ -114,7 +114,7 @@ const DisciplineTrend = ({ trend, weeklyChange }) => {
             <Tooltip
               cursor={{ stroke: 'rgba(52, 211, 153, 0.18)', strokeWidth: 2 }}
               contentStyle={{
-                background: '#020617',
+                background: 'rgb(var(--surface))',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '10px',
                 color: '#f8fafc',
@@ -142,8 +142,8 @@ const DisciplineStreak = ({ days, description }) => (
       <Flame size={22} aria-hidden="true" />
     </div>
     <div>
-      <h3 className="font-semibold text-white">{days}-day discipline streak</h3>
-      <p className="mt-1 text-sm leading-6 text-gray-400">{description}</p>
+      <h3 className="font-semibold text-foreground">{days}-day discipline streak</h3>
+      <p className="mt-1 text-sm leading-6 text-muted">{description}</p>
     </div>
   </div>
 );
@@ -151,8 +151,8 @@ const DisciplineStreak = ({ days, description }) => (
 const DisciplineFocusArea = ({ focusArea, onReviewViolations }) => (
   <div className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/[0.07] p-4">
     <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-200/80">Focus area</p>
-    <h3 className="mt-2 text-xl font-black text-white">{focusArea.title}</h3>
-    <p className="mt-2 text-sm leading-6 text-gray-400">{focusArea.description}</p>
+    <h3 className="mt-2 text-xl font-black text-foreground">{focusArea.title}</h3>
+    <p className="mt-2 text-sm leading-6 text-muted">{focusArea.description}</p>
     <button
       type="button"
       onClick={onReviewViolations}
@@ -170,7 +170,7 @@ const Home = () => {
   };
 
   return (
-  <div className="min-h-screen bg-gray-950 text-gray-100">
+  <div className="min-h-screen bg-background text-foreground">
     <Navbar />
 
     <main>
@@ -189,10 +189,10 @@ const Home = () => {
         <div className="relative z-20 mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="text-center lg:text-left">
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-300">Forex journal and analytics</p>
-            <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-6xl">
+            <h1 className="mt-5 text-4xl font-black tracking-tight text-foreground sm:text-6xl">
               Stop Guessing. Start Journaling Like a Disciplined Forex Trader.
             </h1>
-            <p className="mt-6 text-base leading-8 text-gray-300 sm:text-lg">
+            <p className="mt-6 text-base leading-8 text-muted sm:text-lg">
               Track every trade, screenshot, emotion, mistake, and setup, then discover what actually makes you profitable.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
@@ -234,7 +234,7 @@ const Home = () => {
             />
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {['Log trades', 'Upload chart screenshots', 'Track rules', 'Track emotions', 'Analyze performance', 'Prepare smart reviews'].map((item) => (
-                <div key={item} className="flex items-center gap-3 text-sm text-gray-300">
+                <div key={item} className="flex items-center gap-3 text-sm text-muted">
                   <CheckCircle2 size={18} className="text-emerald-300" />
                   {item}
                 </div>
@@ -274,7 +274,7 @@ const Home = () => {
             {['Log your trade', 'Upload screenshots', 'Track emotions and rules', 'Review analytics', 'Discover your edge'].map((step, index) => (
               <div key={step} className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
                 <span className="text-3xl font-black text-emerald-300">0{index + 1}</span>
-                <p className="mt-4 font-semibold text-white">{step}</p>
+                <p className="mt-4 font-semibold text-foreground">{step}</p>
               </div>
             ))}
           </div>
@@ -292,11 +292,11 @@ const Home = () => {
             />
             <div className="mt-8 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-5">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-white">Discipline score</span>
+                <span className="font-semibold text-foreground">Discipline score</span>
                 <span className="text-3xl font-black text-emerald-300">{disciplineData.score}/100</span>
               </div>
               <div
-                className="mt-4 h-3 overflow-hidden rounded-full bg-gray-800"
+                className="mt-4 h-3 overflow-hidden rounded-full bg-surface-muted"
                 role="progressbar"
                 aria-label="Discipline score"
                 aria-valuemin="0"

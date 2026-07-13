@@ -1,8 +1,36 @@
 @import "tailwindcss";
 
+@theme {
+  --color-background: rgb(var(--background));
+  --color-surface: rgb(var(--surface));
+  --color-surface-muted: rgb(var(--surface-muted));
+  --color-border: rgb(var(--border));
+  --color-foreground: rgb(var(--foreground));
+  --color-muted: rgb(var(--muted-foreground));
+}
 @layer base {
+  :root {
+    color-scheme: light;
+    --background: 248 250 252;
+    --surface: 255 255 255;
+    --surface-muted: 241 245 249;
+    --border: 226 232 240;
+    --foreground: 15 23 42;
+    --muted-foreground: 100 116 139;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 5 10 20;
+    --surface: 12 18 30;
+    --surface-muted: 18 26 42;
+    --border: 37 48 68;
+    --foreground: 241 245 249;
+    --muted-foreground: 148 163 184;
+  }
+
   body {
-    @apply bg-gray-900 text-gray-100 min-h-screen antialiased;
+    @apply min-h-screen antialiased bg-background text-foreground transition-colors duration-200;
   }
 }
 
