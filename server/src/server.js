@@ -3,12 +3,15 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
+const { globalApiLimiter } = require('./middleware/rateLimitMiddleware');
 const dotenv = require('dotenv');
 const path = require('path');
 const { startSchedulers } = require('./cron/scheduler');
 
 dotenv.config();
+
+const { validateProductionEnv } = require('./config/envValidator');
+validateProductionEnv();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -18,14 +21,18 @@ const configuredClientOrigins = (process.env.CLIENT_URL || '')
   .filter(Boolean);
 const allowedClientOrigins = new Set([
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
   ...configuredClientOrigins,
 ]);
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // Middleware
 app.set('trust proxy', 1);
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedClientOrigins.has(origin)) {
@@ -37,7 +44,18 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(morgan('dev'));
+const logger = require('./utils/logger');
+
+// Structured request logging
+const morganFormat = process.env.NODE_ENV === 'production' 
+  ? ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent" - :response-time ms'
+  : 'dev';
+
+app.use(morgan(morganFormat, {
+  stream: {
+    write: (message) => logger.info('HTTP Request', { request: message.trim() })
+  }
+}));
 app.use(express.json({
   verify: (req, res, buf) => {
     req.rawBody = buf;
@@ -68,16 +86,11 @@ app.use((req, res, next) => {
   next();
 });
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+app.use(globalApiLimiter);
 
 // Routes
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'JahzJournals API is running' });
-});
+const { getHealthStatus } = require('./controllers/healthController');
+app.get('/api/health', getHealthStatus);
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
@@ -89,7 +102,36 @@ app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/mentors', require('./routes/mentorRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
+app.use('/api/strategies', require('./routes/strategyRoutes'));
+app.use('/api/setups', require('./routes/setupRoutes'));
 app.use('/api', require('./routes/miscRoutes'));
+
+// Serve built Vite React frontend in production
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.resolve(__dirname, '../../client/dist');
+
+  // Serve hashed static assets with long cache lifetimes (1 year)
+  app.use(express.static(clientBuildPath, {
+    maxAge: '1y',
+    immutable: true,
+    index: false,
+  }));
+
+  // React Router catch-all route for client-side routing
+  app.get('*', (req, res, next) => {
+    if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/uploads')) {
+      return next();
+    }
+
+    res.sendFile(path.join(clientBuildPath, 'index.html'), {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
+  });
+}
 
 // Error handlers
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');

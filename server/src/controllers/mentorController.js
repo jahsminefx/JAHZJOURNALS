@@ -1,5 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { getProvider } = require('../ai/providers/providerFactory');
+const { validateStructuredOutput } = require('../ai/utils/validateStructuredOutput');
+const { z } = require('zod');
 
 const createGroup = async (req, res) => {
   try {
@@ -116,11 +119,16 @@ const getStudentTrades = async (req, res) => {
     const { studentId } = req.params;
 
     const isMentor = await prisma.mentorStudent.findFirst({
-      where: { studentId, mentorGroup: { mentorId: req.user.id } }
+      where: { studentId, mentorGroup: { mentorId: req.user.id } },
+      include: { student: { select: { userSettings: { select: { shareTradesWithMentor: true } } } } }
     });
 
     if (!isMentor && req.user.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Not authorized to view these trades.' });
+    }
+
+    if (isMentor && isMentor.student.userSettings?.shareTradesWithMentor === false && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'This student has disabled trade sharing with mentors.' });
     }
 
     const trades = await prisma.trade.findMany({
@@ -136,10 +144,134 @@ const getStudentTrades = async (req, res) => {
   }
 };
 
+const draftMentorSummary = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const membership = await prisma.mentorStudent.findFirst({
+      where: { studentId, mentorGroup: { mentorId: req.user.id } },
+      include: { 
+         student: { 
+            include: { userSettings: true } 
+         } 
+      }
+    });
+
+    if (!membership && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Not authorized to mentor this student.' });
+    }
+
+    if (membership && membership.student.userSettings?.shareTradesWithMentor === false && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Student has disabled trade sharing.' });
+    }
+
+    const recentTrades = await prisma.trade.findMany({
+      where: { tradingAccount: { userId: studentId } },
+      orderBy: { entryTime: 'desc' },
+      take: 20,
+      include: { ruleViolations: true }
+    });
+
+    let wins = 0;
+    let losses = 0;
+    let violations = 0;
+
+    recentTrades.forEach(t => {
+       if (t.result === 'WIN') wins++;
+       if (t.result === 'LOSS') losses++;
+       violations += t.ruleViolations.length;
+    });
+
+    const provider = getProvider();
+    const systemPrompt = `You are the executive drafting assistant for an elite trading mentor. 
+Draft a professional, authoritative, but encouraging performance review letter comparing the student's recent execution.`;
+
+    const userPrompt = `Student Name: ${membership.student.name}
+Recent Trades (last 20 limit): ${wins} Wins, ${losses} Losses.
+Total Rule Violations recorded during this period: ${violations}.
+
+Draft a short markdown letter addressed to the student highlighting their focus and recommending discipline steps.`;
+
+    const MentorSchema = z.object({
+      draftTitle: z.string(),
+      markdownLetter: z.string()
+    });
+
+    const result = await validateStructuredOutput(provider, systemPrompt, userPrompt, MentorSchema, 1);
+
+    if (!result.success) {
+      return res.status(500).json({ message: 'Failed to draft AI summary.' });
+    }
+
+    // Optionally save Request 
+    await prisma.aiRequest.create({
+      data: {
+        userId: req.user.id,
+        featureType: 'MENTOR_SUMMARY',
+        status: 'COMPLETED',
+        provider: result.provider,
+        model: result.model,
+        promptVersion: '1.0',
+        inputTokens: result.usage?.prompt_tokens,
+        outputTokens: result.usage?.completion_tokens,
+        structuredOutput: result.data
+      }
+    });
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Draft Summary Error:', error);
+    res.status(500).json({ message: 'Failed to draft the AI summary.' });
+  }
+};
+
+const sendMentorSummary = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { markdownLetter } = req.body;
+
+    const membership = await prisma.mentorStudent.findFirst({
+      where: { studentId, mentorGroup: { mentorId: req.user.id } }
+    });
+
+    if (!membership && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Not authorized to mentor this student.' });
+    }
+
+    // Since we don't have a global "direct message" model, we'll attach this AI draft feedback
+    // to the student's MOST RECENT trade so they can see it when reviewing their journal.
+    const latestTrade = await prisma.trade.findFirst({
+      where: { tradingAccount: { userId: studentId } },
+      orderBy: { entryTime: 'desc' }
+    });
+
+    if (!latestTrade) {
+       return res.status(400).json({ message: 'Student has no trades to attach the summary to.' });
+    }
+
+    const mentorFeedback = await prisma.mentorFeedback.create({
+      data: {
+        mentorId: req.user.id,
+        tradeId: latestTrade.id,
+        feedback: markdownLetter,
+        grade: 'A', // placeholder or parsed
+        recommendation: 'General Monthly Summary'
+      }
+    });
+
+    res.json({ message: 'Summary sent to student successfully', mentorFeedback });
+  } catch (error) {
+    console.error('Send Summary Error:', error);
+    res.status(500).json({ message: 'Failed to send summary.' });
+  }
+};
+
 module.exports = {
   createGroup,
   getMyGroups,
   inviteStudent,
   addTradeFeedback,
-  getStudentTrades
+  getStudentTrades,
+  draftMentorSummary,
+  sendMentorSummary
 };

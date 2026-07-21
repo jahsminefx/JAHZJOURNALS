@@ -13,6 +13,8 @@ const TradeDetail = () => {
   const [deletingTrade, setDeletingTrade] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [analyzingScreenshotId, setAnalyzingScreenshotId] = useState(null);
+  const [visionInsights, setVisionInsights] = useState({});
   const [aiInsight, setAiInsight] = useState(null);
 
   const fetchTrade = useCallback(async () => {
@@ -28,6 +30,19 @@ const TradeDetail = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Couldn\'t load this trade. Let\'s try again.');
+    }
+
+    try {
+      const visionRes = await api.get(`/ai/vision-insights/trade/${id}`);
+      const insightsMap = {};
+      visionRes.data.forEach(req => {
+         if (req.inputSnapshot?.screenshotId && !insightsMap[req.inputSnapshot.screenshotId]) {
+             insightsMap[req.inputSnapshot.screenshotId] = req;
+         }
+      });
+      setVisionInsights(insightsMap);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -41,15 +56,43 @@ const TradeDetail = () => {
     setIsGeneratingAi(true);
     toast.loading('Analyzing trade execution data...', { id: 'aiToast' });
     try {
-      const { data } = await api.post(`/ai/trade-insight/${id}`);
-      setAiInsight(data.insight);
-      toast.success('AI Mentor analysis complete!', { id: 'aiToast' });
+      await api.post(`/ai/trade-insight/${id}`);
+      toast.loading('Analysis queued. Please wait...', { id: 'aiToast' });
+      // The poll effect will catch it and refresh automatically
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to generate AI insight.', { id: 'aiToast' });
-    } finally {
+      toast.error(error.response?.data?.message || 'Failed to queue AI insight.', { id: 'aiToast' });
       setIsGeneratingAi(false);
     }
   };
+
+  // Poll for completion if a review is processing
+  useEffect(() => {
+    let intervalId;
+    const activeReview = trade?.aiReviews?.[0];
+    const isTradeAiProcessing = activeReview && (activeReview.reviewStatus === 'PROCESSING' || activeReview.reviewStatus === 'QUEUED');
+    const isVisionProcessing = Object.values(visionInsights).some(v => v.status === 'QUEUED' || v.status === 'PROCESSING');
+
+    if (isTradeAiProcessing || isVisionProcessing) {
+      if (isTradeAiProcessing) setIsGeneratingAi(true);
+      
+      intervalId = setInterval(async () => {
+        try {
+           await fetchTrade();
+           
+           // Toast conditions manually inside effect scope could be complex, relying on fetchTrade state updating
+        } catch (e) {
+          console.error(e);
+        }
+      }, 3000);
+    } else {
+      setIsGeneratingAi(false);
+      setAnalyzingScreenshotId(null);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [trade?.aiReviews, visionInsights, fetchTrade]);
 
   const deleteTrade = async () => {
     if (!trade || deletingTrade) return;
@@ -63,6 +106,19 @@ const TradeDetail = () => {
       toast.error(error.response?.data?.message || 'Couldn\'t remove that trade right now.');
     } finally {
       setDeletingTrade(false);
+    }
+  };
+
+  const analyzeScreenshotImage = async (screenshotId) => {
+    setAnalyzingScreenshotId(screenshotId);
+    toast.loading('Queueing chart for AI analysis...', { id: 'visionAiToast' });
+    try {
+      await api.post(`/ai/vision-analysis`, { screenshotId });
+      toast.success('Vision AI Analysis queued!', { id: 'visionAiToast' });
+      fetchTrade(); // Refresh to show processing status
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to process chart vision.', { id: 'visionAiToast' });
+      setAnalyzingScreenshotId(null);
     }
   };
 
@@ -145,13 +201,43 @@ const TradeDetail = () => {
                 <div>
                   <h4 className="font-semibold text-muted mb-2">Weaknesses</h4>
                   <ul className="list-disc list-inside text-sm text-muted space-y-1">
-                    {aiInsight.weaknesses?.map((wk, idx) => <li key={idx}>{wk}</li>)}
+                    {aiInsight.weaknesses?.map((wk, idx) => <li key={idx}>{wk}</li>) || aiInsight.mistakes?.map((wk, idx) => <li key={idx}>{wk}</li>) || <li>None recorded</li>}
                   </ul>
                 </div>
               </div>
+              
+              {(aiInsight.ruleFeedback?.length > 0 || aiInsight.psychologyFeedback?.length > 0) && (
+                <div className="grid md:grid-cols-2 gap-6 mt-4 pt-4 border-t border-purple-500/30">
+                  {aiInsight.ruleFeedback?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-muted mb-2">Discipline & Rules</h4>
+                      <ul className="list-disc list-inside text-sm text-muted space-y-1">
+                        {aiInsight.ruleFeedback.map((fb, idx) => <li key={idx}>{fb}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {aiInsight.psychologyFeedback?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-muted mb-2">Psychology</h4>
+                      <ul className="list-disc list-inside text-sm text-muted space-y-1">
+                        {aiInsight.psychologyFeedback.map((fb, idx) => <li key={idx}>{fb}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mt-4 pt-4 border-t border-purple-500/30">
-                <h4 className="font-semibold text-purple-300 mb-2">Actionable Advice</h4>
-                <p className="text-sm text-purple-200/80 italic">"{aiInsight.actionableAdvice}"</p>
+                <h4 className="font-semibold text-purple-300 mb-2 flex justify-between">
+                  <span>Actionable Advice</span>
+                  {aiInsight.disciplineScore !== undefined && (
+                    <span className="text-sm font-normal">Discipline Score: {aiInsight.disciplineScore}/100</span>
+                  )}
+                </h4>
+                <p className="text-sm text-purple-200/80 italic">"{aiInsight.actionableAdvice || aiInsight.recommendedAction}"</p>
+                {aiInsight.disclaimer && (
+                  <p className="text-xs text-muted mt-2 opacity-70">Disclaimer: {aiInsight.disclaimer}</p>
+                )}
               </div>
             </div>
           )}
@@ -159,8 +245,8 @@ const TradeDetail = () => {
           <div className="bg-surface-muted p-6 rounded-xl border border-border shadow-lg">
             <h3 className="text-lg font-bold text-green-400 border-b border-border pb-2 mb-4">Trade Context</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              <div><span className="block text-muted">Setup</span><span className="font-medium text-foreground">{trade.setupType || 'N/A'}</span></div>
-              <div><span className="block text-muted">Strategy</span><span className="font-medium text-foreground">{trade.strategyName || 'N/A'}</span></div>
+              <div><span className="block text-muted">Setup</span><span className="font-medium text-foreground">{trade.setup?.name || 'N/A'}</span></div>
+              <div><span className="block text-muted">Strategy</span><span className="font-medium text-foreground">{trade.strategy?.name || 'N/A'}</span></div>
               <div><span className="block text-muted">Session</span><span className="font-medium text-foreground">{trade.session || 'N/A'}</span></div>
               <div><span className="block text-muted">Timeframe</span><span className="font-medium text-foreground">{trade.entryTimeframe || 'N/A'}</span></div>
               <div><span className="block text-muted">Followed Plan</span><span className="font-medium text-foreground">{trade.followedPlan === null ? 'N/A' : trade.followedPlan ? 'Yes' : 'No'}</span></div>
@@ -187,15 +273,52 @@ const TradeDetail = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {screenshots.map((screenshot) => (
-                  <div key={screenshot.id} className="rounded-lg border border-border bg-surface p-3">
-                    <img src={screenshot.imageUrl} alt={screenshot.note || screenshot.screenshotType} className="w-full rounded-lg border border-gray-600" />
-                    <div className="mt-3">
-                      <p className="text-xs font-semibold text-muted">{screenshot.screenshotType}</p>
-                      {screenshot.note && <p className="text-xs text-muted">{screenshot.note}</p>}
+                {screenshots.map((screenshot) => {
+                  const visionData = visionInsights[screenshot.id];
+                  const isProcessing = visionData?.status === 'QUEUED' || visionData?.status === 'PROCESSING' || analyzingScreenshotId === screenshot.id;
+                  
+                  return (
+                    <div key={screenshot.id} className="rounded-lg border border-border bg-surface p-3">
+                      <img src={screenshot.imageUrl} alt={screenshot.note || screenshot.screenshotType} className="w-full rounded-lg border border-gray-600 mb-2" />
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
+                           <p className="text-xs font-semibold text-muted">{screenshot.screenshotType}</p>
+                           <button 
+                             onClick={() => analyzeScreenshotImage(screenshot.id)}
+                             disabled={isProcessing}
+                             className="text-xs flex items-center gap-1 text-purple-400 hover:text-purple-300 disabled:opacity-50"
+                           >
+                              <Brain size={12} /> {isProcessing ? 'Analyzing...' : 'Analyze with AI'}
+                           </button>
+                        </div>
+                        {screenshot.note && <p className="text-xs text-muted whitespace-pre-wrap mb-2">User Note: {screenshot.note}</p>}
+                        
+                        {visionData && (
+                           <div className="mt-2 p-3 bg-purple-500/10 rounded-md border border-purple-500/20 text-xs">
+                             <div className="flex justify-between items-center mb-1">
+                               <p className="font-bold text-purple-400">AI Observation</p>
+                               {visionData.status === 'FAILED' && <span className="text-red-400">Failed</span>}
+                               {visionData.status === 'COMPLETED' && <span className="text-green-400 text-[10px]">Confidence: {visionData.structuredOutput?.confidenceLevel}</span>}
+                             </div>
+                             {visionData.status === 'COMPLETED' && visionData.structuredOutput && (
+                               <div className="space-y-2 mt-2">
+                                  <ul className="list-disc list-inside text-purple-200/90 leading-relaxed">
+                                    {visionData.structuredOutput.observations.map((obs, i) => <li key={i}>{obs}</li>)}
+                                  </ul>
+                                  {visionData.structuredOutput.patterns?.length > 0 && (
+                                    <p className="text-purple-300"><span className="font-semibold">Patterns:</span> {visionData.structuredOutput.patterns.join(', ')}</p>
+                                  )}
+                                  <p className="text-muted opacity-75 mt-2 italic border-l-2 border-purple-500/30 pl-2">
+                                    {visionData.structuredOutput.educationalDisclaimer} {visionData.structuredOutput.uncertaintyNotice}
+                                  </p>
+                               </div>
+                             )}
+                           </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

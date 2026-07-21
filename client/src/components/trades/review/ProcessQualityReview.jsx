@@ -23,7 +23,7 @@ const ToggleGroup = ({ label, name, register, watchValue }) => {
 const ProcessQualityReview = ({ register, watch }) => {
   return (
     <section className="bg-surface-muted p-6 rounded-xl border border-border space-y-4">
-      <h3 className="text-lg font-medium text-green-400">Process Quality</h3>
+      <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400">Process Quality</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <ToggleGroup label="Followed trading plan?" name="followedPlan" register={register} watch={watch} watchValue={watch('followedPlan')} />
         <ToggleGroup label="A+ setup?" name="isAPlusSetup" register={register} watch={watch} watchValue={watch('isAPlusSetup')} />

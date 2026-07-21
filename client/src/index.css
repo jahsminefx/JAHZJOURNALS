@@ -17,6 +17,8 @@
     --border: 226 232 240;
     --foreground: 15 23 42;
     --muted-foreground: 100 116 139;
+    --problem-icon: #ef4444;
+    --problem-text: #334155;
   }
 
   .dark {
@@ -27,6 +29,8 @@
     --border: 37 48 68;
     --foreground: 241 245 249;
     --muted-foreground: 148 163 184;
+    --problem-icon: #fca5a5;
+    --problem-text: #e5e7eb;
   }
 
   body {

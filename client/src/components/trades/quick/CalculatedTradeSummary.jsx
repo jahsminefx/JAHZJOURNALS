@@ -25,13 +25,13 @@ const CalculatedTradeSummary = ({ watch, status }) => {
         </div>
         <div>
           <span className="block text-xs text-muted">Risk / Reward</span>
-          <span className="block text-base text-green-400 font-medium">
+          <span className="block text-base text-emerald-600 dark:text-emerald-400 font-medium">
             {riskRewardRatio ? `1 : ${riskRewardRatio}` : '-'}
           </span>
         </div>
         <div>
           <span className="block text-xs text-muted">Auto Result</span>
-          <span className={`block text-base font-medium ${result === 'WIN' ? 'text-green-500' : result === 'LOSS' ? 'text-red-500' : 'text-blue-400'}`}>
+          <span className={`block text-base font-medium ${result === 'WIN' ? 'text-emerald-600 dark:text-emerald-400' : result === 'LOSS' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
             {result}
           </span>
         </div>

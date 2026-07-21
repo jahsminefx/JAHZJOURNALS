@@ -22,6 +22,21 @@ async function main() {
     },
   });
 
+  if (process.env.NODE_ENV !== 'production') {
+    await prisma.user.upsert({
+      where: { email: 'admin@jahzjournals.com' },
+      update: {},
+      create: {
+        name: 'Development Admin',
+        email: 'admin@jahzjournals.com',
+        passwordHash, // Uses same password123 default
+        role: 'SUPER_ADMIN',
+        onboardingCompleted: true,
+      },
+    });
+    console.log('Development Admin created: admin@jahzjournals.com');
+  }
+
   // Create trading account
   const account = await prisma.tradingAccount.create({
     data: {
@@ -48,7 +63,6 @@ async function main() {
       result: 'WIN',
       status: 'CLOSED',
       profitLossAmount: 250,
-      setupType: 'FVG Reversal',
       session: 'LONDON',
       entryTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
       exitTime: new Date()

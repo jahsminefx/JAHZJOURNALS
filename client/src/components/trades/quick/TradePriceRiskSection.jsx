@@ -3,7 +3,7 @@ import React from 'react';
 const TradePriceRiskSection = ({ register, status }) => {
   return (
     <section>
-      <h3 className="text-lg font-medium text-green-400 border-b border-border pb-2 mb-4">Price and Risk</h3>
+      <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400 border-b border-border pb-2 mb-4">Price and Risk</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <label className="text-sm text-muted">
           {status === 'PLANNED' ? 'Intended Entry Price' : 'Entry Price'}

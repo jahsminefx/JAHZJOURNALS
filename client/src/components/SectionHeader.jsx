@@ -6,11 +6,11 @@ const SectionHeader = ({ eyebrow, title, description, align = 'center' }) => {
   return (
     <div className={`max-w-3xl ${alignment}`}>
       {eyebrow && (
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-emerald-600 dark:text-emerald-300">
           {eyebrow}
         </p>
       )}
-      <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+      <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
         {title}
       </h2>
       {description && (

@@ -3,7 +3,7 @@ import React from 'react';
 const TradeContextReview = ({ register }) => {
   return (
     <section className="bg-surface-muted p-6 rounded-xl border border-border space-y-4">
-      <h3 className="text-lg font-medium text-green-400">Trade Context</h3>
+      <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400">Trade Context</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <label className="text-sm text-muted">
           Session

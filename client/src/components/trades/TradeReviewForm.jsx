@@ -50,7 +50,7 @@ const TradeReviewForm = ({ trade, activeRules }) => {
   const [existingScreenshots, setExistingScreenshots] = useState(trade.screenshots || []);
   const [screenshotFiles, setScreenshotFiles] = useState([]);
 
-  const { register, handleSubmit, watch } = useForm({
+  const { register, handleSubmit, watch, getValues, setValue } = useForm({
     defaultValues: {
       session: trade.session || '',
       higherTimeframe: trade.higherTimeframe || '',
@@ -103,7 +103,7 @@ const TradeReviewForm = ({ trade, activeRules }) => {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <TradeContextReview register={register} />
       <ProcessQualityReview register={register} watch={watch} />
-      <TradeReflectionReview register={register} />
+      <TradeReflectionReview register={register} getValues={getValues} setValue={setValue} />
       <RuleViolationEditor ruleViolations={ruleViolations} setRuleViolations={setRuleViolations} activeRules={activeRules} />
       <EmotionLogEditor emotionLogs={emotionLogs} setEmotionLogs={setEmotionLogs} />
       <ScreenshotManager 
@@ -115,7 +115,7 @@ const TradeReviewForm = ({ trade, activeRules }) => {
       />
 
       <div className="pt-4 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-border">
-        <button type="button" onClick={() => navigate(-1)} className="w-full sm:w-auto px-5 py-2.5 border border-gray-600 rounded-lg text-sm font-medium text-muted hover:bg-surface-muted transition">Go Back</button>
+        <button type="button" onClick={() => navigate(-1)} className="w-full sm:w-auto px-5 py-2.5 border border-border rounded-lg text-sm font-medium text-muted hover:bg-surface-muted transition">Go Back</button>
         <button type="submit" disabled={isSaving} className="w-full sm:w-auto px-6 py-2.5 bg-green-500 text-gray-900 rounded-lg text-sm font-bold shadow-md hover:bg-green-400 transition disabled:opacity-70">
           {isSaving ? 'Saving Review...' : 'Save My Review'}
         </button>

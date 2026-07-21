@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 const { destroyScreenshots } = require('../services/screenshotService');
 const { quickTradeSchema, tradeReviewSchema, ruleViolationSchema, emotionLogSchema } = require('../validation/tradeSchemas');
 const { calculateRiskReward, calculateTradeResult, normalizeTradeState } = require('../utils/tradeCalculations');
+const { evaluateTradeAgainstRules } = require('../services/ruleCheckService');
 
 const hasValue = (value) => value !== undefined && value !== null && value !== '';
 const parseOptionalFloat = (value) => (hasValue(value) ? Number.parseFloat(value) : null);
@@ -116,6 +117,32 @@ const syncEmotionLogs = async (tx, tradeId, incomingLogs) => {
   }
 };
 
+const syncChecklistResponses = async (tx, tradeId, incomingResponses) => {
+  if (!incomingResponses) return;
+  const existingRecords = await tx.tradeChecklistResponse.findMany({ where: { tradeId } });
+  const existingMap = new Map(existingRecords.map((r) => [r.checklistItemId, r]));
+
+  for (const resp of incomingResponses) {
+    if (!resp.checklistItemId) continue;
+    if (existingMap.has(resp.checklistItemId)) {
+      await tx.tradeChecklistResponse.update({
+        where: { id: existingMap.get(resp.checklistItemId).id },
+        data: { checked: resp.checked, notes: resp.notes || null },
+      });
+      existingMap.delete(resp.checklistItemId);
+    } else {
+      await tx.tradeChecklistResponse.create({
+         data: { tradeId, checklistItemId: resp.checklistItemId, checked: Boolean(resp.checked), notes: resp.notes || null }
+      });
+    }
+  }
+
+  const idsToDelete = Array.from(existingMap.values()).map(r => r.id);
+  if (idsToDelete.length > 0) {
+    await tx.tradeChecklistResponse.deleteMany({ where: { id: { in: idsToDelete } } });
+  }
+};
+
 const buildTradeData = (tradeData, existingTrade = {}) => {
   const direction = tradeData.direction || existingTrade.direction;
   const status = tradeData.status || existingTrade.status || 'PLANNED';
@@ -147,8 +174,8 @@ const buildTradeData = (tradeData, existingTrade = {}) => {
     result: calculatedResult,
     status,
     session: optionalString(tradeData.session),
-    setupType: optionalString(tradeData.setupType),
-    strategyName: optionalString(tradeData.strategyName),
+    strategyId: optionalString(tradeData.strategyId) || existingTrade.strategyId || null,
+    setupId: optionalString(tradeData.setupId) || existingTrade.setupId || null,
     higherTimeframe: optionalString(tradeData.higherTimeframe),
     entryTimeframe: optionalString(tradeData.entryTimeframe),
     htfBias: optionalString(tradeData.htfBias),
@@ -200,6 +227,13 @@ const createTrade = async (req, res) => {
         data: {
           tradingAccountId: tradeData.tradingAccountId,
           ...normalizedData,
+          checklistResponses: Array.isArray(tradeData.checklistResponses) ? {
+             create: tradeData.checklistResponses.map(r => ({
+                checklistItemId: r.checklistItemId,
+                checked: Boolean(r.checked),
+                notes: r.notes || null
+             }))
+          } : undefined
         }
       });
 
@@ -208,6 +242,29 @@ const createTrade = async (req, res) => {
           where: { id: createdTrade.tradingAccountId },
           data: { currentBalance: { increment: createdTrade.profitLossAmount } }
         });
+      }
+
+      // Auto-log system violations
+      const evalRes = await evaluateTradeAgainstRules(req.user.id, normalizedData);
+      if (evalRes.warnings && evalRes.warnings.length > 0) {
+         let systemRule = await tx.tradeRule.findFirst({
+            where: { userId: req.user.id, name: 'System Rule Violation' }
+         });
+         if (!systemRule) {
+            systemRule = await tx.tradeRule.create({
+               data: { userId: req.user.id, name: 'System Rule Violation', category: 'RISK_MANAGEMENT', active: true }
+            });
+         }
+         for (const warning of evalRes.warnings) {
+            await tx.tradeRuleViolation.create({
+               data: {
+                  tradeId: createdTrade.id,
+                  tradeRuleId: systemRule.id,
+                  severity: 'MODERATE',
+                  note: `[AUTO-DETECTED] ${warning}`
+               }
+            });
+         }
       }
 
       return createdTrade;
@@ -229,6 +286,9 @@ const getTradeById = async (req, res) => {
       },
       include: {
         tradingAccount: { select: { id: true, name: true } },
+        strategy: { select: { id: true, name: true, style: true } },
+        setup: { select: { id: true, name: true } },
+        checklistResponses: true,
         screenshots: true,
         ruleViolations: {
           include: {
@@ -364,10 +424,49 @@ const updateTrade = async (req, res) => {
         await syncEmotionLogs(tx, req.params.id, emotionLogs);
       }
 
+      if (Array.isArray(tradeData.checklistResponses)) {
+        await syncChecklistResponses(tx, req.params.id, tradeData.checklistResponses);
+      }
+
+      // Auto-log system violations
+      const evalRes = await evaluateTradeAgainstRules(req.user.id, normalizedData);
+      if (evalRes.warnings && evalRes.warnings.length > 0) {
+         let systemRule = await tx.tradeRule.findFirst({
+            where: { userId: req.user.id, name: 'System Rule Violation' }
+         });
+         if (!systemRule) {
+            systemRule = await tx.tradeRule.create({
+               data: { userId: req.user.id, name: 'System Rule Violation', category: 'RISK_MANAGEMENT', active: true }
+            });
+         }
+         
+         // Only log if it's not already logged to prevent duplicates on edits
+         const existingAutoLogs = await tx.tradeRuleViolation.findMany({
+            where: { tradeId: req.params.id, tradeRuleId: systemRule.id }
+         });
+
+         for (const warning of evalRes.warnings) {
+            const warningText = `[AUTO-DETECTED] ${warning}`;
+            if (!existingAutoLogs.some(log => log.note === warningText)) {
+              await tx.tradeRuleViolation.create({
+                 data: {
+                    tradeId: req.params.id,
+                    tradeRuleId: systemRule.id,
+                    severity: 'MODERATE',
+                    note: warningText
+                 }
+              });
+            }
+         }
+      }
+
       return tx.trade.findUnique({
         where: { id: savedTrade.id },
         include: {
           tradingAccount: { select: { id: true, name: true } },
+          strategy: true,
+          setup: true,
+          checklistResponses: true,
           screenshots: true,
           ruleViolations: { include: { tradeRule: { select: { id: true, name: true, active: true } } } },
           emotionLogs: true,

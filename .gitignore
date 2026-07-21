@@ -1,5 +1,6 @@
 # Markdown documents
 *.md
+README.md
 
 # Secrets and local environment
 .env
@@ -28,3 +29,9 @@ server/uploads/
 .codex/
 .agents/
 /auth-*-check.png
+playwright-report/
+test-results/
+client/playwright-report/
+client/test-results/
+client/build.txt
+

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 
-const TradeQuickContextSection = ({ register, screenshotFiles, setScreenshotFiles }) => {
+const TradeQuickContextSection = ({ register, watch, strategies = [], screenshotFiles, setScreenshotFiles }) => {
   const addScreenshotFile = (event) => {
     const files = Array.from(event.target.files || []);
     setScreenshotFiles((current) => [
@@ -19,11 +19,19 @@ const TradeQuickContextSection = ({ register, screenshotFiles, setScreenshotFile
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
         <label className="text-sm text-muted">
           Strategy
-          <input {...register('strategyName')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" placeholder="e.g. ICT, Support & Resistance" />
+          <select {...register('strategyId')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+            <option value="">No Strategy</option>
+            {strategies.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
         </label>
         <label className="text-sm text-muted">
           Setup
-          <input {...register('setupType')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" placeholder="e.g. Liquidity Sweep" />
+          <select {...register('setupId')} disabled={!watch('strategyId')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 disabled:opacity-50">
+            <option value="">No Setup</option>
+            {strategies.find(s => s.id === watch('strategyId'))?.setups.map(su => (
+              <option key={su.id} value={su.id}>{su.name}</option>
+            ))}
+          </select>
         </label>
         <label className="text-sm text-muted md:col-span-2">
           Entry Reason

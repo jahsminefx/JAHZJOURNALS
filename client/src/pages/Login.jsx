@@ -26,7 +26,12 @@ const Login = () => {
     try {
       const user = await login(data);
       toast.success('Welcome back — let\'s review.');
-      navigate(user.onboardingCompleted ? '/dashboard' : '/onboarding', { replace: true });
+      
+      if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate(user.onboardingCompleted ? '/dashboard' : '/onboarding', { replace: true });
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Couldn\'t sign you in. Check your details and try again.');
     } finally {
@@ -43,7 +48,7 @@ const Login = () => {
             id="email"
             type="email"
             {...register('email')}
-            className="mt-2 block w-full rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400"
+            className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400"
           />
           {errors.email && <p className="mt-2 text-sm text-red-400">{errors.email.message}</p>}
         </div>
@@ -56,7 +61,7 @@ const Login = () => {
             id="password"
             type="password"
             {...register('password')}
-            className="mt-2 block w-full rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400"
+            className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400"
           />
           {errors.password && <p className="mt-2 text-sm text-red-400">{errors.password.message}</p>}
         </div>

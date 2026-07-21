@@ -12,12 +12,12 @@ const compactPayload = (data) => Object.fromEntries(
   Object.entries(data).map(([key, value]) => [key, value === '' ? null : value]),
 );
 
-const QuickTradeForm = ({ initialData, accounts, isEditMode, tradeId }) => {
+const QuickTradeForm = ({ initialData, accounts, strategies, isEditMode, tradeId }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [screenshotFiles, setScreenshotFiles] = useState([]);
   const navigate = useNavigate();
 
-  const { register, handleSubmit, watch } = useForm({ defaultValues: initialData });
+  const { register, handleSubmit, watch, control } = useForm({ defaultValues: initialData });
 
   const status = watch('status');
 
@@ -38,6 +38,30 @@ const QuickTradeForm = ({ initialData, accounts, isEditMode, tradeId }) => {
     try {
       const payload = compactPayload(data);
       let newOrUpdateTradeId = tradeId;
+
+      // 1. Pre-trade rule evaluation check (only on creation)
+      if (!isEditMode) {
+        try {
+          const evalRes = await api.post('/trades/pre-trade-check', payload);
+          const evaluation = evalRes.data;
+          
+          if (!evaluation.allowed) {
+            toast.error(`Trade Blocked: ${evaluation.hardBlocks.join(' ')}`, { duration: 6000 });
+            setIsSaving(false);
+            return;
+          }
+          
+          if (evaluation.warnings?.length > 0) {
+            const proceed = window.confirm(`Rule Warnings:\n\n${evaluation.warnings.join('\n')}\n\nDo you want to overrule these warnings and save anyway?`);
+            if (!proceed) {
+              setIsSaving(false);
+              return;
+            }
+          }
+        } catch (e) {
+          console.error('Pre-trade check failed, proceeding anyway', e);
+        }
+      }
 
       if (isEditMode) {
         await api.put(`/trades/${tradeId}`, payload);
@@ -67,18 +91,18 @@ const QuickTradeForm = ({ initialData, accounts, isEditMode, tradeId }) => {
   return (
     <div className="bg-surface-muted p-6 sm:p-8 rounded-xl shadow-lg border border-border">
       <form className="space-y-8">
-        <TradeSetupSection register={register} accounts={accounts} status={status} />
+        <TradeSetupSection register={register} control={control} accounts={accounts} status={status} />
         <TradePriceRiskSection register={register} status={status} />
         <CalculatedTradeSummary watch={watch} status={status} />
-        <TradeQuickContextSection register={register} screenshotFiles={screenshotFiles} setScreenshotFiles={setScreenshotFiles} />
+        <TradeQuickContextSection register={register} watch={watch} strategies={strategies} screenshotFiles={screenshotFiles} setScreenshotFiles={setScreenshotFiles} />
 
         <div className="pt-4 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-border">
-          <button type="button" onClick={() => navigate(-1)} className="w-full sm:w-auto px-5 py-2.5 border border-gray-600 rounded-lg text-sm font-medium text-muted hover:bg-surface-muted transition">Go Back</button>
+          <button type="button" onClick={() => navigate(-1)} className="w-full sm:w-auto px-5 py-2.5 border border-border rounded-lg text-sm font-medium text-muted hover:bg-surface-muted transition">Go Back</button>
           <button 
             type="button" 
             onClick={handleSubmit((data) => onSubmit(data, 'SAVE'))} 
             disabled={isSaving} 
-            className="w-full sm:w-auto px-5 py-2.5 bg-gray-700 text-foreground rounded-lg text-sm font-bold shadow-md hover:bg-gray-600 transition disabled:opacity-70"
+            className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 text-white dark:bg-gray-700 dark:text-foreground rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 dark:hover:bg-gray-600 transition disabled:opacity-70"
           >
             {isSaving ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Save Trade')}
           </button>

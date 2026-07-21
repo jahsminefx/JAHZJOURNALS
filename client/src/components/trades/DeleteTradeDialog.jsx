@@ -35,7 +35,7 @@ const DeleteTradeDialog = ({ trade, isOpen, isDeleting, onCancel, onConfirm }) =
       >
         <div className="p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-red-500/40 bg-red-500/10 text-red-300">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-300">
               <AlertTriangle size={22} />
             </div>
             <button
@@ -43,7 +43,7 @@ const DeleteTradeDialog = ({ trade, isOpen, isDeleting, onCancel, onConfirm }) =
               onClick={onCancel}
               disabled={isDeleting}
               aria-label="Close delete confirmation"
-              className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-gray-900 dark:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               <X size={18} />
             </button>

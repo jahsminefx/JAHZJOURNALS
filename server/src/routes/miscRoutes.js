@@ -23,6 +23,7 @@ const {
 const {
   getRules,
   createRule,
+  createRulesBulk,
   getRuleById,
   updateRule,
   updateRuleStatus,
@@ -35,6 +36,7 @@ const {
   deleteViolation,
   createAiTradeReview,
   getAiTradeReview,
+  createUserFeedback,
 } = require('../controllers/miscController');
 
 const contactLimiter = rateLimit({
@@ -47,6 +49,7 @@ const contactLimiter = rateLimit({
 
 router.get('/rules', protect, getRules);
 router.post('/rules', protect, createRule);
+router.post('/rules/bulk', protect, createRulesBulk);
 router.get('/rules/:id', protect, getRuleById);
 router.put('/rules/:id', protect, updateRule);
 router.delete('/rules/:id', protect, deleteRule);
@@ -80,6 +83,9 @@ router.post('/automated/trades/:id/review', protect, createAiTradeReview);
 router.get('/automated/trades/:tradeId/review', protect, getAiTradeReview);
 router.post('/ai/trades/:id/review', protect, createAiTradeReview);
 router.get('/ai/trades/:tradeId/review', protect, getAiTradeReview);
+
+// Phase 10: Pre-Beta Hardening Native Feedback Hooks
+router.post('/feedback', protect, createUserFeedback);
 
 router.get('/admin/dashboard', protect, (req, res) => res.json({ status: 'admin panel' }));
 router.get('/mentor/dashboard', protect, (req, res) => res.json({ status: 'mentor panel' }));

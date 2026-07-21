@@ -63,6 +63,40 @@ const createRule = async (req, res) => {
   }
 };
 
+const createRulesBulk = async (req, res) => {
+  try {
+    const { rules } = req.body;
+    if (!Array.isArray(rules) || rules.length === 0) {
+      return res.status(400).json({ message: 'Please provide an array of rules.' });
+    }
+
+    const createdRules = [];
+    for (const ruleText of rules) {
+       if (ruleText && String(ruleText).trim()) {
+         const existing = await prisma.tradeRule.findFirst({
+           where: { userId: req.user.id, name: String(ruleText).trim() }
+         });
+         
+         if (!existing) {
+           const rule = await prisma.tradeRule.create({
+             data: {
+               userId: req.user.id,
+               name: String(ruleText).trim(),
+               active: true
+             }
+           });
+           createdRules.push(rule);
+         }
+       }
+    }
+
+    res.status(201).json(createdRules);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Failed to import bulk rules.' });
+  }
+};
+
 const getRuleById = async (req, res) => {
   try {
     const rule = await prisma.tradeRule.findFirst({
@@ -461,9 +495,31 @@ const deleteViolation = async (req, res) => {
   }
 };
 
+const createUserFeedback = async (req, res) => {
+  try {
+     const { type, subject, description } = req.body;
+     if (!subject || !description) return res.status(400).json({ message: 'Subject and detailed descriptions are legally required for tracking.' });
+
+     if (type === 'BUG') {
+         await prisma.bugReport.create({ data: { reporterId: req.user.id, title: subject, description, severity: 'MEDIUM', status: 'NEW' } });
+     } else if (type === 'FEATURE') {
+         await prisma.featureRequest.create({ data: { userId: req.user.id, title: subject, description, status: 'UNDER_REVIEW', votes: 1 } });
+     } else {
+         const ticketCount = await prisma.supportTicket.count();
+         await prisma.supportTicket.create({ data: { userId: req.user.id, subject, description, ticketNumber: `TK-${1000 + ticketCount}`, status: 'OPEN', priority: 'MEDIUM' } });
+     }
+
+     res.status(201).json({ message: 'Your transmission has successfully reached our Customer Success matrix natively. Thank you for making JAHZJOURNALS strictly better.' });
+  } catch (error) {
+     console.error(error);
+     res.status(500).json({ message: 'Hard fault bridging feedback matrices. Please hold on.' });
+  }
+};
+
 module.exports = {
   getRules,
   createRule,
+  createRulesBulk,
   getRuleById,
   updateRule,
   updateRuleStatus,
@@ -476,4 +532,5 @@ module.exports = {
   deleteViolation,
   createAiTradeReview,
   getAiTradeReview,
+  createUserFeedback,
 };

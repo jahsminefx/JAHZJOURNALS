@@ -219,6 +219,31 @@ const buildTopPairs = (trades) => {
   }));
 };
 
+const buildWorstPairs = (trades) => {
+  const groups = new Map();
+
+  trades.filter(isClosedTrade).forEach((trade) => {
+    const key = trade.pair || 'UNKNOWN';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(trade);
+  });
+
+  const pairStats = [...groups.entries()].map(([pair, group]) => ({
+    pair,
+    ...calculateSummary(group),
+  })).filter((pair) => pair.netProfitLoss < 0)
+    .sort((a, b) => a.netProfitLoss - b.netProfitLoss)
+    .slice(0, 5);
+
+  const negativeTotal = pairStats.reduce((total, pair) => total + pair.netProfitLoss, 0);
+
+  return pairStats.map((pair) => ({
+    pair: pair.pair,
+    netProfitLoss: pair.netProfitLoss,
+    contributionPercentage: negativeTotal ? round((pair.netProfitLoss / negativeTotal) * 100, 1) : 0,
+  }));
+};
+
 const buildRecentTrades = (trades) => [...trades]
   .sort((a, b) => getTradeTimestamp(b) - getTradeTimestamp(a))
   .slice(0, 5)
@@ -399,6 +424,7 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
       averageLoss: currentSummary.averageLoss,
     },
     topPairs: buildTopPairs(currentTrades),
+    worstPairs: buildWorstPairs(currentTrades),
     tradeOutcomes: {
       wins: currentSummary.wins,
       losses: currentSummary.losses,
@@ -415,6 +441,7 @@ module.exports = {
   buildSessionPerformance,
   buildCalendar,
   buildTopPairs,
+  buildWorstPairs,
   getPreviousPeriod,
   filterTradesByPeriod,
   validateAccountFilter,

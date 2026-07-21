@@ -6,7 +6,10 @@ const getApiBaseURL = () => {
   }
 
   if (typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.hostname}:5000/api`;
+    if (window.location.port === '5173' || window.location.port === '5174') {
+      return `${window.location.protocol}//${window.location.hostname}:5000/api`;
+    }
+    return '/api';
   }
 
   return 'http://localhost:5000/api';

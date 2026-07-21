@@ -39,7 +39,7 @@ const Contact = () => {
         />
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+            <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-6 shadow-sm dark:shadow-none">
               <h2 className="text-2xl font-bold text-foreground">Founder message</h2>
               <p className="mt-4 leading-7 text-muted">
                 JAHZJOURNALS is being built for traders who want to take review seriously. Your feedback helps shape the product before launch.
@@ -50,7 +50,7 @@ const Contact = () => {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+            <form onSubmit={handleSubmit} className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-6 shadow-sm dark:shadow-none">
               <input
                 tabIndex="-1"
                 autoComplete="off"
@@ -63,20 +63,20 @@ const Contact = () => {
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="text-sm text-muted">
                   Name
-                  <input name="name" value={form.name} onChange={handleChange} required className="mt-2 w-full rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none focus:border-emerald-400" />
+                  <input name="name" value={form.name} onChange={handleChange} required className="mt-2 w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none focus:border-emerald-400" />
                 </label>
                 <label className="text-sm text-muted">
                   Email
-                  <input name="email" type="email" value={form.email} onChange={handleChange} required className="mt-2 w-full rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none focus:border-emerald-400" />
+                  <input name="email" type="email" value={form.email} onChange={handleChange} required className="mt-2 w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none focus:border-emerald-400" />
                 </label>
               </div>
               <label className="mt-5 block text-sm text-muted">
                 Subject
-                <input name="subject" value={form.subject} onChange={handleChange} required className="mt-2 w-full rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none focus:border-emerald-400" />
+                <input name="subject" value={form.subject} onChange={handleChange} required className="mt-2 w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none focus:border-emerald-400" />
               </label>
               <label className="mt-5 block text-sm text-muted">
                 Message
-                <textarea name="message" rows="6" value={form.message} onChange={handleChange} required className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none focus:border-emerald-400" />
+                <textarea name="message" rows="6" value={form.message} onChange={handleChange} required className="mt-2 w-full resize-none rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none focus:border-emerald-400" />
               </label>
               <Button type="submit" disabled={isSubmitting} className="mt-6 w-full sm:w-auto">
                 {isSubmitting ? 'Submitting...' : 'Submit Message'}

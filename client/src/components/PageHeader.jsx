@@ -35,7 +35,7 @@ const PageHeader = ({
         {title}
       </h1>
       {description && (
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-muted sm:text-lg">
+        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-gray-300 sm:text-lg">
           {description}
         </p>
       )}

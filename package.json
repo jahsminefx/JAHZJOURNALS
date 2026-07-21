@@ -1,0 +1,30 @@
+{
+  "name": "jahzjournals-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JAHZJOURNALS monorepo configured for Dokku deployment",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "build:client": "npm run build --prefix client",
+    "build:server": "npm run build --prefix server",
+    "build": "npm run build:client && npm run build:server",
+    "postinstall": "npm run build:server",
+    "start": "npm run start:web --prefix server",
+    "start:web": "npm run start:web --prefix server",
+    "start:worker": "npm run start:worker --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
+  }
+}

@@ -6,7 +6,7 @@ const AuthLayout = ({ title, subtitle, children }) => (
   <div className="min-h-screen bg-background px-4 py-10 text-foreground sm:px-6 lg:px-8">
     <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.16),transparent_34%),linear-gradient(180deg,#020617,#111827_72%,#020617)]" />
     <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
-      <div className="grid w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-2xl lg:grid-cols-[1fr_0.9fr]">
+      <div className="grid w-full overflow-hidden rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] shadow-2xl lg:grid-cols-[1fr_0.9fr]">
         <div className="relative hidden overflow-hidden p-10 lg:flex lg:flex-col lg:justify-between">
           <div
             className="absolute inset-0 scale-105 bg-cover bg-center opacity-95 blur-[1px]"
@@ -32,7 +32,7 @@ const AuthLayout = ({ title, subtitle, children }) => (
         <div className="p-6 sm:p-8 lg:p-10">
           <BrandLogo className="mb-8 lg:hidden" />
           <div className="mb-10">
-            <h1 className="text-3xl font-bold text-white">{title}</h1>
+            <h1 className="text-3xl font-bold text-foreground">{title}</h1>
             <p className="mt-2 text-sm text-muted">{subtitle}</p>
           </div>
           {children}

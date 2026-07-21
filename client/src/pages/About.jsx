@@ -38,7 +38,7 @@ const About = () => (
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-5">
           {values.map((value) => (
-            <div key={value} className="rounded-xl border border-white/10 bg-white/[0.04] p-5 text-sm font-semibold text-foreground">
+            <div key={value} className="rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-5 text-sm font-semibold text-foreground shadow-sm dark:shadow-none">
               {value}
             </div>
           ))}

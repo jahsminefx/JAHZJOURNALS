@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Users, UserPlus } from 'lucide-react';
+import { Users, UserPlus, FileText, Send, Wand2 } from 'lucide-react';
 import api from '../utils/api';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -12,6 +12,8 @@ const MentorDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [newInviteEmail, setNewInviteEmail] = useState('');
   const [activeGroupId, setActiveGroupId] = useState(null);
+  const [draftingFor, setDraftingFor] = useState(null);
+  const [aiDrafts, setAiDrafts] = useState({});
 
   useEffect(() => {
     fetchGroups();
@@ -52,6 +54,33 @@ const MentorDashboard = () => {
       fetchGroups();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to add student.');
+    }
+  };
+
+  const draftSummary = async (studentId) => {
+    setDraftingFor(studentId);
+    toast.loading('JAHZ AI is reviewing their past 20 trades...', { id: 'draftToast' });
+    try {
+      const { data } = await api.post(`/mentors/students/${studentId}/draft-summary`);
+      setAiDrafts(prev => ({ ...prev, [studentId]: data }));
+      toast.success('Draft prepared!', { id: 'draftToast' });
+    } catch (error) {
+      toast.error('Failed to generate draft.', { id: 'draftToast' });
+    } finally {
+      setDraftingFor(null);
+    }
+  };
+
+  const publishSummary = async (studentId) => {
+    if (!aiDrafts[studentId] || !aiDrafts[studentId].markdownLetter) return;
+    try {
+      await api.post(`/mentors/students/${studentId}/send-summary`, { markdownLetter: aiDrafts[studentId].markdownLetter });
+      toast.success('Feedback securely saved to student\'s recent trade!');
+      const updatedDrafts = { ...aiDrafts };
+      delete updatedDrafts[studentId];
+      setAiDrafts(updatedDrafts);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send feedback.');
     }
   };
 
@@ -117,12 +146,34 @@ const MentorDashboard = () => {
                     {groups.find(g => g.id === activeGroupId)?.students?.map(s => (
                       <div key={s.id} className="flex justify-between items-center p-3 border border-border bg-background rounded-lg">
                         <div>
-                          <p className="font-medium text-foreground">{s.student?.name}</p>
-                          <p className="text-xs text-muted">{s.student?.email}</p>
+                          <p className="font-medium text-foreground flex items-center gap-2">
+                             {s.student?.name}
+                             <span className={`text-xs px-2 py-1 rounded-full ${s.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                               {s.status}
+                             </span>
+                          </p>
+                          <p className="text-xs text-muted mb-2">{s.student?.email}</p>
+                          {aiDrafts[s.studentId] && (
+                             <div className="mt-4 mb-2 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg max-w-lg">
+                               <h4 className="text-sm font-bold text-purple-400 mb-2 flex items-center gap-2"><Wand2 size={14}/> {aiDrafts[s.studentId].draftTitle}</h4>
+                               <textarea 
+                                  className="w-full h-32 bg-background border border-border p-2 text-sm text-foreground rounded mt-1"
+                                  value={aiDrafts[s.studentId].markdownLetter}
+                                  onChange={(e) => setAiDrafts(prev => ({ ...prev, [s.studentId]: { ...prev[s.studentId], markdownLetter: e.target.value } }))}
+                               ></textarea>
+                               <Button className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 text-xs py-1" onClick={() => publishSummary(s.studentId)}>Send to Student Workspace</Button>
+                             </div>
+                          )}
                         </div>
-                        <span className={`text-xs px-2 py-1 rounded-full ${s.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                          {s.status}
-                        </span>
+                        <div className="flex flex-col gap-2">
+                          <button 
+                            disabled={draftingFor === s.studentId}
+                            onClick={() => draftSummary(s.studentId)}
+                            className="text-xs px-3 py-1.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 flex items-center justify-center disabled:opacity-50"
+                          >
+                             {draftingFor === s.studentId ? 'Drafting...' : 'Autodraft AI Feedback'}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

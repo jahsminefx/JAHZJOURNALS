@@ -44,7 +44,7 @@ const Mentors = () => (
           <SectionHeader eyebrow="Solution" title="Review student process from one workspace." />
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {solutions.map((solution) => (
-              <div key={solution} className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-4">
+              <div key={solution} className="flex gap-3 rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-4 shadow-sm dark:shadow-none">
                 <CheckCircle2 size={18} className="text-emerald-300" />
                 <span className="text-sm text-muted">{solution}</span>
               </div>

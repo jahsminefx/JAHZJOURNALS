@@ -1,0 +1,69 @@
+{
+  "topics": [
+    {
+      "title": "Prop Firm Tracking",
+      "keywords": ["prop", "firm", "evaluation", "funded", "challenge", "drawdown"],
+      "content": "JAHZJOURNALS supports tracking your prop-firm evaluation progress natively. In the 'Add Account' section, select 'Funding Evaluation'. Set your starting balance, absolute max trailing drawdown limit, and daily loss limit to automatically enable risk alerts on the dashboard."
+    },
+    {
+      "title": "JAHZ Edge Finder",
+      "keywords": ["edge finder", "strategy", "improve", "statistics", "report", "what works"],
+      "content": "JAHZ Edge Finder scans your historical trade logs to definitively identify the exact combination of Session, Timeframe, Direction, and Setups that produce your highest Win Rate and Net Profit. It requires at least 15 minimum trades to build reliable correlations. Go to Analytics -> Edge Finder to run an analysis."
+    },
+    {
+      "title": "Managing Mentors",
+      "keywords": ["mentor", "student", "share", "teacher", "coach", "review"],
+      "content": "To connect with a mentor, the mentor must invite you via their Mentor Dashboard using your email address. Once accepted, you must explicitly enable 'Share Trades with Mentor' in your User Settings for them to see your trades or write executive AI summaries."
+    },
+    {
+      "title": "Vision AI & Screenshots",
+      "keywords": ["vision", "screenshots", "images", "charts", "analysis"],
+      "content": "JAHZ AI Vision can analyze your chart screenshots! Upload a screenshot to a trade, click 'Analyze visually', and the system will queue a background Vision AI job that looks at support/resistance boundaries, candlestick formations, and provides strict, non-prescriptive feedback."
+    },
+    {
+      "title": "Plan Limits",
+      "keywords": ["limit", "plan", "subscribe", "payment", "credits", "tokens"],
+      "content": "Free accounts have no AI access. Starter allows 5 full AI reviews per month. Pro allows 50 monthly AI interactions. Mentors have unrestricted AI usage to help analyze their massive cohorts."
+    },
+    {
+      "title": "Theme and Appearance",
+      "keywords": ["theme", "appearance", "dark mode", "light mode", "color", "display", "density", "font"],
+      "content": "To change the app's appearance, click on the Settings gear icon and navigate to 'Appearance Settings'. From there, you can switch between Light, Dark, or System predefined themes. You can also adjust the Dashboard density and Trade table density to Comfortable or Compact."
+    },
+    {
+      "title": "Risk Management Settings",
+      "keywords": ["risk", "drawdown", "limit", "losses", "stop trading", "warn"],
+      "content": "Navigate to Settings -> Risk Management to configure personal risk limits. You can set Risk per trade (%), Daily/Weekly drawdown limits, Maximum open trades, and Stop trading after N consecutive losses. You can also enable warnings when your risk is above your personal limit or when your Risk-to-Reward (RR) is below your minimum threshold."
+    },
+    {
+      "title": "Trading Preferences",
+      "keywords": ["defaults", "prefill", "account", "strategy", "preferences", "session", "pair"],
+      "content": "In Settings -> Trading Preferences, you can configure default values that pre-fill your new-trade form. This includes setting a default trading account, default risk percentage, minimum RR ratio, preferred trading session, default timeframes, and main instruments."
+    },
+    {
+      "title": "Journal Preferences",
+      "keywords": ["journal", "required fields", "notes", "emotions", "rule checklist"],
+      "content": "In Settings -> Journal Preferences, you can enforce strict journaling habits! You can set required fields for logging trades, enforce uploading a screenshot before a trade is completed, and mandate post-trade notes, emotion tracking, or rule checklists."
+    },
+    {
+      "title": "AI Settings",
+      "keywords": ["enable ai", "tone", "supportive", "direct", "analytical", "auto review"],
+      "content": "AI features can be fine-tuned in Settings -> Journal Preferences under 'AI Settings'. You can toggle automatic AI trade reviews upon closing a trade, choose whether the AI considers your emotions/rule violations/screenshots, and change the AI coaching tone between Direct, Supportive, or Analytical."
+    },
+    {
+      "title": "Profile and Account",
+      "keywords": ["profile", "password", "avatar", "email", "timezone", "currency", "delete"],
+      "content": "Visit Settings -> Profile Settings to update your name, phone number, country, timezone, and preferred base currency. You can also upload a profile photo. To change your password, use the Security section. Below all settings, you can export all your data or permanently delete your account."
+    },
+    {
+      "title": "Notifications",
+      "keywords": ["reminders", "alerts", "email", "push"],
+      "content": "Customize your alerts under Settings -> Notification Settings. Options include weekly review reminders, daily journaling reminders, trade follow-up reminders, risk-limit/drawdown warnings, mentor feedback alerts, and product updates."
+    },
+    {
+      "title": "Weekly Goals Dashboard",
+      "keywords": ["goal", "target", "weekly", "profit", "win rate"],
+      "content": "You can establish weekly performance targets in Settings -> Trading Preferences (Weekly Dashboard Goals). Set a Profit Target, Trade Count Target, Win-Rate Goal, or Maximum Loss Goal to have a progress card displayed right on your main dashboard."
+    }
+  ]
+}

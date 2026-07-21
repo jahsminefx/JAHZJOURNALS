@@ -65,10 +65,10 @@ const ImportTradesModal = ({ defaultAccountId, isOpen, onClose, onImportSuccess 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface shadow-2xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-xl font-bold text-white">Import History</h2>
+          <h2 className="text-xl font-bold text-foreground">Import History</h2>
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-muted hover:bg-surface-muted hover:text-white transition-colors"
+            className="rounded-full p-2 text-muted hover:bg-surface-muted hover:text-foreground transition-colors"
           >
             <X size={20} />
           </button>
@@ -80,7 +80,7 @@ const ImportTradesModal = ({ defaultAccountId, isOpen, onClose, onImportSuccess 
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-white focus:border-emerald-400 focus:outline-none"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-foreground focus:border-emerald-400 focus:outline-none"
               required
             >
               <option value="" disabled>Select an account...</option>
@@ -91,17 +91,17 @@ const ImportTradesModal = ({ defaultAccountId, isOpen, onClose, onImportSuccess 
           </div>
 
           <div className="mb-6 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-muted/50 p-6 text-center">
-            <Upload size={32} className="mb-3 text-emerald-400" />
+            <Upload size={32} className="mb-3 text-emerald-600 dark:text-emerald-400" />
             <p className="mb-1 text-sm font-medium text-foreground">Upload CSV File</p>
             <p className="mb-4 text-xs text-muted">MT4, MT5, and generic CSV layouts supported.</p>
             
-            <label className="cursor-pointer rounded-lg bg-surface-muted px-4 py-2 border border-border text-sm font-medium text-muted hover:bg-surface-muted hover:text-white transition-all">
+            <label className="cursor-pointer rounded-lg bg-surface-muted px-4 py-2 border border-border text-sm font-medium text-muted hover:bg-surface-muted hover:text-foreground transition-all">
               Choose File
               <input type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
             </label>
             
             {file && (
-              <p className="mt-4 text-xs font-medium text-emerald-400 max-w-full truncate px-4">
+              <p className="mt-4 text-xs font-medium text-emerald-600 dark:text-emerald-400 max-w-full truncate px-4">
                 Selected: {file.name}
               </p>
             )}

@@ -8,8 +8,11 @@ const topPlans = new Set(['PRO', 'MENTOR']);
 const UpgradeCard = ({ compact = false }) => {
   const { user } = useAuth();
   const plan = String(user?.subscriptionPlan || 'FREE').toUpperCase();
+  
+  const activeSub = user?.subscriptions?.[0];
+  const isFoundingTrader = activeSub?.source === 'PROMOTION';
 
-  if (topPlans.has(plan)) return null;
+  if (topPlans.has(plan) || isFoundingTrader) return null;
 
   return (
     <div className={`relative overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/10 ${compact ? 'p-4' : 'p-5'}`}>
@@ -22,7 +25,7 @@ const UpgradeCard = ({ compact = false }) => {
         <p className="mt-2 text-sm leading-relaxed text-muted">Unlock advanced analytics, custom reports, AI reviews and more.</p>
         <Link to="/pricing" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-emerald-400">
           <Sparkles size={15} />
-          Upgrade Plan
+          {import.meta.env.VITE_LAUNCH_MODE === 'true' ? 'Activate Founding Access' : 'Upgrade Plan'}
         </Link>
       </div>
     </div>

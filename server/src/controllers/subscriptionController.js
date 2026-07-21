@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { determineActivationMethod } = require('../services/subscriptionService');
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || 'sk_test_example';
 const PLAN_MAPPINGS = {
@@ -16,34 +17,17 @@ const initializeSubscription = async (req, res) => {
       return res.status(400).json({ message: 'Invalid subscription plan selected.' });
     }
 
-    const reference = `JAHZ_${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
-
-    // Normally we'd POST to Paystack api.paystack.co/transaction/initialize here and return the auth URL.
-    // Assuming native Node fetch exists (Node >= 18)
-    const response = await fetch('https://api.paystack.co/transaction/initialize', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: email || req.user.email,
-        amount: PLAN_MAPPINGS[plan].amount * 100, // Paystack requires kobo/cents
-        plan: PLAN_MAPPINGS[plan].planCode,
-        reference,
-        metadata: {
-          userId: req.user.id,
-          requestedPlan: plan,
-        },
-      }),
-    });
-
-    const data = await response.json();
-    if (!data.status) {
-      return res.status(400).json({ message: data.message || 'Failed to initialize payment gateway.' });
+    const activation = await determineActivationMethod(req.user, plan);
+    
+    if (activation.method === 'PROMOTION') {
+      return res.json({ success: true, authorization_url: null, message: activation.message });
+    } else if (activation.method === 'ALREADY_ACTIVE') {
+      return res.status(400).json({ message: activation.message });
+    } else {
+      // Mocking the Paystack checkout URL init 
+      const authorization_url = `https://checkout.paystack.com/mock-url-${plan}`;
+      return res.json({ success: true, authorization_url, message: activation.message });
     }
-
-    res.json({ success: true, authorization_url: data.data.authorization_url, reference });
   } catch (error) {
     console.error('Subscription Init Error:', error);
     res.status(500).json({ message: 'Unable to initialize subscription at this time.' });

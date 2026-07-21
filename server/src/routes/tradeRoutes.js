@@ -13,6 +13,9 @@ const { importTrades } = require('../controllers/importController');
 const { protect } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 const screenshotRoutes = require('./screenshotRoutes');
+const { preTradeCheck } = require('../controllers/preTradeController');
+
+router.post('/pre-trade-check', protect, preTradeCheck);
 
 router.route('/')
   .get(protect, getTrades)

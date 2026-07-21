@@ -12,7 +12,7 @@ import {
   CreditCard,
   Database,
   Download,
-  KeyRound,
+  Layers,
   Lock,
   Palette,
   Save,
@@ -25,6 +25,8 @@ import api from '../utils/api';
 import { useAuth } from '../context/useAuth';
 import { useTheme } from '../context/ThemeProvider';
 import { loadSettings, saveSettings, fetchAndSyncSettings } from '../utils/settings';
+import AiUsageDashboard from '../components/settings/AiUsageDashboard';
+import StrategySettings from '../components/settings/StrategySettings';
 
 const inputClass = 'mt-2 block w-full rounded-lg border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition focus:border-green-400 disabled:cursor-not-allowed disabled:opacity-60';
 
@@ -32,6 +34,7 @@ const sectionNav = [
   { id: 'profile', label: 'Profile', icon: UserRound },
   { id: 'trading', label: 'Trading Preferences', icon: SlidersHorizontal },
   { id: 'risk', label: 'Risk Management', icon: ShieldCheck },
+  { id: 'strategies', label: 'Trading Strategies', icon: Layers },
   { id: 'journal', label: 'Journal Preferences', icon: Camera },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'appearance', label: 'Appearance', icon: Palette },
@@ -706,6 +709,8 @@ const Settings = () => {
               Clear AI review history
             </button>
           </div>
+          
+          <AiUsageDashboard />
 
           <div className="rounded-xl border border-border bg-surface p-4">
             <div className="mb-4 flex items-center gap-3">
@@ -862,7 +867,12 @@ const Settings = () => {
     </form>
   );
 
-  const renderBilling = () => (
+  const renderBilling = () => {
+    const activeSub = user?.subscriptions?.[0];
+    const isFoundingTrader = activeSub?.source === 'PROMOTION';
+    const promotion = activeSub?.promotion;
+
+    return (
     <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('billing', null, 'Billing preferences saved'); }}>
       <SettingsCard
         title="Subscription and Billing"
@@ -870,11 +880,41 @@ const Settings = () => {
         actions={<SaveButton section="billing" savingSection={savingSection} />}
       >
         <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-xl border border-green-500/20 bg-green-500/10 p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-green-300">Current plan</p>
-            <h3 className="mt-3 text-3xl font-black text-foreground">{user?.subscriptionPlan || 'FREE'}</h3>
-            <p className="mt-2 text-sm text-muted">Status: {user?.subscriptionStatus || 'ACTIVE'}</p>
-            <p className="mt-4 text-sm text-muted">Renewal date: Not scheduled on Free plan</p>
+          <div className="rounded-xl border border-green-500/20 bg-green-500/10 p-5 relative overflow-hidden">
+            {isFoundingTrader && <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-amber-500/20 blur-xl" />}
+            <p className="relative z-10 text-xs font-bold uppercase tracking-[0.2em] text-green-300">Current plan</p>
+            <h3 className="relative z-10 mt-3 text-3xl font-black text-foreground">{user?.subscriptionPlan || 'FREE'}</h3>
+            
+            <div className="relative z-10 mt-6 space-y-3 border-t border-green-500/20 pt-4">
+              <div className="flex justify-between text-sm">
+                 <span className="text-muted">Status</span>
+                 <span className="text-foreground font-medium">{user?.subscriptionStatus || 'ACTIVE'}</span>
+              </div>
+              <div className="flex justify-between text-sm items-center">
+                 <span className="text-muted">Access Type</span>
+                 <span className="font-medium text-foreground">
+                   {isFoundingTrader ? (
+                     <span className="flex items-center gap-1.5 text-amber-400">
+                       🏅 {promotion?.badge?.name || 'Founding Trader'}
+                     </span>
+                   ) : 'Standard'}
+                 </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                 <span className="text-muted">Source</span>
+                 <span className="text-foreground font-medium capitalize">{activeSub?.source?.toLowerCase() || 'Free Tier'}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                 <span className="text-muted">Valid Until</span>
+                 <span className="text-foreground font-medium">
+                    {activeSub?.expiresAt ? new Date(activeSub.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Ongoing'}
+                 </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                 <span className="text-muted">Auto Renewal</span>
+                 <span className="text-foreground font-medium">{activeSub?.autoRenew ? 'Enabled' : 'Disabled'}</span>
+              </div>
+            </div>
           </div>
           <div className="space-y-4">
             <TextInput label="Billing email" value={settings.billing.billingEmail} onChange={(event) => updateSettingsSection('billing', 'billingEmail', event.target.value)} placeholder={profile.email} />
@@ -893,7 +933,7 @@ const Settings = () => {
         </div>
       </SettingsCard>
     </form>
-  );
+  )};
 
   const renderDataPrivacy = () => (
     <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('dataPrivacy', 'data-privacy', 'Data and privacy settings saved'); }} className="space-y-5">
@@ -956,6 +996,7 @@ const Settings = () => {
     profile: renderProfile,
     trading: renderTrading,
     risk: renderRisk,
+    strategies: () => <StrategySettings />,
     journal: renderJournal,
     notifications: renderNotifications,
     appearance: renderAppearance,

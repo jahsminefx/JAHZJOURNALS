@@ -49,23 +49,23 @@ const Register = () => {
       <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-muted">Your name</label>
-          <input id="name" type="text" {...register('name')} className="mt-2 block w-full rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
+          <input id="name" type="text" {...register('name')} className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
           {errors.name && <p className="mt-2 text-sm text-red-400">{errors.name.message}</p>}
         </div>
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-muted">Email</label>
-          <input id="email" type="email" {...register('email')} className="mt-2 block w-full rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
+          <input id="email" type="email" {...register('email')} className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
           {errors.email && <p className="mt-2 text-sm text-red-400">{errors.email.message}</p>}
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-muted">Password</label>
-            <input id="password" type="password" {...register('password')} className="mt-2 block w-full rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
+            <input id="password" type="password" {...register('password')} className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
             {errors.password && <p className="mt-2 text-sm text-red-400">{errors.password.message}</p>}
           </div>
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-muted">Confirm password</label>
-            <input id="confirmPassword" type="password" {...register('confirmPassword')} className="mt-2 block w-full rounded-lg border border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
+            <input id="confirmPassword" type="password" {...register('confirmPassword')} className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
             {errors.confirmPassword && <p className="mt-2 text-sm text-red-400">{errors.confirmPassword.message}</p>}
           </div>
         </div>

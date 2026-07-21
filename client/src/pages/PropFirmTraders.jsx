@@ -44,7 +44,7 @@ const PropFirmTraders = () => (
           <SectionHeader eyebrow="How it helps" title="Make your rules visible before pressure makes them expensive." />
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {helps.map((item) => (
-              <div key={item} className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-4">
+              <div key={item} className="flex gap-3 rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-4 shadow-sm dark:shadow-none">
                 <CheckCircle2 size={18} className="text-emerald-300" />
                 <span className="text-sm text-muted">{item}</span>
               </div>

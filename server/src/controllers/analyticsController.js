@@ -45,6 +45,9 @@ const fetchAnalyticsTrades = async (req) => {
     orderBy: [{ entryTime: 'asc' }, { createdAt: 'asc' }],
     include: {
       emotionLogs: true,
+      strategy: { select: { id: true, name: true } },
+      setup: { select: { id: true, name: true } },
+      checklistResponses: { include: { checklistItem: true } },
       ruleViolations: {
         include: {
           tradeRule: {

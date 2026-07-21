@@ -85,9 +85,9 @@ const disciplineData = {
 };
 
 const DisciplineMetric = ({ label, value }) => (
-  <div className="rounded-xl border border-white/10 bg-background/55 p-4">
+  <div className="rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-background/55 p-4 shadow-sm dark:shadow-none">
     <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-500">{label}</p>
-    <p className="mt-2 text-2xl font-black text-emerald-300">{value}</p>
+    <p className="mt-2 text-2xl font-black text-emerald-600 dark:text-emerald-300">{value}</p>
   </div>
 );
 
@@ -98,7 +98,7 @@ const DisciplineTrend = ({ trend, weeklyChange }) => {
   }));
 
   return (
-    <div className="mt-5 rounded-xl border border-white/10 bg-background/55 p-4">
+    <div className="mt-5 rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-background/55 p-4 shadow-sm dark:shadow-none">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold text-foreground">Discipline trend</h3>
@@ -150,13 +150,13 @@ const DisciplineStreak = ({ days, description }) => (
 
 const DisciplineFocusArea = ({ focusArea, onReviewViolations }) => (
   <div className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/[0.07] p-4">
-    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-200/80">Focus area</p>
+    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-200/80">Focus area</p>
     <h3 className="mt-2 text-xl font-black text-foreground">{focusArea.title}</h3>
     <p className="mt-2 text-sm leading-6 text-muted">{focusArea.description}</p>
     <button
       type="button"
       onClick={onReviewViolations}
-      className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-200/20 px-4 py-2 text-sm font-bold text-amber-100 transition hover:border-amber-200/40 hover:bg-amber-200/10"
+      className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-500/30 px-4 py-2 text-sm font-bold text-amber-700 transition hover:border-amber-500/50 hover:bg-amber-500/10 dark:border-amber-200/20 dark:text-amber-100 dark:hover:border-amber-200/40 dark:hover:bg-amber-200/10"
     >
       Review violations
       <ArrowRight size={16} aria-hidden="true" />
@@ -166,7 +166,7 @@ const DisciplineFocusArea = ({ focusArea, onReviewViolations }) => (
 
 const Home = () => {
   const handleReviewViolations = () => {
-    // TODO: Route to a dedicated violations review page when it exists.
+    // Route to a dedicated violations review page when it exists.
   };
 
   return (
@@ -185,14 +185,14 @@ const Home = () => {
             '--hero-position-desktop': 'center top',
           }}
         />
-        <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.22),transparent_33%),linear-gradient(180deg,rgba(2,6,23,0.78),rgba(17,24,39,0.84)_70%,rgba(2,6,23,0.95))]" />
+        <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.18),transparent_33%),linear-gradient(180deg,rgba(2,6,23,0.76),rgba(17,24,39,0.82)_70%,rgba(2,6,23,0.92))]" />
         <div className="relative z-20 mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="text-center lg:text-left">
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-300">Forex journal and analytics</p>
-            <h1 className="mt-5 text-4xl font-black tracking-tight text-foreground sm:text-6xl">
+            <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-6xl">
               Stop Guessing. Start Journaling Like a Disciplined Forex Trader.
             </h1>
-            <p className="mt-6 text-base leading-8 text-muted sm:text-lg">
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-gray-300 lg:mx-0">
               Track every trade, screenshot, emotion, mistake, and setup, then discover what actually makes you profitable.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
@@ -214,9 +214,9 @@ const Home = () => {
           />
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {problems.map((problem) => (
-              <div key={problem} className="flex items-center gap-3 rounded-xl border border-red-400/15 bg-red-400/[0.04] p-4">
-                <AlertTriangle size={20} className="shrink-0 text-red-300" />
-                <span className="text-sm font-medium text-gray-200">{problem}</span>
+              <div key={problem} className="flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.06] p-4 dark:border-red-400/15 dark:bg-red-400/[0.04]">
+                <AlertTriangle size={20} className="shrink-0" style={{ color: 'var(--problem-icon, #ef4444)' }} />
+                <span className="text-sm font-medium" style={{ color: 'var(--problem-text, #334155)' }}>{problem}</span>
               </div>
             ))}
           </div>
@@ -241,7 +241,7 @@ const Home = () => {
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+          <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-6 shadow-sm dark:shadow-none">
             <div className="grid grid-cols-2 gap-4">
               <StatCard label="Best pair" value="GBPUSD" />
               <StatCard label="Worst pair" value="XAUUSD" tone="red" />
@@ -272,8 +272,8 @@ const Home = () => {
           <SectionHeader eyebrow="How it works" title="Five steps from execution to insight." />
           <div className="mt-10 grid gap-5 md:grid-cols-5">
             {['Log your trade', 'Upload screenshots', 'Track emotions and rules', 'Review analytics', 'Discover your edge'].map((step, index) => (
-              <div key={step} className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
-                <span className="text-3xl font-black text-emerald-300">0{index + 1}</span>
+              <div key={step} className="rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-5 shadow-sm dark:shadow-none">
+                <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">0{index + 1}</span>
                 <p className="mt-4 font-semibold text-foreground">{step}</p>
               </div>
             ))}
@@ -283,7 +283,7 @@ const Home = () => {
 
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8">
+          <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-8 shadow-sm dark:shadow-none">
             <SectionHeader
               align="left"
               eyebrow="Discipline"
@@ -293,7 +293,7 @@ const Home = () => {
             <div className="mt-8 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-5">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-foreground">Discipline score</span>
-                <span className="text-3xl font-black text-emerald-300">{disciplineData.score}/100</span>
+                <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">{disciplineData.score}/100</span>
               </div>
               <div
                 className="mt-4 h-3 overflow-hidden rounded-full bg-surface-muted"

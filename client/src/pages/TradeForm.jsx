@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Trash2 } from 'lucide-react';
 import api from '../utils/api';
 import { loadSettings } from '../utils/settings';
+import AiDraftHelper from '../components/trades/review/AiDraftHelper';
+import DirectionSelect from '../components/trades/DirectionSelect';
 
 const emotionOptions = ['CALM', 'CONFIDENT', 'ANXIOUS', 'GREEDY', 'FEARFUL', 'ANGRY', 'FOMO', 'REVENGE_MINDSET', 'DISCIPLINED', 'REGRETFUL', 'FRUSTRATED'];
 const stageOptions = ['BEFORE_TRADE', 'DURING_TRADE', 'AFTER_TRADE'];
@@ -55,7 +57,7 @@ const getNewTradeDefaults = (settings, accounts) => {
     ...defaultValues,
     tradingAccountId: defaultAccount?.id || '',
     pair: getFirstInstrument(settings.trading.mainPairs),
-    strategyName: settings.trading.mainStrategy || '',
+    strategyId: '',
     session: settings.trading.preferredSession || defaultValues.session,
     higherTimeframe: settings.trading.defaultHigherTimeframe || '',
     entryTimeframe: settings.trading.defaultEntryTimeframe || '',
@@ -71,6 +73,8 @@ const TradeForm = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [accounts, setAccounts] = useState([]);
   const [rules, setRules] = useState([]);
+  const [strategies, setStrategies] = useState([]);
+  const [checklistData, setChecklistData] = useState([]);
   const [existingScreenshots, setExistingScreenshots] = useState([]);
   const [screenshotFiles, setScreenshotFiles] = useState([]);
   const [ruleViolations, setRuleViolations] = useState([]);
@@ -78,7 +82,7 @@ const TradeForm = () => {
   const [deletingScreenshotId, setDeletingScreenshotId] = useState(null);
   const navigate = useNavigate();
   const appSettings = useMemo(() => loadSettings(), []);
-  const { register, handleSubmit, reset } = useForm({ defaultValues });
+  const { register, handleSubmit, reset, getValues, setValue, control, watch } = useForm({ defaultValues });
 
   const activeRules = useMemo(() => rules.filter((rule) => rule.active), [rules]);
 
@@ -86,14 +90,16 @@ const TradeForm = () => {
     const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        const [accountsResponse, rulesResponse, tradeResponse] = await Promise.all([
+        const [accountsResponse, rulesResponse, strategiesResponse, tradeResponse] = await Promise.all([
           api.get('/accounts'),
           api.get('/rules'),
+          api.get('/strategies'),
           isEditMode ? api.get(`/trades/${id}`) : Promise.resolve({ data: null }),
         ]);
 
         setAccounts(accountsResponse.data);
         setRules(rulesResponse.data);
+        setStrategies(strategiesResponse.data);
 
         if (tradeResponse.data) {
           const trade = tradeResponse.data;
@@ -101,8 +107,8 @@ const TradeForm = () => {
             tradingAccountId: trade.tradingAccountId,
             pair: trade.pair || '',
             direction: trade.direction || 'BUY',
-            strategyName: trade.strategyName || '',
-            setupType: trade.setupType || '',
+            strategyId: trade.strategyId || '',
+            setupId: trade.setupId || '',
             session: trade.session || '',
             higherTimeframe: trade.higherTimeframe || '',
             entryTimeframe: trade.entryTimeframe || '',
@@ -143,6 +149,7 @@ const TradeForm = () => {
             intensity: log.intensity,
             note: log.note || '',
           })));
+          setChecklistData(trade.checklistResponses || []);
         } else if (accountsResponse.data.length > 0) {
           reset(getNewTradeDefaults(appSettings, accountsResponse.data));
           if (appSettings.journal.requireEmotionTracking) {
@@ -158,6 +165,37 @@ const TradeForm = () => {
 
     fetchInitialData();
   }, [appSettings, id, isEditMode, reset]);
+
+  useEffect(() => {
+    const activeSetupId = watch('setupId');
+    if (!activeSetupId || strategies.length === 0) return;
+
+    let targetSetup = null;
+    for (const strat of strategies) {
+      const found = strat.setups.find((su) => su.id === activeSetupId);
+      if (found) { targetSetup = found; break; }
+    }
+
+    if (targetSetup && targetSetup.checklistItems) {
+      setChecklistData((current) => {
+        return targetSetup.checklistItems.map((item) => {
+          const existing = current.find((c) => c.checklistItemId === item.id);
+          return {
+            checklistItemId: item.id,
+            title: item.title,
+            sortOrder: item.sortOrder,
+            checked: existing ? existing.checked : false,
+          };
+        }).sort((a, b) => a.sortOrder - b.sortOrder);
+      });
+    }
+  }, [watch('setupId'), strategies]);
+
+  const toggleChecklist = (checklistItemId) => {
+    setChecklistData(current => current.map(item =>
+      item.checklistItemId === checklistItemId ? { ...item, checked: !item.checked } : item
+    ));
+  };
 
   const uploadScreenshots = async (tradeId) => {
     for (const screenshot of screenshotFiles) {
@@ -178,6 +216,7 @@ const TradeForm = () => {
         ...compactPayload(data),
         ruleViolations,
         emotionLogs,
+        checklistResponses: checklistData,
       };
 
       let tradeId = id;
@@ -299,18 +338,33 @@ const TradeForm = () => {
                 </label>
                 <label className="text-sm text-muted">
                   Direction
-                  <select required {...register('direction')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
-                    <option value="BUY">Long / Buy</option>
-                    <option value="SELL">Short / Sell</option>
-                  </select>
+                  <Controller
+                    name="direction"
+                    control={control}
+                    render={({ field }) => (
+                      <DirectionSelect 
+                        value={field.value} 
+                        onChange={field.onChange} 
+                        onBlur={field.onBlur}
+                      />
+                    )}
+                  />
                 </label>
                 <label className="text-sm text-muted">
                   Strategy
-                  <input {...register('strategyName')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
+                  <select {...register('strategyId')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+                    <option value="">No Strategy</option>
+                    {strategies.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
                 </label>
                 <label className="text-sm text-muted">
                   Setup
-                  <input {...register('setupType')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
+                  <select {...register('setupId')} disabled={!watch('strategyId')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 disabled:opacity-50">
+                    <option value="">No Setup</option>
+                    {strategies.find(s => s.id === watch('strategyId'))?.setups.map(su => (
+                      <option key={su.id} value={su.id}>{su.name}</option>
+                    ))}
+                  </select>
                 </label>
                 <label className="text-sm text-muted">
                   Session
@@ -396,6 +450,25 @@ const TradeForm = () => {
               </div>
             </section>
 
+            {checklistData.length > 0 && (
+              <section>
+                <h3 className="text-lg font-medium text-green-400 border-b border-border pb-2 mb-4">Execution Checklist</h3>
+                <div className="space-y-3 max-w-xl">
+                  {checklistData.map(item => (
+                    <label key={item.checklistItemId} className="flex cursor-pointer items-start gap-4 rounded-xl border border-border bg-surface p-4 transition hover:bg-surface-muted hover:border-foreground/20">
+                      <input 
+                        type="checkbox"
+                        checked={item.checked}
+                        onChange={() => toggleChecklist(item.checklistItemId)}
+                        className="mt-0.5 h-5 w-5 rounded border-border text-green-500 bg-background"
+                      />
+                      <span className={`text-sm leading-6 ${item.checked ? 'text-muted line-through' : 'text-foreground font-medium'}`}>{item.title}</span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+            )}
+
             <section>
               <h3 className="text-lg font-medium text-green-400 border-b border-border pb-2 mb-4">Process & Discipline</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -430,10 +503,12 @@ const TradeForm = () => {
                 <label className="text-sm text-muted">
                   Pre-Trade Notes
                   <textarea rows="4" {...register('notesBefore')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
+                  <AiDraftHelper getValues={getValues} setValue={setValue} fieldName="notesBefore" draftType="BEFORE" />
                 </label>
                 <label className="text-sm text-muted">
                   Post-Trade Notes
                   <textarea rows="4" {...register('notesAfter')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 resize-none" />
+                  <AiDraftHelper getValues={getValues} setValue={setValue} fieldName="notesAfter" draftType="AFTER" />
                 </label>
               </div>
             </section>

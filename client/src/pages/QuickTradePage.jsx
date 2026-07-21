@@ -24,7 +24,7 @@ const getNewTradeDefaults = (settings, accounts) => {
     direction: 'BUY',
     status: 'PLANNED',
     result: 'OPEN',
-    strategyName: settings.trading.mainStrategy || '',
+    strategyId: '',
   };
 };
 
@@ -33,6 +33,7 @@ const QuickTradePage = () => {
   const isEditMode = Boolean(id);
   const [isLoading, setIsLoading] = useState(true);
   const [accounts, setAccounts] = useState([]);
+  const [strategies, setStrategies] = useState([]);
   const [initialData, setInitialData] = useState(null);
 
   useEffect(() => {
@@ -40,13 +41,15 @@ const QuickTradePage = () => {
       setIsLoading(true);
       try {
         const settings = loadSettings();
-        const [accountsResponse, tradeResponse] = await Promise.all([
+        const [accountsResponse, strategiesResponse, tradeResponse] = await Promise.all([
           api.get('/accounts'),
+          api.get('/strategies'),
           isEditMode ? api.get(`/trades/${id}`) : Promise.resolve({ data: null }),
         ]);
 
         const rawAccounts = accountsResponse.data;
         setAccounts(rawAccounts);
+        setStrategies(strategiesResponse.data);
 
         if (tradeResponse.data) {
           const trade = tradeResponse.data;
@@ -65,8 +68,8 @@ const QuickTradePage = () => {
             entryTime: toDateTimeLocal(trade.entryTime),
             exitTime: toDateTimeLocal(trade.exitTime),
             profitLossAmount: trade.profitLossAmount ?? '',
-            strategyName: trade.strategyName || '',
-            setupType: trade.setupType || '',
+            strategyId: trade.strategyId || '',
+            setupId: trade.setupId || '',
             entryReason: trade.entryReason || '',
           });
         } else if (rawAccounts.length > 0) {
@@ -104,7 +107,7 @@ const QuickTradePage = () => {
           <Link to="/accounts/new" className="px-4 py-2 bg-green-500 text-gray-900 rounded-lg">Create Your First Account</Link>
         </div>
       ) : initialData && (
-        <QuickTradeForm initialData={initialData} accounts={accounts} isEditMode={isEditMode} tradeId={id} />
+        <QuickTradeForm initialData={initialData} accounts={accounts} strategies={strategies} isEditMode={isEditMode} tradeId={id} />
       )}
     </div>
   );

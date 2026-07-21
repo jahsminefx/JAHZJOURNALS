@@ -10,7 +10,10 @@ generator client {
 enum Role {
   TRADER
   MENTOR
+  MODERATOR
+  SUPPORT
   ADMIN
+  SUPER_ADMIN
 }
 
 enum ThemePreference {
@@ -112,10 +115,59 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum SubscriptionSource {
+  PAYMENT
+  PROMOTION
+  ADMIN
+  GIFT
+  REFERRAL
+}
+
+enum SubscriptionReason {
+  PROMOTION_EXPIRED
+  ADMIN_GRANTED
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+  PROMOTION_REDEEMED
+  REFERRAL_REWARD
+  INITIAL_SIGNUP
+}
+
+enum PromotionCategory {
+  LAUNCH
+  REFERRAL
+  GIFT
+  COUPON
+  BETA
+  INTERNAL
+  MARKETING
+  PARTNERSHIP
+}
+
 enum GoalPeriod {
   DAILY
   WEEKLY
   MONTHLY
+}
+
+enum AiFeatureType {
+  TRADE_REVIEW
+  WEEKLY_COACH
+  EDGE_FINDER
+  TRADING_PLAN
+  SCREENSHOT_REVIEW
+  JOURNAL_ASSISTANT
+  ANALYTICS_ASSISTANT
+  MENTOR_SUMMARY
+  SUPPORT_ASSISTANT
+}
+
+enum AiRequestStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
 
 enum AccountCategory {
@@ -205,41 +257,52 @@ model User {
   reportExports      ReportExport[]
   subscriptions      Subscription[]
   payments           Payment[]
-  contactMessages    ContactMessage[]
+  contactMessages         ContactMessage[] @relation("UserContactMessages")
+  assignedContactMessages ContactMessage[] @relation("AssignedContactMessages")
+  supportTickets          SupportTicket[]
+  bugReports         BugReport[]
+  featureRequests    FeatureRequest[]
+  internalNotes      InternalNote[]
   mentorGroups       MentorStudent[]     @relation("StudentGroups")
   ownedMentorGroups  MentorGroup[]       @relation("MentorGroups")
   mentorFeedbacks    MentorFeedback[]    @relation("FeedbacksGiven")
+  aiRequests         AiRequest[]
   userSettings       UserSettings?
+  strategies         Strategy[]
+  notificationRecipients NotificationRecipient[]
+  authoredContactNotes   ContactInternalNote[] @relation("ContactNoteAuthor")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  subscriptionHistories SubscriptionHistory[]
+  userBadges            UserBadge[]
 
   @@index([timezone])
 }
 
 model UserSettings {
-  id                          String   @id @default(uuid())
-  user                        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId                      String   @unique
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
 
-  theme                       ThemePreference @default(system)
-  dashboardDensity            String   @default("comfortable")
-  tradeTableDensity           String   @default("comfortable")
-  chartAnimations             Boolean  @default(true)
-  preferredDateFormat         String?  @default("DD/MM/YYYY")
-  preferredNumberFormat       String?  @default("1,234.56")
+  theme                 ThemePreference @default(system)
+  dashboardDensity      String          @default("comfortable")
+  tradeTableDensity     String          @default("comfortable")
+  chartAnimations       Boolean         @default(true)
+  preferredDateFormat   String?         @default("DD/MM/YYYY")
+  preferredNumberFormat String?         @default("1,234.56")
 
-  defaultTradingAccountId     String?
-  defaultRiskPercent          Float?
-  minimumRiskRewardRatio      Float?
-  defaultHigherTimeframe      String?
-  defaultEntryTimeframe       String?
-  mainStrategy                String?
-  mainPairs                   String?
-  preferredSession            String?
-  maxTradesPerDay             Int?
-  maxLossesPerDay             Int?
-  dailyLossLimit              Float?
+  defaultTradingAccountId String?
+  defaultRiskPercent      Float?
+  minimumRiskRewardRatio  Float?
+  defaultHigherTimeframe  String?
+  defaultEntryTimeframe   String?
+  mainStrategy            String?
+  mainPairs               String?
+  preferredSession        String?
+  maxTradesPerDay         Int?
+  maxLossesPerDay         Int?
+  dailyLossLimit          Float?
 
   defaultTradeGrade                 String?
   requireScreenshotBeforeCompletion Boolean  @default(false)
@@ -251,61 +314,65 @@ model UserSettings {
   defaultAnalyticsPeriod            String   @default("30d")
   requiredTradeFields               String[] @default(["pair", "direction", "entryPrice", "stopLoss", "takeProfit"])
 
-  defaultScreenshotType             String   @default("MARKED_CHART")
-  defaultScreenshotQuality          String   @default("high")
-  maximumScreenshotsPerTrade        Int      @default(6)
-  automaticallyCompressImages       Boolean  @default(true)
-  keepOriginalImage                 Boolean  @default(false)
-  deleteCloudinaryImagesWithTrade   Boolean  @default(true)
+  defaultScreenshotType           String  @default("MARKED_CHART")
+  defaultScreenshotQuality        String  @default("high")
+  maximumScreenshotsPerTrade      Int     @default(6)
+  automaticallyCompressImages     Boolean @default(true)
+  keepOriginalImage               Boolean @default(false)
+  deleteCloudinaryImagesWithTrade Boolean @default(true)
 
-  enableAiTradeReviews              Boolean  @default(false)
-  generateReviewAfterClose          Boolean  @default(false)
-  includeEmotions                   Boolean  @default(true)
-  includeRuleViolations             Boolean  @default(true)
-  includeScreenshots                Boolean  @default(false)
-  weeklyAiSummary                   Boolean  @default(false)
-  coachingTone                      String   @default("analytical")
+  enableAiTradeReviews     Boolean @default(false)
+  generateReviewAfterClose Boolean @default(false)
+  includeEmotions          Boolean @default(true)
+  includeRuleViolations    Boolean @default(true)
+  includeScreenshots       Boolean @default(false)
+  weeklyAiSummary          Boolean @default(false)
+  coachingTone             String  @default("analytical")
 
-  assignedMentor                    String?
-  shareTradesWithMentor             Boolean  @default(false)
-  shareScreenshots                  Boolean  @default(false)
-  shareEmotions                     Boolean  @default(false)
-  shareWeeklyReviews                Boolean  @default(false)
-  allowMentorComments               Boolean  @default(true)
+  assignedMentor        String?
+  shareTradesWithMentor Boolean @default(false)
+  shareScreenshots      Boolean @default(false)
+  shareEmotions         Boolean @default(false)
+  shareWeeklyReviews    Boolean @default(false)
+  allowMentorComments   Boolean @default(true)
 
-  weeklyReviewReminders             Boolean  @default(false)
-  dailyJournalingReminders          Boolean  @default(false)
-  tradeFollowUpReminders            Boolean  @default(false)
-  riskLimitWarnings                 Boolean  @default(false)
-  propFirmDrawdownWarnings          Boolean  @default(false)
-  mentorFeedbackNotifications       Boolean  @default(false)
-  productUpdates                    Boolean  @default(false)
-  emailNotifications                Boolean  @default(false)
-  inAppNotifications                Boolean  @default(true)
+  weeklyReviewReminders       Boolean @default(false)
+  dailyJournalingReminders    Boolean @default(false)
+  tradeFollowUpReminders      Boolean @default(false)
+  riskLimitWarnings           Boolean @default(false)
+  propFirmDrawdownWarnings    Boolean @default(false)
+  mentorFeedbackNotifications Boolean @default(false)
+  productUpdates              Boolean @default(false)
+  emailNotifications          Boolean @default(false)
+  inAppNotifications          Boolean @default(true)
 
-  riskPerTrade                      Float?
-  dailyDrawdownLimit                Float?
-  weeklyDrawdownLimit               Float?
-  maximumOpenTrades                 Int?
-  stopAfterLosses                   Int?
-  warnRiskAboveLimit                Boolean  @default(false)
-  warnRiskRewardBelowMinimum        Boolean  @default(false)
+  riskPerTrade               Float?
+  dailyDrawdownLimit         Float?
+  weeklyDrawdownLimit        Float?
+  maximumOpenTrades          Int?
+  stopAfterLosses            Int?
+  warnRiskAboveLimit         Boolean @default(false)
+  warnRiskRewardBelowMinimum Boolean @default(false)
 
-  loginAlerts                       Boolean  @default(false)
+  loginAlerts Boolean @default(false)
 
-  billingEmail                      String?
-  renewalReminders                  Boolean  @default(false)
+  billingEmail     String?
+  renewalReminders Boolean @default(false)
 
-  allowAiUseOfJournalData           Boolean  @default(false)
+  enableJahzAi            Boolean @default(true)
+  allowTradeDataAnalysis  Boolean @default(true)
+  allowAiUseOfJournalData Boolean @default(false)
+  allowScreenshotAnalysis Boolean @default(false)
+  aiLanguage              String  @default("english")
+  saveAiHistory           Boolean @default(true)
 
-  createdAt                   DateTime @default(now())
-  updatedAt                   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-
 model TradingAccount {
-  id                  String  @id @default(uuid())
-  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String          @id @default(uuid())
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId              String
   name                String
   accountCategory     AccountCategory @default(REGULAR)
@@ -313,7 +380,7 @@ model TradingAccount {
   accountType         String?
   startingBalance     Float
   currentBalance      Float
-  currency            String  @default("USD")
+  currency            String          @default("USD")
   platform            String?
   defaultRiskPercent  Float?
   riskPerTradePercent Float?
@@ -321,7 +388,7 @@ model TradingAccount {
   maxTradesPerDay     Int?
   maxLossesPerDay     Int?
   notes               String?
-  isPropFirmAccount   Boolean @default(false)
+  isPropFirmAccount   Boolean         @default(false)
   propFirmName        String?
   profitTarget        Float?
   maxDrawdown         Float?
@@ -342,21 +409,21 @@ model TradingAccount {
 }
 
 model PropFirmAccount {
-  id                          String                  @id @default(uuid())
-  tradingAccount              TradingAccount          @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
-  tradingAccountId            String                  @unique
+  id                          String                @id @default(uuid())
+  tradingAccount              TradingAccount        @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
+  tradingAccountId            String                @unique
   firmName                    String
   customFirmName              String?
   programmeName               String
   marketType                  PropFirmMarketType
   evaluationType              EvaluationType
-  accountStatus               PropFirmAccountStatus   @default(NOT_STARTED)
+  accountStatus               PropFirmAccountStatus @default(NOT_STARTED)
   platform                    String?
   brokerServer                String?
   challengeFee                Float?
   startDate                   DateTime?
   currentPhaseNumber          Int?
-  dailyLossEnabled            Boolean                 @default(true)
+  dailyLossEnabled            Boolean               @default(true)
   dailyLossPercent            Float?
   dailyLossAmount             Float?
   maximumLossPercent          Float?
@@ -364,9 +431,9 @@ model PropFirmAccount {
   drawdownType                DrawdownType?
   dailyLossCalculationBasis   String?
   overallLossCalculationBasis String?
-  includeFloatingPnl          Boolean                 @default(true)
-  includeCommissions          Boolean                 @default(true)
-  includeSwaps                Boolean                 @default(true)
+  includeFloatingPnl          Boolean               @default(true)
+  includeCommissions          Boolean               @default(true)
+  includeSwaps                Boolean               @default(true)
   dailyResetTime              String?
   dailyResetTimezone          String?
   maxRiskPerTradePercent      Float?
@@ -374,7 +441,7 @@ model PropFirmAccount {
   maxOpenPositions            Int?
   maxLotSize                  Float?
   stopAfterLosses             Int?
-  consistencyRuleEnabled      Boolean                 @default(false)
+  consistencyRuleEnabled      Boolean               @default(false)
   consistencyRuleType         String?
   consistencyThreshold        Float?
   maximumBestDayPercent       Float?
@@ -399,7 +466,7 @@ model PropFirmAccount {
   payoutFrequency             String?
   minimumPayoutAmount         Float?
   payoutCycleStartDate        DateTime?
-  scalingPlanEnabled          Boolean                 @default(false)
+  scalingPlanEnabled          Boolean               @default(false)
   nextScalingTarget           Float?
   maximumAllocation           Float?
 
@@ -453,8 +520,8 @@ model PropFirmProgressSnapshot {
 }
 
 model TradingGoal {
-  id               String         @id @default(cuid())
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String          @id @default(cuid())
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId           String
   tradingAccount   TradingAccount? @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
   tradingAccountId String?
@@ -463,7 +530,7 @@ model TradingGoal {
   tradeCountTarget Int?
   winRateTarget    Decimal?
   maxLossTarget    Decimal?
-  active           Boolean        @default(true)
+  active           Boolean         @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -492,8 +559,10 @@ model Trade {
   result            TradeResult     @default(OPEN)
   status            TradeStatus     @default(PLANNED)
   session           TradingSession?
-  setupType         String?
-  strategyName      String?
+  strategyId        String?
+  strategy          Strategy?       @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  setupId           String?
+  setup             Setup?          @relation(fields: [setupId], references: [id], onDelete: SetNull)
   higherTimeframe   String?
   entryTimeframe    String?
   htfBias           String?
@@ -513,8 +582,9 @@ model Trade {
   emotionLogs          EmotionLog[]
   aiReviews            AiTradeReview[]
   mentorFeedbacks      MentorFeedback[]
-  bestInWeeklyReviews  WeeklyReview[]       @relation("WeeklyReviewBestTrade")
-  worstInWeeklyReviews WeeklyReview[]       @relation("WeeklyReviewWorstTrade")
+  checklistResponses   TradeChecklistResponse[]
+  bestInWeeklyReviews  WeeklyReview[]           @relation("WeeklyReviewBestTrade")
+  worstInWeeklyReviews WeeklyReview[]           @relation("WeeklyReviewWorstTrade")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -526,8 +596,8 @@ model Trade {
   @@index([pair])
   @@index([result])
   @@index([session])
-  @@index([setupType])
-  @@index([strategyName])
+  @@index([strategyId])
+  @@index([setupId])
   @@index([direction])
   @@index([entryTimeframe])
   @@index([followedPlan])
@@ -724,6 +794,35 @@ model AiTradeReview {
   @@index([tradeId])
 }
 
+model AiRequest {
+  id               String          @id @default(cuid())
+  userId           String
+  tradeId          String?
+  weeklyReviewId   String?
+  mentorGroupId    String?
+  featureType      AiFeatureType
+  status           AiRequestStatus @default(QUEUED)
+  provider         String
+  model            String
+  promptVersion    String
+  inputSnapshot    Json?
+  structuredOutput Json?
+  rawResponse      Json?
+  errorMessage     String?
+  inputTokens      Int?
+  outputTokens     Int?
+  estimatedCost    Decimal?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, featureType, createdAt])
+  @@index([status, createdAt])
+}
+
 model MentorGroup {
   id          String  @id @default(uuid())
   mentor      User    @relation("MentorGroups", fields: [mentorId], references: [id], onDelete: Cascade)
@@ -764,12 +863,19 @@ model MentorFeedback {
 }
 
 model Subscription {
-  id        String             @id @default(uuid())
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  plan      SubscriptionPlan
-  status    SubscriptionStatus @default(ACTIVE)
-  startedAt DateTime           @default(now())
+  id               String             @id @default(uuid())
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  plan             SubscriptionPlan
+  status           SubscriptionStatus @default(ACTIVE)
+  source           SubscriptionSource @default(PAYMENT)
+  autoRenew        Boolean            @default(false)
+  paymentReference String?
+
+  promotionId String?
+  promotion   Promotion? @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+
+  startedAt DateTime  @default(now())
   expiresAt DateTime?
 
   createdAt DateTime @default(now())
@@ -791,22 +897,367 @@ model Payment {
   updatedAt DateTime @updatedAt
 }
 
-model ContactMessage {
-  id      String  @id @default(uuid())
-  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId  String?
-  name    String
-  email   String
-  subject String
-  message String
-  status  String  @default("NEW")
-  ipHash  String?
+model Strategy {
+  id                 String  @id @default(uuid())
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+  name               String
+  description        String?
+  style              String?
+  market             String?
+  defaultRiskPercent Float?
+  isActive           Boolean @default(true)
+  isArchived         Boolean @default(false)
+  isImported         Boolean @default(false)
 
+  setups Setup[]
+  trades Trade[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isArchived])
+}
+
+model Setup {
+  id                  String   @id @default(uuid())
+  strategy            Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  strategyId          String
+  name                String
+  description         String?
+  preferredSession    String?
+  preferredTimeframes String[]
+  minimumRR           Float?
+  maximumRisk         Float?
+  exampleImage        String?
+  notes               String?
+  isActive            Boolean  @default(true)
+  isArchived          Boolean  @default(false)
+  isImported          Boolean  @default(false)
+  sortOrder           Int      @default(0)
+
+  checklistItems ChecklistItem[]
+  trades         Trade[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId])
+}
+
+model ChecklistItem {
+  id          String  @id @default(uuid())
+  setup       Setup   @relation(fields: [setupId], references: [id], onDelete: Cascade)
+  setupId     String
+  title       String
+  description String?
+  category    String?
+  required    Boolean @default(false)
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  responses TradeChecklistResponse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([setupId])
+}
+
+model TradeChecklistResponse {
+  id              String        @id @default(uuid())
+  trade           Trade         @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeId         String
+  checklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  checklistItemId String
+  checked         Boolean       @default(false)
+  notes           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tradeId, checklistItemId])
+  @@index([tradeId])
+}
+
+model Promotion {
+  id          String           @id @default(uuid())
+  name        String
+  slug        String           @unique
+  description String?
+  planGranted SubscriptionPlan
+  benefits    String[]         @default([])
+
+  badgeId String?
+  badge   Badge?  @relation(fields: [badgeId], references: [id], onDelete: SetNull)
+
+  category           PromotionCategory @default(MARKETING)
+  isActive           Boolean   @default(true)
+  startsAt           DateTime?
+  endsAt             DateTime?
+  maxRedemptions     Int?
+  currentRedemptions Int       @default(0)
+  requiresInvite     Boolean   @default(false)
+  autoActivate       Boolean   @default(false)
+  autoExpire         Boolean   @default(false)
+  revokeBadgeOnExpiry Boolean  @default(false)
+
+  subscriptions Subscription[]
+  histories     SubscriptionHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SubscriptionHistory {
+  id           String              @id @default(uuid())
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  previousPlan SubscriptionPlan?
+  newPlan      SubscriptionPlan
+  source       SubscriptionSource
+  reason       SubscriptionReason?
+
+  promotionId String?
+  promotion   Promotion? @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+
+  paymentReference String?
+  changedBy        String  @default("USER")
+
+  createdAt DateTime @default(now())
+}
+
+model Badge {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  color       String  @default("gold")
+  icon        String?
+  description String?
+
+  promotions Promotion[]
+  users      UserBadge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserBadge {
+  id      String @id @default(uuid())
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  badge   Badge  @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  badgeId String
+
+  awardedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  adminId    String?
+  action     String
+  resource   String?
+  resourceId String?
+  oldValue   String?
+  newValue   String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  ticketNumber String  @unique @default(uuid())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?
+  subject     String
+  description String
+  category    String   @default("GENERAL")
+  status      String   @default("OPEN")
+  priority    String   @default("NORMAL")
+  assignedTo  String?
+  rating      Int?
+  feedback    String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([ticketNumber])
+}
+
+model SystemConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+model BugReport {
+  id            String   @id @default(uuid())
+  reporter      User?    @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+  reporterId    String?
+  browser       String?
+  device        String?
+  appVersion    String?
+  severity      String   @default("NORMAL")
+  status        String   @default("NEW")
+  assignedTo    String?
+  relatedModule String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([reporterId])
+  @@index([status])
+}
+
+model FeatureRequest {
+  id               String   @id @default(uuid())
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId           String?
+  category         String   @default("GENERAL")
+  description      String
+  votes            Int      @default(0)
+  status           String   @default("UNDER_REVIEW")
+  estimatedRelease String?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model InternalNote {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  content   String
+  authorId  String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Notification {
+  id           String   @id @default(uuid())
+  type         String   @default("SYSTEM")
+  category     String   @default("INFO")
+  title        String
+  message      String
+  actionUrl    String?
+  targetUsers  String[]
+  targetRoles  String[]
+  isGlobal     Boolean  @default(false)
+  senderId     String?
+  expiresAt    DateTime?
+  
+  recipients   NotificationRecipient[]
+
+  createdAt    DateTime @default(now())
+}
+
+model NotificationRecipient {
+  id             String       @id @default(uuid())
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  notificationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  status         String       @default("UNREAD")
+  readAt         DateTime?
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([notificationId, userId])
+  @@index([userId, status])
+}
+
+model Announcement {
+  id                String    @id @default(uuid())
+  title             String
+  content           String
+  targetAudiences   String[]  @default(["ALL"])
+  displayLocations  String[]  @default(["DASHBOARD"])
+  priority          String    @default("NORMAL")
+  status            String    @default("DRAFT")
+  startsAt          DateTime?
+  endsAt            DateTime?
+  createdBy         String?
+  views             Int       @default(0)
+  clicks            Int       @default(0)
+  
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([status])
+  @@index([startsAt, endsAt])
+}
+
+model ContactMessage {
+  id           String  @id @default(uuid())
+  user         User?   @relation("UserContactMessages", fields: [userId], references: [id], onDelete: SetNull)
+  userId       String?
+  assignedTo   User?   @relation("AssignedContactMessages", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId String?
+  name         String
+  email        String
+  subject      String
+  message      String
+  status       String  @default("NEW")
+  tags         String[] @default([])
+  ipHash       String?
+
+  threads       ContactThread[]
+  internalNotes ContactInternalNote[]
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([status])
+  @@index([assignedToId])
   @@index([createdAt])
   @@index([userId])
 }
+
+model ContactThread {
+  id               String         @id @default(uuid())
+  contactMessage   ContactMessage @relation(fields: [contactMessageId], references: [id], onDelete: Cascade)
+  contactMessageId String
+  senderType       String
+  senderId         String?
+  message          String
+  attachments      String[]
+  
+  createdAt        DateTime       @default(now())
+
+  @@index([contactMessageId])
+}
+
+model ContactInternalNote {
+  id               String         @id @default(uuid())
+  contactMessage   ContactMessage @relation(fields: [contactMessageId], references: [id], onDelete: Cascade)
+  contactMessageId String
+  author           User           @relation("ContactNoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  authorId         String
+  content          String
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([contactMessageId])
+  @@index([authorId])
+}
+
+

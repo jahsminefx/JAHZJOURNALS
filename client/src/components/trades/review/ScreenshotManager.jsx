@@ -47,7 +47,7 @@ const ScreenshotManager = ({ existingScreenshots, setExistingScreenshots, screen
 
   return (
     <section className="bg-surface-muted p-6 rounded-xl border border-border space-y-4">
-      <h3 className="text-lg font-medium text-green-400">Screenshots</h3>
+      <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400">Screenshots</h3>
       
       {existingScreenshots.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -67,7 +67,7 @@ const ScreenshotManager = ({ existingScreenshots, setExistingScreenshots, screen
       )}
 
       <div className="pt-4 mt-4 border-t border-border">
-        <input type="file" accept="image/*" multiple onChange={addScreenshotFile} className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-gray-700 file:px-4 file:py-2 file:font-medium file:text-green-400" />
+        <input type="file" accept="image/*" multiple onChange={addScreenshotFile} className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:font-medium file:text-emerald-400 dark:file:bg-gray-700" />
       </div>
 
       {screenshotFiles.length > 0 && (

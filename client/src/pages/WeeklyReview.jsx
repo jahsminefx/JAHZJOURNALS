@@ -28,6 +28,8 @@ const WeeklyReview = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiInsight, setAiInsight] = useState(null);
 
   const fetchReviews = async () => {
     const params = new URLSearchParams();
@@ -42,6 +44,15 @@ const WeeklyReview = () => {
 
   const setReflectionsFromReview = (review) => {
     setReflections(Object.fromEntries(reflectionFields.map(([field]) => [field, review?.[field] || ''])));
+    if (review?.aiSummary) {
+      try {
+        setAiInsight(JSON.parse(review.aiSummary));
+      } catch (e) {
+        setAiInsight({ weeklySummary: review.aiSummary }); // fallback for legacy text
+      }
+    } else {
+      setAiInsight(null);
+    }
   };
 
   useEffect(() => {
@@ -106,6 +117,57 @@ const WeeklyReview = () => {
     }
   };
 
+  const requestAiCoach = async () => {
+    if (!selectedReview) return;
+    setIsGeneratingAi(true);
+    toast.loading('Analyzing your weekly statistics...', { id: 'aiCoachToast' });
+    try {
+      await api.post(`/ai/weekly-reviews/${selectedReview.id}/coach`);
+      toast.loading('Weekly analysis queued. Sit tight...', { id: 'aiCoachToast' });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to queue AI coach.', { id: 'aiCoachToast' });
+      setIsGeneratingAi(false);
+    }
+  };
+
+  useEffect(() => {
+    let intervalId;
+    // We poll if there's no aiSummary but we requested it, or if we want to determine queued status from a global state.
+    // For simplicity, if we triggered generation, we just poll the review until aiSummary appears
+    if (isGeneratingAi && selectedReview) {
+      intervalId = setInterval(async () => {
+        try {
+          const { data } = await api.get(`/weekly-reviews?accountId=${form.accountId}`);
+          const reviewList = data.data || [];
+          const updatedReview = reviewList.find(r => r.id === selectedReview.id);
+          
+          if (updatedReview && updatedReview.aiSummary) {
+            setSelectedReview(updatedReview);
+            setReflectionsFromReview(updatedReview);
+            setIsGeneratingAi(false);
+            toast.success('AI Weekly Coach analysis complete!', { id: 'aiCoachToast' });
+            clearInterval(intervalId);
+          }
+          // We don't have AiRequest attached to the review payload yet, so if it fails silently it might poll forever. 
+          // Stop after 20 tries (60 seconds)
+        } catch (e) {
+          console.error(e);
+        }
+      }, 3000);
+      
+      // Stop after 20 tries
+      setTimeout(() => {
+        if (isGeneratingAi) {
+           setIsGeneratingAi(false);
+           clearInterval(intervalId);
+        }
+      }, 60000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isGeneratingAi, selectedReview, form.accountId]);
+
   const components = selectedReview?.disciplineScoreComponents || {};
 
   return (
@@ -168,6 +230,76 @@ const WeeklyReview = () => {
                   </div>
                 ))}
               </div>
+
+              {aiInsight ? (
+                <div className="bg-purple-500/10 p-6 rounded-xl border border-purple-500/30 shadow-lg mt-6 mb-6">
+                  <h3 className="text-lg font-bold text-purple-400 border-b border-purple-500/30 pb-2 mb-4 flex items-center gap-2">
+                    JAHZ AI Weekly Coach
+                  </h3>
+                  
+                  {aiInsight.sampleSizeWarning && (
+                    <div className="bg-yellow-500/20 text-yellow-500 text-sm p-3 rounded-lg border border-yellow-500/30 mb-4">
+                      {aiInsight.sampleSizeWarning}
+                    </div>
+                  )}
+
+                  <p className="text-sm text-foreground/90 italic leading-relaxed mb-6">
+                    "{aiInsight.weeklySummary}"
+                  </p>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold text-green-400 mb-2">Continue Doing</h4>
+                      <p className="text-sm text-muted">{aiInsight.whatToContinueDoing}</p>
+                      
+                      <h4 className="font-semibold text-green-400 mt-4 mb-2">Greatest Strength</h4>
+                      <p className="text-sm text-muted">{aiInsight.mainStrength}</p>
+                      
+                      <h4 className="font-semibold text-purple-400 mt-4 mb-2">Positive Habit</h4>
+                      <p className="text-sm text-muted">{aiInsight.mostUsefulPositiveHabit}</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-red-400 mb-2">Stop Doing</h4>
+                      <p className="text-sm text-muted">{aiInsight.whatToStopDoing}</p>
+                      
+                      <h4 className="font-semibold text-red-400 mt-4 mb-2">Weakness</h4>
+                      <p className="text-sm text-muted">{aiInsight.mainWeakness}</p>
+                      
+                      <h4 className="font-semibold text-orange-400 mt-4 mb-2">Repeated Mistake</h4>
+                      <p className="text-sm text-muted">{aiInsight.mostImportantRepeatedMistake}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-purple-500/30">
+                     <div>
+                       <h4 className="font-semibold text-muted mb-2">Psychology Check</h4>
+                       <p className="text-sm text-muted">{aiInsight.psychologyInsight}</p>
+                     </div>
+                     <div>
+                       <h4 className="font-semibold text-muted mb-2">Risk Check</h4>
+                       <p className="text-sm text-muted">{aiInsight.riskManagementInsight}</p>
+                     </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-purple-500/30 text-center">
+                    <h4 className="font-bold text-purple-300 text-lg mb-2">Measurable Goal for Next Week</h4>
+                    <p className="text-md text-foreground">{aiInsight.measurableGoalForNextWeek}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-surface-muted p-6 rounded-xl border border-purple-500/30 mt-6 mb-6 flex flex-col items-center justify-center space-y-3">
+                   <h3 className="text-lg font-bold text-purple-400">Want deeper insight?</h3>
+                   <p className="text-sm text-muted text-center">Let JAHZ AI analyze these statistics and give you a structured psychological and risk breakdown.</p>
+                   <button
+                     onClick={requestAiCoach}
+                     disabled={isGeneratingAi}
+                     className="inline-flex items-center justify-center gap-2 rounded-lg bg-purple-500/20 px-4 py-2 text-sm font-bold text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 border border-purple-500/50 mt-2"
+                   >
+                     {isGeneratingAi ? 'Analyzing Data...' : 'Generate AI Weekly Coach'}
+                   </button>
+                </div>
+              )}
 
               <div className="rounded-xl border border-border bg-surface-muted p-6">
                 <h3 className="mb-4 text-lg font-bold text-green-400">The Hard Truth</h3>

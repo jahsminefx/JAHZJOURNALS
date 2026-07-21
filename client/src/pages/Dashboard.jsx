@@ -14,9 +14,11 @@ import WeeklyGoalProgress from '../components/dashboard/WeeklyGoalProgress';
 import RecentTrades from '../components/dashboard/RecentTrades';
 import UpgradeCard from '../components/dashboard/UpgradeCard';
 import DisciplineBanner from '../components/dashboard/DisciplineBanner';
+import EdgeFinderWidget from '../components/dashboard/EdgeFinderWidget';
 import DashboardSkeleton from '../components/dashboard/DashboardSkeleton';
 import DashboardEmptyState from '../components/dashboard/DashboardEmptyState';
 import DashboardErrorState from '../components/dashboard/DashboardErrorState';
+import AiChatWidget from '../components/dashboard/AiChatWidget';
 import { formatCurrency, formatNumber, formatPercent, getDateRange } from '../utils/dashboard';
 
 const getInitialRange = (searchParams) => {
@@ -291,8 +293,12 @@ const Dashboard = () => {
               <UpgradeCard />
             </div>
           </section>
+          
+          <EdgeFinderWidget />
 
           <DisciplineBanner />
+
+          <AiChatWidget />
         </>
       )}
     </div>

@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 
 const variants = {
   primary: 'bg-emerald-400 text-gray-950 hover:bg-emerald-300 shadow-[0_0_28px_rgba(52,211,153,0.22)]',
-  secondary: 'border border-white/10 bg-white/5 text-white hover:bg-white/10',
-  ghost: 'text-muted hover:text-white hover:bg-white/5',
+  secondary: 'border border-border bg-surface text-foreground hover:bg-surface-muted dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10',
+  ghost: 'text-muted hover:text-foreground hover:bg-surface-muted dark:hover:text-white dark:hover:bg-white/5',
 };
 
 const sizes = {

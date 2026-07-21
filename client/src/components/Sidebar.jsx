@@ -1,13 +1,14 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, LineChart, Briefcase, PlusCircle, Calculator, Compass, Settings, LogOut, Wallet, ShieldCheck } from 'lucide-react';
+import { Home, LineChart, Briefcase, PlusCircle, Calculator, Compass, Settings, LogOut, Wallet, ShieldCheck, Layers, Sparkles, User as UserIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/useAuth';
 import BrandLogo from './BrandLogo';
 import UpgradeCard from './dashboard/UpgradeCard';
+import FoundingTraderBadge from './FoundingTraderBadge';
 
 const Sidebar = () => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const navItems = [
@@ -16,9 +17,11 @@ const Sidebar = () => {
     { name: 'Trades', path: '/trades', icon: <Briefcase size={20} /> },
     { name: 'New Trade', path: '/trades/new', icon: <PlusCircle size={20} /> },
     { name: 'Rules', path: '/rules', icon: <ShieldCheck size={20} /> },
+    { name: 'Strategies', path: '/strategies', icon: <Layers size={20} /> },
     { name: 'Analytics', path: '/analytics', icon: <LineChart size={20} /> },
     { name: 'Calculator', path: '/risk-calculator', icon: <Calculator size={20} /> },
     { name: 'Weekly Review', path: '/weekly-review', icon: <Compass size={20} /> },
+    { name: 'JAHZ AI', path: '/ai', icon: <Sparkles size={20} /> },
     { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
   ];
 
@@ -52,9 +55,48 @@ const Sidebar = () => {
             <span className="font-medium">{item.name}</span>
           </NavLink>
         ))}
+
+        {user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              `flex items-center px-4 py-3 rounded-lg transition-colors mt-4 border border-rose-500/20 bg-rose-500/5 ${
+                isActive ? 'text-rose-600 dark:text-rose-400' : 'text-rose-500/80 hover:bg-rose-500/10 hover:text-rose-500'
+              }`
+            }
+          >
+            <span className="mr-3"><ShieldCheck size={20} /></span>
+            <span className="font-medium">Admin Console</span>
+          </NavLink>
+        )}
       </nav>
       <div className="space-y-4 p-4 border-t border-border">
         <UpgradeCard compact />
+        
+        <div className="flex flex-col gap-2 rounded-lg bg-surface-muted/50 p-3 mt-auto">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center overflow-hidden shrink-0">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <UserIcon size={18} />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">{user?.name || 'Trader'}</p>
+              {user?.subscriptions?.[0]?.source === 'PROMOTION' && (
+                <div className="mt-1">
+                  <FoundingTraderBadge 
+                    subscription={user.subscriptions[0]} 
+                    badgeName={user.subscriptions[0].promotion?.badge?.name || 'Founding Trader'}
+                    badgeColor={user.subscriptions[0].promotion?.badge?.color || 'amber'}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={handleLogout}

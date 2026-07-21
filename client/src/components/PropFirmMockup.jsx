@@ -2,11 +2,11 @@ import React from 'react';
 import StatCard from './StatCard';
 
 const PropFirmMockup = () => (
-  <div className="rounded-2xl border border-white/10 bg-background/80 p-5 shadow-2xl shadow-cyan-950/20">
+  <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-background/80 p-5 shadow-xl dark:shadow-cyan-950/20">
     <div className="flex items-center justify-between">
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-muted">Challenge Tracker</p>
-        <h3 className="mt-1 text-xl font-bold text-white">Phase 1 Account</h3>
+        <h3 className="mt-1 text-xl font-bold text-foreground">Phase 1 Account</h3>
       </div>
       <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-300">47% progress</span>
     </div>
@@ -16,7 +16,7 @@ const PropFirmMockup = () => (
       <StatCard label="Daily drawdown" value="3%" tone="red" />
       <StatCard label="Max drawdown" value="8%" tone="red" />
     </div>
-    <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="mt-5 rounded-xl border border-border bg-surface-muted dark:border-white/10 dark:bg-white/[0.03] p-4">
       <div className="flex justify-between text-sm text-muted">
         <span>Current progress</span>
         <span className="font-semibold text-emerald-300">47%</span>

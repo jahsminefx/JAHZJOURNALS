@@ -33,12 +33,12 @@ const RuleViolationEditor = ({ ruleViolations, setRuleViolations, activeRules })
     <section className="bg-surface-muted p-6 rounded-xl border border-border space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h3 className="text-lg font-medium text-green-400">Rules Broken</h3>
+          <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400">Rules Broken</h3>
           <p className="text-sm text-muted">Were any of your trading rules bent or broken?</p>
         </div>
         <div className="flex bg-surface p-1 rounded-lg border border-border self-start">
-          <button type="button" onClick={() => setShowViolations(false)} className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${!showViolations ? 'bg-green-500 text-gray-900' : 'text-muted hover:text-gray-200'}`}>No</button>
-          <button type="button" onClick={() => { setShowViolations(true); if (ruleViolations.length === 0) addRuleViolation(); }} className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${showViolations ? 'bg-red-500 text-white' : 'text-muted hover:text-gray-200'}`}>Yes</button>
+          <button type="button" onClick={() => setShowViolations(false)} className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${!showViolations ? 'bg-green-500 text-gray-900' : 'text-muted hover:text-foreground'}`}>No</button>
+          <button type="button" onClick={() => { setShowViolations(true); if (ruleViolations.length === 0) addRuleViolation(); }} className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${showViolations ? 'bg-red-500 text-white' : 'text-muted hover:text-foreground'}`}>Yes</button>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ const RuleViolationEditor = ({ ruleViolations, setRuleViolations, activeRules })
               </button>
             </div>
           ))}
-          <button type="button" onClick={addRuleViolation} className="text-sm font-medium text-green-400 hover:text-green-300">+ Add another rule</button>
+          <button type="button" onClick={addRuleViolation} className="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300">+ Add another rule</button>
         </div>
       )}
     </section>

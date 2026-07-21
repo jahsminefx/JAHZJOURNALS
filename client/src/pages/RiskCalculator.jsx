@@ -28,7 +28,7 @@ const RiskCalculator = () => {
     <div className="max-w-xl mx-auto space-y-6 font-sans">
       <div className="bg-surface-muted p-6 rounded-xl shadow-lg border border-border">
         <div className="flex items-center space-x-3 border-b border-border pb-4 mb-6">
-          <div className="p-2 bg-green-500/20 rounded-lg text-green-400">
+          <div className="p-2 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-lg text-emerald-600 dark:text-emerald-400">
             <Calculator size={24} />
           </div>
           <div>
@@ -76,11 +76,11 @@ const RiskCalculator = () => {
            <div className="grid grid-cols-2 gap-6 text-center">
              <div className="bg-surface p-4 rounded-lg border border-border">
                 <p className="text-sm text-muted mb-1">Capital at Risk</p>
-                <p className="text-2xl font-bold text-red-400">${results.riskAmount}</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">${results.riskAmount}</p>
              </div>
              <div className="bg-surface p-4 rounded-lg border border-border">
                 <p className="text-sm text-muted mb-1">Suggested Lot Size</p>
-                <p className="text-2xl font-bold text-green-400">{results.lotSize}</p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{results.lotSize}</p>
              </div>
            </div>
         </div>

@@ -19,6 +19,25 @@ const registerUser = async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+
+    // PHASE 10: CLOSED BETA REGISTRATION LOCK
+    const systemConfig = await prisma.systemConfig.findUnique({ where: { key: 'FEATURES_CONFIG'} });
+    const launchMode = systemConfig?.value?.launchMode || 'DEVELOPMENT';
+    
+    if (launchMode === 'CLOSED_BETA' || launchMode === 'WAITLIST') {
+       if (!req.body.promoCode) {
+         return res.status(403).json({ message: 'JAHZJOURNALS is currently in an exclusive Closed Beta. An invitation code is strictly required to register.' });
+       }
+
+       const validPromo = await prisma.promotion.findFirst({
+          where: { code: req.body.promoCode.toUpperCase(), isActive: true }
+       });
+
+       if (!validPromo) {
+         return res.status(403).json({ message: 'The Beta Access code provided is either invalid or has expired.' });
+       }
+    }
+
     const userExists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
     if (userExists) {
@@ -188,6 +207,10 @@ const getUserProfile = async (req, res) => {
     });
 
     if (user) {
+      if (req.user.isImpersonating) {
+         user.isImpersonating = true;
+         // Explicitly strip impersonatorId from frontend traces preventing XSS ID escalation.
+      }
       res.json(user);
     } else {
       res.status(404).json({ message: 'We couldn\'t find your profile.' });

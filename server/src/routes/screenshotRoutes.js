@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const { uploadScreenshot, deleteScreenshot } = require('../controllers/screenshotController');
+const { uploadScreenshot, deleteScreenshot, analyzeScreenshot } = require('../controllers/screenshotController');
 const { protect } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 

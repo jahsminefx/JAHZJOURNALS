@@ -32,6 +32,12 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'We couldn\'t recognize your credentials.' });
       }
 
+      // IMPERSONATION VECTOR (PHASE 9)
+      if (decoded.isImpersonating) {
+         req.user.isImpersonating = true;
+         req.user.impersonatorId = decoded.impersonatorId;
+      }
+
       if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== req.user.tokenVersion) {
         return res.status(401).json({ message: 'Your session has been invalidated from another device. Please log in again.' });
       }

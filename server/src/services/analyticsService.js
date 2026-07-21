@@ -49,8 +49,8 @@ const buildTradeWhere = (query = {}, userId) => {
 
   if (hasValue(query.pair)) where.pair = String(query.pair).trim().toUpperCase();
   if (hasValue(query.session)) where.session = query.session;
-  if (hasValue(query.setup)) where.setupType = { contains: String(query.setup).trim(), mode: 'insensitive' };
-  if (hasValue(query.strategy)) where.strategyName = { contains: String(query.strategy).trim(), mode: 'insensitive' };
+  if (hasValue(query.setup)) where.setupId = String(query.setup).trim();
+  if (hasValue(query.strategy)) where.strategyId = String(query.strategy).trim();
   if (hasValue(query.direction)) where.direction = query.direction;
   if (hasValue(query.timeframe)) where.entryTimeframe = String(query.timeframe).trim();
   if (hasValue(query.result)) where.result = query.result;
@@ -221,8 +221,6 @@ const groupTrades = (trades = [], groupBy, timezone = 'UTC') => {
   const fieldByGroup = {
     pair: 'pair',
     session: 'session',
-    setup: 'setupType',
-    strategy: 'strategyName',
     direction: 'direction',
     timeframe: 'entryTimeframe',
   };
@@ -230,15 +228,29 @@ const groupTrades = (trades = [], groupBy, timezone = 'UTC') => {
 
   trades.forEach((trade) => {
     const timestamp = getTradeTimestamp(trade);
-    const key = groupBy === 'weekday'
-      ? getWeekday(timestamp, timezone)
-      : trade[fieldByGroup[groupBy]] || 'UNSPECIFIED';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(trade);
+    let key = 'UNSPECIFIED';
+    let label = 'UNSPECIFIED';
+
+    if (groupBy === 'weekday') {
+      key = getWeekday(timestamp, timezone);
+      label = key;
+    } else if (groupBy === 'strategy') {
+      key = trade.strategyId || 'UNSPECIFIED';
+      label = trade.strategy?.name || 'UNSPECIFIED';
+    } else if (groupBy === 'setup') {
+      key = trade.setupId || 'UNSPECIFIED';
+      label = trade.setup?.name || 'UNSPECIFIED';
+    } else {
+      key = trade[fieldByGroup[groupBy]] || 'UNSPECIFIED';
+      label = key;
+    }
+
+    if (!groups.has(key)) groups.set(key, { label, trades: [] });
+    groups.get(key).trades.push(trade);
   });
 
   return [...groups.entries()]
-    .map(([key, groupTradesForKey]) => createGroupMetric(key, groupTradesForKey))
+    .map(([key, groupData]) => createGroupMetric(key, groupData.trades, { label: groupData.label }))
     .sort((a, b) => b.totalTrades - a.totalTrades);
 };
 

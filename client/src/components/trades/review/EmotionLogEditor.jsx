@@ -38,7 +38,7 @@ const EmotionLogEditor = ({ emotionLogs, setEmotionLogs }) => {
     <section className="bg-surface-muted p-6 rounded-xl border border-border space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium text-green-400">Your Mindset</h3>
+          <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400">Your Mindset</h3>
           <p className="text-sm text-muted">How was your mind before, during, and after?</p>
         </div>
       </div>
@@ -93,7 +93,7 @@ const EmotionLogEditor = ({ emotionLogs, setEmotionLogs }) => {
           </div>
         ))}
 
-        <button type="button" onClick={addEmotion} className="text-sm font-medium text-green-400 hover:text-green-300 inline-flex items-center px-4 py-2 border border-green-500/30 rounded-lg bg-green-500/10">
+        <button type="button" onClick={addEmotion} className="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 inline-flex items-center px-4 py-2 border border-emerald-500/30 rounded-lg bg-emerald-500/10">
           + Add Another Feeling
         </button>
       </div>

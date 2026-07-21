@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Briefcase, PlusCircle, LineChart, Settings } from 'lucide-react';
+import { Home, Briefcase, PlusCircle, LineChart, Settings, Sparkles } from 'lucide-react';
 
 const MobileNav = () => {
   const navItems = [
@@ -8,6 +8,7 @@ const MobileNav = () => {
     { name: 'Trades', path: '/trades', icon: <Briefcase size={24} /> },
     { name: 'New Trade', path: '/trades/new', icon: <PlusCircle size={32} className="text-green-400" /> },
     { name: 'Analytics', path: '/analytics', icon: <LineChart size={24} /> },
+    { name: 'JAHZ AI', path: '/ai', icon: <Sparkles size={24} /> },
     { name: 'Settings', path: '/settings', icon: <Settings size={24} /> },
   ];
 

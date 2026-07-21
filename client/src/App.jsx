@@ -7,6 +7,26 @@ import { useAuth } from './context/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const Layout = lazy(() => import('./components/Layout'));
+const AdminRoute = lazy(() => import('./components/AdminRoute'));
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
+const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
+const SubscriptionManagement = lazy(() => import('./pages/admin/SubscriptionManagement'));
+const PromotionManagement = lazy(() => import('./pages/admin/PromotionManagement'));
+const FoundingTraderAdmin = lazy(() => import('./pages/admin/FoundingTraderAdmin'));
+const AiConsole = lazy(() => import('./pages/admin/AiConsole'));
+const CustomerSuccessDashboard = lazy(() => import('./pages/admin/CustomerSuccessDashboard'));
+const SupportTickets = lazy(() => import('./pages/admin/SupportTickets'));
+const BugReports = lazy(() => import('./pages/admin/BugReports'));
+const FeatureRequests = lazy(() => import('./pages/admin/FeatureRequests'));
+const PlatformSettingsHub = lazy(() => import('./pages/admin/PlatformSettingsHub'));
+const InfrastructureHub = lazy(() => import('./pages/admin/InfrastructureHub'));
+const BusinessIntelligenceHub = lazy(() => import('./pages/admin/BusinessIntelligenceHub'));
+const CommunicationsHub = lazy(() => import('./pages/admin/communications/CommunicationsHub'));
+
+const ImpersonationBanner = lazy(() => import('./components/ImpersonationBanner'));
+
 const Home = lazy(() => import('./pages/Home'));
 const Features = lazy(() => import('./pages/Features'));
 const Pricing = lazy(() => import('./pages/Pricing'));
@@ -31,9 +51,22 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const WeeklyReview = lazy(() => import('./pages/WeeklyReview'));
 const RulesPage = lazy(() => import('./pages/RulesPage'));
+const StrategiesPage = lazy(() => import('./pages/StrategiesPage'));
+const TradingPlanBuilder = lazy(() => import('./pages/TradingPlanBuilder'));
 const Settings = lazy(() => import('./pages/Settings'));
 const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
 const Legal = lazy(() => import('./pages/Legal'));
+
+const AiHubPage = lazy(() => import('./pages/ai/AiHubPage'));
+const AiTradeReviewsPage = lazy(() => import('./pages/ai/AiTradeReviewsPage'));
+const AiWeeklyCoachPage = lazy(() => import('./pages/ai/AiWeeklyCoachPage'));
+const AiEdgeFinderPage = lazy(() => import('./pages/ai/AiEdgeFinderPage'));
+const AiTradingPlanPage = lazy(() => import('./pages/ai/AiTradingPlanPage'));
+const AiPsychologyPage = lazy(() => import('./pages/ai/AiPsychologyPage'));
+const AiScreenshotsPage = lazy(() => import('./pages/ai/AiScreenshotsPage'));
+const AskJahzPage = lazy(() => import('./pages/ai/AskJahzPage'));
+const AiHistoryPage = lazy(() => import('./pages/ai/AiHistoryPage'));
+const AiUsagePage = lazy(() => import('./pages/ai/AiUsagePage'));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-900 text-gray-400">
@@ -98,10 +131,44 @@ function App() {
                 <Route path="/trades/:id/review" element={<TradeReviewPage />} />
                 <Route path="/trades/:id" element={<TradeDetail />} />
                 <Route path="/rules" element={<RulesPage />} />
+                <Route path="/strategies" element={<StrategiesPage />} />
+                <Route path="/trading-plan" element={<TradingPlanBuilder />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/risk-calculator" element={<RiskCalculator />} />
                 <Route path="/weekly-review" element={<WeeklyReview />} />
                 <Route path="/settings" element={<Settings />} />
+
+                {/* AI Hub Routes */}
+                <Route path="/ai" element={<AiHubPage />} />
+                <Route path="/ai/trade-reviews" element={<AiTradeReviewsPage />} />
+                <Route path="/ai/weekly-coach" element={<AiWeeklyCoachPage />} />
+                <Route path="/ai/edge-finder" element={<AiEdgeFinderPage />} />
+                <Route path="/ai/trading-plan" element={<AiTradingPlanPage />} />
+                <Route path="/ai/psychology" element={<AiPsychologyPage />} />
+                <Route path="/ai/screenshots" element={<AiScreenshotsPage />} />
+                <Route path="/ai/ask-jahz" element={<AskJahzPage />} />
+                <Route path="/ai/history" element={<AiHistoryPage />} />
+                <Route path="/ai/usage" element={<AiUsagePage />} />
+              </Route>
+            </Route>
+
+            <Route path="/admin" element={<AdminRoute />}>
+              <Route element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<UserManagement />} />
+                <Route path="audit" element={<AuditLogs />} />
+                <Route path="subscriptions" element={<SubscriptionManagement />} />
+                <Route path="promotions" element={<PromotionManagement />} />
+                <Route path="founding-trader" element={<FoundingTraderAdmin />} />
+                <Route path="ai" element={<AiConsole />} />
+                <Route path="customer-success" element={<CustomerSuccessDashboard />} />
+                <Route path="support" element={<SupportTickets />} />
+                <Route path="bugs" element={<BugReports />} />
+                <Route path="features" element={<FeatureRequests />} />
+                <Route path="platform/:tab?" element={<PlatformSettingsHub />} />
+                <Route path="infrastructure" element={<InfrastructureHub />} />
+                <Route path="business/:tab?" element={<BusinessIntelligenceHub />} />
+                <Route path="communications/:tab?" element={<CommunicationsHub />} />
               </Route>
             </Route>
           </Routes>

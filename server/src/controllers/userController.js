@@ -23,6 +23,15 @@ const userProfileSelect = {
   subscriptionStatus: true,
   onboardingCompleted: true,
   avatarUrl: true,
+  subscriptions: {
+    where: { status: 'ACTIVE' },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+    include: { promotion: { include: { badge: true } } }
+  },
+  userBadges: {
+    include: { badge: true }
+  }
 };
 
 const normalizeStringList = (value) => {

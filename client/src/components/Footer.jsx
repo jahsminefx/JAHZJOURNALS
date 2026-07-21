@@ -40,7 +40,7 @@ const groups = [
 ];
 
 const Footer = () => (
-  <footer className="border-t border-white/10 bg-background px-4 py-12 sm:px-6 lg:px-8">
+  <footer className="border-t border-border dark:border-white/10 bg-background px-4 py-12 sm:px-6 lg:px-8">
     <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.2fr_2fr]">
       <div>
         <BrandLogo />
@@ -57,7 +57,7 @@ const Footer = () => (
       <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
         {groups.map((group) => (
           <div key={group.title}>
-            <h3 className="font-semibold text-white">{group.title}</h3>
+            <h3 className="font-semibold text-foreground">{group.title}</h3>
             <ul className="mt-4 space-y-3">
               {group.links.map(([label, to]) => (
                 <li key={label}>
@@ -71,7 +71,7 @@ const Footer = () => (
         ))}
       </div>
     </div>
-    <div className="mx-auto mt-10 max-w-7xl border-t border-white/10 pt-6 text-sm text-gray-500">
+    <div className="mx-auto mt-10 max-w-7xl border-t border-border dark:border-white/10 pt-6 text-sm text-gray-500">
       © 2026 JAHZJOURNALS. Built for disciplined trading review. Not financial advice.
     </div>
   </footer>

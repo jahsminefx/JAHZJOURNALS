@@ -7,6 +7,9 @@ const {
   saveLocalScreenshot,
   destroyScreenshotAsset,
 } = require('../services/screenshotService');
+const { getProvider } = require('../ai/providers/providerFactory');
+const { validateStructuredOutput } = require('../ai/utils/validateStructuredOutput');
+const { z } = require('zod');
 
 const screenshotTypes = [
   'HIGHER_TIMEFRAME_ANALYSIS',
@@ -139,4 +142,79 @@ const deleteScreenshot = async (req, res) => {
   }
 };
 
-module.exports = { uploadScreenshot, deleteScreenshot };
+const analyzeScreenshot = async (req, res) => {
+  try {
+    const screenshot = await prisma.tradeScreenshot.findFirst({
+      where: {
+        id: req.params.id,
+        trade: { tradingAccount: { userId: req.user.id } },
+      },
+    });
+
+    if (!screenshot) {
+      return res.status(404).json({ message: 'We couldn\'t find that screenshot.' });
+    }
+
+    if (!screenshot.imageUrl) {
+      return res.status(400).json({ message: 'No valid image URL to analyze.' });
+    }
+
+    const provider = getProvider();
+    const systemPrompt = `You are a professional technical analyst. Examine the provided trading chart image.
+Extract technical concepts such as Support/Resistance zones, Trend structure, Candlestick patterns, or recognizable shapes.
+Provide a clear, brief markdown analysis.`;
+
+    const userPromptContent = [
+      { type: "text", text: "Please analyze this trading chart and summarize your technical observations in a few bullet points." },
+      { type: "image_url", image_url: { url: screenshot.imageUrl, detail: "auto" } }
+    ];
+
+    const VisionSchema = z.object({
+      markdownAnalysis: z.string()
+    });
+
+    const result = await validateStructuredOutput(
+      provider, 
+      systemPrompt, 
+      userPromptContent, 
+      VisionSchema, 
+      1, 
+      true // useVision = true
+    );
+
+    if (!result.success) {
+      return res.status(500).json({ message: 'Failed to analyze the screenshot.' });
+    }
+
+    const analysisPrefix = "\n\n**🤖 JAHZ Vision AI Analysis:**\n" + result.data.markdownAnalysis;
+    const newNote = ((screenshot.note || "") + analysisPrefix).trim().slice(0, 1500); // Expanding character capacity slightly to fit AI notes
+
+    const updatedScreenshot = await prisma.tradeScreenshot.update({
+      where: { id: screenshot.id },
+      data: { note: newNote }
+    });
+
+    // Option: Increment AI request log for Usage tracking
+    await prisma.aiRequest.create({
+      data: {
+        userId: req.user.id,
+        tradeId: screenshot.tradeId,
+        featureType: 'SCREENSHOT_REVIEW',
+        status: 'COMPLETED',
+        provider: result.provider,
+        model: result.model,
+        promptVersion: 'vision-1.0',
+        inputTokens: result.usage?.prompt_tokens,
+        outputTokens: result.usage?.completion_tokens,
+        structuredOutput: result.data
+      }
+    });
+
+    res.json(updatedScreenshot);
+  } catch (error) {
+    console.error('Vision AI Error:', error);
+    res.status(500).json({ message: 'Hit a snag processing vision analysis.' });
+  }
+};
+
+module.exports = { uploadScreenshot, deleteScreenshot, analyzeScreenshot };
