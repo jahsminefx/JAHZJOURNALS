@@ -118,7 +118,7 @@ if (process.env.NODE_ENV === 'production') {
   }));
 
   // React Router catch-all route for client-side routing
-  app.get('(.*)', (req, res, next) => {
+  app.get('{*path}', (req, res, next) => {
     if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/uploads')) {
       return next();
     }
