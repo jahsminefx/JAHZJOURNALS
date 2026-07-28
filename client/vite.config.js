@@ -25,12 +25,15 @@ export default defineConfig({
       manifest: {
         name: 'JahzJournal',
         short_name: 'JahzJournal',
-        description: 'A soulful, celestial digital sanctuary for journaling and mindfulness.',
+        description: 'A soulful, celestial digital sanctuary for journaling, trading, and analytics.',
         theme_color: '#030712',
         background_color: '#030712',
         display: 'standalone',
+        orientation: 'portrait',
         icons: [
-          { src: '/favicon.ico', sizes: '64x64', type: 'image/x-icon' },
+          { src: '/logo-mark.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: '/logo-mark.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }
         ]
       }
     })
