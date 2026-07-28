@@ -37,7 +37,7 @@ const allowedClientOrigins = new Set([
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // Middleware
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: false,
@@ -95,7 +95,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(globalApiLimiter);
+app.use('/api', globalApiLimiter);
 
 // Routes
 const { getHealthStatus } = require('./controllers/healthController');

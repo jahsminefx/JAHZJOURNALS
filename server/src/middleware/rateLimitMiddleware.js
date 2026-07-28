@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 // Global API Limiter (Standard routes)
 const globalApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV !== 'production' ? 5000 : 300,
+  max: process.env.NODE_ENV !== 'production' ? 5000 : 2000,
   message: { message: 'Too many requests from this IP, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -12,7 +12,7 @@ const globalApiLimiter = rateLimit({
 // Strict Limiter for Authentication (Login/Register/Reset)
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: process.env.NODE_ENV !== 'production' ? 5000 : 20,
+  max: process.env.NODE_ENV !== 'production' ? 5000 : 100,
   message: { message: 'Too many authentication attempts, please try again after an hour.' },
   standardHeaders: true,
   legacyHeaders: false,
