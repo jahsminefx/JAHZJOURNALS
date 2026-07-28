@@ -24,6 +24,14 @@ const allowedClientOrigins = new Set([
   'http://localhost:5174',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
+  'https://jahzjournal.com',
+  'https://www.jahzjournal.com',
+  'http://jahzjournal.com',
+  'http://www.jahzjournal.com',
+  'http://169.58.9.55',
+  'https://169.58.9.55',
+  'http://jahzjournals.vmi3432347.contaboserver.net',
+  'https://jahzjournals.vmi3432347.contaboserver.net',
   ...configuredClientOrigins,
 ]);
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -31,7 +39,8 @@ const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 // Middleware
 app.set('trust proxy', 1);
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false,
 }));
 app.use(cors({
   origin(origin, callback) {
@@ -40,7 +49,7 @@ app.use(cors({
       return;
     }
 
-    callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    callback(null, false);
   },
   credentials: true
 }));
