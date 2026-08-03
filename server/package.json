@@ -9,7 +9,8 @@
     "start:web": "node src/server.js",
     "start:worker": "node src/worker.js",
     "test": "node --test",
-    "make-admin": "node src/scripts/make-admin.js"
+    "make-admin": "node src/scripts/make-admin.js",
+    "create-admin": "node src/scripts/create-super-admin.js"
   },
   "keywords": [],
   "author": "",
