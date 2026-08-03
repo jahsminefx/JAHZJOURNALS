@@ -1,21 +1,43 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import MobileNav from './MobileNav';
+import DashboardTopBar from './DashboardTopBar';
+import FloatingQuickActions from './FloatingQuickActions';
 import FoundingTraderWelcomeModal from './FoundingTraderWelcomeModal';
 import GlobalFeedbackWidget from './GlobalFeedbackWidget';
 
 const Layout = () => {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const location = useLocation();
+
+  // Scroll restoration on route navigation
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-gray-50 text-gray-900 dark:bg-surface dark:text-foreground font-sans">
-      <Sidebar />
+    <div className="flex flex-col lg:flex-row h-[100dvh] overflow-hidden bg-background text-foreground font-sans antialiased selection:bg-emerald-500/20 selection:text-emerald-300">
+      {/* Mobile Top Bar (<1024px) */}
+      <DashboardTopBar onOpenDrawer={() => setIsMobileOpen(true)} />
+
+      {/* Responsive Sidebar & Mobile Drawer */}
+      <Sidebar 
+        isMobileOpen={isMobileOpen} 
+        onCloseMobile={() => setIsMobileOpen(false)} 
+      />
+
       <FoundingTraderWelcomeModal />
-      <main className="flex-1 min-w-0 overflow-y-auto pb-16 md:pb-0 relative">
-        <div className="p-4 md:p-7 max-w-[1500px] mx-auto">
+
+      {/* Main Content Area */}
+      <main className="flex-1 min-w-0 overflow-y-auto relative pb-20 lg:pb-6 pt-2 lg:pt-0">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-6">
           <Outlet />
         </div>
       </main>
-      <MobileNav />
+
+      {/* Mobile Floating Quick Action Dock */}
+      <FloatingQuickActions />
+
       <GlobalFeedbackWidget />
     </div>
   );

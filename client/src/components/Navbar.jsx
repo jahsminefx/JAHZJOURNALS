@@ -5,6 +5,7 @@ import Button from './Button';
 import BrandLogo from './BrandLogo';
 
 const links = [
+  { label: 'Home', to: '/' },
   { label: 'Features', to: '/features' },
   { label: 'Pricing', to: '/pricing' },
   { label: 'Prop Firm Traders', to: '/prop-firm-traders' },
