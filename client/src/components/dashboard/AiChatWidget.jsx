@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, User, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { Bot, Send, User, ChevronDown, AlertCircle, GripHorizontal } from 'lucide-react';
 import api from '../../utils/api';
 
 const AiChatWidget = () => {
@@ -11,6 +11,55 @@ const AiChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [chatMode, setChatMode] = useState('ANALYTICS');
   const endRef = useRef(null);
+
+  // Draggable position state
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const hasMovedRef = useRef(false);
+
+  const handlePointerDown = (e) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    dragStartRef.current = { x: clientX - pos.x, y: clientY - pos.y };
+
+    const handlePointerMove = (moveEvt) => {
+      if (!isDraggingRef.current) return;
+      const curX = moveEvt.touches ? moveEvt.touches[0].clientX : moveEvt.clientX;
+      const curY = moveEvt.touches ? moveEvt.touches[0].clientY : moveEvt.clientY;
+
+      const newX = curX - dragStartRef.current.x;
+      const newY = curY - dragStartRef.current.y;
+
+      if (Math.abs(newX - pos.x) > 4 || Math.abs(newY - pos.y) > 4) {
+        hasMovedRef.current = true;
+      }
+
+      setPos({ x: newX, y: newY });
+    };
+
+    const handlePointerUp = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', handlePointerUp);
+    };
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    window.addEventListener('touchmove', handlePointerMove, { passive: false });
+    window.addEventListener('touchend', handlePointerUp);
+  };
+
+  const handleButtonClick = () => {
+    if (!hasMovedRef.current) {
+      setIsOpen(true);
+    }
+  };
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -35,12 +84,22 @@ const AiChatWidget = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div 
+      style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
+      className="fixed bottom-6 right-6 z-50 flex flex-col items-end transition-transform duration-75"
+    >
       {isOpen && (
-        <div className="bg-surface border border-border shadow-2xl rounded-xl w-80 sm:w-96 mb-4 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
-          <div className="bg-slate-900 flex justify-between items-center p-4">
+        <div className="bg-surface border border-border shadow-2xl rounded-2xl w-80 sm:w-96 mb-4 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
+          <div 
+            onMouseDown={handlePointerDown}
+            onTouchStart={handlePointerDown}
+            className="bg-slate-900 flex justify-between items-center p-4 cursor-grab active:cursor-grabbing select-none"
+          >
             <div className="flex flex-col">
-              <h3 className="font-bold text-white flex items-center gap-2"><Bot size={20} className="text-amber-400" /> JAHZ AI Chat</h3>
+              <div className="flex items-center gap-2">
+                <GripHorizontal size={16} className="text-gray-400" />
+                <h3 className="font-bold text-white flex items-center gap-2"><Bot size={20} className="text-amber-400" /> JAHZ AI Chat</h3>
+              </div>
               <div className="flex bg-slate-800 rounded-lg p-1 mt-2">
                  <button onClick={() => setChatMode('ANALYTICS')} className={`flex-1 text-xs py-1 rounded transition ${chatMode === 'ANALYTICS' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}>Analytics</button>
                  <button onClick={() => setChatMode('SUPPORT')} className={`flex-1 text-xs py-1 rounded transition ${chatMode === 'SUPPORT' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}>Support</button>
@@ -93,12 +152,19 @@ const AiChatWidget = () => {
       )}
 
       {!isOpen && (
-        <button 
-          onClick={() => setIsOpen(true)}
-          className="bg-slate-900 dark:bg-gray-800 text-white p-4 rounded-full shadow-xl hover:scale-105 transition hover:shadow-indigo-500/20 active:scale-95 group flex items-center justify-center"
+        <div
+          onMouseDown={handlePointerDown}
+          onTouchStart={handlePointerDown}
+          className="cursor-grab active:cursor-grabbing"
         >
-          <Bot size={28} className="text-amber-400 group-hover:animate-bounce" />
-        </button>
+          <button 
+            onClick={handleButtonClick}
+            className="bg-slate-900 dark:bg-gray-800 text-white p-4 rounded-full shadow-xl hover:scale-105 transition hover:shadow-indigo-500/20 active:scale-95 group flex items-center justify-center"
+            title="Drag to move • Click to open JAHZ AI Chat"
+          >
+            <Bot size={28} className="text-amber-400 group-hover:animate-bounce" />
+          </button>
+        </div>
       )}
     </div>
   );
