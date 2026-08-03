@@ -35,15 +35,15 @@ const GlobalFeedbackWidget = () => {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 p-3 md:p-4 rounded-full bg-emerald-600 text-white shadow-lg hover:bg-emerald-500 hover:scale-105 transition-all z-[9999] ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        className={`fixed bottom-20 right-5 lg:bottom-6 lg:right-6 p-3 md:p-4 rounded-full bg-emerald-600 text-white shadow-xl hover:bg-emerald-500 hover:scale-105 transition-all z-[9999] ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
         title="Report Issue or Request Feature"
       >
-        <MessageSquarePlus size={24} />
+        <MessageSquarePlus size={22} />
       </button>
 
       {/* Modal / Dialog */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-[90vw] max-w-[400px] bg-white dark:bg-surface border border-gray-200 dark:border-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.2)] z-[9999] overflow-hidden animate-in slide-in-from-bottom-4">
+        <div className="fixed bottom-20 right-5 lg:bottom-6 lg:right-6 w-[90vw] max-w-[400px] bg-white dark:bg-surface border border-gray-200 dark:border-border rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.2)] z-[9999] overflow-hidden animate-in slide-in-from-bottom-4">
           <div className="flex justify-between items-center bg-gray-50 dark:bg-surface-muted px-4 py-3 border-b border-gray-200 dark:border-border">
             <h3 className="font-bold text-gray-900 dark:text-foreground text-sm">Send Feedback</h3>
             <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-red-500 transition">
