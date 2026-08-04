@@ -14,46 +14,144 @@ const parseTradeCsv = (buffer) => {
   });
 };
 
+const parseBool = (val) => {
+  if (val === null || val === undefined || val === '') return null;
+  const s = String(val).toLowerCase().trim();
+  if (s === 'true' || s === '1' || s === 'yes') return true;
+  if (s === 'false' || s === '0' || s === 'no') return false;
+  return null;
+};
+
 const mapCsvRowToTrade = (row, accountId) => {
-  // Normalize row keys
+  // Normalize row keys to lower-case trimmed strings
   const normalizedRow = Object.keys(row).reduce((acc, key) => {
     acc[key.trim().toLowerCase()] = row[key];
     return acc;
   }, {});
 
-  // Different platforms use different headings. Example headers:
-  // Pair: Item, Symbol, Pair
-  // Direction: Type, Action, Direction
-  // Entry Time: Open Time, Time, Entry
-  // Exit Time: Close Time, Exit
-  // Profit: Profit, Net Profit
-  
-  const pair = normalizedRow['item'] || normalizedRow['symbol'] || normalizedRow['pair'];
+  // Pair mapping
+  const pair = 
+    normalizedRow['item'] || 
+    normalizedRow['symbol'] || 
+    normalizedRow['pair'] || 
+    normalizedRow['instrument'] || 
+    normalizedRow['currency'] || 
+    normalizedRow['ticker'] || 
+    normalizedRow['asset'] || 
+    normalizedRow['market'];
+
   if (!pair) return null;
 
-  const rawDirection = String(normalizedRow['type'] || normalizedRow['action'] || normalizedRow['direction'] || '').toLowerCase();
-  const direction = rawDirection.includes('buy') ? 'BUY' : rawDirection.includes('sell') ? 'SELL' : null;
+  // Direction mapping
+  const rawDirection = String(
+    normalizedRow['type'] || 
+    normalizedRow['action'] || 
+    normalizedRow['direction'] || 
+    normalizedRow['side'] || 
+    normalizedRow['trade type'] || 
+    normalizedRow['b/s'] || 
+    normalizedRow['order type'] || ''
+  ).toLowerCase();
+
+  const direction = rawDirection.includes('buy') || rawDirection.includes('long')
+    ? 'BUY'
+    : rawDirection.includes('sell') || rawDirection.includes('short')
+    ? 'SELL'
+    : null;
+
   if (!direction) return null;
 
-  const entryTimeStr = normalizedRow['open time'] || normalizedRow['time'] || normalizedRow['entry time'];
-  const exitTimeStr = normalizedRow['close time'] || normalizedRow['exit time'];
+  // Time mapping
+  const entryTimeStr = 
+    normalizedRow['entrytime'] ||
+    normalizedRow['entry time'] || 
+    normalizedRow['entry_time'] || 
+    normalizedRow['open time'] || 
+    normalizedRow['time'] || 
+    normalizedRow['date'] || 
+    normalizedRow['open_time'] || 
+    normalizedRow['date/time'] || 
+    normalizedRow['created_at'] || 
+    normalizedRow['timestamp'];
+
+  const exitTimeStr = 
+    normalizedRow['exittime'] ||
+    normalizedRow['exit time'] || 
+    normalizedRow['exit_time'] || 
+    normalizedRow['close time'] || 
+    normalizedRow['close_time'];
   
-  const profitStr = normalizedRow['profit'] || normalizedRow['net profit'] || 0;
+  // Numeric mapping helpers
+  const getNum = (val) => {
+    if (val === null || val === undefined || val === '' || val === 'null') return null;
+    const n = Number(String(val).replace(/[^0-9.-]+/g, ''));
+    return isNaN(n) ? null : n;
+  };
+
+  const getStr = (val) => {
+    if (val === null || val === undefined || val === 'null' || val === 'undefined') return null;
+    const s = String(val).trim();
+    return s.length > 0 ? s : null;
+  };
+
+  const entryTime = entryTimeStr ? new Date(entryTimeStr) : new Date();
+  const exitTime = exitTimeStr && exitTimeStr !== 'null' && exitTimeStr !== 'undefined' ? new Date(exitTimeStr) : null;
+  
+  const profitLossAmount = getNum(
+    normalizedRow['profitlossamount'] ||
+    normalizedRow['profit loss amount'] ||
+    normalizedRow['profit'] || 
+    normalizedRow['net profit'] || 
+    normalizedRow['p/l'] || 
+    normalizedRow['pl'] || 
+    normalizedRow['pnl'] || 
+    normalizedRow['profit/loss'] || 
+    normalizedRow['net_profit'] || 
+    normalizedRow['realized p&l'] || 
+    normalizedRow['realized pnl']
+  ) || 0;
+
+  const rawResult = getStr(normalizedRow['result']);
+  const result = rawResult 
+    ? (rawResult.toUpperCase() === 'WIN' || rawResult.toUpperCase() === 'LOSS' || rawResult.toUpperCase() === 'BREAKEVEN' ? rawResult.toUpperCase() : (profitLossAmount > 0 ? 'WIN' : profitLossAmount < 0 ? 'LOSS' : 'BREAKEVEN'))
+    : (profitLossAmount > 0 ? 'WIN' : profitLossAmount < 0 ? 'LOSS' : 'BREAKEVEN');
+
+  const rawStatus = getStr(normalizedRow['status']);
+  const status = rawStatus
+    ? (['PLANNED', 'ACTIVE', 'CLOSED', 'CANCELLED'].includes(rawStatus.toUpperCase()) ? rawStatus.toUpperCase() : (exitTime ? 'CLOSED' : 'ACTIVE'))
+    : (exitTime ? 'CLOSED' : 'ACTIVE');
 
   return {
     tradingAccountId: accountId,
-    pair: pair.toUpperCase().trim(),
+    pair: String(pair).toUpperCase().trim(),
     direction,
-    entryTime: entryTimeStr ? new Date(entryTimeStr) : new Date(),
-    exitTime: exitTimeStr ? new Date(exitTimeStr) : null,
-    entryPrice: Number(normalizedRow['open price'] || normalizedRow['price'] || 0) || null,
-    exitPrice: Number(normalizedRow['close price'] || 0) || null,
-    stopLoss: Number(normalizedRow['s / l'] || normalizedRow['sl'] || 0) || null,
-    takeProfit: Number(normalizedRow['t / p'] || normalizedRow['tp'] || 0) || null,
-    lotSize: Number(normalizedRow['size'] || normalizedRow['volume'] || 0) || null,
-    profitLossAmount: Number(profitStr),
-    status: exitTimeStr ? 'CLOSED' : 'ACTIVE',
-    result: Number(profitStr) > 0 ? 'WIN' : Number(profitStr) < 0 ? 'LOSS' : 'BREAKEVEN',
+    entryPrice: getNum(normalizedRow['entryprice'] || normalizedRow['entry price'] || normalizedRow['open price'] || normalizedRow['price']),
+    stopLoss: getNum(normalizedRow['stoploss'] || normalizedRow['stop loss'] || normalizedRow['s / l'] || normalizedRow['sl']),
+    takeProfit: getNum(normalizedRow['takeprofit'] || normalizedRow['take profit'] || normalizedRow['t / p'] || normalizedRow['tp']),
+    exitPrice: getNum(normalizedRow['exitprice'] || normalizedRow['exit price'] || normalizedRow['close price']),
+    lotSize: getNum(normalizedRow['lotsize'] || normalizedRow['lot size'] || normalizedRow['size'] || normalizedRow['volume'] || normalizedRow['lots']),
+    riskAmount: getNum(normalizedRow['riskamount'] || normalizedRow['risk amount']),
+    rewardAmount: getNum(normalizedRow['rewardamount'] || normalizedRow['reward amount']),
+    profitLossAmount,
+    profitLossPercent: getNum(normalizedRow['profitlosspercent'] || normalizedRow['profit loss percent']),
+    riskRewardRatio: getNum(normalizedRow['riskrewardratio'] || normalizedRow['risk reward ratio']),
+    pips: getNum(normalizedRow['pips']),
+    status,
+    result,
+    session: getStr(normalizedRow['session']) ? getStr(normalizedRow['session']).toUpperCase() : null,
+    higherTimeframe: getStr(normalizedRow['highertimeframe'] || normalizedRow['higher timeframe'] || normalizedRow['htf']),
+    entryTimeframe: getStr(normalizedRow['entrytimeframe'] || normalizedRow['entry timeframe'] || normalizedRow['ltf']),
+    htfBias: getStr(normalizedRow['htfbias'] || normalizedRow['htf bias'] || normalizedRow['bias']),
+    entryReason: getStr(normalizedRow['entryreason'] || normalizedRow['entry reason']),
+    exitReason: getStr(normalizedRow['exitreason'] || normalizedRow['exit reason']),
+    notesBefore: getStr(normalizedRow['notesbefore'] || normalizedRow['notes before'] || normalizedRow['notes']),
+    notesAfter: getStr(normalizedRow['notesafter'] || normalizedRow['notes after']),
+    followedPlan: parseBool(normalizedRow['followedplan'] || normalizedRow['followed plan']),
+    isAPlusSetup: parseBool(normalizedRow['isaplussetup'] || normalizedRow['is a+ setup'] || normalizedRow['a+ setup']),
+    newsRelated: parseBool(normalizedRow['newsrelated'] || normalizedRow['news related']),
+    grade: getStr(normalizedRow['grade']),
+    entryTime: !isNaN(entryTime.getTime()) ? entryTime : new Date(),
+    exitTime: exitTime && !isNaN(exitTime.getTime()) ? exitTime : null,
   };
 };
 
@@ -70,11 +168,11 @@ const importTrades = async (req, res) => {
     });
 
     if (!account) {
-      return res.status(404).json({ message: 'Account not found' });
+      return res.status(404).json({ message: 'Target trading account not found' });
     }
 
-    if (!req.file) {
-      return res.status(400).json({ message: 'No CSV file uploaded' });
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ message: 'No CSV file uploaded or file is empty.' });
     }
 
     const rows = await parseTradeCsv(req.file.buffer);
@@ -133,7 +231,7 @@ const importTrades = async (req, res) => {
       skippedCount: pendingTrades.length - newTrades.length,
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error during trade CSV import:', error);
     res.status(500).json({ message: 'An error occurred during trade import.' });
   }
 };

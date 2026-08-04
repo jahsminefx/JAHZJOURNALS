@@ -18,7 +18,6 @@ import EdgeFinderWidget from '../components/dashboard/EdgeFinderWidget';
 import DashboardSkeleton from '../components/dashboard/DashboardSkeleton';
 import DashboardEmptyState from '../components/dashboard/DashboardEmptyState';
 import DashboardErrorState from '../components/dashboard/DashboardErrorState';
-import AiChatWidget from '../components/dashboard/AiChatWidget';
 import { formatCurrency, formatNumber, formatPercent, getDateRange } from '../utils/dashboard';
 
 const getInitialRange = (searchParams) => {
@@ -297,8 +296,6 @@ const Dashboard = () => {
           <EdgeFinderWidget />
 
           <DisciplineBanner />
-
-          <AiChatWidget />
         </>
       )}
     </div>

@@ -11,7 +11,7 @@ const {
 } = require('../controllers/tradeController');
 const { importTrades } = require('../controllers/importController');
 const { protect } = require('../middleware/authMiddleware');
-const upload = require('../middleware/uploadMiddleware');
+const csvUpload = require('../middleware/csvUploadMiddleware');
 const screenshotRoutes = require('./screenshotRoutes');
 const { preTradeCheck } = require('../controllers/preTradeController');
 
@@ -22,7 +22,7 @@ router.route('/')
   .post(protect, createTrade);
 
 router.get('/export-csv', protect, exportTradesCsv);
-router.post('/import', protect, upload.single('file'), importTrades);
+router.post('/import', protect, csvUpload.single('file'), importTrades);
 
 router.route('/:id')
   .get(protect, getTradeById)
