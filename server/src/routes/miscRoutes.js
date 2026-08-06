@@ -81,6 +81,7 @@ router.get('/weekly-reviews/:id', protect, getWeeklyReviewById);
 router.put('/weekly-reviews/:id', protect, updateWeeklyReview);
 
 router.post('/contact-messages', contactLimiter, optionalProtect, createContactMessage);
+router.get('/announcements', optionalProtect, require('../controllers/announcementController').getUserAnnouncements);
 router.get('/support/threads', protect, getUserSupportThreads);
 router.get('/support/threads/:id', protect, getUserSupportThreadById);
 router.post('/support/threads/:id/reply', protect, postUserReply);

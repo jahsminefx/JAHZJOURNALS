@@ -14,6 +14,7 @@ import WeeklyGoalProgress from '../components/dashboard/WeeklyGoalProgress';
 import RecentTrades from '../components/dashboard/RecentTrades';
 import UpgradeCard from '../components/dashboard/UpgradeCard';
 import DisciplineBanner from '../components/dashboard/DisciplineBanner';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 import EdgeFinderWidget from '../components/dashboard/EdgeFinderWidget';
 import DashboardSkeleton from '../components/dashboard/DashboardSkeleton';
 import DashboardEmptyState from '../components/dashboard/DashboardEmptyState';
@@ -253,6 +254,8 @@ const Dashboard = () => {
         onDateRangeChange={handleDateRangeChange}
         onCustomDateChange={handleCustomDateChange}
       />
+
+      <AnnouncementBanner />
 
       {loading && <DashboardSkeleton />}
 
