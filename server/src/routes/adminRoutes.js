@@ -54,6 +54,8 @@ const {
   getContactThread,
   replyToMessage,
   updateMessageStatus,
+  updateMessagePriority,
+  updateMessageCategory,
   assignMessage,
   bulkAction
 } = require('../controllers/communications/adminContactController');
@@ -165,6 +167,8 @@ router.get('/communications/contact', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT
 router.get('/communications/contact/:id', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), getContactThread);
 router.post('/communications/contact/:id/reply', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), replyToMessage);
 router.patch('/communications/contact/:id/status', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), updateMessageStatus);
+router.patch('/communications/contact/:id/priority', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), updateMessagePriority);
+router.patch('/communications/contact/:id/category', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), updateMessageCategory);
 router.patch('/communications/contact/:id/assign', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), assignMessage);
 router.post('/communications/contact/bulk', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), bulkAction);
 

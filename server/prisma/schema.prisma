@@ -1205,30 +1205,39 @@ model Announcement {
 }
 
 model ContactMessage {
-  id           String  @id @default(uuid())
-  user         User?   @relation("UserContactMessages", fields: [userId], references: [id], onDelete: SetNull)
-  userId       String?
-  assignedTo   User?   @relation("AssignedContactMessages", fields: [assignedToId], references: [id], onDelete: SetNull)
-  assignedToId String?
-  name         String
-  email        String
-  subject      String
-  message      String
-  status       String  @default("NEW")
-  tags         String[] @default([])
-  ipHash       String?
-
-  threads       ContactThread[]
-  internalNotes ContactInternalNote[]
+  id              String    @id @default(uuid())
+  user            User?     @relation("UserContactMessages", fields: [userId], references: [id], onDelete: SetNull)
+  userId          String?
+  assignedTo      User?     @relation("AssignedContactMessages", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId    String?
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  name            String
+  email           String
+  subject         String
+  message         String
+  category        String    @default("GENERAL")
+  status          String    @default("OPEN")
+  priority        String    @default("NORMAL")
+  tags            String[]  @default([])
+  
+  unreadForUser   Int       @default(0)
+  unreadForAdmin  Int       @default(1)
+  lastMessageAt   DateTime  @default(now())
+  closedAt        DateTime?
+  ipHash          String?
+
+  threads         ContactThread[]
+  internalNotes   ContactInternalNote[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([email])
   @@index([status])
+  @@index([priority])
   @@index([assignedToId])
-  @@index([createdAt])
   @@index([userId])
+  @@index([lastMessageAt])
 }
 
 model ContactThread {
@@ -1237,12 +1246,17 @@ model ContactThread {
   contactMessageId String
   senderType       String
   senderId         String?
+  senderName       String?
+  senderEmail      String?
   message          String
-  attachments      String[]
+  attachments      String[]       @default([])
+  isInternal       Boolean        @default(false)
   
   createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @default(now()) @updatedAt
 
   @@index([contactMessageId])
+  @@index([senderId])
 }
 
 model ContactInternalNote {

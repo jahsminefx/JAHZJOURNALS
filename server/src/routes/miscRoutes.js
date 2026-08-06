@@ -13,6 +13,9 @@ const {
 const { deleteScreenshot } = require('../controllers/screenshotController');
 const {
   createContactMessage,
+  getUserSupportThreads,
+  getUserSupportThreadById,
+  postUserReply,
 } = require('../controllers/contactController');
 const {
   getWeeklyReviews,
@@ -78,6 +81,9 @@ router.get('/weekly-reviews/:id', protect, getWeeklyReviewById);
 router.put('/weekly-reviews/:id', protect, updateWeeklyReview);
 
 router.post('/contact-messages', contactLimiter, optionalProtect, createContactMessage);
+router.get('/support/threads', protect, getUserSupportThreads);
+router.get('/support/threads/:id', protect, getUserSupportThreadById);
+router.post('/support/threads/:id/reply', protect, postUserReply);
 
 router.post('/automated/trades/:id/review', protect, createAiTradeReview);
 router.get('/automated/trades/:tradeId/review', protect, getAiTradeReview);
