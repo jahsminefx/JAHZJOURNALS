@@ -113,6 +113,7 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
 app.use('/api/strategies', require('./routes/strategyRoutes'));
 app.use('/api/setups', require('./routes/setupRoutes'));
+app.use('/api/notifications', require('./routes/userNotificationRoutes'));
 app.use('/api', require('./routes/miscRoutes'));
 
 // Serve built Vite React frontend in production

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu, Bell, User as UserIcon, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import BrandLogo from './BrandLogo';
+import api from '../utils/api';
 
 const routeTitles = {
   '/dashboard': 'Dashboard',
@@ -14,6 +15,7 @@ const routeTitles = {
   '/analytics': 'Performance Analytics',
   '/risk-calculator': 'Position Calculator',
   '/weekly-review': 'Weekly Journal',
+  '/notifications': 'Notifications',
   '/ai': 'JAHZ AI Assistant',
   '/settings': 'Account Settings',
   '/admin': 'Admin Console',
@@ -23,6 +25,23 @@ const DashboardTopBar = ({ onOpenDrawer }) => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkUnread = async () => {
+      try {
+        const res = await api.get('/notifications');
+        if (isMounted) {
+          setUnreadCount(res.data.unreadCount || 0);
+        }
+      } catch (err) {
+        // Silent catch for top bar
+      }
+    };
+    if (user) checkUnread();
+    return () => { isMounted = false; };
+  }, [user, location.pathname]);
 
   const getPageTitle = () => {
     if (routeTitles[location.pathname]) {
@@ -72,7 +91,9 @@ const DashboardTopBar = ({ onOpenDrawer }) => {
           aria-label="Notifications"
         >
           <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-background" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background animate-pulse" />
+          )}
         </button>
 
         <button

@@ -68,12 +68,42 @@ const contactService = {
 
     // 2. Automatically update status to REPLIED if it was NEW or WAITING
     const contact = await prisma.contactMessage.findUnique({ where: { id: contactMessageId } });
-    if (['NEW', 'OPEN', 'WAITING'].includes(contact.status)) {
+    if (contact && ['NEW', 'OPEN', 'WAITING'].includes(contact.status)) {
       await this.updateStatus(contactMessageId, 'REPLIED');
     }
 
-    // 3. (In real life we would dispatch an email here, omitted for MVP)
-    
+    // 3. Dispatch in-app Notification for the user
+    try {
+      let targetUserId = contact?.userId;
+      if (!targetUserId && contact?.email) {
+        const matchingUser = await prisma.user.findUnique({ where: { email: contact.email } });
+        if (matchingUser) targetUserId = matchingUser.id;
+      }
+
+      if (targetUserId) {
+        const notification = await prisma.notification.create({
+          data: {
+            type: 'SUPPORT_REPLY',
+            category: 'INFO',
+            title: `Reply to: ${contact.subject || 'Support Message'}`,
+            message: message.length > 150 ? message.substring(0, 150) + '...' : message,
+            actionUrl: '/notifications',
+            senderId: adminId,
+          }
+        });
+
+        await prisma.notificationRecipient.create({
+          data: {
+            notificationId: notification.id,
+            userId: targetUserId,
+            status: 'UNREAD',
+          }
+        });
+      }
+    } catch (notifErr) {
+      console.error('Error generating notification for contact reply:', notifErr);
+    }
+
     return thread;
   },
 
