@@ -45,7 +45,10 @@ const contactService = {
         user: { select: { id: true, name: true, email: true, avatarUrl: true } },
         _count: { select: { threads: true, internalNotes: true } }
       },
-      orderBy: { lastMessageAt: 'desc' }
+      orderBy: [
+        { lastMessageAt: 'desc' },
+        { createdAt: 'desc' }
+      ]
     });
   },
 

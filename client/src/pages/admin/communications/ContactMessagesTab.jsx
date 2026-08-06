@@ -76,9 +76,19 @@ const ContactMessagesTab = () => {
       let list = Array.isArray(res.data) ? res.data : (res.data?.messages || []);
 
       if (statusTab === 'ASSIGNED_TO_ME') {
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        if (currentUser.id) {
-          list = list.filter(m => m.assignedToId === currentUser.id);
+        let currentUserId = null;
+        try {
+          const rawUser = localStorage.getItem('user');
+          if (rawUser && rawUser !== 'undefined') {
+            const parsed = JSON.parse(rawUser);
+            currentUserId = parsed?.id || null;
+          }
+        } catch (e) {
+          console.error('Error parsing user from localStorage:', e);
+        }
+
+        if (currentUserId) {
+          list = list.filter(m => m.assignedToId === currentUserId);
         }
       }
 
@@ -89,8 +99,9 @@ const ContactMessagesTab = () => {
         openThread(list[0].id);
       }
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to load support threads');
+      console.error('Error in fetchMessages:', error);
+      const errMsg = error.response?.data?.error || error.response?.data?.message || 'Failed to load support threads';
+      toast.error(errMsg);
       setMessages([]);
     } finally {
       setLoading(false);
