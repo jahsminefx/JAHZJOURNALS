@@ -1,0 +1,43 @@
+# JAHZJOURNALS Robots Directive
+# https://jahzjournal.com/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /features
+Allow: /pricing
+Allow: /prop-firm-traders
+Allow: /mentors
+Allow: /about
+Allow: /contact
+Allow: /terms
+Allow: /privacy
+Allow: /disclaimer
+
+# Authenticated & Private Routes (Strict Crawl Exclusion)
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /settings
+Disallow: /accounts
+Disallow: /trades
+Disallow: /rules
+Disallow: /strategies
+Disallow: /trading-plan
+Disallow: /analytics
+Disallow: /risk-calculator
+Disallow: /weekly-review
+Disallow: /notifications
+Disallow: /ai/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /onboarding
+Disallow: /mentor-workspace
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /profile
+
+# Sitemap Location
+Sitemap: https://jahzjournal.com/sitemap.xml

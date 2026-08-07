@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
+import SEO from './SEO';
 
 const ProtectedRoute = () => {
   const { user, isAuthLoading } = useAuth();
@@ -17,7 +18,12 @@ const ProtectedRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <>
+      <SEO noindex={true} />
+      <Outlet />
+    </>
+  );
 };
 
 export default ProtectedRoute;

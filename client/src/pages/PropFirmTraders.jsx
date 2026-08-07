@@ -6,14 +6,18 @@ import PageHeader from '../components/PageHeader';
 import SectionHeader from '../components/SectionHeader';
 import PropFirmMockup from '../components/PropFirmMockup';
 import CTASection from '../components/CTASection';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const pains = ['Daily drawdown mistakes', 'Overtrading', 'Revenge trading', 'Poor risk control', 'Breaking challenge rules', 'Not tracking progress properly'];
 const helps = ['Track daily performance', 'Track max drawdown', 'Track profit target', 'Track trading days', 'Track rule violations', 'Review challenge discipline'];
 
 const PropFirmTraders = () => (
   <div className="min-h-screen bg-background text-foreground">
+    <SEO />
     <Navbar />
-    <main>
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <Breadcrumbs />
       <PageHeader
         eyebrow="Prop firm traders"
         title="Protect Your Challenge With Better Discipline."

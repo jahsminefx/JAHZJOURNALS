@@ -27,6 +27,7 @@ import PropFirmMockup from '../components/PropFirmMockup';
 import MentorMockup from '../components/MentorMockup';
 import StatCard from '../components/StatCard';
 import TestimonialCard from '../components/TestimonialCard';
+import SEO from '../components/SEO';
 
 const problems = [
   'Taking too many random trades',
@@ -171,6 +172,7 @@ const Home = () => {
 
   return (
   <div className="min-h-screen bg-background text-foreground">
+    <SEO />
     <Navbar />
 
     <main>

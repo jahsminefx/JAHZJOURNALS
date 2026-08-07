@@ -5,6 +5,8 @@ import Footer from '../components/Footer';
 import PageHeader from '../components/PageHeader';
 import FeatureCard from '../components/FeatureCard';
 import CTASection from '../components/CTASection';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const groups = [
   ['Trade Journaling', ClipboardList, ['Manual trade logging', 'Pair/instrument tracking', 'Entry/exit details', 'Risk/reward tracking', 'Notes before and after trade']],
@@ -19,8 +21,10 @@ const groups = [
 
 const Features = () => (
   <div className="min-h-screen bg-background text-foreground">
+    <SEO />
     <Navbar />
-    <main>
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <Breadcrumbs />
       <PageHeader
         eyebrow="Features"
         title="Everything You Need to Review, Refine, and Improve Your Trading."

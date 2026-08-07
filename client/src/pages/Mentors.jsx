@@ -6,14 +6,18 @@ import PageHeader from '../components/PageHeader';
 import SectionHeader from '../components/SectionHeader';
 import MentorMockup from '../components/MentorMockup';
 import CTASection from '../components/CTASection';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const problems = ['Students do not journal properly', 'Screenshots are scattered', 'Hard to track progress', 'Hard to know who is improving', 'Feedback is not organized'];
 const solutions = ['Student journals', 'Trade screenshots', 'Mentor comments', 'Discipline scores', 'Group analytics', 'Weekly progress reviews'];
 
 const Mentors = () => (
   <div className="min-h-screen bg-background text-foreground">
+    <SEO />
     <Navbar />
-    <main>
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <Breadcrumbs />
       <PageHeader
         eyebrow="Mentors and academies"
         title="Manage Student Journals Without Chasing Screenshots on WhatsApp."

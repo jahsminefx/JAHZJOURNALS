@@ -4,13 +4,17 @@ import Footer from '../components/Footer';
 import PageHeader from '../components/PageHeader';
 import SectionHeader from '../components/SectionHeader';
 import CTASection from '../components/CTASection';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const values = ['Built for real traders', 'Built for discipline', 'Built for screenshots and review', 'Built for mobile-first traders', 'Built for African and global forex communities'];
 
 const About = () => (
   <div className="min-h-screen bg-background text-foreground">
+    <SEO />
     <Navbar />
-    <main>
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <Breadcrumbs />
       <PageHeader
         eyebrow="About JAHZJOURNALS"
         title="A trading journal built from trading experience and software discipline."

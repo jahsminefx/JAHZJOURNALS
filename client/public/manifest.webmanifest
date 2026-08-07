@@ -1,0 +1,23 @@
+{
+  "short_name": "JAHZJOURNALS",
+  "name": "JAHZJOURNALS | AI Forex Trading Journal & Analytics Platform",
+  "icons": [
+    {
+      "src": "/logo-mark.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo-mark.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#030712",
+  "theme_color": "#030712",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "description": "Log trades, upload screenshots, track emotions, analyze performance, and discover your trading edge with AI."
+}

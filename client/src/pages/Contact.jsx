@@ -5,6 +5,8 @@ import Footer from '../components/Footer';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import api from '../utils/api';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const Contact = () => {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '', website: '' });
@@ -30,8 +32,10 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO />
       <Navbar />
-      <main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <Breadcrumbs />
         <PageHeader
           eyebrow="Contact"
           title="Talk to the JAHZJOURNALS team."

@@ -10,6 +10,8 @@ import { useAuth } from '../context/useAuth';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const plans = [
   {
@@ -89,8 +91,10 @@ const Pricing = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO />
       <Navbar />
-      <main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <Breadcrumbs />
         <PageHeader
           eyebrow="Pricing"
           title="Simple plans for disciplined traders and trading teams."
