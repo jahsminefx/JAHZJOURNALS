@@ -6,9 +6,13 @@ Allow: /
 Allow: /features
 Allow: /pricing
 Allow: /prop-firm-traders
+Allow: /trading-psychology
+Allow: /risk-management
 Allow: /mentors
 Allow: /about
 Allow: /contact
+Allow: /blog
+Allow: /blog/
 Allow: /terms
 Allow: /privacy
 Allow: /disclaimer

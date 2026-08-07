@@ -9,32 +9,32 @@ const groups = [
       ['Features', '/features'],
       ['Pricing', '/pricing'],
       ['Prop Firm Traders', '/prop-firm-traders'],
-      ['Mentors', '/mentors'],
+      ['Mentors & Academies', '/mentors'],
+    ],
+  },
+  {
+    title: 'Resources',
+    links: [
+      ['Trading Blog', '/blog'],
+      ['Trading Psychology', '/trading-psychology'],
+      ['Risk Management', '/risk-management'],
     ],
   },
   {
     title: 'Company',
     links: [
-      ['About', '/about'],
-      ['Contact', '/contact'],
+      ['About Us', '/about'],
+      ['Contact Support', '/contact'],
       ['Login', '/login'],
-      ['Register', '/register'],
-    ],
-  },
-  {
-    title: 'Support',
-    links: [
-      ['Help Center', '/contact'],
-      ['Founder Message', '/about'],
-      ['Academy Enquiries', '/mentors'],
+      ['Register Free', '/register'],
     ],
   },
   {
     title: 'Legal',
     links: [
-      ['Terms Placeholder', '/contact'],
-      ['Privacy Placeholder', '/contact'],
-      ['Responsible Trading', '/about'],
+      ['Terms of Service', '/terms'],
+      ['Privacy Policy', '/privacy'],
+      ['Risk Disclaimer', '/disclaimer'],
     ],
   },
 ];

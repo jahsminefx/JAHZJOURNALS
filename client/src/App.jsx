@@ -57,6 +57,10 @@ const Settings = lazy(() => import('./pages/Settings'));
 const NotificationsPage = lazy(() => import('./pages/Notifications'));
 const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
 const Legal = lazy(() => import('./pages/Legal'));
+const BlogList = lazy(() => import('./pages/BlogList'));
+const BlogPost = lazy(() => import('./pages/BlogPost'));
+const TradingPsychology = lazy(() => import('./pages/TradingPsychology'));
+const RiskManagementPage = lazy(() => import('./pages/RiskManagementPage'));
 
 const AiHubPage = lazy(() => import('./pages/ai/AiHubPage'));
 const AiTradeReviewsPage = lazy(() => import('./pages/ai/AiTradeReviewsPage'));
@@ -105,6 +109,10 @@ function App() {
             <Route path="/terms" element={<Legal type="terms" />} />
             <Route path="/privacy" element={<Legal type="privacy" />} />
             <Route path="/disclaimer" element={<Legal type="disclaimer" />} />
+            <Route path="/blog" element={<BlogList />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/trading-psychology" element={<TradingPsychology />} />
+            <Route path="/risk-management" element={<RiskManagementPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/onboarding" element={<Onboarding />} />

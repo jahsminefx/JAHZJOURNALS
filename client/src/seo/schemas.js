@@ -26,7 +26,7 @@ export const getOrganizationSchema = () => ({
 });
 
 /**
- * WebSite Schema with SearchAction (User Directive #8)
+ * WebSite Schema with SearchAction
  */
 export const getWebSiteSchema = () => ({
   '@context': 'https://schema.org',
@@ -139,4 +139,63 @@ export const getBreadcrumbSchema = (items = []) => ({
     name: item.name,
     item: `${SEO_DEFAULTS.SITE_URL}${item.path}`,
   })),
+});
+
+/**
+ * BlogPosting / Article Schema generator
+ */
+export const getArticleSchema = (post) => ({
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  '@id': `${SEO_DEFAULTS.SITE_URL}/blog/${post.slug}#article`,
+  headline: post.title,
+  description: post.summary || post.excerpt,
+  image: post.coverImage || SEO_DEFAULTS.DEFAULT_OG_IMAGE,
+  datePublished: post.publishedAt,
+  dateModified: post.updatedAt || post.publishedAt,
+  author: {
+    '@type': 'Person',
+    name: post.author?.name || 'Jahsmine Aninta',
+    jobTitle: post.author?.title || 'Founder & Chief Architect',
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: SEO_DEFAULTS.ORGANIZATION.name,
+    logo: {
+      '@type': 'ImageObject',
+      url: SEO_DEFAULTS.ORGANIZATION.logo,
+    },
+  },
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': `${SEO_DEFAULTS.SITE_URL}/blog/${post.slug}`,
+  },
+  articleSection: post.category || 'Trading Education',
+  keywords: post.keywords || 'Forex Trading Journal, AI Trading, Risk Management',
+});
+
+/**
+ * ContactPage Schema generator
+ */
+export const getContactPageSchema = () => ({
+  '@context': 'https://schema.org',
+  '@type': 'ContactPage',
+  '@id': `${SEO_DEFAULTS.SITE_URL}/contact#webpage`,
+  url: `${SEO_DEFAULTS.SITE_URL}/contact`,
+  name: 'Contact JAHZJOURNALS Support',
+  description: 'Get in touch with JAHZJOURNALS support, sales, and mentor onboarding teams.',
+  mainEntity: getOrganizationSchema(),
+});
+
+/**
+ * AboutPage Schema generator
+ */
+export const getAboutPageSchema = () => ({
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  '@id': `${SEO_DEFAULTS.SITE_URL}/about#webpage`,
+  url: `${SEO_DEFAULTS.SITE_URL}/about`,
+  name: 'About JAHZJOURNALS',
+  description: 'Learn how JAHZJOURNALS empowers traders with AI analytics, emotional tracking, and risk safeguards.',
+  mainEntity: getOrganizationSchema(),
 });
