@@ -92,7 +92,7 @@ const QuickTradeForm = ({ initialData, accounts, strategies, isEditMode, tradeId
     <div className="bg-surface-muted p-6 sm:p-8 rounded-xl shadow-lg border border-border">
       <form className="space-y-8">
         <TradeSetupSection register={register} control={control} accounts={accounts} status={status} />
-        <TradePriceRiskSection register={register} status={status} />
+        <TradePriceRiskSection register={register} status={status} setValue={setValue} watch={watch} />
         <CalculatedTradeSummary watch={watch} status={status} />
         <TradeQuickContextSection register={register} watch={watch} strategies={strategies} screenshotFiles={screenshotFiles} setScreenshotFiles={setScreenshotFiles} />
 

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const getApiBaseURL = () => {
   if (import.meta.env.VITE_API_URL) {
@@ -41,16 +42,27 @@ const shouldNotifyDashboard = (config = {}) => {
   return mutatingMethods.has(method) && dashboardRefreshPaths.some((path) => url.startsWith(path));
 };
 
-api.interceptors.response.use((response) => {
-  if (typeof window !== 'undefined' && shouldNotifyDashboard(response.config)) {
-    const timestamp = String(Date.now());
-    window.localStorage.setItem('jahzjournal:data-version', timestamp);
-    window.dispatchEvent(new CustomEvent('jahzjournal:data-changed', {
-      detail: { version: timestamp },
-    }));
-  }
+api.interceptors.response.use(
+  (response) => {
+    if (typeof window !== 'undefined' && shouldNotifyDashboard(response.config)) {
+      const timestamp = String(Date.now());
+      window.localStorage.setItem('jahzjournal:data-version', timestamp);
+      window.dispatchEvent(new CustomEvent('jahzjournal:data-changed', {
+        detail: { version: timestamp },
+      }));
+    }
 
-  return response;
-});
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.data) {
+      const data = error.response.data;
+      if (data.error === 'PLAN_LIMIT_REACHED' && data.message) {
+        toast.error(data.message, { id: `limit-${data.feature}`, duration: 5000 });
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

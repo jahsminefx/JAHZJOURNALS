@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
+const { requireProFeature } = require('../middleware/subscriptionGate');
 const {
   createPropFirm,
   getPropFirm,
@@ -13,7 +14,7 @@ const {
 } = require('../controllers/propFirmAccountController');
 
 router.route('/')
-  .post(protect, createPropFirm);
+  .post(protect, requireProFeature('prop_firm'), createPropFirm);
 
 router.route('/:id')
   .get(protect, getPropFirm)

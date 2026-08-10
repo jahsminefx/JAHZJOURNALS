@@ -30,9 +30,10 @@ export const calculateRiskReward = (direction, entryPrice, stopLoss, takeProfit)
 
 export const calculateTradeResult = (status, profitLossAmount) => {
   if (status === 'PLANNED' || status === 'ACTIVE') return 'OPEN';
-  if (!profitLossAmount) return 'OPEN';
+  if (profitLossAmount === undefined || profitLossAmount === null || profitLossAmount === '') return 'OPEN';
 
   const pl = Number.parseFloat(profitLossAmount);
+  if (Number.isNaN(pl)) return 'OPEN';
   if (pl > 0) return 'WIN';
   if (pl < 0) return 'LOSS';
   return 'BREAKEVEN';

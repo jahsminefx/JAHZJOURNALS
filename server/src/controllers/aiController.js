@@ -1,22 +1,23 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { enqueueAiJob } = require('../jobs/queues/aiQueue');
+const { buildLimitReachedPayload } = require('../config/plans');
 
 const checkAiLimit = async (userId, plan, featureType) => {
   const userSettings = await prisma.userSettings.findUnique({ where: { userId } });
   
   if (userSettings && userSettings.enableJahzAi === false) {
-    return { allowed: false, message: 'JAHZ AI is disabled in your settings.' };
+    return { allowed: false, payload: { message: 'JAHZ AI is disabled in your settings.' } };
   }
 
   if (featureType === 'TRADE_REVIEW' || featureType === 'EDGE_FINDER' || featureType === 'WEEKLY_COACH') {
      if (userSettings && userSettings.allowTradeDataAnalysis === false) {
-       return { allowed: false, message: 'Trade data analysis is disabled in your privacy settings.' };
+       return { allowed: false, payload: { message: 'Trade data analysis is disabled in your privacy settings.' } };
      }
   }
   if (featureType === 'SCREENSHOT_REVIEW') {
      if (!userSettings || userSettings.allowScreenshotAnalysis === false) {
-       return { allowed: false, message: 'Screenshot analysis is disabled in your privacy settings. Please enable it to use this feature.' };
+       return { allowed: false, payload: { message: 'Screenshot analysis is disabled in your privacy settings. Please enable it to use this feature.' } };
      }
   }
 
@@ -25,10 +26,30 @@ const checkAiLimit = async (userId, plan, featureType) => {
          const limit = 2;
          const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
          const usageCount = await prisma.aiRequest.count({ where: { userId, featureType, createdAt: { gte: startOfMonth } } });
-         if (usageCount >= limit) return { allowed: false, message: `Free plan limit reached (${limit}/${limit}). Upgrade your plan.` };
+         if (usageCount >= limit) {
+           return {
+             allowed: false,
+             payload: buildLimitReachedPayload({
+               feature: 'ai',
+               current: usageCount,
+               limit,
+               userPlan: 'FREE',
+               requiredPlan: 'STARTER',
+             })
+           };
+         }
          return { allowed: true };
      }
-     return { allowed: false, message: 'This AI feature requires a paid subscription.' };
+     return {
+       allowed: false,
+       payload: buildLimitReachedPayload({
+         feature: 'ai',
+         current: 0,
+         limit: 0,
+         userPlan: 'FREE',
+         requiredPlan: 'PRO',
+       })
+     };
   }
 
   const featureLimits = {
@@ -65,7 +86,16 @@ const checkAiLimit = async (userId, plan, featureType) => {
   const limit = planLimits[featureType];
 
   if (limit === undefined) {
-      return { allowed: false, message: `Your ${plan} plan does not include this AI feature.` };
+      return {
+        allowed: false,
+        payload: buildLimitReachedPayload({
+          feature: 'ai',
+          current: 0,
+          limit: 0,
+          userPlan: plan,
+          requiredPlan: 'PRO',
+        })
+      };
   }
   if (limit === Infinity) return { allowed: true };
 
@@ -77,7 +107,16 @@ const checkAiLimit = async (userId, plan, featureType) => {
   });
 
   if (usageCount >= limit) {
-    return { allowed: false, message: `You have reached your monthly limit for this feature (${limit}/${limit}).` };
+    return {
+      allowed: false,
+      payload: buildLimitReachedPayload({
+        feature: 'ai',
+        current: usageCount,
+        limit,
+        userPlan: plan,
+        requiredPlan: plan === 'STARTER' ? 'PRO' : 'MENTOR',
+      })
+    };
   }
 
   return { allowed: true };
@@ -100,7 +139,7 @@ const generateTradeInsight = async (req, res) => {
 
     const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'TRADE_REVIEW');
     if (!limitCheck.allowed) {
-      return res.status(403).json({ message: limitCheck.message });
+      return res.status(403).json(limitCheck.payload);
     }
 
     // Check if there is already a processing request
@@ -172,7 +211,7 @@ const generateWeeklyCoach = async (req, res) => {
 
     const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'WEEKLY_COACH');
     if (!limitCheck.allowed) {
-      return res.status(403).json({ message: limitCheck.message });
+      return res.status(403).json(limitCheck.payload);
     }
 
     // Check existing
@@ -222,7 +261,7 @@ const generateEdgeFinder = async (req, res) => {
   try {
     const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'EDGE_FINDER');
     if (!limitCheck.allowed) {
-      return res.status(403).json({ message: limitCheck.message });
+      return res.status(403).json(limitCheck.payload);
     }
 
     const existingReq = await prisma.aiRequest.findFirst({
@@ -271,7 +310,7 @@ const generateTradingPlan = async (req, res) => {
     
     const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'TRADING_PLAN');
     if (!limitCheck.allowed) {
-      return res.status(403).json({ message: limitCheck.message });
+      return res.status(403).json(limitCheck.payload);
     }
 
     const existingReq = await prisma.aiRequest.findFirst({
@@ -325,7 +364,7 @@ const generateVisionInsight = async (req, res) => {
 
     const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'SCREENSHOT_REVIEW');
     if (!limitCheck.allowed) {
-      return res.status(403).json({ message: limitCheck.message });
+      return res.status(403).json(limitCheck.payload);
     }
 
     // Prevent duplicate processing
@@ -432,7 +471,7 @@ const generateJournalDraft = async (req, res) => {
     
     // Check consent limit
     const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'JOURNAL_ASSISTANT');
-    if (!limitCheck.allowed) return res.status(403).json({ message: limitCheck.message });
+    if (!limitCheck.allowed) return res.status(403).json(limitCheck.payload);
 
     const aiRequest = await prisma.aiRequest.create({
       data: {

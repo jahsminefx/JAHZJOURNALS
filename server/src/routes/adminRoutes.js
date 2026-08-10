@@ -7,7 +7,8 @@ const {
   getUsers,
   updateUserRole,
   getSystemHealth,
-  getAuditLogs
+  getAuditLogs,
+  testAdminEmail
 } = require('../controllers/adminController');
 
 const {
@@ -104,8 +105,9 @@ router.get('/dashboard', authorize('SUPER_ADMIN', 'ADMIN'), getDashboardMetrics)
 router.get('/users', authorize('SUPER_ADMIN', 'ADMIN'), getUsers);
 router.patch('/users/:id/role', authorize('SUPER_ADMIN'), updateUserRole);
 
-// System Health
+// System Health & Email Testing
 router.get('/health', authorize('SUPER_ADMIN', 'ADMIN'), getSystemHealth);
+router.post('/email/test', authorize('SUPER_ADMIN', 'ADMIN'), testAdminEmail);
 
 // Audit Logs
 router.get('/audit', authorize('SUPER_ADMIN', 'ADMIN'), getAuditLogs);

@@ -91,22 +91,24 @@ const createTrade = async (req, res) => {
       return res.status(404).json({ message: 'Trading account not found' });
     }
 
+    const parseNum = (val) => (val !== undefined && val !== null && val !== '' && !Number.isNaN(Number(val))) ? parseFloat(val) : null;
+
     const trade = await prisma.trade.create({
       data: {
         tradingAccountId,
         pair: pair.toUpperCase().trim(),
         direction,
-        entryPrice: entryPrice ? parseFloat(entryPrice) : null,
-        stopLoss: stopLoss ? parseFloat(stopLoss) : null,
-        takeProfit: takeProfit ? parseFloat(takeProfit) : null,
-        exitPrice: exitPrice ? parseFloat(exitPrice) : null,
-        lotSize: lotSize ? parseFloat(lotSize) : null,
-        riskAmount: riskAmount ? parseFloat(riskAmount) : null,
-        rewardAmount: rewardAmount ? parseFloat(rewardAmount) : null,
-        profitLossAmount: profitLossAmount ? parseFloat(profitLossAmount) : null,
-        profitLossPercent: profitLossPercent ? parseFloat(profitLossPercent) : null,
-        riskRewardRatio: riskRewardRatio ? parseFloat(riskRewardRatio) : null,
-        pips: pips ? parseFloat(pips) : null,
+        entryPrice: parseNum(entryPrice),
+        stopLoss: parseNum(stopLoss),
+        takeProfit: parseNum(takeProfit),
+        exitPrice: parseNum(exitPrice),
+        lotSize: parseNum(lotSize),
+        riskAmount: parseNum(riskAmount),
+        rewardAmount: parseNum(rewardAmount),
+        profitLossAmount: parseNum(profitLossAmount),
+        profitLossPercent: parseNum(profitLossPercent),
+        riskRewardRatio: parseNum(riskRewardRatio),
+        pips: parseNum(pips),
         result: result || 'OPEN',
         status: status || 'ACTIVE',
         session: session || null,
@@ -215,22 +217,24 @@ const updateTrade = async (req, res) => {
       exitTime,
     } = req.body;
 
+    const parseNum = (val) => (val !== undefined && val !== null && val !== '' && !Number.isNaN(Number(val))) ? parseFloat(val) : null;
+
     const updatedTrade = await prisma.trade.update({
       where: { id: req.params.id },
       data: {
         pair: pair ? pair.toUpperCase().trim() : undefined,
         direction: direction || undefined,
-        entryPrice: entryPrice !== undefined ? (entryPrice ? parseFloat(entryPrice) : null) : undefined,
-        stopLoss: stopLoss !== undefined ? (stopLoss ? parseFloat(stopLoss) : null) : undefined,
-        takeProfit: takeProfit !== undefined ? (takeProfit ? parseFloat(takeProfit) : null) : undefined,
-        exitPrice: exitPrice !== undefined ? (exitPrice ? parseFloat(exitPrice) : null) : undefined,
-        lotSize: lotSize !== undefined ? (lotSize ? parseFloat(lotSize) : null) : undefined,
-        riskAmount: riskAmount !== undefined ? (riskAmount ? parseFloat(riskAmount) : null) : undefined,
-        rewardAmount: rewardAmount !== undefined ? (rewardAmount ? parseFloat(rewardAmount) : null) : undefined,
-        profitLossAmount: profitLossAmount !== undefined ? (profitLossAmount ? parseFloat(profitLossAmount) : null) : undefined,
-        profitLossPercent: profitLossPercent !== undefined ? (profitLossPercent ? parseFloat(profitLossPercent) : null) : undefined,
-        riskRewardRatio: riskRewardRatio !== undefined ? (riskRewardRatio ? parseFloat(riskRewardRatio) : null) : undefined,
-        pips: pips !== undefined ? (pips ? parseFloat(pips) : null) : undefined,
+        entryPrice: entryPrice !== undefined ? parseNum(entryPrice) : undefined,
+        stopLoss: stopLoss !== undefined ? parseNum(stopLoss) : undefined,
+        takeProfit: takeProfit !== undefined ? parseNum(takeProfit) : undefined,
+        exitPrice: exitPrice !== undefined ? parseNum(exitPrice) : undefined,
+        lotSize: lotSize !== undefined ? parseNum(lotSize) : undefined,
+        riskAmount: riskAmount !== undefined ? parseNum(riskAmount) : undefined,
+        rewardAmount: rewardAmount !== undefined ? parseNum(rewardAmount) : undefined,
+        profitLossAmount: profitLossAmount !== undefined ? parseNum(profitLossAmount) : undefined,
+        profitLossPercent: profitLossPercent !== undefined ? parseNum(profitLossPercent) : undefined,
+        riskRewardRatio: riskRewardRatio !== undefined ? parseNum(riskRewardRatio) : undefined,
+        pips: pips !== undefined ? parseNum(pips) : undefined,
         result: result || undefined,
         status: status || undefined,
         session: session !== undefined ? session : undefined,

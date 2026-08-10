@@ -3,12 +3,15 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
   initializeSubscription,
+  verifySubscription,
   cancelSubscription,
   handlePaystackWebhook
 } = require('../controllers/subscriptionController');
 
 router.post('/initialize', protect, initializeSubscription);
+router.get('/verify/:reference', protect, verifySubscription);
 router.post('/cancel', protect, cancelSubscription);
-router.post('/webhook', handlePaystackWebhook); // Webhooks are authenticated via HMAC SHA512 signature checking
+router.post('/webhook', handlePaystackWebhook);
+router.post('/paystack-webhook', handlePaystackWebhook);
 
 module.exports = router;

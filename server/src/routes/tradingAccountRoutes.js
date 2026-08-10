@@ -8,13 +8,14 @@ const {
   deleteAccount
 } = require('../controllers/tradingAccountController');
 const { protect } = require('../middleware/authMiddleware');
+const { checkAccountLimit } = require('../middleware/subscriptionGate');
 const propFirmAccountRoutes = require('./propFirmAccountRoutes');
 
 router.use('/prop-firm', propFirmAccountRoutes);
 
 router.route('/')
   .get(protect, getAccounts)
-  .post(protect, createAccount);
+  .post(protect, checkAccountLimit, createAccount);
 
 router.route('/:id')
   .get(protect, getAccountById)

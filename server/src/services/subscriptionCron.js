@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { sendSubscriptionExpiryEmail } = require('./emailService');
 
 const startSubscriptionCron = () => {
   // Run daily at midnight
@@ -43,7 +44,11 @@ const startSubscriptionCron = () => {
         });
         console.log(`Expired promotional subscription for user ${sub.userId}`);
         
-        // Next: queue email or in-app notification for expiry
+        if (sub.user) {
+          sendSubscriptionExpiryEmail(sub.user, sub.plan).catch(err => {
+            console.warn(`Failed to send expiry email to user ${sub.userId}:`, err?.message || err);
+          });
+        }
       }
     } catch (e) {
       console.error('Error in subscription cron:', e);

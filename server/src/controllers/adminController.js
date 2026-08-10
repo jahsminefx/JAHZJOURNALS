@@ -184,10 +184,44 @@ const getAuditLogs = async (req, res) => {
   }
 };
 
+const testAdminEmail = async (req, res) => {
+  try {
+    const { to } = req.body;
+    const recipient = to || req.user.email;
+    const { sendEmail } = require('../services/emailService');
+
+    const result = await sendEmail({
+      to: recipient,
+      subject: 'JAHZJOURNALS Admin Email Test',
+      html: `
+        <div style="background-color: #0b0f17; padding: 32px; color: #e2e8f0; font-family: sans-serif; border-radius: 12px;">
+          <h2 style="color: #10b981; margin-top: 0;">JAHZJOURNALS Transactional Email Test</h2>
+          <p>This is a test transactional email dispatched from the JAHZJOURNALS Admin Console.</p>
+          <p>Timestamp: ${new Date().toISOString()}</p>
+          <p>Requested by: ${req.user.name} (${req.user.email})</p>
+        </div>
+      `,
+      text: `JAHZJOURNALS Admin Email Test dispatched at ${new Date().toISOString()} by ${req.user.email}`,
+    });
+
+    res.json({
+      success: result.success,
+      provider: result.provider,
+      messageId: result.messageId,
+      errorCode: result.errorCode || null,
+      message: result.success ? `Test email dispatched successfully to ${recipient}` : `Email test failed: ${result.error || 'Check server logs'}`,
+    });
+  } catch (err) {
+    console.error('[Admin Email Test Error]', err);
+    res.status(500).json({ success: false, message: 'Failed to dispatch test email.' });
+  }
+};
+
 module.exports = {
   getDashboardMetrics,
   getUsers,
   updateUserRole,
   getSystemHealth,
-  getAuditLogs
+  getAuditLogs,
+  testAdminEmail,
 };

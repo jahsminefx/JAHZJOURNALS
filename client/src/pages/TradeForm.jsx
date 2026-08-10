@@ -7,6 +7,7 @@ import api from '../utils/api';
 import { loadSettings } from '../utils/settings';
 import AiDraftHelper from '../components/trades/review/AiDraftHelper';
 import DirectionSelect from '../components/trades/DirectionSelect';
+import SignedNumericInput from '../components/common/SignedNumericInput';
 
 const emotionOptions = ['CALM', 'CONFIDENT', 'ANXIOUS', 'GREEDY', 'FEARFUL', 'ANGRY', 'FOMO', 'REVENGE_MINDSET', 'DISCIPLINED', 'REGRETFUL', 'FRUSTRATED'];
 const stageOptions = ['BEFORE_TRADE', 'DURING_TRADE', 'AFTER_TRADE'];
@@ -413,14 +414,30 @@ const TradeForm = () => {
                   ['rewardAmount', 'Reward Amount', '0.01'],
                   ['riskRewardRatio', 'Risk/Reward', '0.01'],
                   ['pips', 'Pips', '0.1'],
-                  ['profitLossAmount', 'Realised P/L', '0.01'],
-                  ['profitLossPercent', 'P/L %', '0.01'],
                 ].map(([name, label, step]) => (
                   <label key={name} className="text-sm text-muted">
                     {label}
-                    <input type="number" step={step} {...register(name)} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
+                    <input type="number" step={step} inputMode="decimal" min="0" {...register(name)} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
                   </label>
                 ))}
+                <SignedNumericInput
+                  label="Realised P/L ($)"
+                  name="profitLossAmount"
+                  register={register}
+                  setValue={setValue}
+                  watch={watch}
+                  step="0.01"
+                  placeholder="0.00"
+                />
+                <SignedNumericInput
+                  label="P/L %"
+                  name="profitLossPercent"
+                  register={register}
+                  setValue={setValue}
+                  watch={watch}
+                  step="0.01"
+                  placeholder="0.00"
+                />
                 <label className="text-sm text-muted">
                   Result
                   <select {...register('result')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">

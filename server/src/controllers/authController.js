@@ -3,7 +3,11 @@ const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const generateToken = require('../utils/generateToken');
-const sendEmail = require('../utils/sendEmail');
+const {
+  sendWelcomeEmail,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} = require('../services/emailService');
 const { getClearCookieOptions } = require('../utils/cookieOptions');
 const { userProfileSelect } = require('./userController');
 
@@ -58,6 +62,26 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
+      // Generate email verification token asynchronously
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const emailVerificationTokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerificationTokenHash,
+          emailVerificationExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        },
+      }).catch(err => console.error('Failed to set verification token on register:', err.message));
+
+      const appUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+      const verifyUrl = `${appUrl}/verify-email?token=${rawToken}`;
+
+      // Dispatch welcome email asynchronously without blocking registration flow
+      sendWelcomeEmail(user, verifyUrl).catch(err => {
+        console.warn('Welcome email dispatch warning:', err?.message || err);
+      });
+
       generateToken(res, user.id);
       res.status(201).json(user);
     } else {
@@ -134,17 +158,8 @@ const requestPasswordReset = async (req, res) => {
 
         const appUrl = process.env.CLIENT_URL || 'http://localhost:5173';
         const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
-        const emailMessage = `You requested a password reset for your Sanctuary account.\n\nPlease reset your password by clicking here: ${resetUrl}\n\nThis link will expire in 1 hour. If you did not request this, please ignore this email.`;
         
-        await sendEmail({
-          to: user.email,
-          subject: 'Reset Your Sanctuary Password',
-          text: emailMessage,
-        });
-
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`Password reset token for ${normalizedEmail}: ${rawToken}`);
-        }
+        await sendPasswordResetEmail(user, resetUrl);
       }
     }
 
@@ -247,13 +262,8 @@ const requestEmailVerification = async (req, res) => {
 
     const appUrl = process.env.CLIENT_URL || 'http://localhost:5173';
     const verifyUrl = `${appUrl}/verify-email?token=${rawToken}`;
-    const emailMessage = `Welcome to your Sanctuary.\n\nPlease verify your email address by clicking here: ${verifyUrl}\n\nThis helps keep your journal secure.`;
     
-    await sendEmail({
-      to: user.email,
-      subject: 'Verify Your Sanctuary Email',
-      text: emailMessage,
-    });
+    await sendVerificationEmail(user, verifyUrl);
 
     res.json({ message: 'A fresh verification link has been sent to your email.' });
   } catch (error) {

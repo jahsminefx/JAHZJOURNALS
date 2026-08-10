@@ -38,9 +38,9 @@ function validateProductionEnv() {
     console.warn(`[WARNING] Neither OPENROUTER_API_KEY nor OPENAI_API_KEY supplied. AI Hub features will fail gracefully.`);
   }
 
-  const missingEmail = !process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS;
-  if (missingEmail) {
-    console.warn(`[WARNING] Complete SMTP credentials not supplied. Platform emails will not send.`);
+  const missingBrevo = !process.env.BREVO_API_KEY && (process.env.EMAIL_PROVIDER || 'brevo') === 'brevo';
+  if (missingBrevo) {
+    console.warn(`[WARNING] BREVO_API_KEY is not supplied. Transactional emails will operate in mock mode.`);
   }
 }
 

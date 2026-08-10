@@ -11,6 +11,7 @@ const {
 } = require('../controllers/tradeController');
 const { importTrades } = require('../controllers/importController');
 const { protect } = require('../middleware/authMiddleware');
+const { checkTradeLimit } = require('../middleware/subscriptionGate');
 const csvUpload = require('../middleware/csvUploadMiddleware');
 const screenshotRoutes = require('./screenshotRoutes');
 const { preTradeCheck } = require('../controllers/preTradeController');
@@ -19,7 +20,7 @@ router.post('/pre-trade-check', protect, preTradeCheck);
 
 router.route('/')
   .get(protect, getTrades)
-  .post(protect, createTrade);
+  .post(protect, checkTradeLimit, createTrade);
 
 router.get('/export-csv', protect, exportTradesCsv);
 router.post('/import', protect, csvUpload.single('file'), importTrades);
