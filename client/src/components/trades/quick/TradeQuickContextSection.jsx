@@ -28,7 +28,7 @@ const TradeQuickContextSection = ({ register, watch, strategies = [], screenshot
           Setup
           <select {...register('setupId')} disabled={!watch('strategyId')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 disabled:opacity-50">
             <option value="">No Setup</option>
-            {strategies.find(s => s.id === watch('strategyId'))?.setups.map(su => (
+            {strategies.find(s => s.id === watch('strategyId'))?.setups?.map(su => (
               <option key={su.id} value={su.id}>{su.name}</option>
             ))}
           </select>

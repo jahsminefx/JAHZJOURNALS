@@ -56,20 +56,19 @@ const quickTradeSchema = baseTradeContextSchema.extend({
 }).superRefine((data, ctx) => {
   // If status is OPEN, require entry info (simplification depending on actual UX requirements)
   if (data.status === 'ACTIVE' || data.status === 'CLOSED') {
-    if (!data.entryPrice) {
+    if (data.entryPrice === undefined || data.entryPrice === null || data.entryPrice === '') {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Entry price is required for active/closed trades", path: ['entryPrice'] });
     }
-    if (!data.entryTime) {
+    if (data.entryTime === undefined || data.entryTime === null || data.entryTime === '') {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Entry time is required for active/closed trades", path: ['entryTime'] });
     }
   }
 
-  // If CLOSED, exit info is normally required, but we allow partial saves if they just hit 'Save'. Wait, instructions: 'Closed trade - Entry price required, Exit price required, Entry time required, Exit time required'
   if (data.status === 'CLOSED') {
-    if (!data.exitPrice) {
+    if (data.exitPrice === undefined || data.exitPrice === null || data.exitPrice === '') {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Exit price is required for closed trades", path: ['exitPrice'] });
     }
-    if (!data.exitTime) {
+    if (data.exitTime === undefined || data.exitTime === null || data.exitTime === '') {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Exit time is required for closed trades", path: ['exitTime'] });
     }
     const hasProfitLossAmount = data.profitLossAmount !== undefined && data.profitLossAmount !== null && data.profitLossAmount !== '';

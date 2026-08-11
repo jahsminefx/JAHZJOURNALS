@@ -17,7 +17,7 @@ const QuickTradeForm = ({ initialData, accounts, strategies, isEditMode, tradeId
   const [screenshotFiles, setScreenshotFiles] = useState([]);
   const navigate = useNavigate();
 
-  const { register, handleSubmit, watch, control } = useForm({ defaultValues: initialData });
+  const { register, handleSubmit, watch, control, setValue } = useForm({ defaultValues: initialData });
 
   const status = watch('status');
 

@@ -125,7 +125,7 @@ const createTrade = async (req, res) => {
         isAPlusSetup: isAPlusSetup !== undefined ? Boolean(isAPlusSetup) : null,
         newsRelated: newsRelated !== undefined ? Boolean(newsRelated) : null,
         grade: grade || null,
-        entryTime: entryTime ? new Date(entryTime) : new Date(),
+        entryTime: entryTime ? new Date(entryTime) : (status === 'PLANNED' ? null : new Date()),
         exitTime: exitTime ? new Date(exitTime) : null,
       },
     });
@@ -251,7 +251,7 @@ const updateTrade = async (req, res) => {
         isAPlusSetup: isAPlusSetup !== undefined ? Boolean(isAPlusSetup) : undefined,
         newsRelated: newsRelated !== undefined ? Boolean(newsRelated) : undefined,
         grade: grade !== undefined ? grade : undefined,
-        entryTime: entryTime ? new Date(entryTime) : undefined,
+        entryTime: entryTime !== undefined ? (entryTime ? new Date(entryTime) : null) : undefined,
         exitTime: exitTime !== undefined ? (exitTime ? new Date(exitTime) : null) : undefined,
       }
     });

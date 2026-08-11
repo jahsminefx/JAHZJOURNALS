@@ -107,7 +107,7 @@ const QuickTradePage = () => {
           <Link to="/accounts/new" className="px-4 py-2 bg-green-500 text-gray-900 rounded-lg">Create Your First Account</Link>
         </div>
       ) : initialData && (
-        <QuickTradeForm initialData={initialData} accounts={accounts} strategies={strategies} isEditMode={isEditMode} tradeId={id} />
+        <QuickTradeForm key={id || 'new'} initialData={initialData} accounts={accounts} strategies={strategies} isEditMode={isEditMode} tradeId={id} />
       )}
     </div>
   );
