@@ -78,6 +78,13 @@ const Register = () => {
           {isLoading ? 'Preparing your space...' : 'Create My Sanctuary'}
         </button>
 
+        <p className="text-center text-xs leading-5 text-muted">
+          By creating an account, you agree to the JAHZJOURNALS{' '}
+          <Link to="/terms" className="font-medium text-emerald-400 hover:text-emerald-300 underline">Terms of Service</Link>{' '}
+          and acknowledge the{' '}
+          <Link to="/privacy" className="font-medium text-emerald-400 hover:text-emerald-300 underline">Privacy Policy</Link>.
+        </p>
+
         <p className="text-center text-sm text-muted">
           Already part of the journey?{' '}
           <Link to="/login" className="font-semibold text-emerald-300 hover:text-emerald-200">

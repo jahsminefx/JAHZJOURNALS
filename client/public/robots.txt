@@ -15,6 +15,7 @@ Allow: /blog
 Allow: /blog/
 Allow: /terms
 Allow: /privacy
+Allow: /cookies
 Allow: /disclaimer
 
 # Authenticated & Private Routes (Strict Crawl Exclusion)

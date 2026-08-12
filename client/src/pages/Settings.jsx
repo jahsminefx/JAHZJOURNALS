@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Sun,
@@ -27,6 +27,8 @@ import { useTheme } from '../context/ThemeProvider';
 import { loadSettings, saveSettings, fetchAndSyncSettings } from '../utils/settings';
 import AiUsageDashboard from '../components/settings/AiUsageDashboard';
 import StrategySettings from '../components/settings/StrategySettings';
+import { useConsent } from '../context/ConsentProvider';
+import { getConsentTimestamp } from '../utils/consentService';
 
 const inputClass = 'mt-2 block w-full rounded-lg border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition focus:border-green-400 disabled:cursor-not-allowed disabled:opacity-60';
 
@@ -935,62 +937,103 @@ const Settings = () => {
     </form>
   )};
 
-  const renderDataPrivacy = () => (
-    <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('dataPrivacy', 'data-privacy', 'Data and privacy settings saved'); }} className="space-y-5">
+  const renderDataPrivacy = () => {
+    const { consent, acceptAll: consentAcceptAll, rejectNonEssential: consentRejectNonEssential, savePreferences: consentSavePreferences, resetConsent: consentReset, openPreferences: consentOpenPrefs } = useConsent();
+    const consentTimestamp = getConsentTimestamp();
+    const consentCategories = consent?.categories || { necessary: true, preferences: false, analytics: false, advertising: false };
+
+    return (
+    <div className="space-y-5">
+      {/* Privacy & Cookies */}
       <SettingsCard
-        title="Data and Privacy"
-        description="Export your journal data, control AI data usage, and prepare destructive actions with confirmation."
-        actions={<SaveButton section="dataPrivacy" savingSection={savingSection} />}
+        title="Privacy & Cookies"
+        description="Manage your cookie and privacy preferences. Necessary cookies are always active for authentication and security."
       >
-        <div className="space-y-5">
-          <Toggle label="Allow AI usage of journal data" description="Controls whether future AI features can use journal content for analysis." checked={settings.dataPrivacy.allowAiUseOfJournalData} onChange={(value) => updateSettingsSection('dataPrivacy', 'allowAiUseOfJournalData', value)} />
-          <div className="grid gap-3 md:grid-cols-3">
-            <button type="button" onClick={handleExportData} disabled={exporting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-3 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">
-              <Download size={16} />
-              {exporting ? 'Exporting...' : 'Export all data'}
-            </button>
-            <button type="button" onClick={() => comingSoon('Screenshot download archive')} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">
-              Download screenshots
-            </button>
-            <button type="button" onClick={() => comingSoon('Account-only export')} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">
-              Export account data
-            </button>
-            <button type="button" onClick={() => comingSoon('Delete individual trading account data')} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">
-              Delete account data
-            </button>
+        <div className="space-y-4">
+          {/* Necessary — always on */}
+          <div className="flex w-full items-start justify-between gap-4 rounded-xl border border-border bg-surface p-4">
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Necessary</span>
+              <span className="mt-1 block text-sm leading-6 text-muted">Required for authentication, security, and core platform functionality.</span>
+            </span>
+            <span className="mt-1 text-xs font-semibold text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-2 py-1 rounded whitespace-nowrap">Always On</span>
           </div>
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-1 shrink-0 text-red-300" size={20} />
-              <div>
-                <h3 className="font-bold text-red-100">Danger zone</h3>
-                <p className="mt-2 text-sm leading-6 text-red-100/70">Destructive actions should require password confirmation. Backend delete endpoints for all journal data and account deletion are not connected yet.</p>
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto]">
-              <input
-                type="password"
-                value={deleteConfirmation}
-                onChange={(event) => setDeleteConfirmation(event.target.value)}
-                placeholder="Type your current password to confirm"
-                className="rounded-lg border border-red-500/30 bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-red-300"
-              />
-              <button type="button" onClick={() => comingSoon('Delete all journal data')} disabled={!deleteConfirmation} className="rounded-lg border border-red-400/40 px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50">
-                Delete journal data
-              </button>
-              <button type="button" onClick={handleDeleteAccount} disabled={!deleteConfirmation || savingSection === 'deleteAccount'} className="rounded-lg bg-red-500 px-4 py-3 text-sm font-bold text-foreground hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50">
-                {savingSection === 'deleteAccount' ? 'Deleting...' : 'Delete account'}
-              </button>
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <button type="button" onClick={() => comingSoon('Privacy Policy page')} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">Read Privacy Policy</button>
-            <button type="button" onClick={() => comingSoon('Terms of Service page')} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">Read Terms of Service</button>
+
+          <Toggle label="Preferences" description="Remembers your choices like theme, sidebar layout, and display preferences." checked={consentCategories.preferences} onChange={(value) => consentSavePreferences({ ...consentCategories, preferences: value })} />
+          <Toggle label="Analytics" description="Helps us understand how the platform is used to improve the experience. Not currently active." checked={consentCategories.analytics} onChange={(value) => consentSavePreferences({ ...consentCategories, analytics: value })} />
+          <Toggle label="Advertising" description="Enables third-party advertising on eligible public pages. Your private trading data is never shared with advertising providers." checked={consentCategories.advertising} onChange={(value) => consentSavePreferences({ ...consentCategories, advertising: value })} />
+
+          {consentTimestamp && (
+            <p className="text-xs text-muted">Consent last updated: {new Date(consentTimestamp).toLocaleString()}</p>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <button type="button" onClick={consentAcceptAll} className="rounded-lg bg-green-500 px-4 py-3 text-sm font-bold text-gray-900 hover:bg-green-400">Accept All</button>
+            <button type="button" onClick={consentRejectNonEssential} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">Reject Non-Essential</button>
+            <button type="button" onClick={consentReset} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">Withdraw Consent</button>
           </div>
         </div>
       </SettingsCard>
-    </form>
+
+      {/* AI Data & Export */}
+      <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('dataPrivacy', 'data-privacy', 'Data and privacy settings saved'); }} className="space-y-5">
+        <SettingsCard
+          title="Data Controls"
+          description="Control AI data usage, export your journal data, and manage account deletion."
+          actions={<SaveButton section="dataPrivacy" savingSection={savingSection} />}
+        >
+          <div className="space-y-5">
+            <Toggle label="Allow AI usage of journal data" description="Controls whether future AI features can use journal content for analysis." checked={settings.dataPrivacy.allowAiUseOfJournalData} onChange={(value) => updateSettingsSection('dataPrivacy', 'allowAiUseOfJournalData', value)} />
+            <div className="grid gap-3 md:grid-cols-3">
+              <button type="button" onClick={handleExportData} disabled={exporting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-3 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">
+                <Download size={16} />
+                {exporting ? 'Exporting...' : 'Export all data'}
+              </button>
+              <button type="button" onClick={() => comingSoon('Screenshot download archive')} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">
+                Download screenshots
+              </button>
+              <button type="button" onClick={() => comingSoon('Account-only export')} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">
+                Export account data
+              </button>
+              <button type="button" onClick={() => comingSoon('Delete individual trading account data')} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">
+                Delete account data
+              </button>
+            </div>
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-1 shrink-0 text-red-300" size={20} />
+                <div>
+                  <h3 className="font-bold text-red-100">Danger zone</h3>
+                  <p className="mt-2 text-sm leading-6 text-red-100/70">Destructive actions should require password confirmation. Backend delete endpoints for all journal data and account deletion are not connected yet.</p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto]">
+                <input
+                  type="password"
+                  value={deleteConfirmation}
+                  onChange={(event) => setDeleteConfirmation(event.target.value)}
+                  placeholder="Type your current password to confirm"
+                  className="rounded-lg border border-red-500/30 bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-red-300"
+                />
+                <button type="button" onClick={() => comingSoon('Delete all journal data')} disabled={!deleteConfirmation} className="rounded-lg border border-red-400/40 px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50">
+                  Delete journal data
+                </button>
+                <button type="button" onClick={handleDeleteAccount} disabled={!deleteConfirmation || savingSection === 'deleteAccount'} className="rounded-lg bg-red-500 px-4 py-3 text-sm font-bold text-foreground hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50">
+                  {savingSection === 'deleteAccount' ? 'Deleting...' : 'Delete account'}
+                </button>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Link to="/privacy" className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted text-center">Privacy Policy</Link>
+              <Link to="/terms" className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted text-center">Terms of Service</Link>
+              <Link to="/cookies" className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted text-center">Cookie Policy</Link>
+            </div>
+          </div>
+        </SettingsCard>
+      </form>
+    </div>
   );
+  };
 
   const contentBySection = {
     profile: renderProfile,

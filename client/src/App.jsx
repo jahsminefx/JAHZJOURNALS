@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './context/ThemeProvider';
 import { AuthProvider } from './context/AuthProvider';
+import { ConsentProvider } from './context/ConsentProvider';
 import { useAuth } from './context/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -26,6 +27,7 @@ const BusinessIntelligenceHub = lazy(() => import('./pages/admin/BusinessIntelli
 const CommunicationsHub = lazy(() => import('./pages/admin/communications/CommunicationsHub'));
 
 const ImpersonationBanner = lazy(() => import('./components/ImpersonationBanner'));
+const CookieConsentBanner = lazy(() => import('./components/CookieConsentBanner'));
 
 const Home = lazy(() => import('./pages/Home'));
 const Features = lazy(() => import('./pages/Features'));
@@ -94,6 +96,7 @@ const RequireOnboarding = ({ children }) => {
 function App() {
   return (
     <ThemeProvider>
+      <ConsentProvider>
       <AuthProvider>
         <Router>
         <Toaster position="top-right" />
@@ -111,6 +114,7 @@ function App() {
             <Route path="/terms" element={<Legal type="terms" />} />
             <Route path="/privacy" element={<Legal type="privacy" />} />
             <Route path="/disclaimer" element={<Legal type="disclaimer" />} />
+            <Route path="/cookies" element={<Legal type="cookies" />} />
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/trading-psychology" element={<TradingPsychology />} />
@@ -187,8 +191,10 @@ function App() {
             </Route>
           </Routes>
         </Suspense>
+        <Suspense fallback={null}><CookieConsentBanner /></Suspense>
         </Router>
       </AuthProvider>
+      </ConsentProvider>
     </ThemeProvider>
   );
 }

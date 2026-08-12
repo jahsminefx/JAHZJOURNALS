@@ -34,6 +34,7 @@ const groups = [
     links: [
       ['Terms of Service', '/terms'],
       ['Privacy Policy', '/privacy'],
+      ['Cookie Policy', '/cookies'],
       ['Risk Disclaimer', '/disclaimer'],
     ],
   },
@@ -71,8 +72,15 @@ const Footer = () => (
         ))}
       </div>
     </div>
-    <div className="mx-auto mt-10 max-w-7xl border-t border-border dark:border-white/10 pt-6 text-sm text-gray-500">
-      © 2026 JAHZJOURNALS. Built for disciplined trading review. Not financial advice.
+    <div className="mx-auto mt-10 max-w-7xl border-t border-border dark:border-white/10 pt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-500">
+      <span>© 2026 JAHZJOURNALS. Built for disciplined trading review. Not financial advice.</span>
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new CustomEvent('jahzjournals:open-privacy-settings'))}
+        className="text-sm text-muted hover:text-emerald-300 transition-colors text-left sm:text-right"
+      >
+        Privacy Settings
+      </button>
     </div>
   </footer>
 );

@@ -1,0 +1,2 @@
+# ads.txt for JAHZJOURNALS
+google.com, pub-6725573719511845, DIRECT, f08c47fec0942fa0
