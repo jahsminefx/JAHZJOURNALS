@@ -103,6 +103,28 @@ const sendWeeklyReviewReminderEmail = async (user, dashboardUrl) => {
   });
 };
 
+const sendPromotionNotificationEmail = async (user, promotion) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const promoUrl = `${clientUrl}/pricing`;
+  const subject = `🎉 New JAHZJOURNALS Promotion: ${promotion.name}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; background-color: #111827; color: #f3f4f6; padding: 32px; border-radius: 16px;">
+      <h2 style="color: #10b981;">🎉 Special Promotion Live!</h2>
+      <h1 style="color: #ffffff; font-size: 24px;">${promotion.name}</h1>
+      <p style="color: #9ca3af; font-size: 16px;">${promotion.description || 'Unlock exclusive tier access on JAHZJOURNALS.'}</p>
+      <div style="background-color: #1f2937; padding: 16px; border-radius: 12px; margin: 24px 0; border: 1px solid #374151;">
+        <p style="margin: 0; color: #9ca3af; font-size: 12px;">PROMO CODE</p>
+        <p style="margin: 4px 0 0 0; color: #38bdf8; font-size: 20px; font-weight: bold; font-family: monospace;">${promotion.slug.toUpperCase()}</p>
+        <p style="margin: 8px 0 0 0; color: #34d399; font-size: 14px;"><strong>Benefit:</strong> ${promotion.planGranted} Tier Access</p>
+      </div>
+      <a href="${promoUrl}" style="display: inline-block; background: linear-gradient(to right, #10b981, #14b8a6); color: #030712; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: bold; font-size: 16px;">Redeem Promotion Now →</a>
+    </div>
+  `;
+  const text = `🎉 New JAHZJOURNALS Promotion: ${promotion.name}\n\n${promotion.description || ''}\nCode: ${promotion.slug.toUpperCase()}\nBenefit: ${promotion.planGranted}\n\nRedeem now: ${promoUrl}`;
+
+  return await sendEmail({ to: user.email, subject, html, text });
+};
+
 module.exports = {
   sendEmail,
   sendWelcomeEmail,
@@ -111,4 +133,5 @@ module.exports = {
   sendSubscriptionConfirmationEmail,
   sendSubscriptionExpiryEmail,
   sendWeeklyReviewReminderEmail,
+  sendPromotionNotificationEmail,
 };

@@ -26,8 +26,11 @@ const {
   updatePromotion,
   deletePromotion,
   grantPromotion,
-  getGranteesByPromotion
+  getGranteesByPromotion,
+  awardBadge,
+  revokeBadge
 } = require('../controllers/adminPromotionController');
+
 
 const {
   getAiDashboardMetrics,
@@ -127,6 +130,8 @@ router.put('/promotions/:id', authorize('SUPER_ADMIN'), updatePromotion);
 router.delete('/promotions/:id', authorize('SUPER_ADMIN'), deletePromotion);
 router.post('/promotions/grant', authorize('SUPER_ADMIN'), grantPromotion);
 router.get('/promotions/:id/grantees', authorize('SUPER_ADMIN', 'ADMIN'), getGranteesByPromotion);
+router.post('/badges/award', authorize('SUPER_ADMIN'), awardBadge);
+router.post('/badges/revoke', authorize('SUPER_ADMIN'), revokeBadge);
 
 // AI Console Operations Center
 router.get('/ai/dashboard', authorize('SUPER_ADMIN', 'ADMIN'), getAiDashboardMetrics);

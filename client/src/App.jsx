@@ -55,6 +55,8 @@ const StrategiesPage = lazy(() => import('./pages/StrategiesPage'));
 const TradingPlanBuilder = lazy(() => import('./pages/TradingPlanBuilder'));
 const Settings = lazy(() => import('./pages/Settings'));
 const NotificationsPage = lazy(() => import('./pages/Notifications'));
+const PromotionsPage = lazy(() => import('./pages/PromotionsPage'));
+const PromotionDetailPage = lazy(() => import('./pages/PromotionDetailPage'));
 const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
 const Legal = lazy(() => import('./pages/Legal'));
 const BlogList = lazy(() => import('./pages/BlogList'));
@@ -146,6 +148,8 @@ function App() {
                 <Route path="/risk-calculator" element={<RiskCalculator />} />
                 <Route path="/weekly-review" element={<WeeklyReview />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/promotions" element={<PromotionsPage />} />
+                <Route path="/promotions/:id" element={<PromotionDetailPage />} />
                 <Route path="/settings" element={<Settings />} />
 
                 {/* AI Hub Routes */}

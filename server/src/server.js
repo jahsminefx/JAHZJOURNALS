@@ -102,6 +102,8 @@ app.use((req, res, next) => {
 });
 
 app.use('/api', globalApiLimiter);
+const { maintenanceMiddleware } = require('./middleware/maintenanceMiddleware');
+app.use('/api', maintenanceMiddleware);
 
 // Routes
 const { getHealthStatus } = require('./controllers/healthController');
@@ -117,6 +119,7 @@ app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/mentors', require('./routes/mentorRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
+app.use('/api/promotions', require('./routes/traderPromotionRoutes'));
 app.use('/api/strategies', require('./routes/strategyRoutes'));
 app.use('/api/setups', require('./routes/setupRoutes'));
 app.use('/api/notifications', require('./routes/userNotificationRoutes'));

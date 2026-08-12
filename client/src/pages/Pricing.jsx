@@ -111,6 +111,28 @@ const Pricing = () => {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
 
+  const [promoCode, setPromoCode] = React.useState('');
+  const [redeemingPromo, setRedeemingPromo] = React.useState(false);
+
+  const handleRedeemCode = async (e) => {
+    e.preventDefault();
+    if (!promoCode.trim()) return toast.error('Please enter a promo code');
+    if (!user) return navigate('/login');
+
+    try {
+      setRedeemingPromo(true);
+      const { data } = await api.post('/promotions/redeem-code', { code: promoCode.trim() });
+      toast.success(data.message || 'Promo code redeemed!');
+      setPromoCode('');
+      await refreshUser();
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Invalid or expired promo code.');
+    } finally {
+      setRedeemingPromo(false);
+    }
+  };
+
   React.useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const reference = searchParams.get('reference') || searchParams.get('trxref');
@@ -220,6 +242,34 @@ const Pricing = () => {
                 to={getTo(plan.name)}
               />
             ))}
+          </div>
+
+          {/* Promo Code Section */}
+          <div className="mt-8 max-w-2xl mx-auto rounded-2xl border border-gray-800 bg-gray-900/80 p-6 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                🏷️ Have an official promo code?
+              </h3>
+              <p className="text-xs text-gray-400 mt-1">
+                Enter your code to unlock complimentary tier access or discounts.
+              </p>
+            </div>
+            <form onSubmit={handleRedeemCode} className="flex gap-2 w-full sm:w-auto">
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value)}
+                placeholder="e.g. FOUNDING50"
+                className="bg-gray-950 border border-gray-700 px-3 py-2 rounded-xl text-xs font-mono font-bold text-sky-400 uppercase placeholder-gray-600 outline-none focus:border-sky-500 w-full sm:w-36"
+              />
+              <button
+                type="submit"
+                disabled={redeemingPromo || !promoCode.trim()}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-gray-950 font-black text-xs rounded-xl shadow-md disabled:opacity-50 transition-all shrink-0"
+              >
+                {redeemingPromo ? 'Applying...' : 'Apply'}
+              </button>
+            </form>
           </div>
         </section>
 

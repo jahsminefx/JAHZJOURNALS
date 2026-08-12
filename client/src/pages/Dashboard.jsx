@@ -15,6 +15,7 @@ import RecentTrades from '../components/dashboard/RecentTrades';
 import UpgradeCard from '../components/dashboard/UpgradeCard';
 import DisciplineBanner from '../components/dashboard/DisciplineBanner';
 import AnnouncementBanner from '../components/AnnouncementBanner';
+import DashboardPromotionBanner from '../components/DashboardPromotionBanner';
 import EdgeFinderWidget from '../components/dashboard/EdgeFinderWidget';
 import DashboardSkeleton from '../components/dashboard/DashboardSkeleton';
 import DashboardEmptyState from '../components/dashboard/DashboardEmptyState';
@@ -256,6 +257,7 @@ const Dashboard = () => {
       />
 
       <AnnouncementBanner />
+      <DashboardPromotionBanner />
 
       {loading && <DashboardSkeleton />}
 

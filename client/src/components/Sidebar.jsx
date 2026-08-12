@@ -3,8 +3,9 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, LineChart, Briefcase, PlusCircle, Calculator, Compass, Settings, 
   LogOut, Wallet, ShieldCheck, Layers, Sparkles, User as UserIcon, X, 
-  ChevronLeft, ChevronRight, HelpCircle, Bell
+  ChevronLeft, ChevronRight, HelpCircle, Bell, Tag
 } from 'lucide-react';
+
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/useAuth';
 import BrandLogo from './BrandLogo';
@@ -94,6 +95,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     { name: 'Calculator', path: '/risk-calculator', icon: Calculator },
     { name: 'Weekly Review', path: '/weekly-review', icon: Compass },
     { name: 'JAHZ AI', path: '/ai', icon: Sparkles, prefix: '/ai' },
+    { name: 'Offers & Promos', path: '/promotions', icon: Tag, prefix: '/promotions' },
     { name: 'Notifications', path: '/notifications', icon: Bell },
     { name: 'Settings', path: '/settings', icon: Settings },
     { name: 'Help & Support', path: '/contact', icon: HelpCircle },

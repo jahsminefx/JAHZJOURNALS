@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { logAudit } = require('../services/auditService');
+const { dispatchPromotionNotifications } = require('../services/promotionService');
 
 const getPromotions = async (req, res) => {
   try {
@@ -95,14 +96,46 @@ const createPromotion = async (req, res) => {
   try {
     const { name, slug, description, planGranted, category, benefits, isActive, startsAt, endsAt, requiresInvite, maxRedemptions, autoActivate, autoExpire, revokeBadgeOnExpiry } = req.body;
     
-    // Check if slug exists
-    const existing = await prisma.promotion.findUnique({ where: { slug } });
-    if (existing) return res.status(400).json({ message: 'Slug already extensively used.' });
+    if (!name || !slug) {
+      return res.status(400).json({ message: 'Name and slug are required.' });
+    }
+
+    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'MENTOR'];
+    if (planGranted && !VALID_PLANS.includes(planGranted)) {
+      return res.status(400).json({ message: `Invalid target plan. Must be one of: ${VALID_PLANS.join(', ')}` });
+    }
+
+    if (maxRedemptions !== null && maxRedemptions !== undefined && parseInt(maxRedemptions) <= 0) {
+      return res.status(400).json({ message: 'Max redemptions must be greater than 0.' });
+    }
+
+    const startDate = startsAt ? new Date(startsAt) : null;
+    const endDate = endsAt ? new Date(endsAt) : null;
+
+    if (startDate && endDate && endDate <= startDate) {
+      return res.status(400).json({ message: 'Expiration date must be after start date.' });
+    }
+
+    const cleanSlug = slug.toLowerCase().replace(/\s+/g, '-');
+    const existing = await prisma.promotion.findUnique({ where: { slug: cleanSlug } });
+    if (existing) return res.status(400).json({ message: 'Promotion slug already exists.' });
 
     const promotion = await prisma.promotion.create({
       data: {
-        name, slug, description, planGranted, category, benefits: benefits || [], isActive, startsAt: startsAt ? new Date(startsAt) : null, endsAt: endsAt ? new Date(endsAt) : null,
-        requiresInvite, maxRedemptions, autoActivate, autoExpire, revokeBadgeOnExpiry
+        name,
+        slug: cleanSlug,
+        description,
+        planGranted: planGranted || 'FREE',
+        category: category || 'MARKETING',
+        benefits: benefits || [],
+        isActive: isActive !== undefined ? isActive : true,
+        startsAt: startDate,
+        endsAt: endDate,
+        requiresInvite: !!requiresInvite,
+        maxRedemptions: maxRedemptions ? parseInt(maxRedemptions) : null,
+        autoActivate: !!autoActivate,
+        autoExpire: !!autoExpire,
+        revokeBadgeOnExpiry: !!revokeBadgeOnExpiry
       }
     });
 
@@ -115,23 +148,44 @@ const createPromotion = async (req, res) => {
       ipAddress: req.ip
     });
 
+    const { notifyInApp = true, notifyEmail = false } = req.body;
+    if (promotion.isActive) {
+      dispatchPromotionNotifications(promotion, { notifyInApp, notifyEmail }).catch(err => {
+        console.error('Failed dispatching promotion notifications:', err);
+      });
+    }
+
     res.status(201).json(promotion);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create generic promotion.' });
+    console.error('createPromotion error:', error);
+    res.status(500).json({ message: 'Failed to create promotion.' });
   }
 };
 
 const updatePromotion = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
-
-    // formatting dates
-    if (updateData.startsAt) updateData.startsAt = new Date(updateData.startsAt);
-    if (updateData.endsAt) updateData.endsAt = new Date(updateData.endsAt);
+    const updateData = { ...req.body };
 
     const oldPromo = await prisma.promotion.findUnique({ where: { id } });
-    if (!oldPromo) return res.status(404).json({ message: 'Promotion missing' });
+    if (!oldPromo) return res.status(404).json({ message: 'Promotion not found' });
+
+    if (updateData.maxRedemptions !== undefined && updateData.maxRedemptions !== null && parseInt(updateData.maxRedemptions) <= 0) {
+      return res.status(400).json({ message: 'Max redemptions must be greater than 0.' });
+    }
+
+    const startDate = updateData.startsAt ? new Date(updateData.startsAt) : oldPromo.startsAt;
+    const endDate = updateData.endsAt ? new Date(updateData.endsAt) : oldPromo.endsAt;
+
+    if (startDate && endDate && endDate <= startDate) {
+      return res.status(400).json({ message: 'Expiration date must be after start date.' });
+    }
+
+    if (updateData.startsAt) updateData.startsAt = new Date(updateData.startsAt);
+    if (updateData.endsAt) updateData.endsAt = new Date(updateData.endsAt);
+    if (updateData.maxRedemptions !== undefined) {
+      updateData.maxRedemptions = updateData.maxRedemptions ? parseInt(updateData.maxRedemptions) : null;
+    }
 
     const promotion = await prisma.promotion.update({
       where: { id },
@@ -139,26 +193,33 @@ const updatePromotion = async (req, res) => {
     });
 
     await logAudit({
-      adminId: req.user.id, action: 'UPDATE_PROMOTION', resource: 'Promotion', resourceId: id,
-      oldValue: JSON.stringify(oldPromo), newValue: JSON.stringify(promotion), ipAddress: req.ip
+      adminId: req.user.id,
+      action: 'UPDATE_PROMOTION',
+      resource: 'Promotion',
+      resourceId: id,
+      oldValue: JSON.stringify(oldPromo),
+      newValue: JSON.stringify(promotion),
+      ipAddress: req.ip
     });
 
     res.json(promotion);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to update generic promotion.' });
+    console.error('updatePromotion error:', error);
+    res.status(500).json({ message: 'Failed to update promotion.' });
   }
 };
 
 const deletePromotion = async (req, res) => {
   try {
-    // Only SUPER_ADMIN allowed via routes. Should archive if used.
     const { id } = req.params;
     const promo = await prisma.promotion.findUnique({ where: { id } });
     
-    if (!promo) return res.status(404).json({ message: 'Not found' });
+    if (!promo) return res.status(404).json({ message: 'Promotion not found' });
     if (promo.currentRedemptions > 0) {
-       // Must ARCHIVE instead
-       const archived = await prisma.promotion.update({ where: { id }, data: { isActive: false, endsAt: new Date() } });
+       const archived = await prisma.promotion.update({
+         where: { id },
+         data: { isActive: false, endsAt: new Date() }
+       });
        
        await logAudit({ adminId: req.user.id, action: 'ARCHIVE_PROMOTION', resource: 'Promotion', resourceId: id, ipAddress: req.ip });
        return res.json({ message: 'Promotion has redemptions and was ARCHIVED securely.', promotion: archived });
@@ -167,96 +228,126 @@ const deletePromotion = async (req, res) => {
     await prisma.promotion.delete({ where: { id } });
     await logAudit({ adminId: req.user.id, action: 'DELETE_PROMOTION_EMPTY', resource: 'Promotion', resourceId: id, ipAddress: req.ip });
     
-    res.json({ message: 'Unused promotion entirely wiped.' });
+    res.json({ message: 'Unused promotion wiped.' });
   } catch(error) {
-    res.status(500).json({ message: 'Failed to delete.' });
+    res.status(500).json({ message: 'Failed to delete promotion.' });
   }
 };
 
 const grantPromotion = async (req, res) => {
-  // Foundational promotional bridging mechanism utilizing existing subscription boundaries.
   try {
     const { userId, promotionId, reason } = req.body;
-    
-    const promotion = await prisma.promotion.findUnique({ where: { id: promotionId } });
-    const user = await prisma.user.findUnique({ where: { id: userId }, include: { subscriptions: { where: { status: 'ACTIVE' } } } });
-
-    if (!promotion || !user) return res.status(404).json({ message: 'User or Promotion missing' });
-
-    // Ensure redemptions limits
-    if (promotion.maxRedemptions && promotion.currentRedemptions >= promotion.maxRedemptions) {
-      return res.status(400).json({ message: 'Promotion max redemptions reached.' });
+    if (!userId || !promotionId) {
+      return res.status(400).json({ message: 'User ID and Promotion ID are required.' });
     }
 
-    // Attempt to map onto existing subscription gracefully
-    let activeSub = user.subscriptions[0];
-    let createdSub = false;
+    const result = await prisma.$transaction(async (tx) => {
+      const promotion = await tx.promotion.findUnique({ where: { id: promotionId } });
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        include: { subscriptions: { where: { status: 'ACTIVE' } } }
+      });
 
-    if (!activeSub) {
-      // User literally has no active generic subscription edge case
-      activeSub = await prisma.subscription.create({
+      if (!promotion || !user) {
+        throw new Error('NOT_FOUND');
+      }
+
+      if (!promotion.isActive) {
+        throw new Error('PROMOTION_INACTIVE');
+      }
+
+      if (promotion.endsAt && new Date(promotion.endsAt) < new Date()) {
+        throw new Error('PROMOTION_EXPIRED');
+      }
+
+      if (promotion.startsAt && new Date(promotion.startsAt) > new Date()) {
+        throw new Error('PROMOTION_FUTURE');
+      }
+
+      if (promotion.maxRedemptions && promotion.currentRedemptions >= promotion.maxRedemptions) {
+        throw new Error('LIMIT_EXCEEDED');
+      }
+
+      let activeSub = user.subscriptions[0];
+      if (!activeSub) {
+        activeSub = await tx.subscription.create({
+          data: {
+            userId,
+            plan: user.subscriptionPlan || 'FREE',
+            status: 'ACTIVE',
+            source: 'ADMIN'
+          }
+        });
+      }
+
+      const updatedSub = await tx.subscription.update({
+        where: { id: activeSub.id },
         data: {
-          userId,
-          plan: user.subscriptionPlan || 'FREE',
-          status: 'ACTIVE',
-          source: 'ADMIN'
+          plan: promotion.planGranted,
+          source: 'PROMOTION',
+          promotionId: promotion.id,
+          ...(promotion.autoExpire && promotion.endsAt && { expiresAt: promotion.endsAt })
         }
       });
-      createdSub = true;
-    }
 
-    // Force subscription injection
-    const updatedSub = await prisma.subscription.update({
-      where: { id: activeSub.id },
-      data: {
-        plan: promotion.planGranted,
-        source: 'PROMOTION',
-        promotionId: promotion.id,
-        // Override the expiry gracefully
-        ...(promotion.autoExpire && promotion.endsAt && { expiresAt: promotion.endsAt })
+      await tx.subscriptionHistory.create({
+        data: {
+          userId,
+          previousPlan: activeSub.plan,
+          newPlan: promotion.planGranted,
+          source: 'PROMOTION',
+          reason: 'PROMOTION_REDEEMED',
+          promotionId: promotion.id,
+          changedBy: req.user.email
+        }
+      });
+
+      await tx.promotion.update({
+        where: { id: promotion.id },
+        data: { currentRedemptions: { increment: 1 } }
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { subscriptionPlan: promotion.planGranted }
+      });
+
+      if (promotion.badgeId) {
+        await tx.userBadge.create({
+          data: { userId, badgeId: promotion.badgeId }
+        }).catch(() => {});
       }
-    });
 
-    // Write Subscription History securely
-    await prisma.subscriptionHistory.create({
-      data: {
-        userId,
-        previousPlan: activeSub.plan,
-        newPlan: promotion.planGranted,
-        source: 'PROMOTION',
-        reason: reason || 'ADMIN_PROMOTION_GRANT_MANUAL',
-        promotionId: promotion.id,
-        changedBy: req.user.email
-      }
+      return updatedSub;
     });
-
-    // Increment promotion redemptions
-    await prisma.promotion.update({
-       where: { id: promotion.id },
-       data: { currentRedemptions: { increment: 1 } }
-    });
-
-    // Also update User base struct bridging just in case global checks use legacy flags
-    await prisma.user.update({
-      where: { id: userId },
-      data: { subscriptionPlan: promotion.planGranted }
-    });
-
-    // Optional Badge allocation if exists
-    if (promotion.badgeId) {
-       await prisma.userBadge.create({
-         data: { userId, badgeId: promotion.badgeId }
-       }).catch(() => {}); // Eat unique constraint bugs safely if user already has it
-    }
 
     await logAudit({
-      adminId: req.user.id, action: 'MANUAL_GRANT_PROMOTION', resource: 'Subscription', resourceId: activeSub.id,
-      newValue: JSON.stringify(updatedSub), ipAddress: req.ip
+      adminId: req.user.id,
+      action: 'MANUAL_GRANT_PROMOTION',
+      resource: 'Subscription',
+      resourceId: result.id,
+      newValue: JSON.stringify(result),
+      ipAddress: req.ip
     });
 
-    res.json({ message: 'Promotion successfully assigned and bridged to existing mechanisms.', subscription: updatedSub });
-  } catch(e) {
-    console.error(e);
+    res.json({ message: 'Promotion successfully assigned.', subscription: result });
+  } catch (e) {
+    if (e.message === 'NOT_FOUND') {
+      return res.status(404).json({ message: 'User or Promotion missing' });
+    }
+    if (e.message === 'PROMOTION_INACTIVE') {
+      return res.status(400).json({ message: 'Promotion is currently inactive.' });
+    }
+    if (e.message === 'PROMOTION_EXPIRED') {
+      return res.status(400).json({ message: 'Promotion has expired.' });
+    }
+    if (e.message === 'PROMOTION_FUTURE') {
+      return res.status(400).json({ message: 'Promotion has not started yet.' });
+    }
+    if (e.message === 'LIMIT_EXCEEDED') {
+      return res.status(400).json({ message: 'Promotion max redemptions reached.' });
+    }
+    console.error('grantPromotion error:', e);
     res.status(500).json({ message: 'Engine failure evaluating assignment hook' });
   }
 };
@@ -280,7 +371,79 @@ const getGranteesByPromotion = async (req, res) => {
    } catch(e) {
      res.status(500).json({ message: 'Failed isolating historical grants' });
    }
-}
+};
+
+const awardBadge = async (req, res) => {
+  try {
+    const { userId, badgeName, badgeId } = req.body;
+    if (!userId || (!badgeName && !badgeId)) {
+      return res.status(400).json({ message: 'userId and badgeName or badgeId are required.' });
+    }
+
+    let targetBadge = null;
+    if (badgeId) {
+      targetBadge = await prisma.badge.findUnique({ where: { id: badgeId } });
+    } else {
+      targetBadge = await prisma.badge.upsert({
+        where: { name: badgeName },
+        update: {},
+        create: { name: badgeName, color: 'gold', description: `${badgeName} Awarded Badge` }
+      });
+    }
+
+    if (!targetBadge) {
+      return res.status(404).json({ message: 'Badge not found' });
+    }
+
+    const userBadge = await prisma.userBadge.upsert({
+      where: {
+        userId_badgeId: { userId, badgeId: targetBadge.id }
+      },
+      update: {},
+      create: { userId, badgeId: targetBadge.id }
+    });
+
+    await logAudit({
+      adminId: req.user.id,
+      action: 'AWARD_BADGE',
+      resource: 'UserBadge',
+      resourceId: userBadge.id,
+      newValue: JSON.stringify(userBadge),
+      ipAddress: req.ip
+    });
+
+    res.json({ message: 'Badge successfully awarded.', userBadge });
+  } catch (error) {
+    console.error('awardBadge error:', error);
+    res.status(500).json({ message: 'Failed to award badge' });
+  }
+};
+
+const revokeBadge = async (req, res) => {
+  try {
+    const { userId, badgeId } = req.body;
+    if (!userId || !badgeId) {
+      return res.status(400).json({ message: 'userId and badgeId are required.' });
+    }
+
+    await prisma.userBadge.deleteMany({
+      where: { userId, badgeId }
+    });
+
+    await logAudit({
+      adminId: req.user.id,
+      action: 'REVOKE_BADGE',
+      resource: 'UserBadge',
+      resourceId: `${userId}:${badgeId}`,
+      ipAddress: req.ip
+    });
+
+    res.json({ message: 'Badge successfully revoked.' });
+  } catch (error) {
+    console.error('revokeBadge error:', error);
+    res.status(500).json({ message: 'Failed to revoke badge' });
+  }
+};
 
 module.exports = {
   getPromotions,
@@ -290,5 +453,8 @@ module.exports = {
   updatePromotion,
   deletePromotion,
   grantPromotion,
-  getGranteesByPromotion
+  getGranteesByPromotion,
+  awardBadge,
+  revokeBadge
 };
+
