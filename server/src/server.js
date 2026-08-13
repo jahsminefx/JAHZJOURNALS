@@ -130,6 +130,25 @@ app.use('/api', require('./routes/miscRoutes'));
 if (process.env.NODE_ENV === 'production') {
   const clientBuildPath = path.resolve(__dirname, '../../client/dist');
 
+  // Explicit static file routes with no-cache to ensure immediate updates
+  app.get('/ads.txt', (req, res) => {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.sendFile(path.join(clientBuildPath, 'ads.txt'));
+  });
+
+  app.get('/robots.txt', (req, res) => {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.sendFile(path.join(clientBuildPath, 'robots.txt'));
+  });
+
+  app.get('/sitemap.xml', (req, res) => {
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.sendFile(path.join(clientBuildPath, 'sitemap.xml'));
+  });
+
   // Serve hashed static assets with long cache lifetimes (1 year)
   app.use(express.static(clientBuildPath, {
     maxAge: '1y',
