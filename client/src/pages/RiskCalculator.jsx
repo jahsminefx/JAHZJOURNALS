@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
-import PageHeader from '../components/PageHeader';
 import { INSTRUMENT_SPECS, SPECIFICATION_SOURCES, getInstrumentSpec } from '../config/instrumentSpecs.js';
 import { getMarketData, resolveExecutionPrice } from '../services/marketDataService.js';
 import { getSavedBrokerProfiles, DEFAULT_BROKER_PROFILE } from '../services/brokerProfileService.js';
@@ -110,7 +109,8 @@ const RiskCalculator = () => {
         const targetAcc = fetchedAccounts.find(a => a.id === paramAccId) || fetchedAccounts[0];
         if (targetAcc) {
           setSelectedAccountId(targetAcc.id);
-          setAccountBalance(String(targetAcc.accountBalance || 10000));
+          const bal = targetAcc.currentBalance ?? targetAcc.accountBalance ?? targetAcc.startingBalance ?? 10000;
+          setAccountBalance(String(bal));
           if (targetAcc.currency) setAccountCurrency(targetAcc.currency);
         }
       } catch (_) {}
@@ -125,7 +125,8 @@ const RiskCalculator = () => {
     setSelectedAccountId(accId);
     const acc = accounts.find(a => a.id === accId);
     if (acc) {
-      setAccountBalance(String(acc.accountBalance || 10000));
+      const bal = acc.currentBalance ?? acc.accountBalance ?? acc.startingBalance ?? 10000;
+      setAccountBalance(String(bal));
       if (acc.currency) setAccountCurrency(acc.currency);
     }
   };
@@ -291,7 +292,7 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 font-sans text-foreground pb-12">
+    <div className="max-w-6xl mx-auto space-y-5 font-sans text-foreground pb-12">
       <SEO 
         title="Position Size & Risk Calculator | JAHZJOURNALS"
         description="Calculate exact broker-safe lot sizes and verify pre-trade risk for Forex, Metals, and Indices."
@@ -300,33 +301,43 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
 
       <Breadcrumbs />
 
-      <PageHeader
-        eyebrow="Position Size & Risk Engine"
-        title="Forex Position Size & Risk Calculator"
-        description="Calculate exact executable lot sizes and verify safety rules before placing your trade."
-        heroImage="/heroes/hero-analytics.png"
-        heroAlt="Risk Calculator"
-      />
+      {/* Sleek Compact Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface p-4 rounded-2xl border border-border/80 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+            <Calculator size={22} />
+          </div>
+          <div>
+            <h1 className="text-base sm:text-lg font-black text-foreground tracking-tight">
+              Position Size & Risk Calculator
+            </h1>
+            <p className="text-xs text-muted">
+              Deterministic broker-aware lot sizing & pre-trade risk check.
+            </p>
+          </div>
+        </div>
 
-      {/* Main 2-Column Responsive Layout */}
-      <div className="grid gap-6 lg:grid-cols-12 items-start">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="px-3 py-1.5 bg-surface-muted hover:bg-surface border border-border rounded-xl text-xs font-bold text-muted hover:text-foreground flex items-center gap-1.5 transition-all"
+          >
+            <RefreshCw size={13} /> Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Main 2-Column Desktop Grid Layout */}
+      <div className="grid gap-5 lg:grid-cols-12 items-start">
         
-        {/* SECTION 1 — TRADE SETUP (Left Column on Desktop / Top on Mobile) */}
+        {/* LEFT COLUMN — TRADE SETUP (7 Columns) */}
         <div className="lg:col-span-7 space-y-5">
           <div className="bg-surface p-5 sm:p-6 rounded-2xl border border-border shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                <Calculator size={18} className="text-emerald-400" />
-                1. Trade Setup
-              </h2>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="text-xs font-semibold text-muted hover:text-foreground flex items-center gap-1 transition-all"
-              >
-                <RefreshCw size={12} /> Reset
-              </button>
-            </div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2 border-b border-border pb-3">
+              <Calculator size={16} className="text-emerald-400" />
+              1. Trade Setup
+            </h2>
 
             {/* Account & Currency Selection */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -338,11 +349,17 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
                   className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:border-emerald-500 focus:outline-none"
                 >
                   <option value="">Custom Trading Account</option>
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.accountName || acc.brokerName} (${Number(acc.accountBalance).toLocaleString()}) {acc.isPropFirmAccount ? '🏆 Prop Firm' : ''}
-                    </option>
-                  ))}
+                  {accounts.map((acc) => {
+                    const accName = acc.name || acc.accountName || acc.propFirmName || acc.brokerName || 'Trading Account';
+                    const rawBal = acc.currentBalance ?? acc.accountBalance ?? acc.startingBalance ?? 0;
+                    const numBal = Number(rawBal);
+                    const formattedBal = Number.isNaN(numBal) ? '0' : numBal.toLocaleString();
+                    return (
+                      <option key={acc.id} value={acc.id}>
+                        {accName} (${formattedBal}) {acc.isPropFirmAccount ? '🏆 Prop Firm' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -469,9 +486,9 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
                   <label className="block text-xs font-semibold text-muted">Entry Price</label>
                   {marketData.bid && (
                     <div className="flex gap-1 text-[10px]">
-                      <button type="button" onClick={() => handleApplyMarketPrice('ASK')} className="text-emerald-400 hover:underline">Ask</button>
+                      <button type="button" onClick={() => handleApplyMarketPrice('ASK')} className="text-emerald-400 hover:underline font-semibold">Ask</button>
                       <span className="text-muted">|</span>
-                      <button type="button" onClick={() => handleApplyMarketPrice('BID')} className="text-rose-400 hover:underline">Bid</button>
+                      <button type="button" onClick={() => handleApplyMarketPrice('BID')} className="text-rose-400 hover:underline font-semibold">Bid</button>
                     </div>
                   )}
                 </div>
@@ -535,10 +552,10 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
           </div>
         </div>
 
-        {/* RIGHT COLUMN — RESULTS, SAFETY & ACTIONS (Desktop Right / Mobile Bottom) */}
+        {/* RIGHT COLUMN — RESULTS, SAFETY & ACTIONS (5 Columns) */}
         <div className="lg:col-span-5 space-y-5">
 
-          {/* SECTION 2 — POSITION SIZE RESULT (HERO CARD) */}
+          {/* SECTION 2 — POSITION SIZE RESULT (HERO DISPLAY CARD) */}
           <div className="bg-surface p-6 rounded-2xl border border-emerald-500/40 shadow-2xl space-y-5 relative overflow-hidden">
             <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
 
@@ -573,7 +590,7 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
             </div>
           </div>
 
-          {/* SECTION 3 — CAN I TAKE THIS TRADE? (SINGLE COMPACT SAFETY CARD) */}
+          {/* SECTION 3 — CAN I TAKE THIS TRADE? (SAFETY CHECK CARD) */}
           <div className={`p-5 rounded-2xl border shadow-xl space-y-3 ${
             riskCheck.status === 'PASS' 
               ? 'bg-emerald-500/5 border-emerald-500/40' 
@@ -614,7 +631,7 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
             </div>
           </div>
 
-          {/* SECTION 5 — PRIMARY ACTIONS & DISCLAIMER */}
+          {/* SECTION 5 — PRIMARY ACTIONS & MANDATORY DISCLAIMER */}
           <div className="space-y-3">
             <button
               type="button"
