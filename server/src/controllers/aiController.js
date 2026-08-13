@@ -1,9 +1,10 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { enqueueAiJob } = require('../jobs/queues/aiQueue');
-const { buildLimitReachedPayload } = require('../config/plans');
+const { buildLimitReachedPayload, getEffectivePlanKey } = require('../config/plans');
 
-const checkAiLimit = async (userId, plan, featureType) => {
+const checkAiLimit = async (userId, userOrPlan, featureType) => {
+  const plan = typeof userOrPlan === 'string' ? userOrPlan : getEffectivePlanKey(userOrPlan);
   const userSettings = await prisma.userSettings.findUnique({ where: { userId } });
   
   if (userSettings && userSettings.enableJahzAi === false) {
@@ -137,7 +138,7 @@ const generateTradeInsight = async (req, res) => {
       return res.status(404).json({ message: 'Trade not found.' });
     }
 
-    const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'TRADE_REVIEW');
+    const limitCheck = await checkAiLimit(req.user.id, req.user, 'TRADE_REVIEW');
     if (!limitCheck.allowed) {
       return res.status(403).json(limitCheck.payload);
     }
@@ -209,7 +210,7 @@ const generateWeeklyCoach = async (req, res) => {
       return res.status(404).json({ message: 'Review not found.' });
     }
 
-    const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'WEEKLY_COACH');
+    const limitCheck = await checkAiLimit(req.user.id, req.user, 'WEEKLY_COACH');
     if (!limitCheck.allowed) {
       return res.status(403).json(limitCheck.payload);
     }
@@ -259,7 +260,7 @@ const generateWeeklyCoach = async (req, res) => {
 
 const generateEdgeFinder = async (req, res) => {
   try {
-    const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'EDGE_FINDER');
+    const limitCheck = await checkAiLimit(req.user.id, req.user, 'EDGE_FINDER');
     if (!limitCheck.allowed) {
       return res.status(403).json(limitCheck.payload);
     }
@@ -308,7 +309,7 @@ const generateTradingPlan = async (req, res) => {
   try {
     const { strategy, pairs, risk, goals } = req.body;
     
-    const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'TRADING_PLAN');
+    const limitCheck = await checkAiLimit(req.user.id, req.user, 'TRADING_PLAN');
     if (!limitCheck.allowed) {
       return res.status(403).json(limitCheck.payload);
     }
@@ -362,7 +363,7 @@ const generateVisionInsight = async (req, res) => {
        return res.status(404).json({ message: 'Screenshot not found.' });
     }
 
-    const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'SCREENSHOT_REVIEW');
+    const limitCheck = await checkAiLimit(req.user.id, req.user, 'SCREENSHOT_REVIEW');
     if (!limitCheck.allowed) {
       return res.status(403).json(limitCheck.payload);
     }
@@ -470,7 +471,7 @@ const generateJournalDraft = async (req, res) => {
     const { draftType, tradeData } = req.body;
     
     // Check consent limit
-    const limitCheck = await checkAiLimit(req.user.id, req.user.subscriptionPlan, 'JOURNAL_ASSISTANT');
+    const limitCheck = await checkAiLimit(req.user.id, req.user, 'JOURNAL_ASSISTANT');
     if (!limitCheck.allowed) return res.status(403).json(limitCheck.payload);
 
     const aiRequest = await prisma.aiRequest.create({

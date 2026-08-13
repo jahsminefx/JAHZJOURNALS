@@ -97,6 +97,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     { name: 'JAHZ AI', path: '/ai', icon: Sparkles, prefix: '/ai' },
     { name: 'Offers & Promos', path: '/promotions', icon: Tag, prefix: '/promotions' },
     { name: 'Notifications', path: '/notifications', icon: Bell },
+    { name: 'Upgrade Plan', path: '/pricing', icon: Sparkles },
     { name: 'Settings', path: '/settings', icon: Settings },
     { name: 'Help & Support', path: '/contact', icon: HelpCircle },
   ];

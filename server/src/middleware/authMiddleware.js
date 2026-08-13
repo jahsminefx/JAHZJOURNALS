@@ -25,7 +25,7 @@ const protect = async (req, res, next) => {
       const decoded = jwt.verify(token, getJwtSecret());
       req.user = await prisma.user.findUnique({
         where: { id: decoded.userId },
-        select: { id: true, name: true, email: true, role: true, isDisabled: true, tokenVersion: true }
+        select: { id: true, name: true, email: true, role: true, subscriptionPlan: true, subscriptionStatus: true, isDisabled: true, tokenVersion: true }
       });
 
       if (!req.user || req.user.isDisabled) {
@@ -64,7 +64,7 @@ const optionalProtect = async (req, res, next) => {
     const decoded = jwt.verify(token, getJwtSecret());
     req.user = await prisma.user.findFirst({
       where: { id: decoded.userId, isDisabled: false },
-      select: { id: true, name: true, email: true, role: true },
+      select: { id: true, name: true, email: true, role: true, subscriptionPlan: true, subscriptionStatus: true },
     });
   } catch (error) {
     req.user = null;

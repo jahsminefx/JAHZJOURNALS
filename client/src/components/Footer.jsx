@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
+import { useAuth } from '../context/useAuth';
 
 const groups = [
   {
@@ -40,8 +41,12 @@ const groups = [
   },
 ];
 
-const Footer = () => (
-  <footer className="border-t border-border dark:border-white/10 bg-background px-4 py-12 sm:px-6 lg:px-8">
+const Footer = () => {
+  const { user } = useAuth();
+  if (user) return null;
+
+  return (
+    <footer className="border-t border-border dark:border-white/10 bg-background px-4 py-12 sm:px-6 lg:px-8">
     <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.2fr_2fr]">
       <div>
         <BrandLogo />
@@ -83,6 +88,7 @@ const Footer = () => (
       </button>
     </div>
   </footer>
-);
+  );
+};
 
 export default Footer;

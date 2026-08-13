@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { loadSettings } from '../utils/settings';
@@ -30,6 +30,7 @@ const getNewTradeDefaults = (settings, accounts) => {
 
 const QuickTradePage = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const isEditMode = Boolean(id);
   const [isLoading, setIsLoading] = useState(true);
   const [accounts, setAccounts] = useState([]);
@@ -73,7 +74,27 @@ const QuickTradePage = () => {
             entryReason: trade.entryReason || '',
           });
         } else if (rawAccounts.length > 0) {
-          setInitialData(getNewTradeDefaults(settings, rawAccounts));
+          const defaults = getNewTradeDefaults(settings, rawAccounts);
+          const paramPair = searchParams.get('pair');
+          const paramDirection = searchParams.get('direction');
+          const paramEntry = searchParams.get('entryPrice');
+          const paramSL = searchParams.get('stopLoss');
+          const paramTP = searchParams.get('takeProfit');
+          const paramLot = searchParams.get('lotSize');
+          const paramRisk = searchParams.get('riskAmount');
+          const paramAccId = searchParams.get('tradingAccountId');
+
+          setInitialData({
+            ...defaults,
+            ...(paramAccId ? { tradingAccountId: paramAccId } : {}),
+            ...(paramPair ? { pair: paramPair } : {}),
+            ...(paramDirection ? { direction: paramDirection } : {}),
+            ...(paramEntry ? { entryPrice: paramEntry } : {}),
+            ...(paramSL ? { stopLoss: paramSL } : {}),
+            ...(paramTP ? { takeProfit: paramTP } : {}),
+            ...(paramLot ? { lotSize: paramLot } : {}),
+            ...(paramRisk ? { riskAmount: paramRisk } : {}),
+          });
         }
       } catch (error) {
         toast.error(error.response?.data?.message || 'We had trouble loading your trade. Let\'s try again.');
@@ -83,7 +104,7 @@ const QuickTradePage = () => {
     };
 
     fetchInitialData();
-  }, [id, isEditMode]);
+  }, [id, isEditMode, searchParams]);
 
   if (isLoading) {
     return <div className="text-center py-12 text-muted">Gathering your details...</div>;

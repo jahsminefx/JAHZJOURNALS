@@ -8,6 +8,7 @@ import { useAuth } from './context/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const Layout = lazy(() => import('./components/Layout'));
+const SharedRouteLayout = lazy(() => import('./components/SharedRouteLayout'));
 const AdminRoute = lazy(() => import('./components/AdminRoute'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
@@ -102,23 +103,27 @@ function App() {
         <Toaster position="top-right" />
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/features" element={<Features />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/prop-firm-traders" element={<PropFirmTraders />} />
-            <Route path="/mentors" element={<Mentors />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/terms" element={<Legal type="terms" />} />
-            <Route path="/privacy" element={<Legal type="privacy" />} />
-            <Route path="/disclaimer" element={<Legal type="disclaimer" />} />
-            <Route path="/cookies" element={<Legal type="cookies" />} />
-            <Route path="/blog" element={<BlogList />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path="/trading-psychology" element={<TradingPsychology />} />
-            <Route path="/risk-management" element={<RiskManagementPage />} />
+
+            {/* Shared Public/Legal Pages (Accessible to both Anonymous and Authenticated Traders) */}
+            <Route element={<SharedRouteLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/features" element={<Features />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/prop-firm-traders" element={<PropFirmTraders />} />
+              <Route path="/mentors" element={<Mentors />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/terms" element={<Legal type="terms" />} />
+              <Route path="/privacy" element={<Legal type="privacy" />} />
+              <Route path="/disclaimer" element={<Legal type="disclaimer" />} />
+              <Route path="/cookies" element={<Legal type="cookies" />} />
+              <Route path="/blog" element={<BlogList />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/trading-psychology" element={<TradingPsychology />} />
+              <Route path="/risk-management" element={<RiskManagementPage />} />
+            </Route>
 
             <Route element={<ProtectedRoute />}>
               <Route path="/onboarding" element={<Onboarding />} />

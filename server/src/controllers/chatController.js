@@ -1,5 +1,7 @@
 const { getProvider } = require('../ai/providers/providerFactory');
 const { buildDashboardAnalytics } = require('../services/dashboardAnalyticsService');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 let supportDocs = [];
 try { supportDocs = require('../utils/supportDocs.json').topics; } catch(e) {}
 
@@ -8,7 +10,7 @@ const analyticsTools = [
     type: "function",
     function: {
       name: "getDashboardAnalytics",
-      description: "Get the user's trading performance metrics. Call this to summarize how they are performing.",
+      description: "Get the user's trading performance metrics and recent trade list. Call this to analyze performance or answer questions about specific trades.",
       parameters: {
         type: "object",
         properties: {}
@@ -44,7 +46,7 @@ const sendMessage = async (req, res) => {
     if (chatMode === 'ANALYTICS') {
        systemMessage = {
          role: 'system',
-         content: "You are the JAHZ AI Analytics Assistant. Answer questions strictly based on the user's metrics retrieved via getDashboardAnalytics. Do NOT hallucinate metrics or use raw SQL."
+         content: "You are the JAHZ AI Analytics Assistant. Answer questions accurately using metrics and recent trade lists retrieved via getDashboardAnalytics. Be concise and precise with numbers."
        };
        tools = analyticsTools;
     } else {
@@ -66,23 +68,44 @@ const sendMessage = async (req, res) => {
     if (message1.tool_calls && message1.tool_calls.length > 0) {
        payloadMessages.push(message1); // Append assistant's tool call request
 
-       // Loop over tool calls (for now, we only support one function, but good to handle array)
+       // Loop over tool calls
        for (const toolCall of message1.tool_calls) {
           if (toolCall.function.name === 'getDashboardAnalytics') {
              let args = {};
              try { args = JSON.parse(toolCall.function.arguments); } catch(e) {}
              
-             // STRICT ALLOWLISTED BACKEND FUNCTION (No Raw SQL)
              const analyticsData = await buildDashboardAnalytics({ 
                  userId: req.user.id, 
                  query: {} 
              });
              
+             // Fetch user's recent trades so AI can locate specific trades/amounts
+             const recentTrades = await prisma.trade.findMany({
+               where: { tradingAccount: { userId: req.user.id } },
+               orderBy: { exitTime: 'desc' },
+               take: 30,
+               select: {
+                 pair: true,
+                 direction: true,
+                 profitLossAmount: true,
+                 result: true,
+                 exitTime: true,
+                 entryTime: true,
+               }
+             });
+
              const slimData = {
                summary: analyticsData.summary,
                tradeOutcomes: analyticsData.tradeOutcomes,
                topPairs: analyticsData.topPairs,
-               worstPairs: analyticsData.worstPairs
+               worstPairs: analyticsData.worstPairs,
+               recentTrades: recentTrades.map(t => ({
+                 pair: t.pair,
+                 direction: t.direction,
+                 pnl: t.profitLossAmount != null ? Number(t.profitLossAmount) : 0,
+                 result: t.result,
+                 date: (t.exitTime || t.entryTime)?.toISOString().split('T')[0],
+               }))
              };
 
              payloadMessages.push({
@@ -110,11 +133,13 @@ const sendMessage = async (req, res) => {
 
        // 2. Send the second Completion Request containing the tool result
        const response2 = await provider.generateChatCompletion(payloadMessages, []);
-       return res.json({ message: response2.message.content });
+       const finalContent = response2.message?.content || 'I evaluated your trading data based on your request.';
+       return res.json({ message: finalContent });
     }
 
     // Direct response without tools
-    return res.json({ message: message1.content });
+    const directContent = message1?.content || 'I analyzed your query, but no response text was generated.';
+    return res.json({ message: directContent });
 
   } catch (error) {
     console.error('Chat AI Error:', error);

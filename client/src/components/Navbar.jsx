@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import Button from './Button';
 import BrandLogo from './BrandLogo';
+import { useAuth } from '../context/useAuth';
 
 const links = [
   { label: 'Home', to: '/' },
@@ -16,6 +17,10 @@ const links = [
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const { user } = useAuth();
+
+  // If user is authenticated, hide public landing navbar (app layout handles navigation)
+  if (user) return null;
 
   const linkClass = ({ isActive }) =>
     `text-sm font-medium transition-colors ${isActive ? 'text-emerald-500 dark:text-emerald-300' : 'text-muted hover:text-foreground dark:hover:text-foreground'}`;

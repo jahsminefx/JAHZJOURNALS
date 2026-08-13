@@ -207,7 +207,7 @@ const Pricing = () => {
           eyebrow="Pricing & Plans"
           title="Simple plans for disciplined traders and trading teams."
           description="Build the habit free, build discipline with Starter, or find your edge with Pro."
-          primaryCta={{ label: 'Start Free Today', to: '/register' }}
+          primaryCta={user ? { label: 'Go to Dashboard', to: '/dashboard' } : { label: 'Start Free Today', to: '/register' }}
           heroImage="/heroes/hero-pricing.png"
           heroAlt="Trading journal pricing plans"
         />
@@ -331,7 +331,10 @@ const Pricing = () => {
           </div>
         </section>
 
-        <CTASection title="Start building your trading discipline today." cta="Start Journaling Free" />
+        <CTASection 
+          title="Start building your trading discipline today." 
+          cta={user ? "Go to Dashboard" : "Start Journaling Free"} 
+        />
       </main>
 
       <Footer />
