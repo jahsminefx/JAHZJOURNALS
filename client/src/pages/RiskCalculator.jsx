@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Calculator, ShieldCheck, AlertTriangle, AlertCircle, CheckCircle2, 
-  RefreshCw, Info, ArrowRight, Save, Copy, Check, Sliders, ChevronDown, ChevronUp, Globe, Activity, Layers, DollarSign
+  ArrowRight, Copy, Check, Sliders, ChevronDown, ChevronUp, Info, RefreshCw, Layers
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
@@ -10,7 +10,7 @@ import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import PageHeader from '../components/PageHeader';
 import { INSTRUMENT_SPECS, SPECIFICATION_SOURCES, getInstrumentSpec } from '../config/instrumentSpecs.js';
-import { getMarketData, resolveExecutionPrice, MARKET_DATA_STATUS } from '../services/marketDataService.js';
+import { getMarketData, resolveExecutionPrice } from '../services/marketDataService.js';
 import { getSavedBrokerProfiles, DEFAULT_BROKER_PROFILE } from '../services/brokerProfileService.js';
 import { 
   calculatePositionSize, 
@@ -20,7 +20,7 @@ import {
   evaluateTradeRiskCheck 
 } from '../services/riskCalculatorService.js';
 
-const RISK_PRESETS = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
+const RISK_PRESETS = [0.25, 0.5, 1.0, 1.5, 2.0];
 const RR_PRESETS = [1, 2, 3, 5];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'NGN', 'JPY', 'CAD', 'AUD', 'NZD', 'CHF'];
 
@@ -28,18 +28,11 @@ const RiskCalculator = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Mode: 'STANDARD' | 'REVERSE_SL' | 'REVERSE_RISK'
-  const [calcMode, setCalcMode] = useState('STANDARD');
-
-  // User accounts & settings
+  // Accounts & User Settings
   const [accounts, setAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [userSettings, setUserSettings] = useState(null);
   const [existingOpenTradeRisk, setExistingOpenTradeRisk] = useState(0);
-
-  // Broker Profiles
-  const [brokerProfiles, setBrokerProfiles] = useState(() => getSavedBrokerProfiles());
-  const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_BROKER_PROFILE.id);
 
   // Form State
   const [accountBalance, setAccountBalance] = useState('10000');
@@ -49,19 +42,17 @@ const RiskCalculator = () => {
   const [entryPrice, setEntryPrice] = useState('1.1000');
   const [stopLoss, setStopLoss] = useState('1.0980');
   const [takeProfit, setTakeProfit] = useState('1.1060');
-  const [stopLossPipsInput, setStopLossPipsInput] = useState('');
   const [riskPercent, setRiskPercent] = useState('1.0');
   const [manualRiskAmount, setManualRiskAmount] = useState('');
-  const [manualLotSize, setManualLotSize] = useState('0.50');
 
-  // V3 Execution Costs & Specs
+  // Execution Costs & Broker Custom Specs
   const [spreadPips, setSpreadPips] = useState('0');
   const [slippagePips, setSlippagePips] = useState('0');
   const [commissionPerLot, setCommissionPerLot] = useState('0');
 
-  // Custom Broker Inputs
+  // Broker Spec Accordion State
   const [specSource, setSpecSource] = useState(SPECIFICATION_SOURCES.STANDARD);
-  const [isAdvancedSpecsOpen, setIsAdvancedSpecsOpen] = useState(false);
+  const [isBrokerSpecsOpen, setIsBrokerSpecsOpen] = useState(false);
   const [customContractSize, setCustomContractSize] = useState('');
   const [customTickSize, setCustomTickSize] = useState('');
   const [customTickValue, setCustomTickValue] = useState('');
@@ -69,28 +60,19 @@ const RiskCalculator = () => {
   const [customMinLot, setCustomMinLot] = useState('0.01');
   const [customMaxLot, setCustomMaxLot] = useState('100');
 
-  // Currency Conversion Manual Rate
+  // Secondary Tools Accordion State
+  const [isAdvancedToolsOpen, setIsAdvancedToolsOpen] = useState(false);
   const [manualConversionRate, setManualConversionRate] = useState('');
+  const [reverseMode, setReverseMode] = useState('OFF'); // 'OFF' | 'REVERSE_SL' | 'REVERSE_RISK'
+  const [manualLotSize, setManualLotSize] = useState('0.50');
 
   // UI state
   const [isCopied, setIsCopied] = useState(false);
-  const [savedCalculations, setSavedCalculations] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('jahzjournals-risk-calc-history') || '[]');
-    } catch (_) {
-      return [];
-    }
-  });
 
-  // Live Market Data Feed
+  // Market Data Feed
   const marketData = useMemo(() => getMarketData(pair), [pair]);
 
-  // Selected Broker Profile
-  const selectedProfile = useMemo(() => {
-    return brokerProfiles.find((p) => p.id === selectedProfileId) || DEFAULT_BROKER_PROFILE;
-  }, [brokerProfiles, selectedProfileId]);
-
-  // Standard Spec for pair
+  // Standard Spec
   const standardSpec = useMemo(() => getInstrumentSpec(pair), [pair]);
 
   // Active Custom Spec
@@ -106,7 +88,7 @@ const RiskCalculator = () => {
     };
   }, [specSource, customContractSize, customTickSize, customTickValue, customLotStep, customMinLot, customMaxLot, standardSpec]);
 
-  // Fetch Accounts & Open Trades Risk
+  // Load Accounts & User Preferences
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -120,7 +102,6 @@ const RiskCalculator = () => {
         setAccounts(fetchedAccounts);
         if (settingsRes.data) setUserSettings(settingsRes.data);
 
-        // Sum existing open trades risk
         const openTrades = openTradesRes.data?.trades || openTradesRes.data || [];
         const openRiskSum = openTrades.reduce((sum, t) => sum + (Number(t.riskAmount) || 0), 0);
         setExistingOpenTradeRisk(openRiskSum);
@@ -138,7 +119,7 @@ const RiskCalculator = () => {
     fetchData();
   }, [searchParams]);
 
-  // Account Selection
+  // Account Dropdown Handler
   const handleAccountChange = (e) => {
     const accId = e.target.value;
     setSelectedAccountId(accId);
@@ -164,8 +145,8 @@ const RiskCalculator = () => {
     }
   };
 
-  // Main Position Size Calculation Result V3
-  const calculationResult = useMemo(() => {
+  // Main Calculation Result
+  const calc = useMemo(() => {
     return calculatePositionSize({
       balance: accountBalance,
       riskPercent,
@@ -173,7 +154,6 @@ const RiskCalculator = () => {
       entryPrice,
       stopLoss,
       takeProfit,
-      stopLossPipsInput,
       direction,
       pair,
       accountCurrency,
@@ -183,11 +163,20 @@ const RiskCalculator = () => {
       slippagePips,
       commissionPerLot,
       marketData,
-      brokerProfile: selectedProfile,
     });
-  }, [accountBalance, riskPercent, manualRiskAmount, entryPrice, stopLoss, takeProfit, stopLossPipsInput, direction, pair, accountCurrency, activeCustomSpec, manualConversionRate, spreadPips, slippagePips, commissionPerLot, marketData, selectedProfile]);
+  }, [accountBalance, riskPercent, manualRiskAmount, entryPrice, stopLoss, takeProfit, direction, pair, accountCurrency, activeCustomSpec, manualConversionRate, spreadPips, slippagePips, commissionPerLot, marketData]);
 
-  // Risk Scenario Matrix Simulation
+  // Single Compact Safety Evaluation
+  const riskCheck = useMemo(() => {
+    return evaluateTradeRiskCheck({
+      calculationResult: calc,
+      userSettings: userSettings?.tradingPreferences || userSettings || {},
+      account: selectedAccount,
+      existingOpenTradeRisk,
+    });
+  }, [calc, userSettings, selectedAccount, existingOpenTradeRisk]);
+
+  // Scenario Simulator Matrix
   const scenarioMatrix = useMemo(() => {
     return generateRiskScenarios({
       balance: accountBalance,
@@ -204,19 +193,9 @@ const RiskCalculator = () => {
     });
   }, [accountBalance, entryPrice, stopLoss, direction, pair, accountCurrency, activeCustomSpec, manualConversionRate, spreadPips, slippagePips, commissionPerLot]);
 
-  // Expanded 11-Point Safety Check Evaluation
-  const riskCheck = useMemo(() => {
-    return evaluateTradeRiskCheck({
-      calculationResult,
-      userSettings: userSettings?.tradingPreferences || userSettings || {},
-      account: selectedAccount,
-      existingOpenTradeRisk,
-    });
-  }, [calculationResult, userSettings, selectedAccount, existingOpenTradeRisk]);
-
   // Reverse Calculations
   const reverseSLResult = useMemo(() => {
-    if (calcMode !== 'REVERSE_SL') return null;
+    if (reverseMode !== 'REVERSE_SL') return null;
     return calculateReverseStopLoss({
       balance: accountBalance,
       riskPercent,
@@ -228,10 +207,10 @@ const RiskCalculator = () => {
       customSpec: activeCustomSpec,
       manualConversionRate,
     });
-  }, [calcMode, accountBalance, riskPercent, manualLotSize, pair, entryPrice, direction, accountCurrency, activeCustomSpec, manualConversionRate]);
+  }, [reverseMode, accountBalance, riskPercent, manualLotSize, pair, entryPrice, direction, accountCurrency, activeCustomSpec, manualConversionRate]);
 
   const reverseRiskResult = useMemo(() => {
-    if (calcMode !== 'REVERSE_RISK') return null;
+    if (reverseMode !== 'REVERSE_RISK') return null;
     return calculateReverseRisk({
       balance: accountBalance,
       lotSize: manualLotSize,
@@ -243,67 +222,54 @@ const RiskCalculator = () => {
       customSpec: activeCustomSpec,
       manualConversionRate,
     });
-  }, [calcMode, accountBalance, manualLotSize, entryPrice, stopLoss, direction, pair, accountCurrency, activeCustomSpec, manualConversionRate]);
+  }, [reverseMode, accountBalance, manualLotSize, entryPrice, stopLoss, direction, pair, accountCurrency, activeCustomSpec, manualConversionRate]);
 
-  // Quick R:R Presets
+  // R:R Quick Preset
   const applyRRPreset = (rrMultiplier) => {
     const entry = Number(entryPrice);
-    const slPips = calculationResult.stopLossPips;
+    const slPips = calc.stopLossPips;
     if (!entry || !slPips) {
-      toast.error('Please enter Entry Price and Stop Loss first');
+      toast.error('Enter Entry Price and Stop Loss first');
       return;
     }
-    const targetPipsDistance = slPips * rrMultiplier * calculationResult.spec.pipSize;
-    let newTP = 0;
-    if (direction === 'BUY') {
-      newTP = entry + targetPipsDistance;
-    } else {
-      newTP = entry - targetPipsDistance;
-    }
-    setTakeProfit(newTP.toFixed(calculationResult.spec.pricePrecision || 5));
+    const targetPipsDistance = slPips * rrMultiplier * calc.spec.pipSize;
+    let newTP = direction === 'BUY' ? entry + targetPipsDistance : entry - targetPipsDistance;
+    setTakeProfit(newTP.toFixed(calc.spec.pricePrecision || 5));
   };
 
-  // Save History
-  const handleSaveCalculation = () => {
-    const newEntry = {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      pair,
-      direction,
-      entryPrice,
-      stopLoss,
-      safeLotSize: calculationResult.safeLotSize,
-      estimatedTotalRisk: calculationResult.estimatedTotalRisk,
-      riskPercent,
-      rr: calculationResult.riskRewardRatio,
-    };
-    const updated = [newEntry, ...savedCalculations.slice(0, 9)];
-    setSavedCalculations(updated);
-    try {
-      localStorage.setItem('jahzjournals-risk-calc-history', JSON.stringify(updated));
-    } catch (_) {}
-    toast.success('Calculation saved to local history.');
+  // Reset Calculator
+  const handleReset = () => {
+    setEntryPrice('1.1000');
+    setStopLoss('1.0980');
+    setTakeProfit('1.1060');
+    setRiskPercent('1.0');
+    setManualRiskAmount('');
+    setSpreadPips('0');
+    setSlippagePips('0');
+    setCommissionPerLot('0');
+    setSpecSource(SPECIFICATION_SOURCES.STANDARD);
+    setManualConversionRate('');
+    setReverseMode('OFF');
+    toast.success('Calculator reset to default settings');
   };
 
   // Copy Summary
   const handleCopySummary = () => {
-    const summaryText = `[JAHZJOURNALS RISK CALCULATOR V3]
-Pair: ${pair} (${direction}) | Source: ${calculationResult.isCustomSpec ? 'Custom Broker' : 'Standard'}
-Entry: ${entryPrice} | SL: ${stopLoss} (${calculationResult.stopLossPips} pips)
-Target Risk: $${calculationResult.targetCapitalAtRisk} (${riskPercent}%)
-Executable Position: ${calculationResult.safeLotSize} lots (Step: ${calculationResult.lotStep})
-Price Risk: $${calculationResult.actualPriceRisk} | Spread: $${calculationResult.actualSpreadCost} | Commission: $${calculationResult.actualCommissionCost}
-Estimated Total Risk: $${calculationResult.estimatedTotalRisk} (Unused Buffer: $${calculationResult.unusedRiskBuffer})
-Target R:R: 1:${calculationResult.riskRewardRatio || 'N/A'}
-Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN' ? '⚠️ WARNING' : '🚨 BLOCKED'}`;
+    const text = `[JAHZJOURNALS RISK CALCULATOR]
+Pair: ${pair} (${direction}) | Position Size: ${calc.safeLotSize} lots
+Entry: ${entryPrice} | SL: ${stopLoss} (${calc.stopLossPips} pips)
+Target Risk: $${calc.targetCapitalAtRisk} (${riskPercent}%)
+Actual Risk: $${calc.estimatedTotalRisk} (Buffer: $${calc.unusedRiskBuffer})
+R:R Ratio: 1:${calc.riskRewardRatio || 'N/A'}
+Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 'WARN' ? '⚠️ REVIEW REQUIRED' : '🚨 BLOCKED'}`;
 
-    navigator.clipboard.writeText(summaryText);
+    navigator.clipboard.writeText(text);
     setIsCopied(true);
-    toast.success('Calculation summary copied!');
+    toast.success('Position summary copied');
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  // Transfer to Quick Trade /trades/new
+  // Apply to New Trade
   const handleApplyToNewTrade = () => {
     if (!riskCheck.isPassed) {
       toast.error('Cannot apply trade: Risk and safety evaluation is BLOCKED.');
@@ -316,98 +282,62 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
       entryPrice,
       stopLoss,
       takeProfit,
-      lotSize: String(calculationResult.safeLotSize),
-      riskAmount: String(calculationResult.estimatedTotalRisk),
+      lotSize: String(calc.safeLotSize),
+      riskAmount: String(calc.estimatedTotalRisk),
       tradingAccountId: selectedAccountId || '',
-      specSource: calculationResult.isCustomSpec ? 'CUSTOM' : 'STANDARD',
-      priceSource: marketData?.source || 'MANUAL',
-      conversionSource: calculationResult.rateDetails?.source || 'DIRECT',
-      spreadPips: String(spreadPips),
-      commissionPerLot: String(commissionPerLot),
     }).toString();
 
     navigate(`/trades/new?${query}`);
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 font-sans text-foreground">
+    <div className="max-w-5xl mx-auto space-y-6 font-sans text-foreground pb-12">
       <SEO 
-        title="Live Broker-Aware Risk Engine V3 | JAHZJOURNALS"
-        description="Professional live broker and market-aware position size calculator. Calculate lot sizes with spread, commission, slippage, custom broker specs, and prop-firm combined risk."
+        title="Position Size & Risk Calculator | JAHZJOURNALS"
+        description="Calculate exact broker-safe lot sizes and verify pre-trade risk for Forex, Metals, and Indices."
         canonical="https://jahzjournal.com/risk-calculator"
       />
 
       <Breadcrumbs />
 
       <PageHeader
-        eyebrow="Market & Execution-Aware Risk Engine V3"
-        title="Live Position Size & Risk Management Engine"
-        description="Calculate exact broker-safe lot sizes incorporating spread, commission, slippage buffers, custom broker contract specs, and prop-firm combined drawdown."
+        eyebrow="Position Size & Risk Engine"
+        title="Forex Position Size & Risk Calculator"
+        description="Calculate exact executable lot sizes and verify safety rules before placing your trade."
         heroImage="/heroes/hero-analytics.png"
         heroAlt="Risk Calculator"
       />
 
-      {/* Mode Switcher & Execution Status Badge */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-surface p-2 rounded-2xl border border-border">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setCalcMode('STANDARD')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-              calcMode === 'STANDARD' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-muted hover:text-foreground hover:bg-surface-muted'
-            }`}
-          >
-            📊 Position Sizing
-          </button>
-          <button
-            type="button"
-            onClick={() => setCalcMode('REVERSE_SL')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-              calcMode === 'REVERSE_SL' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-muted hover:text-foreground hover:bg-surface-muted'
-            }`}
-          >
-            📏 Reverse SL
-          </button>
-          <button
-            type="button"
-            onClick={() => setCalcMode('REVERSE_RISK')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-              calcMode === 'REVERSE_RISK' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-muted hover:text-foreground hover:bg-surface-muted'
-            }`}
-          >
-            💰 Reverse Risk
-          </button>
-        </div>
+      {/* Main 2-Column Responsive Layout */}
+      <div className="grid gap-6 lg:grid-cols-12 items-start">
+        
+        {/* SECTION 1 — TRADE SETUP (Left Column on Desktop / Top on Mobile) */}
+        <div className="lg:col-span-7 space-y-5">
+          <div className="bg-surface p-5 sm:p-6 rounded-2xl border border-border shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                <Calculator size={18} className="text-emerald-400" />
+                1. Trade Setup
+              </h2>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="text-xs font-semibold text-muted hover:text-foreground flex items-center gap-1 transition-all"
+              >
+                <RefreshCw size={12} /> Reset
+              </button>
+            </div>
 
-        <div className="flex items-center gap-3 text-xs">
-          <span className="flex items-center gap-1.5 px-3 py-1 bg-surface-muted rounded-xl border border-border text-muted">
-            <span className={`h-2 w-2 rounded-full ${
-              marketData.source === 'LIVE' ? 'bg-emerald-400 animate-pulse' : marketData.source === 'CACHED' ? 'bg-amber-400' : 'bg-sky-400'
-            }`} />
-            <span>Price Feed: <strong className="text-foreground">{marketData.source}</strong></span>
-          </span>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-12">
-        {/* LEFT COLUMN: Input Form */}
-        <div className="lg:col-span-7 space-y-6">
-
-          {/* Section 1: Trading Account */}
-          <div className="bg-surface p-6 rounded-2xl border border-border shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-3">
-              🏛️ Section 1 — Trading Account
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-muted mb-1.5">Select Account</label>
+            {/* Account & Currency Selection */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-muted mb-1">Trading Account</label>
                 <select
                   value={selectedAccountId}
                   onChange={handleAccountChange}
-                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-xs text-foreground focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:border-emerald-500 focus:outline-none"
                 >
-                  <option value="">Custom Account</option>
+                  <option value="">Custom Trading Account</option>
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
                       {acc.accountName || acc.brokerName} (${Number(acc.accountBalance).toLocaleString()}) {acc.isPropFirmAccount ? '🏆 Prop Firm' : ''}
@@ -417,41 +347,78 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted mb-1.5">Account Currency</label>
+                <label className="block text-xs font-semibold text-muted mb-1">Account Currency</label>
                 <select
                   value={accountCurrency}
                   onChange={(e) => setAccountCurrency(e.target.value)}
-                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-xs text-foreground focus:border-emerald-500 focus:outline-none font-bold"
+                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:border-emerald-500 focus:outline-none"
                 >
-                  {CURRENCIES.map(curr => (
-                    <option key={curr} value={curr}>{curr}</option>
+                  {CURRENCIES.map(c => (
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-muted mb-1.5">Account Balance ({accountCurrency})</label>
-              <input
-                type="number"
-                step="0.01"
-                value={accountBalance}
-                onChange={(e) => setAccountBalance(e.target.value)}
-                className="w-full bg-surface-muted border border-border rounded-xl px-4 py-2.5 text-sm font-bold text-emerald-400 focus:border-emerald-500 focus:outline-none"
-                placeholder="10000"
-              />
-            </div>
-          </div>
-
-          {/* Section 2: Instrument & Live Market Data Panel */}
-          <div className="bg-surface p-6 rounded-2xl border border-border shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-3">
-              ⚡ Section 2 — Instrument & Market Price
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Balance & Risk % Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-muted mb-1.5">Instrument / Pair</label>
+                <label className="block text-xs font-semibold text-muted mb-1">Account Balance ({accountCurrency})</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={accountBalance}
+                  onChange={(e) => setAccountBalance(e.target.value)}
+                  className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2 text-sm font-bold text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                  placeholder="10000"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-muted">Risk Percentage (%)</label>
+                  <span className="text-[11px] font-bold text-amber-400 font-mono">${calc.targetCapitalAtRisk}</span>
+                </div>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={riskPercent}
+                  onChange={(e) => {
+                    setRiskPercent(e.target.value);
+                    setManualRiskAmount('');
+                  }}
+                  className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2 text-sm font-bold text-amber-400 focus:border-amber-500 focus:outline-none"
+                  placeholder="1.0"
+                />
+              </div>
+            </div>
+
+            {/* Quick Risk Presets */}
+            <div className="flex items-center justify-between gap-2 pt-0.5">
+              <span className="text-[11px] font-semibold text-muted">Quick Risk Presets:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {RISK_PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => {
+                      setRiskPercent(String(p));
+                      setManualRiskAmount('');
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
+                      Number(riskPercent) === p ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'bg-surface-muted border-border text-muted hover:text-foreground'
+                    }`}
+                  >
+                    {p}%
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Instrument & Direction Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border/80">
+              <div>
+                <label className="block text-xs font-semibold text-muted mb-1">Instrument / Pair</label>
                 <select
                   value={pair}
                   onChange={(e) => {
@@ -460,7 +427,7 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
                     const md = getMarketData(newPair);
                     if (md.mid) setEntryPrice(String(md.mid));
                   }}
-                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:border-emerald-500 focus:outline-none"
                 >
                   {Object.keys(INSTRUMENT_SPECS).map((sym) => (
                     <option key={sym} value={sym}>
@@ -471,7 +438,7 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted mb-1.5">Direction</label>
+                <label className="block text-xs font-semibold text-muted mb-1">Trade Direction</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -495,56 +462,19 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
               </div>
             </div>
 
-            {/* Live Market Price Panel */}
-            {marketData.bid && (
-              <div className="p-3 bg-surface-muted rounded-xl border border-border space-y-2 text-xs">
-                <div className="flex items-center justify-between text-[11px] text-muted">
-                  <span>Market Price Feed ({marketData.provider}):</span>
-                  <span className="font-bold text-emerald-400 font-mono">Spread: {marketData.spreadPips} pips</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center font-mono">
-                  <div className="p-2 bg-surface rounded-lg border border-border">
-                    <span className="text-[10px] text-muted block">BID</span>
-                    <span className="font-bold text-foreground">{marketData.bid}</span>
-                  </div>
-                  <div className="p-2 bg-surface rounded-lg border border-border">
-                    <span className="text-[10px] text-muted block">MID</span>
-                    <span className="font-bold text-sky-400">{marketData.mid}</span>
-                  </div>
-                  <div className="p-2 bg-surface rounded-lg border border-border">
-                    <span className="text-[10px] text-muted block">ASK</span>
-                    <span className="font-bold text-foreground">{marketData.ask}</span>
-                  </div>
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleApplyMarketPrice('ASK')}
-                    className="flex-1 py-1 bg-surface hover:bg-surface/80 border border-border rounded-lg text-[10px] font-bold text-muted hover:text-emerald-400"
-                  >
-                    Use Ask (BUY)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyMarketPrice('BID')}
-                    className="flex-1 py-1 bg-surface hover:bg-surface/80 border border-border rounded-lg text-[10px] font-bold text-muted hover:text-rose-400"
-                  >
-                    Use Bid (SELL)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyMarketPrice('MID')}
-                    className="flex-1 py-1 bg-surface hover:bg-surface/80 border border-border rounded-lg text-[10px] font-bold text-muted hover:text-sky-400"
-                  >
-                    Use Mid
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Entry, Stop Loss, Take Profit Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-muted mb-1.5">Entry Price</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-muted">Entry Price</label>
+                  {marketData.bid && (
+                    <div className="flex gap-1 text-[10px]">
+                      <button type="button" onClick={() => handleApplyMarketPrice('ASK')} className="text-emerald-400 hover:underline">Ask</button>
+                      <span className="text-muted">|</span>
+                      <button type="button" onClick={() => handleApplyMarketPrice('BID')} className="text-rose-400 hover:underline">Bid</button>
+                    </div>
+                  )}
+                </div>
                 <input
                   type="number"
                   step="any"
@@ -556,7 +486,10 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted mb-1.5">Stop Loss Price</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-muted">Stop Loss</label>
+                  <span className="text-[10px] text-muted font-mono">{calc.stopLossPips} pips</span>
+                </div>
                 <input
                   type="number"
                   step="any"
@@ -568,7 +501,10 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted mb-1.5">Take Profit Price</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-muted">Take Profit</label>
+                  <span className="text-[10px] text-muted font-mono">{calc.takeProfitPips} pips</span>
+                </div>
                 <input
                   type="number"
                   step="any"
@@ -581,9 +517,9 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
             </div>
 
             {/* Quick R:R Presets */}
-            <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-semibold text-muted">Quick R:R Presets:</span>
-              <div className="flex gap-2">
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <span className="text-[11px] font-semibold text-muted">Quick Target R:R:</span>
+              <div className="flex gap-1.5">
                 {RR_PRESETS.map((multiplier) => (
                   <button
                     key={multiplier}
@@ -597,99 +533,147 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Section 3: Risk Settings */}
-          <div className="bg-surface p-6 rounded-2xl border border-border shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-3">
-              🎯 Section 3 — Target Risk
-            </h3>
+        {/* RIGHT COLUMN — RESULTS, SAFETY & ACTIONS (Desktop Right / Mobile Bottom) */}
+        <div className="lg:col-span-5 space-y-5">
 
-            {calcMode === 'STANDARD' && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-muted mb-1.5">Risk Percentage (%)</label>
-                    <input
-                      type="number"
-                      step="0.05"
-                      value={riskPercent}
-                      onChange={(e) => {
-                        setRiskPercent(e.target.value);
-                        setManualRiskAmount('');
-                      }}
-                      className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm font-bold text-amber-400 focus:border-amber-500 focus:outline-none"
-                      placeholder="1.0"
-                    />
-                  </div>
+          {/* SECTION 2 — POSITION SIZE RESULT (HERO CARD) */}
+          <div className="bg-surface p-6 rounded-2xl border border-emerald-500/40 shadow-2xl space-y-5 relative overflow-hidden">
+            <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
 
-                  <div>
-                    <label className="block text-xs font-semibold text-muted mb-1.5">Direct Risk Amount ({accountCurrency})</label>
-                    <input
-                      type="number"
-                      step="1"
-                      value={manualRiskAmount}
-                      onChange={(e) => {
-                        setManualRiskAmount(e.target.value);
-                        if (e.target.value && Number(accountBalance) > 0) {
-                          const computed = (Number(e.target.value) / Number(accountBalance)) * 100;
-                          setRiskPercent(computed.toFixed(2));
-                        }
-                      }}
-                      className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm font-bold text-amber-400 focus:border-amber-500 focus:outline-none"
-                      placeholder="e.g. 100"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <span className="text-[11px] font-semibold text-muted">Preset Risk %:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {RISK_PRESETS.map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => {
-                          setRiskPercent(String(p));
-                          setManualRiskAmount('');
-                        }}
-                        className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
-                          Number(riskPercent) === p ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'bg-surface-muted border-border text-muted hover:text-foreground'
-                        }`}
-                      >
-                        {p}%
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {calcMode !== 'STANDARD' && (
-              <div>
-                <label className="block text-xs font-semibold text-muted mb-1.5">Fixed Lot Size (Lots)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={manualLotSize}
-                  onChange={(e) => setManualLotSize(e.target.value)}
-                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm font-bold text-sky-400 focus:border-sky-500 focus:outline-none"
-                  placeholder="0.50"
-                />
+            <div className="text-center space-y-1">
+              <span className="text-xs font-black uppercase tracking-widest text-muted">Calculated Position Size</span>
+              <div className="text-5xl sm:text-6xl font-black text-emerald-400 tracking-tight my-1">
+                {calc.safeLotSize} <span className="text-xl text-emerald-500 font-bold">LOTS</span>
               </div>
-            )}
+              <p className="text-[11px] text-muted">
+                Safe Executable Lot (Step: <span className="font-mono font-bold text-foreground">{calc.lotStep}</span>)
+              </p>
+            </div>
+
+            {/* Compact Results Grid */}
+            <div className="grid grid-cols-2 gap-2 text-xs pt-3 border-t border-border/80">
+              <div className="p-2.5 bg-surface-muted rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Target Risk ({riskPercent}%)</span>
+                <span className="font-bold font-mono text-foreground">${calc.targetCapitalAtRisk}</span>
+              </div>
+              <div className="p-2.5 bg-surface-muted rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Actual Executable Risk</span>
+                <span className="font-bold font-mono text-rose-400">${calc.estimatedTotalRisk}</span>
+              </div>
+              <div className="p-2.5 bg-surface-muted rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Stop Loss Distance</span>
+                <span className="font-bold font-mono text-foreground">{calc.stopLossPips} pips</span>
+              </div>
+              <div className="p-2.5 bg-surface-muted rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Target Risk / Reward</span>
+                <span className="font-bold font-mono text-emerald-400">1 : {calc.riskRewardRatio || 'N/A'}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Section 4: Execution Costs & Broker Specifications */}
-          <div className="bg-surface p-6 rounded-2xl border border-border shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                ⚙️ Section 4 — Execution Costs & Broker Specs
-              </h3>
+          {/* SECTION 3 — CAN I TAKE THIS TRADE? (SINGLE COMPACT SAFETY CARD) */}
+          <div className={`p-5 rounded-2xl border shadow-xl space-y-3 ${
+            riskCheck.status === 'PASS' 
+              ? 'bg-emerald-500/5 border-emerald-500/40' 
+              : riskCheck.status === 'WARN'
+                ? 'bg-amber-500/5 border-amber-500/40'
+                : 'bg-rose-500/5 border-rose-500/40'
+          }`}>
+            <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+              <h3 className="text-xs font-black uppercase tracking-wider text-foreground">Can I Take This Trade?</h3>
+              <span className={`px-3 py-0.5 rounded-full text-xs font-black uppercase tracking-wide ${
+                riskCheck.status === 'PASS'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : riskCheck.status === 'WARN'
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+              }`}>
+                {riskCheck.status === 'PASS' ? '✅ SAFE TO EXECUTE' : riskCheck.status === 'WARN' ? '⚠️ REVIEW REQUIRED' : '🚨 TRADE BLOCKED'}
+              </span>
+            </div>
+
+            <p className="text-xs font-semibold text-foreground leading-relaxed">
+              {riskCheck.summaryMessage}
+            </p>
+
+            {/* Consolidated Bullet Checklist */}
+            <div className="space-y-1.5 pt-1 text-xs">
+              {riskCheck.checklist.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <span className="text-muted flex items-center gap-1.5 text-[11px]">
+                    {item.status === 'PASS' && <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />}
+                    {item.status === 'WARN' && <AlertTriangle size={13} className="text-amber-400 shrink-0" />}
+                    {item.status === 'FAIL' && <AlertCircle size={13} className="text-rose-400 shrink-0" />}
+                    <span>{item.label}</span>
+                  </span>
+                  <span className="font-mono text-[10px] font-bold text-foreground">{item.detail}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* SECTION 5 — PRIMARY ACTIONS & DISCLAIMER */}
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={handleApplyToNewTrade}
+              disabled={!riskCheck.isPassed}
+              className={`w-full py-3.5 px-4 font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${
+                riskCheck.isPassed 
+                  ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20' 
+                  : 'bg-surface-muted text-muted cursor-not-allowed border border-border'
+              }`}
+            >
+              <span>Apply Position Size to New Trade</span>
+              <ArrowRight size={16} />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopySummary}
+              className="w-full py-2 bg-surface-muted hover:bg-surface border border-border rounded-xl text-xs font-bold text-muted hover:text-foreground transition-all flex items-center justify-center gap-1.5"
+            >
+              {isCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+              <span>{isCopied ? 'Summary Copied!' : 'Copy Summary'}</span>
+            </button>
+
+            {/* MANDATORY BROKER DISCLAIMER */}
+            <div className="p-3 bg-surface-muted/50 border border-border rounded-xl text-[11px] text-muted-foreground flex gap-2 items-start leading-relaxed">
+              <Info size={15} className="shrink-0 text-amber-400 mt-0.5" />
+              <p>
+                <strong>Broker Specification Disclaimer:</strong> Broker contract specifications can vary by broker. Always verify tick size, tick value, contract size, lot step and minimum/maximum lot requirements with your broker before executing a live trade.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* SECTION 4 — BROKER SPECIFICATION (COLLAPSED BY DEFAULT) */}
+      <div className="bg-surface rounded-2xl border border-border shadow-md overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setIsBrokerSpecsOpen(!isBrokerSpecsOpen)}
+          className="w-full px-5 py-3.5 flex items-center justify-between text-xs font-bold text-muted hover:text-foreground transition-all"
+        >
+          <span className="flex items-center gap-2">
+            <Sliders size={15} className="text-emerald-400" />
+            Broker Specification: <span className="text-foreground">{calc.isCustomSpec ? 'Custom Broker Spec' : `Standard (${pair})`}</span>
+          </span>
+          {isBrokerSpecsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+
+        {isBrokerSpecsOpen && (
+          <div className="p-5 bg-surface-muted/30 border-t border-border space-y-4 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-muted">Specification Source:</span>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setSpecSource(SPECIFICATION_SOURCES.STANDARD)}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all ${
+                  className={`px-3 py-1 rounded-lg border text-xs font-bold transition-all ${
                     specSource === SPECIFICATION_SOURCES.STANDARD ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'border-border text-muted'
                   }`}
                 >
@@ -697,11 +681,8 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSpecSource(SPECIFICATION_SOURCES.CUSTOM);
-                    setIsAdvancedSpecsOpen(true);
-                  }}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all ${
+                  onClick={() => setSpecSource(SPECIFICATION_SOURCES.CUSTOM)}
+                  className={`px-3 py-1 rounded-lg border text-xs font-bold transition-all ${
                     specSource === SPECIFICATION_SOURCES.CUSTOM ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'border-border text-muted'
                   }`}
                 >
@@ -710,402 +691,205 @@ Status: ${riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN'
               </div>
             </div>
 
-            {/* Execution Costs Inputs (Spread, Slippage, Commission) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label className="block font-semibold text-muted mb-1">Spread (Pips)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={spreadPips}
-                  onChange={(e) => setSpreadPips(e.target.value)}
-                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2 font-mono font-bold text-foreground focus:border-emerald-500 focus:outline-none"
-                  placeholder="0.0"
-                />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-surface p-3 rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Contract Size</span>
+                <span className="font-mono font-bold text-foreground">{calc.spec.contractSize}</span>
               </div>
-              <div>
-                <label className="block font-semibold text-muted mb-1">Slippage Buffer (Pips)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={slippagePips}
-                  onChange={(e) => setSlippagePips(e.target.value)}
-                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2 font-mono font-bold text-amber-400 focus:border-amber-500 focus:outline-none"
-                  placeholder="0.0"
-                />
+              <div className="bg-surface p-3 rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Tick Size</span>
+                <span className="font-mono font-bold text-foreground">{calc.spec.tickSize}</span>
               </div>
-              <div>
-                <label className="block font-semibold text-muted mb-1">Commission ($ / Lot)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={commissionPerLot}
-                  onChange={(e) => setCommissionPerLot(e.target.value)}
-                  className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2 font-mono font-bold text-sky-400 focus:border-sky-500 focus:outline-none"
-                  placeholder="0.00"
-                />
+              <div className="bg-surface p-3 rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Tick Value / Lot</span>
+                <span className="font-mono font-bold text-foreground">${calc.tickValuePerLot}</span>
+              </div>
+              <div className="bg-surface p-3 rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Lot Step</span>
+                <span className="font-mono font-bold text-foreground">{calc.lotStep}</span>
+              </div>
+              <div className="bg-surface p-3 rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Min Lot</span>
+                <span className="font-mono font-bold text-foreground">{calc.minLot}</span>
+              </div>
+              <div className="bg-surface p-3 rounded-xl border border-border">
+                <span className="text-muted block text-[10px]">Max Lot</span>
+                <span className="font-mono font-bold text-foreground">{calc.maxLot}</span>
               </div>
             </div>
 
-            {/* Collapsible Advanced Broker Specifications */}
-            <div className="border border-border/80 rounded-xl overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setIsAdvancedSpecsOpen(!isAdvancedSpecsOpen)}
-                className="w-full px-4 py-3 bg-surface-muted flex items-center justify-between text-xs font-bold text-muted hover:text-foreground transition-all"
-              >
-                <span className="flex items-center gap-2">
-                  <Sliders size={14} className="text-emerald-400" />
-                  Advanced Broker Contract Specifications
-                </span>
-                {isAdvancedSpecsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-
-              {isAdvancedSpecsOpen && (
-                <div className="p-4 space-y-4 bg-surface-muted/40 border-t border-border">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-muted mb-1">Contract Size</label>
-                      <input
-                        type="number"
-                        value={customContractSize}
-                        onChange={(e) => setCustomContractSize(e.target.value)}
-                        placeholder={String(standardSpec.contractSize)}
-                        className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-foreground focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-muted mb-1">Tick Size</label>
-                      <input
-                        type="number"
-                        step="any"
-                        value={customTickSize}
-                        onChange={(e) => setCustomTickSize(e.target.value)}
-                        placeholder={String(standardSpec.tickSize)}
-                        className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-foreground focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-muted mb-1">Tick Value</label>
-                      <input
-                        type="number"
-                        step="any"
-                        value={customTickValue}
-                        onChange={(e) => setCustomTickValue(e.target.value)}
-                        placeholder={String(standardSpec.tickValue)}
-                        className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-foreground focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-muted mb-1">Lot Step</label>
-                      <input
-                        type="number"
-                        step="any"
-                        value={customLotStep}
-                        onChange={(e) => setCustomLotStep(e.target.value)}
-                        placeholder="0.01"
-                        className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-foreground focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-muted mb-1">Min Lot</label>
-                      <input
-                        type="number"
-                        step="any"
-                        value={customMinLot}
-                        onChange={(e) => setCustomMinLot(e.target.value)}
-                        placeholder="0.01"
-                        className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-foreground focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-muted mb-1">Max Lot</label>
-                      <input
-                        type="number"
-                        step="any"
-                        value={customMaxLot}
-                        onChange={(e) => setCustomMaxLot(e.target.value)}
-                        placeholder="100"
-                        className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-foreground focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  {!calculationResult.customSpecValidation.isValid && (
-                    <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-xs text-rose-400 space-y-1">
-                      {calculationResult.customSpecValidation.errors.map((err, i) => (
-                        <p key={i}>• {err}</p>
-                      ))}
-                    </div>
-                  )}
+            {specSource === SPECIFICATION_SOURCES.CUSTOM && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-border">
+                <div>
+                  <label className="block text-[10px] font-semibold text-muted mb-1">Custom Contract Size</label>
+                  <input
+                    type="number"
+                    value={customContractSize}
+                    onChange={(e) => setCustomContractSize(e.target.value)}
+                    placeholder={String(standardSpec.contractSize)}
+                    className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-xs text-foreground focus:border-emerald-500 focus:outline-none"
+                  />
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section 5: Currency Conversion Panel */}
-          {accountCurrency.toUpperCase() !== calculationResult.spec.quoteCurrency.toUpperCase() && (
-            <div className="bg-surface p-6 rounded-2xl border border-sky-500/30 shadow-xl space-y-4">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-3">
-                <Globe size={16} className="text-sky-400" />
-                Section 5 — Currency Conversion Panel
-              </h3>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="bg-surface-muted p-2.5 rounded-xl border border-border">
-                  <span className="text-muted block text-[10px]">Account Currency</span>
-                  <span className="font-bold text-emerald-400">{accountCurrency}</span>
-                </div>
-                <div className="bg-surface-muted p-2.5 rounded-xl border border-border">
-                  <span className="text-muted block text-[10px]">Quote Currency</span>
-                  <span className="font-bold text-foreground">{calculationResult.spec.quoteCurrency}</span>
-                </div>
-                <div className="bg-surface-muted p-2.5 rounded-xl border border-border">
-                  <span className="text-muted block text-[10px]">Rate Source</span>
-                  <span className="font-bold text-sky-400">{calculationResult.rateDetails.source}</span>
-                </div>
-                <div className="bg-surface-muted p-2.5 rounded-xl border border-border">
-                  <span className="text-muted block text-[10px]">Exchange Rate</span>
-                  <span className="font-bold text-foreground font-mono">{calculationResult.rateDetails.rate}</span>
-                </div>
-              </div>
-
-              {!calculationResult.rateDetails.isAvailable && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs space-y-2">
-                  <p className="text-amber-300 font-bold">Live currency conversion rate unavailable for {calculationResult.spec.quoteCurrency} to {accountCurrency}.</p>
-                  <label className="block text-[11px] font-semibold text-muted">Enter Manual Rate (1 {calculationResult.spec.quoteCurrency} = ? {accountCurrency})</label>
+                <div>
+                  <label className="block text-[10px] font-semibold text-muted mb-1">Custom Tick Size</label>
                   <input
                     type="number"
                     step="any"
-                    value={manualConversionRate}
-                    onChange={(e) => setManualConversionRate(e.target.value)}
-                    placeholder="e.g. 1500"
-                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs font-bold font-mono text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                    value={customTickSize}
+                    onChange={(e) => setCustomTickSize(e.target.value)}
+                    placeholder={String(standardSpec.tickSize)}
+                    className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-xs text-foreground focus:border-emerald-500 focus:outline-none"
                   />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-muted mb-1">Custom Tick Value</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={customTickValue}
+                    onChange={(e) => setCustomTickValue(e.target.value)}
+                    placeholder={String(standardSpec.tickValue)}
+                    className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-xs text-foreground focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* SECONDARY / ADVANCED TOOLS (COLLAPSED BY DEFAULT) */}
+      <div className="bg-surface rounded-2xl border border-border shadow-md overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setIsAdvancedToolsOpen(!isAdvancedToolsOpen)}
+          className="w-full px-5 py-3.5 flex items-center justify-between text-xs font-bold text-muted hover:text-foreground transition-all"
+        >
+          <span className="flex items-center gap-2">
+            <Layers size={15} className="text-amber-400" />
+            Advanced Tools & Execution Costs
+          </span>
+          {isAdvancedToolsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+
+        {isAdvancedToolsOpen && (
+          <div className="p-5 bg-surface-muted/30 border-t border-border space-y-6 text-xs">
+            
+            {/* Execution Costs Inputs */}
+            <div>
+              <h4 className="font-bold text-foreground mb-2">Execution Cost Adjustments</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-muted mb-1">Spread (Pips)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={spreadPips}
+                    onChange={(e) => setSpreadPips(e.target.value)}
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2 font-mono font-bold text-foreground focus:border-emerald-500 focus:outline-none"
+                    placeholder="0.0"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-muted mb-1">Slippage Buffer (Pips)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={slippagePips}
+                    onChange={(e) => setSlippagePips(e.target.value)}
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2 font-mono font-bold text-amber-400 focus:border-amber-500 focus:outline-none"
+                    placeholder="0.0"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-muted mb-1">Commission ($ / Lot)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={commissionPerLot}
+                    onChange={(e) => setCommissionPerLot(e.target.value)}
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2 font-mono font-bold text-sky-400 focus:border-sky-500 focus:outline-none"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Risk Scenario Simulator Matrix Table */}
+            <div>
+              <h4 className="font-bold text-foreground mb-2">Risk Scenario Simulator Matrix</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-surface text-muted font-bold text-[11px]">
+                    <tr>
+                      <th className="p-2 rounded-l-lg">Target Risk %</th>
+                      <th className="p-2">Target Amount</th>
+                      <th className="p-2">Safe Lot Size</th>
+                      <th className="p-2">Actual Total Risk</th>
+                      <th className="p-2 rounded-r-lg">Unused Buffer</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {scenarioMatrix.map((sc, idx) => (
+                      <tr key={idx} className={Number(riskPercent) === sc.riskPercent ? 'bg-amber-500/10 font-bold' : 'hover:bg-surface/50'}>
+                        <td className="p-2 text-amber-400 font-bold">{sc.riskPercent}%</td>
+                        <td className="p-2 font-mono">${sc.targetCapitalAtRisk}</td>
+                        <td className="p-2 font-mono text-emerald-400">{sc.safeLotSize} lots</td>
+                        <td className="p-2 font-mono text-rose-400">${sc.estimatedTotalRisk}</td>
+                        <td className="p-2 font-mono text-sky-400">+${sc.unusedRiskBuffer}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Reverse Calculator */}
+            <div className="pt-2 border-t border-border">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-bold text-foreground">Reverse Risk Calculator</h4>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setReverseMode(reverseMode === 'REVERSE_SL' ? 'OFF' : 'REVERSE_SL')}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
+                      reverseMode === 'REVERSE_SL' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'border-border text-muted'
+                    }`}
+                  >
+                    Reverse Stop Loss
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReverseMode(reverseMode === 'REVERSE_RISK' ? 'OFF' : 'REVERSE_RISK')}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
+                      reverseMode === 'REVERSE_RISK' ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'border-border text-muted'
+                    }`}
+                  >
+                    Reverse Risk
+                  </button>
+                </div>
+              </div>
+
+              {reverseMode === 'REVERSE_SL' && reverseSLResult && (
+                <div className="p-3 bg-surface rounded-xl border border-border space-y-1">
+                  <span className="text-muted block text-[11px]">Maximum Stop Loss Distance for {manualLotSize} lots:</span>
+                  <span className="font-bold font-mono text-emerald-400 text-sm">{reverseSLResult.maxStopLossPips} pips</span>
+                  <span className="text-muted block text-[10px]">Suggested Stop Price: {reverseSLResult.suggestedStopLossPrice}</span>
+                </div>
+              )}
+
+              {reverseMode === 'REVERSE_RISK' && reverseRiskResult && (
+                <div className="p-3 bg-surface rounded-xl border border-border space-y-1">
+                  <span className="text-muted block text-[11px]">Calculated Monetary Risk for {manualLotSize} lots:</span>
+                  <span className="font-bold font-mono text-rose-400 text-sm">${reverseRiskResult.riskAmount} ({reverseRiskResult.riskPercent}%)</span>
                 </div>
               )}
             </div>
-          )}
 
-          {/* Section 6: Risk Scenario Simulator Matrix Table */}
-          <div className="bg-surface p-6 rounded-2xl border border-border shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-3">
-              <Layers size={16} className="text-amber-400" />
-              Section 6 — Risk Scenario Simulator Matrix
-            </h3>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-surface-muted text-muted font-bold text-[11px]">
-                  <tr>
-                    <th className="p-2.5 rounded-l-lg">Target Risk %</th>
-                    <th className="p-2.5">Target Amount</th>
-                    <th className="p-2.5">Safe Lot Size</th>
-                    <th className="p-2.5">Actual Total Risk</th>
-                    <th className="p-2.5 rounded-r-lg">Unused Buffer</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {scenarioMatrix.map((sc, idx) => (
-                    <tr key={idx} className={Number(riskPercent) === sc.riskPercent ? 'bg-amber-500/10 font-bold' : 'hover:bg-surface-muted/50'}>
-                      <td className="p-2.5 text-amber-400 font-bold">{sc.riskPercent}%</td>
-                      <td className="p-2.5 font-mono">${sc.targetCapitalAtRisk}</td>
-                      <td className="p-2.5 font-mono text-emerald-400">{sc.isBelowMinLot ? 'Blocked (<Min)' : `${sc.safeLotSize} lots`}</td>
-                      <td className="p-2.5 font-mono text-rose-400">${sc.estimatedTotalRisk}</td>
-                      <td className="p-2.5 font-mono text-sky-400">+${sc.unusedRiskBuffer}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </div>
-
-        </div>
-
-        {/* RIGHT COLUMN: Results & Safety Checks */}
-        <div className="lg:col-span-5 space-y-6">
-
-          {/* Visual Trade Risk Preview Card */}
-          <div className="bg-surface p-6 rounded-2xl border border-emerald-500/30 shadow-2xl space-y-6 relative overflow-hidden">
-            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
-
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div>
-                <h3 className="text-base font-bold text-foreground">Executable Risk Preview V3</h3>
-                <p className="text-xs text-muted">Floor-rounded for zero risk overshoot</p>
-              </div>
-
-              <div className="text-right">
-                <span className="text-xs text-muted block">Estimated Total Risk</span>
-                <span className="text-lg font-black text-rose-400">
-                  -${calculationResult.estimatedTotalRisk} {accountCurrency}
-                </span>
-              </div>
-            </div>
-
-            {/* Main Lot Size Display */}
-            <div className="bg-surface-muted p-5 rounded-xl border border-emerald-500/40 text-center space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted">Broker Executable Lot Size</span>
-              <div className="text-4xl sm:text-5xl font-black text-emerald-400 tracking-tight">
-                {calculationResult.safeLotSize} <span className="text-lg text-emerald-500 font-semibold">Lots</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Raw Theoretical: <span className="font-mono text-foreground font-bold">{calculationResult.rawLotSize}</span> lots (Step: {calculationResult.lotStep})
-              </p>
-            </div>
-
-            {/* Itemized Executable Risk Breakdown */}
-            <div className="p-4 bg-surface-muted/60 rounded-xl border border-border space-y-2 text-xs">
-              <h4 className="text-[11px] font-bold uppercase text-muted tracking-wider border-b border-border/80 pb-1.5">
-                Itemized Cost Breakdown
-              </h4>
-              <div className="flex justify-between">
-                <span className="text-muted">Target Capital Risk ({riskPercent}%):</span>
-                <span className="font-bold font-mono text-foreground">${calculationResult.targetCapitalAtRisk}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Price Risk (Stop Loss):</span>
-                <span className="font-bold font-mono text-rose-400">${calculationResult.actualPriceRisk}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Estimated Spread Cost ({spreadPips} pips):</span>
-                <span className="font-bold font-mono text-amber-400">${calculationResult.actualSpreadCost}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Slippage Buffer Cost ({slippagePips} pips):</span>
-                <span className="font-bold font-mono text-amber-400">${calculationResult.actualSlippageCost}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Broker Commission (${commissionPerLot}/lot):</span>
-                <span className="font-bold font-mono text-sky-400">${calculationResult.actualCommissionCost}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-border/80 font-bold text-foreground">
-                <span>Estimated Total Risk:</span>
-                <span className="text-rose-400 font-mono">${calculationResult.estimatedTotalRisk}</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted">Unused Risk Buffer:</span>
-                <span className="text-emerald-400 font-bold font-mono">+${calculationResult.unusedRiskBuffer} ({100 - calculationResult.riskUtilizationPercent}%)</span>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="pt-2 flex flex-col gap-2.5">
-              <button
-                type="button"
-                onClick={handleApplyToNewTrade}
-                disabled={!riskCheck.isPassed}
-                className={`w-full py-3 font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${
-                  riskCheck.isPassed ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' : 'bg-surface-muted text-muted cursor-not-allowed border border-border'
-                }`}
-              >
-                <span>Apply Position Size to New Trade</span>
-                <ArrowRight size={16} />
-              </button>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveCalculation}
-                  className="py-2.5 bg-surface-muted hover:bg-surface border border-border rounded-xl text-xs font-bold text-muted hover:text-foreground transition-all flex items-center justify-center gap-1.5"
-                >
-                  <Save size={14} />
-                  <span>Save History</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCopySummary}
-                  className="py-2.5 bg-surface-muted hover:bg-surface border border-border rounded-xl text-xs font-bold text-muted hover:text-foreground transition-all flex items-center justify-center gap-1.5"
-                >
-                  {isCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                  <span>{isCopied ? 'Copied!' : 'Copy Summary'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Prop Firm Combined Exposure Evaluation Card */}
-          {riskCheck.propFirmDetails && (
-            <div className="p-5 bg-surface rounded-2xl border border-amber-500/30 shadow-xl space-y-3 text-xs">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                <ShieldCheck size={16} /> Prop Firm Combined Exposure Assessment
-              </h4>
-              <div className="flex justify-between">
-                <span className="text-muted">Remaining Daily Loss Allowance:</span>
-                <span className="font-bold text-emerald-400 font-mono">${riskCheck.propFirmDetails.remainingDaily.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Existing Open Trades Risk:</span>
-                <span className="font-bold text-amber-400 font-mono">${riskCheck.propFirmDetails.existingOpenRisk.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Proposed New Trade Risk:</span>
-                <span className="font-bold text-rose-400 font-mono">${riskCheck.propFirmDetails.newTradeRisk.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-border font-bold text-foreground">
-                <span>Combined Daily Risk Exposure:</span>
-                <span className={riskCheck.propFirmDetails.combinedRisk <= riskCheck.propFirmDetails.dailyLimit ? 'text-emerald-400 font-mono' : 'text-rose-400 font-mono'}>
-                  ${riskCheck.propFirmDetails.combinedRisk.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Expanded 11-Point Safety Check Card */}
-          <div className={`p-6 rounded-2xl border shadow-xl space-y-4 ${
-            riskCheck.status === 'PASS' 
-              ? 'bg-emerald-500/5 border-emerald-500/40' 
-              : riskCheck.status === 'WARN'
-                ? 'bg-amber-500/5 border-amber-500/40'
-                : 'bg-rose-500/5 border-rose-500/40'
-          }`}>
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h4 className="text-xs font-black uppercase tracking-wider text-foreground">11-Point Safety Evaluation</h4>
-              <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide ${
-                riskCheck.status === 'PASS'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : riskCheck.status === 'WARN'
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-              }`}>
-                {riskCheck.status === 'PASS' ? '✅ PASS' : riskCheck.status === 'WARN' ? '⚠️ WARNING' : '🚨 BLOCKED'}
-              </span>
-            </div>
-
-            <p className="text-xs font-bold text-foreground leading-relaxed">
-              {riskCheck.summaryMessage}
-            </p>
-
-            {/* Itemized 11-Point Safety Checklist */}
-            <div className="space-y-2 pt-2 border-t border-border/60">
-              {riskCheck.checklist.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs">
-                  <span className="text-muted flex items-center gap-1.5">
-                    {item.status === 'PASS' && <CheckCircle2 size={14} className="text-emerald-400" />}
-                    {item.status === 'WARN' && <AlertTriangle size={14} className="text-amber-400" />}
-                    {item.status === 'FAIL' && <AlertCircle size={14} className="text-rose-400" />}
-                    <span className="text-[10px] text-muted-foreground uppercase">{item.category}:</span> {item.label}
-                  </span>
-                  <span className={`font-semibold font-mono text-[11px] ${
-                    item.status === 'PASS' ? 'text-foreground' : item.status === 'WARN' ? 'text-amber-400' : 'text-rose-400'
-                  }`}>
-                    {item.detail}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Broker Disclaimer Notice */}
-          <div className="p-4 bg-surface/50 border border-border rounded-xl text-[11px] text-muted-foreground flex gap-2.5 items-start leading-relaxed">
-            <Info size={16} className="shrink-0 text-sky-400 mt-0.5" />
-            <p>
-              <strong>Financial Risk Disclaimer:</strong> Estimated risk is based on the broker specifications, market data, spread, slippage, commission, and conversion rates available at calculation time. Actual execution may differ. Always verify settings with your broker prior to live order placement.
-            </p>
-          </div>
-
-        </div>
+        )}
       </div>
+
     </div>
   );
 };
