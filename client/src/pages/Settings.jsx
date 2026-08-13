@@ -12,6 +12,7 @@ import {
   CreditCard,
   Database,
   Download,
+  KeyRound,
   Layers,
   Lock,
   Palette,
