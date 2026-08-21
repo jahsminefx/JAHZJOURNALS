@@ -1,5 +1,4 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import Layout from './Layout';
 
@@ -8,12 +7,13 @@ import Layout from './Layout';
  * Wraps routes that are accessible to both anonymous visitors and authenticated traders
  * (e.g. /pricing, /privacy, /terms, /cookies, /disclaimer, /about, /contact, /features, /blog, etc.)
  * 
- * - Authenticated trader: Rendered inside the application <Layout /> (with Sidebar, TopBar, and Assistant).
- *   Public Navbar & Footer are suppressed so the user stays in the app experience without logout.
+ * - Authenticated trader: Automatically redirected to /dashboard if accessing root URL '/'.
+ *   Shared pages (e.g. /pricing, /terms) are rendered inside application <Layout />.
  * - Anonymous visitor: Rendered with the public site experience (Navbar, Page Content, Footer).
  */
 const SharedRouteLayout = () => {
   const { user, isAuthLoading } = useAuth();
+  const location = useLocation();
 
   if (isAuthLoading) {
     return (
@@ -27,6 +27,9 @@ const SharedRouteLayout = () => {
   }
 
   if (user) {
+    if (location.pathname === '/') {
+      return <Navigate to="/dashboard" replace />;
+    }
     return (
       <Layout>
         <Outlet />

@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Flame, TrendingUp, TrendingDown, ExternalLink, Sparkles, CheckCircle2, XCircle, AlertTriangle, Brain, Target, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import SEO from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const getMondayDate = () => {
   const date = new Date();
@@ -18,6 +21,8 @@ const reflectionFields = [
   ['generalReflection', 'General Reflection'],
   ['additionalNotes', 'Additional Notes'],
 ];
+
+const inputStyle = "mt-1.5 block w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted outline-none transition focus:border-emerald-500 focus:bg-surface shadow-sm";
 
 const WeeklyReview = () => {
   const [accounts, setAccounts] = useState([]);
@@ -48,7 +53,7 @@ const WeeklyReview = () => {
       try {
         setAiInsight(JSON.parse(review.aiSummary));
       } catch (e) {
-        setAiInsight({ weeklySummary: review.aiSummary }); // fallback for legacy text
+        setAiInsight({ weeklySummary: review.aiSummary });
       }
     } else {
       setAiInsight(null);
@@ -132,8 +137,6 @@ const WeeklyReview = () => {
 
   useEffect(() => {
     let intervalId;
-    // We poll if there's no aiSummary but we requested it, or if we want to determine queued status from a global state.
-    // For simplicity, if we triggered generation, we just poll the review until aiSummary appears
     if (isGeneratingAi && selectedReview) {
       intervalId = setInterval(async () => {
         try {
@@ -148,14 +151,11 @@ const WeeklyReview = () => {
             toast.success('AI Weekly Coach analysis complete!', { id: 'aiCoachToast' });
             clearInterval(intervalId);
           }
-          // We don't have AiRequest attached to the review payload yet, so if it fails silently it might poll forever. 
-          // Stop after 20 tries (60 seconds)
         } catch (e) {
           console.error(e);
         }
       }, 3000);
       
-      // Stop after 20 tries
       setTimeout(() => {
         if (isGeneratingAi) {
            setIsGeneratingAi(false);
@@ -169,182 +169,379 @@ const WeeklyReview = () => {
   }, [isGeneratingAi, selectedReview, form.accountId]);
 
   const components = selectedReview?.disciplineScoreComponents || {};
+  const netPnl = selectedReview ? Number(selectedReview.netProfitLoss || 0) : 0;
 
   return (
-    <div className="space-y-6 text-foreground font-sans">
-      <div className="rounded-xl border border-border bg-surface-muted p-6">
-        <h2 className="text-2xl font-bold">Weekly Reflection</h2>
-        <p className="mt-1 text-sm text-muted">Gather the week's data, find the lessons disguised as losses, and plan your next week.</p>
-        <form onSubmit={generateReview} className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-[1fr_1fr_auto]">
-          <label className="text-sm text-muted">
-            Account
-            <select value={form.accountId} onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2">
-              <option value="">All accounts</option>
-              {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+    <div className="space-y-6 text-foreground font-sans pb-16">
+      <SEO title="Weekly Review & Reflection | JAHZJOURNALS" description="Analyze your weekly trading metrics, AI coaching insights, and discipline score." />
+      <Breadcrumbs />
+
+      {/* Page Header & Build Form Panel */}
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-5">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">Weekly Reflection</h1>
+          <p className="mt-1 text-xs sm:text-sm text-muted">Gather the week's data, find the lessons disguised as losses, and plan your next week.</p>
+        </div>
+
+        <form onSubmit={generateReview} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] pt-4 border-t border-border items-end">
+          <div>
+            <label htmlFor="review-account-id" className="block text-xs font-bold uppercase tracking-wider text-muted">
+              Account
+            </label>
+            <select id="review-account-id" value={form.accountId} onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))} className={inputStyle}>
+              <option value="" className="bg-surface text-foreground">All Accounts</option>
+              {accounts.map((account) => <option key={account.id} value={account.id} className="bg-surface text-foreground">{account.name}</option>)}
             </select>
-          </label>
-          <label className="text-sm text-muted">
-            Week Start
-            <input type="date" value={form.weekStartDate} onChange={(event) => setForm((current) => ({ ...current, weekStartDate: event.target.value }))} className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2" />
-          </label>
-          <button type="submit" disabled={generating} className="self-end rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">
+          </div>
+
+          <div>
+            <label htmlFor="review-week-start" className="block text-xs font-bold uppercase tracking-wider text-muted">
+              Week Start Date
+            </label>
+            <input id="review-week-start" type="date" value={form.weekStartDate} onChange={(event) => setForm((current) => ({ ...current, weekStartDate: event.target.value }))} className={inputStyle} />
+          </div>
+
+          <button type="submit" disabled={generating} className="w-full sm:w-auto rounded-xl bg-emerald-500 hover:bg-emerald-400 px-6 py-2.5 text-xs font-bold text-slate-950 transition shadow-sm disabled:opacity-70">
             {generating ? 'Building...' : 'Build Review'}
           </button>
         </form>
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-border bg-surface-muted p-8 text-center text-muted">Loading your weeks...</div>
+        <div className="rounded-2xl border border-border bg-surface p-12 text-center text-muted font-medium shadow-sm">Loading your weekly reviews...</div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.8fr_1.4fr]">
-          <div className="rounded-xl border border-border bg-surface-muted overflow-hidden">
-            <div className="border-b border-border p-4 font-bold">Previous Reviews</div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
+          {/* Previous Reviews Sidebar */}
+          <aside className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden self-start">
+            <div className="border-b border-border bg-surface-muted px-5 py-4 font-black text-xs uppercase tracking-wider text-muted">
+              Previous Reviews
+            </div>
             {reviews.length === 0 ? (
-              <div className="p-8 text-center text-muted">No weekly reviews yet.</div>
+              <div className="p-8 text-center text-xs text-muted">No weekly reviews yet. Build one above.</div>
             ) : (
-              <div className="divide-y divide-gray-700">
-                {reviews.map((review) => (
-                  <button key={review.id} type="button" onClick={() => selectReview(review)} className={`block w-full p-4 text-left hover:bg-gray-700/50 ${selectedReview?.id === review.id ? 'bg-gray-700/60' : ''}`}>
-                    <p className="font-semibold text-foreground">{new Date(review.weekStartDate).toLocaleDateString()} - {new Date(review.weekEndDate).toLocaleDateString()}</p>
-                    <p className="text-sm text-muted">{review.tradingAccount?.name || 'All accounts'} | {review.totalTrades} trades | {Number(review.winRate || 0).toFixed(1)}% win</p>
-                  </button>
-                ))}
+              <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
+                {reviews.map((review) => {
+                  const isSelected = selectedReview?.id === review.id;
+                  const itemPnl = Number(review.netProfitLoss || 0);
+
+                  return (
+                    <button 
+                      key={review.id} 
+                      type="button" 
+                      onClick={() => selectReview(review)} 
+                      className={`block w-full p-4 text-left transition ${
+                        isSelected 
+                          ? 'bg-emerald-500/10 border-l-4 border-emerald-500 text-foreground font-bold' 
+                          : 'hover:bg-surface-muted text-muted hover:text-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-extrabold text-foreground">
+                          {new Date(review.weekStartDate).toLocaleDateString()} - {new Date(review.weekEndDate).toLocaleDateString()}
+                        </p>
+                        <span className={`text-xs font-bold ${itemPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
+                          {itemPnl >= 0 ? '+' : ''}${itemPnl.toFixed(0)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted font-medium">
+                        {review.tradingAccount?.name || 'All Accounts'} · {review.totalTrades} trades · {Number(review.winRate || 0).toFixed(1)}% win
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             )}
-          </div>
+          </aside>
 
+          {/* Selected Review Main Workspace */}
           {!selectedReview ? (
-            <div className="rounded-xl border border-border bg-surface-muted p-8 text-center text-muted">Pick a past week, or build a new one to reflect on.</div>
+            <div className="rounded-2xl border border-border bg-surface p-12 text-center text-muted font-medium shadow-sm">
+              Pick a past week, or build a new one to start your reflection.
+            </div>
           ) : (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                {[
-                  ['Total Trades', selectedReview.totalTrades],
-                  ['Win Rate', `${Number(selectedReview.winRate || 0).toFixed(1)}%`],
-                  ['Net P/L', `$${Number(selectedReview.netProfitLoss || 0).toFixed(2)}`],
-                  ['Discipline', selectedReview.disciplineScore === null ? 'N/A' : `${selectedReview.disciplineScore}/100`],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-xl border border-border bg-surface-muted p-5">
-                    <p className="text-sm text-muted">{label}</p>
-                    <p className="mt-2 text-2xl font-bold text-foreground">{value}</p>
-                  </div>
-                ))}
+            <div className="space-y-6 min-w-0">
+              {/* 4 Summary Stat Cards */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Total Trades</span>
+                  <p className="mt-2 text-2xl font-black tracking-tight text-foreground">{selectedReview.totalTrades}</p>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Win Rate</span>
+                  <p className="mt-2 text-2xl font-black tracking-tight text-foreground">{Number(selectedReview.winRate || 0).toFixed(1)}%</p>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Net P/L</span>
+                  <p className={`mt-2 text-2xl font-black tracking-tight ${netPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
+                    {netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Discipline Score</span>
+                  <p className={`mt-2 text-2xl font-black tracking-tight ${selectedReview.disciplineScore >= 75 ? 'text-emerald-500 dark:text-emerald-400' : selectedReview.disciplineScore >= 50 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-500'}`}>
+                    {selectedReview.disciplineScore === null ? 'N/A' : `${selectedReview.disciplineScore}/100`}
+                  </p>
+                </div>
               </div>
 
+              {/* JAHZ AI Weekly Coach Panel */}
               {aiInsight ? (
-                <div className="bg-purple-500/10 p-6 rounded-xl border border-purple-500/30 shadow-lg mt-6 mb-6">
-                  <h3 className="text-lg font-bold text-purple-400 border-b border-purple-500/30 pb-2 mb-4 flex items-center gap-2">
-                    JAHZ AI Weekly Coach
-                  </h3>
+                <div className="rounded-2xl border border-purple-500/40 bg-surface p-6 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+                    <h3 className="text-base font-black text-purple-700 dark:text-purple-400 flex items-center gap-2">
+                      <Sparkles size={18} className="text-purple-600 dark:text-purple-400" /> JAHZ AI Weekly Coach
+                    </h3>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-500/15 px-2.5 py-1 rounded-full border border-purple-500/30">
+                      AI Analysis Ready
+                    </span>
+                  </div>
                   
                   {aiInsight.sampleSizeWarning && (
-                    <div className="bg-yellow-500/20 text-yellow-500 text-sm p-3 rounded-lg border border-yellow-500/30 mb-4">
-                      {aiInsight.sampleSizeWarning}
+                    <div className="flex items-center gap-2.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-bold text-slate-900 shadow-sm dark:border-amber-500/30 dark:bg-slate-900 dark:text-amber-200">
+                      <AlertTriangle size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span>{aiInsight.sampleSizeWarning}</span>
                     </div>
                   )}
 
-                  <p className="text-sm text-foreground/90 italic leading-relaxed mb-6">
+                  <p className="text-sm font-semibold text-foreground italic leading-relaxed bg-surface-muted p-4 rounded-xl border border-border">
                     "{aiInsight.weeklySummary}"
                   </p>
 
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold text-green-400 mb-2">Continue Doing</h4>
-                      <p className="text-sm text-muted">{aiInsight.whatToContinueDoing}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    <div className="space-y-4">
+                      {aiInsight.whatToContinueDoing && (
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1">
+                            <CheckCircle2 size={14} /> Continue Doing
+                          </h4>
+                          <p className="text-xs text-foreground font-medium leading-relaxed">{aiInsight.whatToContinueDoing}</p>
+                        </div>
+                      )}
                       
-                      <h4 className="font-semibold text-green-400 mt-4 mb-2">Greatest Strength</h4>
-                      <p className="text-sm text-muted">{aiInsight.mainStrength}</p>
+                      {aiInsight.mainStrength && (
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1">Greatest Strength</h4>
+                          <p className="text-xs text-foreground font-medium leading-relaxed">{aiInsight.mainStrength}</p>
+                        </div>
+                      )}
                       
-                      <h4 className="font-semibold text-purple-400 mt-4 mb-2">Positive Habit</h4>
-                      <p className="text-sm text-muted">{aiInsight.mostUsefulPositiveHabit}</p>
+                      {aiInsight.mostUsefulPositiveHabit && (
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-400 mb-1">Positive Habit</h4>
+                          <p className="text-xs text-foreground font-medium leading-relaxed">{aiInsight.mostUsefulPositiveHabit}</p>
+                        </div>
+                      )}
                     </div>
 
-                    <div>
-                      <h4 className="font-semibold text-red-400 mb-2">Stop Doing</h4>
-                      <p className="text-sm text-muted">{aiInsight.whatToStopDoing}</p>
+                    <div className="space-y-4">
+                      {aiInsight.whatToStopDoing && (
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-1 flex items-center gap-1">
+                            <XCircle size={14} /> Stop Doing
+                          </h4>
+                          <p className="text-xs text-foreground font-medium leading-relaxed">{aiInsight.whatToStopDoing}</p>
+                        </div>
+                      )}
                       
-                      <h4 className="font-semibold text-red-400 mt-4 mb-2">Weakness</h4>
-                      <p className="text-sm text-muted">{aiInsight.mainWeakness}</p>
+                      {aiInsight.mainWeakness && (
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-1">Weakness</h4>
+                          <p className="text-xs text-foreground font-medium leading-relaxed">{aiInsight.mainWeakness}</p>
+                        </div>
+                      )}
                       
-                      <h4 className="font-semibold text-orange-400 mt-4 mb-2">Repeated Mistake</h4>
-                      <p className="text-sm text-muted">{aiInsight.mostImportantRepeatedMistake}</p>
+                      {aiInsight.mostImportantRepeatedMistake && (
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-1">Repeated Mistake</h4>
+                          <p className="text-xs text-foreground font-medium leading-relaxed">{aiInsight.mostImportantRepeatedMistake}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-purple-500/30">
-                     <div>
-                       <h4 className="font-semibold text-muted mb-2">Psychology Check</h4>
-                       <p className="text-sm text-muted">{aiInsight.psychologyInsight}</p>
-                     </div>
-                     <div>
-                       <h4 className="font-semibold text-muted mb-2">Risk Check</h4>
-                       <p className="text-sm text-muted">{aiInsight.riskManagementInsight}</p>
-                     </div>
-                  </div>
+                  {(aiInsight.psychologyInsight || aiInsight.riskManagementInsight) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-purple-500/20">
+                      {aiInsight.psychologyInsight && (
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-foreground mb-1">Psychology Check</h4>
+                          <p className="text-xs text-foreground font-medium leading-relaxed">{aiInsight.psychologyInsight}</p>
+                        </div>
+                      )}
+                      {aiInsight.riskManagementInsight && (
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-foreground mb-1">Risk Check</h4>
+                          <p className="text-xs text-foreground font-medium leading-relaxed">{aiInsight.riskManagementInsight}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                  <div className="mt-6 pt-6 border-t border-purple-500/30 text-center">
-                    <h4 className="font-bold text-purple-300 text-lg mb-2">Measurable Goal for Next Week</h4>
-                    <p className="text-md text-foreground">{aiInsight.measurableGoalForNextWeek}</p>
-                  </div>
+                  {aiInsight.measurableGoalForNextWeek && (
+                    <div className="pt-4 border-t border-purple-500/20 text-center bg-purple-500/10 border border-purple-500/30 p-4 rounded-xl">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 mb-1">Measurable Goal for Next Week</h4>
+                      <p className="text-sm font-extrabold text-foreground">{aiInsight.measurableGoalForNextWeek}</p>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="bg-surface-muted p-6 rounded-xl border border-purple-500/30 mt-6 mb-6 flex flex-col items-center justify-center space-y-3">
-                   <h3 className="text-lg font-bold text-purple-400">Want deeper insight?</h3>
-                   <p className="text-sm text-muted text-center">Let JAHZ AI analyze these statistics and give you a structured psychological and risk breakdown.</p>
-                   <button
-                     onClick={requestAiCoach}
-                     disabled={isGeneratingAi}
-                     className="inline-flex items-center justify-center gap-2 rounded-lg bg-purple-500/20 px-4 py-2 text-sm font-bold text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 border border-purple-500/50 mt-2"
-                   >
-                     {isGeneratingAi ? 'Analyzing Data...' : 'Generate AI Weekly Coach'}
-                   </button>
+                <div className="rounded-2xl border border-purple-500/30 bg-surface p-6 shadow-sm flex flex-col items-center justify-center space-y-3 text-center">
+                  <Brain size={28} className="text-purple-500" />
+                  <h3 className="text-base font-black text-foreground">Want deeper weekly insights?</h3>
+                  <p className="text-xs text-muted max-w-md">Let JAHZ AI analyze these statistics and generate a structured psychological and risk breakdown.</p>
+                  <button
+                    onClick={requestAiCoach}
+                    disabled={isGeneratingAi}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-purple-500 hover:bg-purple-400 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm disabled:opacity-50 mt-1"
+                  >
+                    <Sparkles size={15} />
+                    {isGeneratingAi ? 'Analyzing Data...' : 'Generate AI Weekly Coach'}
+                  </button>
                 </div>
               )}
 
-              <div className="rounded-xl border border-border bg-surface-muted p-6">
-                <h3 className="mb-4 text-lg font-bold text-green-400">The Hard Truth</h3>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <p className="text-sm text-muted">Profit factor: <span className="font-semibold text-foreground">{selectedReview.profitFactor === null ? 'N/A' : Number(selectedReview.profitFactor || 0).toFixed(2)}</span></p>
-                  <p className="text-sm text-muted">Expectancy: <span className="font-semibold text-foreground">${Number(selectedReview.expectancy || 0).toFixed(2)}</span></p>
-                  <p className="text-sm text-muted">Average win: <span className="font-semibold text-foreground">${Number(selectedReview.averageWin || 0).toFixed(2)}</span></p>
-                  <p className="text-sm text-muted">Average loss: <span className="font-semibold text-foreground">${Number(selectedReview.averageLoss || 0).toFixed(2)}</span></p>
-                  <p className="text-sm text-muted">Most broken rule: <span className="font-semibold text-foreground">{selectedReview.mostBrokenRule || 'None'}</span></p>
-                  <p className="text-sm text-muted">Most common emotion: <span className="font-semibold text-foreground">{selectedReview.mostCommonEmotion || 'None'}</span></p>
-                  <p className="text-sm text-muted">Plan-following rate: <span className="font-semibold text-foreground">{selectedReview.planFollowingRate === null ? 'N/A' : `${Number(selectedReview.planFollowingRate || 0).toFixed(1)}%`}</span></p>
-                  <p className="text-sm text-muted">A+ setup win rate: <span className="font-semibold text-foreground">{Number(selectedReview.aPlusSetupWinRate || 0).toFixed(1)}%</span></p>
-                  {selectedReview.bestTradeId && <Link to={`/trades/${selectedReview.bestTradeId}`} className="text-sm text-green-400 hover:text-green-300">Open best trade</Link>}
-                  {selectedReview.worstTradeId && <Link to={`/trades/${selectedReview.worstTradeId}`} className="text-sm text-red-400 hover:text-red-300">Open worst trade</Link>}
+              {/* The Hard Truth Card */}
+              <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-5">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <h3 className="text-base font-black text-foreground flex items-center gap-2">
+                    <Flame size={18} className="text-amber-500" /> The Hard Truth
+                  </h3>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted bg-surface-muted px-2.5 py-1 rounded-full border border-border">
+                    Weekly Reality Check
+                  </span>
                 </div>
-              </div>
 
-              <div className="rounded-xl border border-border bg-surface-muted p-6">
-                <h3 className="text-lg font-bold text-green-400">Discipline Score Explanation</h3>
-                <p className="mt-2 text-sm text-muted">Formula version: {selectedReview.disciplineScoreFormulaVersion || components.formulaVersion || 'discipline-v1'}</p>
-                {components.reason ? (
-                  <p className="mt-3 text-sm text-muted">{components.reason}</p>
-                ) : (
-                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <p className="text-sm text-muted">Plan-following: {components.planFollowingRate ?? 0}%</p>
-                    <p className="text-sm text-muted">Violations/trade: {components.ruleViolationsPerTrade ?? 0}</p>
-                    <p className="text-sm text-muted">Post-trade notes: {components.postTradeNoteCompletionRate ?? 0}%</p>
-                    <p className="text-sm text-muted">High emotion logs/trade: {components.highIntensityEmotionLogsPerTrade ?? 0}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="bg-surface-muted p-3.5 rounded-xl border border-border">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">Profit Factor</span>
+                    <span className={`text-base font-black ${Number(selectedReview.profitFactor || 0) >= 1.5 ? 'text-emerald-500 dark:text-emerald-400' : Number(selectedReview.profitFactor || 0) >= 1.0 ? 'text-amber-500' : 'text-rose-500'}`}>
+                      {selectedReview.profitFactor === null ? 'N/A' : Number(selectedReview.profitFactor || 0).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="bg-surface-muted p-3.5 rounded-xl border border-border">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">Expectancy / Trade</span>
+                    <span className={`text-base font-black ${Number(selectedReview.expectancy || 0) >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
+                      ${Number(selectedReview.expectancy || 0).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="bg-surface-muted p-3.5 rounded-xl border border-border">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">Average Win</span>
+                    <span className="text-base font-black text-emerald-500 dark:text-emerald-400">
+                      ${Number(selectedReview.averageWin || 0).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="bg-surface-muted p-3.5 rounded-xl border border-border">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">Average Loss</span>
+                    <span className="text-base font-black text-rose-500">
+                      ${Number(selectedReview.averageLoss || 0).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between bg-surface-muted p-3 rounded-xl border border-border text-xs">
+                    <span className="text-muted font-medium">Most Broken Rule</span>
+                    <span className="font-bold text-foreground">{selectedReview.mostBrokenRule || 'None'}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-surface-muted p-3 rounded-xl border border-border text-xs">
+                    <span className="text-muted font-medium">Most Common Emotion</span>
+                    <span className="font-bold text-foreground">{selectedReview.mostCommonEmotion || 'None'}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-surface-muted p-3 rounded-xl border border-border text-xs">
+                    <span className="text-muted font-medium">Plan-Following Rate</span>
+                    <span className="font-bold text-foreground">
+                      {selectedReview.planFollowingRate === null ? 'N/A' : `${Number(selectedReview.planFollowingRate || 0).toFixed(1)}%`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-surface-muted p-3 rounded-xl border border-border text-xs">
+                    <span className="text-muted font-medium">A+ Setup Win Rate</span>
+                    <span className="font-bold text-foreground">
+                      {Number(selectedReview.aPlusSetupWinRate || 0).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+
+                {(selectedReview.bestTradeId || selectedReview.worstTradeId) && (
+                  <div className="flex items-center gap-4 pt-3 border-t border-border">
+                    {selectedReview.bestTradeId && (
+                      <Link
+                        to={`/trades/${selectedReview.bestTradeId}`}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-500 dark:text-emerald-400 hover:underline transition-colors"
+                      >
+                        <TrendingUp size={14} /> Open best trade <ExternalLink size={12} />
+                      </Link>
+                    )}
+                    {selectedReview.worstTradeId && (
+                      <Link
+                        to={`/trades/${selectedReview.worstTradeId}`}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:underline transition-colors"
+                      >
+                        <TrendingDown size={14} /> Open worst trade <ExternalLink size={12} />
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
 
-              <div className="rounded-xl border border-border bg-surface-muted p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-green-400">Your Reflection</h3>
-                  <button type="button" onClick={saveReflections} disabled={saving} className="rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">
+              {/* Discipline Score Explanation Card */}
+              <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <h3 className="text-base font-black text-foreground flex items-center gap-2">
+                    <ShieldCheck size={18} className="text-emerald-500" /> Discipline Score Explanation
+                  </h3>
+                  <span className="text-[10px] font-mono text-muted">
+                    {selectedReview.disciplineScoreFormulaVersion || components.formulaVersion || 'discipline-v1'}
+                  </span>
+                </div>
+                {components.reason ? (
+                  <p className="text-xs text-muted leading-relaxed">{components.reason}</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-surface-muted p-3 rounded-xl border border-border text-xs text-muted font-medium">Plan-following: <strong className="text-foreground font-bold">{components.planFollowingRate ?? 0}%</strong></div>
+                    <div className="bg-surface-muted p-3 rounded-xl border border-border text-xs text-muted font-medium">Violations/trade: <strong className="text-foreground font-bold">{components.ruleViolationsPerTrade ?? 0}</strong></div>
+                    <div className="bg-surface-muted p-3 rounded-xl border border-border text-xs text-muted font-medium">Post-trade notes: <strong className="text-foreground font-bold">{components.postTradeNoteCompletionRate ?? 0}%</strong></div>
+                    <div className="bg-surface-muted p-3 rounded-xl border border-border text-xs text-muted font-medium">High emotion logs: <strong className="text-foreground font-bold">{components.highIntensityEmotionLogsPerTrade ?? 0}</strong></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Your Reflection Form Card */}
+              <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-5">
+                <div className="flex items-center justify-between border-b border-border pb-4">
+                  <h3 className="text-base font-black text-foreground">Your Reflection</h3>
+                  <button 
+                    type="button" 
+                    onClick={saveReflections} 
+                    disabled={saving} 
+                    className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2 text-xs font-bold text-slate-950 transition shadow-sm disabled:opacity-70"
+                  >
                     {saving ? 'Saving...' : 'Save Reflection'}
                   </button>
                 </div>
+
                 <div className="space-y-4">
                   {reflectionFields.map(([field, label]) => (
-                    <label key={field} className="block text-sm text-muted">
-                      {label}
-                      <textarea value={reflections[field] || ''} onChange={(event) => setReflections((current) => ({ ...current, [field]: event.target.value }))} rows="3" className="mt-2 w-full resize-none rounded-lg border border-border bg-surface px-4 py-3 text-foreground outline-none focus:border-green-400" />
-                    </label>
+                    <div key={field}>
+                      <label htmlFor={`reflection-${field}`} className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
+                        {label}
+                      </label>
+                      <textarea 
+                        id={`reflection-${field}`} 
+                        value={reflections[field] || ''} 
+                        onChange={(event) => setReflections((current) => ({ ...current, [field]: event.target.value }))} 
+                        rows="3" 
+                        placeholder={`Write your ${label.toLowerCase()}...`}
+                        className="w-full resize-none rounded-xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-emerald-500 focus:bg-surface outline-none transition shadow-sm" 
+                      />
+                    </div>
                   ))}
                 </div>
               </div>

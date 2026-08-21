@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Edit3, Image as ImageIcon, Trash2, Brain } from 'lucide-react';
+import { ArrowLeft, Edit3, Image as ImageIcon, Trash2, Brain, Maximize2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../utils/api';
+import api, { resolveImageUrl } from '../utils/api';
 import DeleteTradeDialog from '../components/trades/DeleteTradeDialog';
+import ImageModal from '../components/common/ImageModal';
 
 const TradeDetail = () => {
   const { id } = useParams();
@@ -16,17 +17,34 @@ const TradeDetail = () => {
   const [analyzingScreenshotId, setAnalyzingScreenshotId] = useState(null);
   const [visionInsights, setVisionInsights] = useState({});
   const [aiInsight, setAiInsight] = useState(null);
+  const [activeModalImage, setActiveModalImage] = useState(null);
 
   const fetchTrade = useCallback(async () => {
     try {
       const { data } = await api.get(`/trades/${id}`);
       setTrade(data);
       if (data.aiReviews && data.aiReviews.length > 0) {
-        setAiInsight(data.aiReviews[0].structuredOutput || {
-          strengths: data.aiReviews[0].strengths?.split(',') || [],
-          weaknesses: data.aiReviews[0].mistakes?.split(',') || [],
-          actionableAdvice: data.aiReviews[0].recommendation || '',
-        });
+        const review = data.aiReviews[0];
+        const output = review.structuredOutput || {};
+        const strengthsList = Array.isArray(output.strengths) ? output.strengths : (review.strengths ? review.strengths.split(',').filter(Boolean) : []);
+        const weaknessesList = Array.isArray(output.weaknesses) ? output.weaknesses : (Array.isArray(output.mistakes) ? output.mistakes : (review.mistakes ? review.mistakes.split(',').filter(Boolean) : []));
+        const advice = output.actionableAdvice || output.recommendedAction || output.summary || review.recommendation || '';
+
+        if (strengthsList.length > 0 || weaknessesList.length > 0 || advice) {
+          setAiInsight({
+            strengths: strengthsList,
+            weaknesses: weaknessesList,
+            actionableAdvice: advice,
+            ruleFeedback: output.ruleFeedback || [],
+            psychologyFeedback: output.psychologyFeedback || [],
+            disciplineScore: output.disciplineScore ?? review.disciplineScore,
+            disclaimer: output.educationalDisclaimer || output.disclaimer || null
+          });
+        } else {
+          setAiInsight(null);
+        }
+      } else {
+        setAiInsight(null);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Couldn\'t load this trade. Let\'s try again.');
@@ -147,16 +165,14 @@ const TradeDetail = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {!aiInsight && (
-            <button
-              onClick={requestAiReview}
-              disabled={isGeneratingAi}
-              className="hidden sm:inline-flex items-center justify-center gap-2 rounded-lg border border-purple-500/50 bg-purple-500/10 px-4 py-2 text-sm font-bold text-purple-400 hover:bg-purple-500/20 disabled:opacity-50"
-            >
-              <Brain size={18} />
-              {isGeneratingAi ? 'Analyzing...' : 'AI Mentor'}
-            </button>
-          )}
+          <button
+            onClick={requestAiReview}
+            disabled={isGeneratingAi}
+            className="hidden sm:inline-flex items-center justify-center gap-2 rounded-lg border border-purple-500/50 bg-purple-500/10 px-4 py-2 text-sm font-bold text-purple-400 hover:bg-purple-500/20 disabled:opacity-50"
+          >
+            <Brain size={18} />
+            {isGeneratingAi ? 'Analyzing...' : aiInsight ? 'Re-analyze' : 'AI Mentor'}
+          </button>
           <Link to={`/trades/${id}/review`} className="hidden sm:inline-flex items-center justify-center gap-2 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-bold text-green-400 hover:bg-green-500/20">
             Deep Review
           </Link>
@@ -279,7 +295,22 @@ const TradeDetail = () => {
                   
                   return (
                     <div key={screenshot.id} className="rounded-lg border border-border bg-surface p-3">
-                      <img src={screenshot.imageUrl} alt={screenshot.note || screenshot.screenshotType} className="w-full rounded-lg border border-gray-600 mb-2" />
+                      <div
+                        className="group relative cursor-pointer overflow-hidden rounded-lg border border-border/60"
+                        onClick={() => setActiveModalImage(screenshot)}
+                        title="Click to view full screen chart"
+                      >
+                        <img
+                          src={resolveImageUrl(screenshot.imageUrl)}
+                          alt={screenshot.note || screenshot.screenshotType}
+                          className="w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-surface/90 px-3 py-1.5 text-xs font-semibold text-foreground shadow-lg">
+                            <Maximize2 size={14} /> View Full Chart
+                          </span>
+                        </div>
+                      </div>
                       <div className="mt-3">
                         <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
                            <p className="text-xs font-semibold text-muted">{screenshot.screenshotType}</p>
@@ -302,8 +333,17 @@ const TradeDetail = () => {
                              </div>
                              {visionData.status === 'COMPLETED' && visionData.structuredOutput && (
                                <div className="space-y-2 mt-2">
-                                  <ul className="list-disc list-inside text-purple-200/90 leading-relaxed">
-                                    {visionData.structuredOutput.observations.map((obs, i) => <li key={i}>{obs}</li>)}
+                                  <ul className="list-disc list-inside text-purple-200/90 leading-relaxed space-y-1">
+                                    {visionData.structuredOutput.observations.map((obs, i) => {
+                                      let text = obs;
+                                      if (typeof obs === 'string' && (obs.startsWith('{') || obs.startsWith('['))) {
+                                        try {
+                                          const parsed = JSON.parse(obs);
+                                          text = typeof parsed === 'object' ? Object.values(parsed).filter(Boolean).join(' ') : parsed;
+                                        } catch (_) {}
+                                      }
+                                      return <li key={i}>{text}</li>;
+                                    })}
                                   </ul>
                                   {visionData.structuredOutput.patterns?.length > 0 && (
                                     <p className="text-purple-300"><span className="font-semibold">Patterns:</span> {visionData.structuredOutput.patterns.join(', ')}</p>
@@ -371,6 +411,14 @@ const TradeDetail = () => {
           </div>
         </div>
       </div>
+
+      <ImageModal
+        isOpen={!!activeModalImage}
+        onClose={() => setActiveModalImage(null)}
+        imageUrl={activeModalImage?.imageUrl}
+        title={activeModalImage?.screenshotType}
+        note={activeModalImage?.note}
+      />
     </div>
   );
 };

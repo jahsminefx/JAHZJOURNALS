@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/useAuth';
 import AuthLayout from '../components/AuthLayout';
@@ -19,6 +20,8 @@ const registerSchema = z.object({
 
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const { user, registerUser } = useAuth();
 
@@ -56,48 +59,81 @@ const Register = () => {
 
   return (
     <AuthLayout title="Begin your journey" subtitle="A space for clarity, growth, and honest reflection.">
-      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-muted">Your name</label>
-          <input id="name" type="text" {...register('name')} className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
-          {errors.name && <p className="mt-2 text-sm text-red-400">{errors.name.message}</p>}
+          <label htmlFor="name" className="block text-xs font-semibold text-muted mb-1">Your name</label>
+          <input id="name" type="text" placeholder="Jahsmine Aninta" {...register('name')} className="w-full rounded-xl border border-border dark:border-white/10 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-emerald-400" />
+          {errors.name && <p className="mt-1.5 text-xs font-semibold text-rose-400">{errors.name.message}</p>}
         </div>
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-muted">Email</label>
-          <input id="email" type="email" {...register('email')} className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
-          {errors.email && <p className="mt-2 text-sm text-red-400">{errors.email.message}</p>}
+          <label htmlFor="email" className="block text-xs font-semibold text-muted mb-1">Email</label>
+          <input id="email" type="email" placeholder="yourname@domain.com" {...register('email')} className="w-full rounded-xl border border-border dark:border-white/10 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-emerald-400" />
+          {errors.email && <p className="mt-1.5 text-xs font-semibold text-rose-400">{errors.email.message}</p>}
         </div>
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-muted">Password</label>
-            <input id="password" type="password" {...register('password')} className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
-            {errors.password && <p className="mt-2 text-sm text-red-400">{errors.password.message}</p>}
+            <label htmlFor="password" className="block text-xs font-semibold text-muted mb-1">Password</label>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="At least 6 chars"
+                {...register('password')}
+                className="w-full rounded-xl border border-border dark:border-white/10 bg-background px-4 py-3 pr-10 text-sm text-foreground outline-none transition focus:border-emerald-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-3 p-1 text-muted hover:text-foreground transition-all"
+                title={showPassword ? 'Hide Password' : 'Show Password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {errors.password && <p className="mt-1.5 text-xs font-semibold text-rose-400">{errors.password.message}</p>}
           </div>
+
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-muted">Confirm password</label>
-            <input id="confirmPassword" type="password" {...register('confirmPassword')} className="mt-2 block w-full rounded-lg border border-border dark:border-white/10 bg-background px-4 py-3 text-foreground outline-none transition focus:border-emerald-400" />
-            {errors.confirmPassword && <p className="mt-2 text-sm text-red-400">{errors.confirmPassword.message}</p>}
+            <label htmlFor="confirmPassword" className="block text-xs font-semibold text-muted mb-1">Confirm password</label>
+            <div className="relative">
+              <input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Re-enter password"
+                {...register('confirmPassword')}
+                className="w-full rounded-xl border border-border dark:border-white/10 bg-background px-4 py-3 pr-10 text-sm text-foreground outline-none transition focus:border-emerald-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-2.5 top-3 p-1 text-muted hover:text-foreground transition-all"
+                title={showConfirmPassword ? 'Hide Password' : 'Show Password'}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {errors.confirmPassword && <p className="mt-1.5 text-xs font-semibold text-rose-400">{errors.confirmPassword.message}</p>}
           </div>
         </div>
 
         <button
           type="submit"
           disabled={isLoading}
-          className="flex w-full justify-center rounded-lg bg-emerald-400 px-5 py-3 font-bold text-gray-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex w-full justify-center rounded-xl bg-emerald-400 px-5 py-3.5 text-xs font-bold text-gray-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-emerald-500/20"
         >
           {isLoading ? 'Preparing your space...' : 'Create My Sanctuary'}
         </button>
 
-        <p className="text-center text-xs leading-5 text-muted">
+        <p className="text-center text-[11px] leading-5 text-muted">
           By creating an account, you agree to the JAHZJOURNALS{' '}
-          <Link to="/terms" className="font-medium text-emerald-400 hover:text-emerald-300 underline">Terms of Service</Link>{' '}
+          <Link to="/terms" className="font-semibold text-emerald-400 hover:text-emerald-300 underline">Terms of Service</Link>{' '}
           and acknowledge the{' '}
-          <Link to="/privacy" className="font-medium text-emerald-400 hover:text-emerald-300 underline">Privacy Policy</Link>.
+          <Link to="/privacy" className="font-semibold text-emerald-400 hover:text-emerald-300 underline">Privacy Policy</Link>.
         </p>
 
-        <p className="text-center text-sm text-muted">
+        <p className="text-center text-xs text-muted">
           Already part of the journey?{' '}
-          <Link to="/login" className="font-semibold text-emerald-300 hover:text-emerald-200">
+          <Link to="/login" className="font-bold text-emerald-400 hover:text-emerald-300">
             Sign in
           </Link>
         </p>

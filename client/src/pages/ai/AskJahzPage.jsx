@@ -27,7 +27,8 @@ const AskJahzPage = () => {
       const res = await api.post('/ai/chat', { messages: newMsgs, chatMode });
       setMessages([...newMsgs, { role: 'assistant', content: res.data.message }]);
     } catch (error) {
-      setMessages([...newMsgs, { role: 'assistant', content: 'Connection issue. Could not reach analytics.' }]);
+      const errorText = error.response?.data?.message || error.message || 'Jahz AI couldn\'t process your request right now. Please try again.';
+      setMessages([...newMsgs, { role: 'assistant', content: `⚠️ ${errorText}` }]);
     } finally {
       setLoading(false);
     }

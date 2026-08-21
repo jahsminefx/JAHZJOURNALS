@@ -36,6 +36,7 @@ const getTrades = async (req, res) => {
         strategy: { select: { id: true, name: true } },
         setup: { select: { id: true, name: true } },
         screenshots: true,
+        aiReviews: { orderBy: { createdAt: 'desc' } },
       },
       orderBy: { entryTime: 'desc' },
     });
@@ -156,6 +157,9 @@ const getTradeById = async (req, res) => {
         strategy: true,
         setup: true,
         screenshots: true,
+        aiReviews: { orderBy: { createdAt: 'desc' } },
+        ruleViolations: { include: { tradeRule: true } },
+        emotionLogs: { orderBy: { createdAt: 'desc' } },
       }
     });
 

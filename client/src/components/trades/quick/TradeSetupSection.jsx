@@ -2,58 +2,74 @@ import React from 'react';
 import { Controller } from 'react-hook-form';
 import DirectionSelect from '../DirectionSelect';
 
+const inputStyle = "mt-1.5 block w-full bg-surface-muted border border-border rounded-xl py-2.5 px-3.5 text-sm text-foreground focus:outline-none focus:border-emerald-500 focus:bg-surface transition-all shadow-sm";
+
 const TradeSetupSection = ({ register, control, accounts, status }) => {
   return (
     <section>
-      <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400 border-b border-border pb-2 mb-4">Trade Setup</h3>
+      <h3 className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 border-b border-border pb-2.5 mb-5 uppercase tracking-wider">Trade Setup</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        <label className="text-sm text-muted">
-          Account
-          <select required {...register('tradingAccountId')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
-            {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+        <div>
+          <label htmlFor="quick-account-id" className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
+            Account
+          </label>
+          <select id="quick-account-id" required {...register('tradingAccountId')} className={inputStyle}>
+            {accounts.map((account) => <option key={account.id} value={account.id} className="bg-surface text-foreground">{account.name}</option>)}
           </select>
-        </label>
+        </div>
         
-        <label className="text-sm text-muted">
-          Pair / Instrument
-          <input required {...register('pair')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500 uppercase" placeholder="EURUSD" />
-        </label>
+        <div>
+          <label htmlFor="quick-pair" className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
+            Pair / Instrument
+          </label>
+          <input id="quick-pair" required {...register('pair')} className={`${inputStyle} uppercase font-mono font-bold`} placeholder="EURUSD" />
+        </div>
         
-        <label className="text-sm text-muted">
-          Direction
-          <Controller
-            name="direction"
-            control={control}
-            render={({ field }) => (
-              <DirectionSelect 
-                value={field.value} 
-                onChange={field.onChange} 
-                onBlur={field.onBlur}
-              />
-            )}
-          />
-        </label>
+        <div>
+          <label htmlFor="quick-direction" className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
+            Direction
+          </label>
+          <div className="mt-1.5">
+            <Controller
+              name="direction"
+              control={control}
+              render={({ field }) => (
+                <DirectionSelect 
+                  value={field.value} 
+                  onChange={field.onChange} 
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
+          </div>
+        </div>
 
-        <label className="text-sm text-muted">
-          Status
-          <select {...register('status')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
-            <option value="PLANNED">Planned</option>
-            <option value="ACTIVE">Open (Active)</option>
-            <option value="CLOSED">Closed</option>
-            <option value="CANCELLED">Cancelled</option>
+        <div>
+          <label htmlFor="quick-status" className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
+            Status
+          </label>
+          <select id="quick-status" {...register('status')} className={inputStyle}>
+            <option value="PLANNED" className="bg-surface text-foreground">Planned</option>
+            <option value="ACTIVE" className="bg-surface text-foreground">Open (Active)</option>
+            <option value="CLOSED" className="bg-surface text-foreground">Closed</option>
+            <option value="CANCELLED" className="bg-surface text-foreground">Cancelled</option>
           </select>
-        </label>
+        </div>
         
-        <label className="text-sm text-muted">
-          Entry Time
-          <input type="datetime-local" {...register('entryTime')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
-        </label>
+        <div>
+          <label htmlFor="quick-entry-time" className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
+            Entry Time
+          </label>
+          <input id="quick-entry-time" type="datetime-local" {...register('entryTime')} className={inputStyle} />
+        </div>
 
         {status === 'CLOSED' && (
-          <label className="text-sm text-muted">
-            Exit Time
-            <input type="datetime-local" {...register('exitTime')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
-          </label>
+          <div>
+            <label htmlFor="quick-exit-time" className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
+              Exit Time
+            </label>
+            <input id="quick-exit-time" type="datetime-local" {...register('exitTime')} className={inputStyle} />
+          </div>
         )}
       </div>
     </section>

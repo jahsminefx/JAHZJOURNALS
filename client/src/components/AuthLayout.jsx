@@ -4,9 +4,9 @@ import authTradingBg from '../assets/auth-trading-bg.jpg';
 
 const AuthLayout = ({ title, subtitle, children }) => (
   <div className="min-h-screen bg-background px-4 py-10 text-foreground sm:px-6 lg:px-8">
-    <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.16),transparent_34%),linear-gradient(180deg,#020617,#111827_72%,#020617)]" />
+    <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.12),transparent_40%)]" />
     <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
-      <div className="grid w-full overflow-hidden rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] shadow-2xl lg:grid-cols-[1fr_0.9fr]">
+      <div className="grid w-full overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl lg:grid-cols-[1fr_0.9fr]">
         <div className="relative hidden overflow-hidden p-10 lg:flex lg:flex-col lg:justify-between">
           <div
             className="absolute inset-0 scale-105 bg-cover bg-center opacity-95 blur-[1px]"

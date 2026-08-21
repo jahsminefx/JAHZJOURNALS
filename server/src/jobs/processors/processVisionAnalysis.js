@@ -1,16 +1,25 @@
+const fs = require('fs/promises');
+const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { getProvider } = require('../../ai/providers/providerFactory');
 const { validateStructuredOutput } = require('../../ai/utils/validateStructuredOutput');
 const { z } = require('zod');
 
+const toArrayOfStrings = (val) => {
+  if (Array.isArray(val)) return val.map(v => typeof v === 'string' ? v : JSON.stringify(v));
+  if (typeof val === 'string') return [val];
+  if (typeof val === 'object' && val !== null) return Object.values(val).map(v => typeof v === 'string' ? v : JSON.stringify(v));
+  return [];
+};
+
 const VisionSchema = z.object({
-  observations: z.array(z.string()),
-  supportResistanceLevels: z.array(z.string()).optional().default([]),
-  patterns: z.array(z.string()).optional().default([]),
-  confidenceLevel: z.string(),
-  educationalDisclaimer: z.string(),
-  uncertaintyNotice: z.string()
+  observations: z.preprocess(toArrayOfStrings, z.array(z.string())).default([]),
+  supportResistanceLevels: z.preprocess(toArrayOfStrings, z.array(z.string())).default([]),
+  patterns: z.preprocess(toArrayOfStrings, z.array(z.string())).default([]),
+  confidenceLevel: z.preprocess(v => String(v || 'MEDIUM'), z.string()).default('MEDIUM'),
+  educationalDisclaimer: z.preprocess(v => String(v || 'For educational analysis only. Past performance does not guarantee future results.'), z.string()).default('For educational analysis only.'),
+  uncertaintyNotice: z.preprocess(v => String(v || 'Market conditions involve risk and uncertainty.'), z.string()).default('Market conditions involve risk and uncertainty.')
 });
 
 const processVisionAnalysis = async ({ aiRequestId, screenshotId, userId }) => {
@@ -28,13 +37,40 @@ const processVisionAnalysis = async ({ aiRequestId, screenshotId, userId }) => {
       throw new Error('Screenshot not found or has no valid image URL');
     }
 
-    const response = await fetch(screenshot.imageUrl);
-    if (!response.ok) throw new Error('Failed to fetch image stream: ' + response.statusText);
-    
-    const arrayBuffer = await response.arrayBuffer();
-    const base64Data = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = response.headers.get('content-type') || 'image/jpeg';
-    const base64ImageUrl = `data:${mimeType};base64,${base64Data}`;
+    let base64ImageUrl;
+    if (screenshot.imageUrl.includes('/uploads/')) {
+      try {
+        let pathname = screenshot.imageUrl;
+        try {
+          pathname = new URL(screenshot.imageUrl).pathname;
+        } catch (_) {
+          pathname = screenshot.imageUrl;
+        }
+        const relativePath = pathname.replace(/^\/uploads\//, '').replace(/\//g, path.sep);
+        const absolutePath = path.resolve(__dirname, '..', '..', '..', 'uploads', relativePath);
+        const buffer = await fs.readFile(absolutePath);
+        const ext = path.extname(absolutePath).replace('.', '').toLowerCase() || 'png';
+        const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+        base64ImageUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+      } catch (fileErr) {
+        console.warn('[Vision Analysis] Disk read failed, falling back to HTTP fetch:', fileErr.message);
+      }
+    }
+
+    if (!base64ImageUrl) {
+      let fetchUrl = screenshot.imageUrl;
+      if (fetchUrl.startsWith('/uploads/')) {
+        fetchUrl = `http://localhost:${process.env.PORT || 5000}${fetchUrl}`;
+      } else if (fetchUrl.includes(':5173/uploads/')) {
+        fetchUrl = fetchUrl.replace(':5173', `:${process.env.PORT || 5000}`);
+      }
+      const response = await fetch(fetchUrl);
+      if (!response.ok) throw new Error('Failed to fetch image stream: ' + response.statusText);
+      const arrayBuffer = await response.arrayBuffer();
+      const base64Data = Buffer.from(arrayBuffer).toString('base64');
+      const mimeType = response.headers.get('content-type') || 'image/jpeg';
+      base64ImageUrl = `data:${mimeType};base64,${base64Data}`;
+    }
 
     const systemPrompt = `You are a professional technical analyst acting exclusively as an educational mentor. Examine the provided trading chart image.
 Extract technical concepts such as Support/Resistance zones, Trend structure, Candlestick patterns, or recognizable shapes.

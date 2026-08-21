@@ -53,9 +53,9 @@ const sendBrevoEmail = async ({ to, subject, html, text, replyTo, templateId, pa
     };
   }
 
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@jahzjournals.com';
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@jahzjournal.com';
   const senderName = process.env.BREVO_SENDER_NAME || 'JAHZJOURNALS';
-  const replyToEmail = replyTo || process.env.BREVO_REPLY_TO_EMAIL || 'support@jahzjournals.com';
+  const replyToEmail = replyTo || process.env.BREVO_REPLY_TO_EMAIL || 'support@jahzjournal.com';
 
   const maxRetries = 2;
   let attempt = 0;

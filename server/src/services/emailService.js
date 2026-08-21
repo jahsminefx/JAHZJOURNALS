@@ -63,11 +63,11 @@ const sendVerificationEmail = async (user, verifyUrl) => {
   });
 };
 
-const sendPasswordResetEmail = async (user, resetUrl) => {
-  const template = passwordResetTemplate({ name: user.name, resetUrl });
+const sendPasswordResetEmail = async (user, resetUrl, otpCode) => {
+  const template = passwordResetTemplate({ name: user.name, resetUrl, otpCode });
   return await sendEmail({
     to: user.email,
-    subject: 'Reset Your JAHZJOURNALS Password',
+    subject: `Your JAHZJOURNALS Password Reset Code: ${otpCode || ''}`,
     html: template.html,
     text: template.text,
   });

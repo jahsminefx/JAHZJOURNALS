@@ -4,30 +4,34 @@
   --color-background: rgb(var(--background));
   --color-surface: rgb(var(--surface));
   --color-surface-muted: rgb(var(--surface-muted));
+  --color-surface-elevated: rgb(var(--surface-elevated));
   --color-border: rgb(var(--border));
   --color-foreground: rgb(var(--foreground));
   --color-muted: rgb(var(--muted-foreground));
 }
+
 @layer base {
   :root {
     color-scheme: light;
-    --background: 248 250 252;
+    --background: 241 245 249;
     --surface: 255 255 255;
-    --surface-muted: 241 245 249;
+    --surface-muted: 248 250 252;
+    --surface-elevated: 255 255 255;
     --border: 226 232 240;
     --foreground: 15 23 42;
-    --muted-foreground: 100 116 139;
+    --muted-foreground: 71 85 105;
     --problem-icon: #ef4444;
     --problem-text: #334155;
   }
 
   .dark {
     color-scheme: dark;
-    --background: 5 10 20;
-    --surface: 12 18 30;
-    --surface-muted: 18 26 42;
-    --border: 37 48 68;
-    --foreground: 241 245 249;
+    --background: 3 7 18;
+    --surface: 15 23 42;
+    --surface-muted: 30 41 59;
+    --surface-elevated: 30 41 59;
+    --border: 51 65 85;
+    --foreground: 248 250 252;
     --muted-foreground: 148 163 184;
     --problem-icon: #fca5a5;
     --problem-text: #e5e7eb;
@@ -53,5 +57,9 @@
     .hero-media {
       object-position: var(--hero-position-desktop, var(--hero-position-tablet, center center));
     }
+  }
+
+  .card-glow {
+    @apply transition-all duration-200 hover:shadow-md hover:border-emerald-500/30;
   }
 }

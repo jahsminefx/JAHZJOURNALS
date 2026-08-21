@@ -5,7 +5,7 @@ const FAQItem = ({ question, answer }) => {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] shadow-sm dark:shadow-none">
+    <div className="rounded-xl border border-border bg-surface shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -15,7 +15,7 @@ const FAQItem = ({ question, answer }) => {
         <ChevronDown size={20} className={`shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <p className="border-t border-border dark:border-white/10 px-5 pb-5 pt-4 text-sm leading-6 text-muted">
+        <p className="border-t border-border px-5 pb-5 pt-4 text-sm leading-6 text-muted">
           {answer}
         </p>
       )}

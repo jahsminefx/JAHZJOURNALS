@@ -13,7 +13,7 @@ const GoalRow = ({ label, current, target, progress, suffix = '', goodWhenLower 
     <div>
       <div className="mb-1 flex items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-slate-200">{label}</p>
+          <p className="text-sm font-semibold text-foreground">{label}</p>
           <p className="text-xs text-muted">{displayCurrent} / {displayTarget}</p>
         </div>
         <span className={`text-sm font-bold ${overLimit ? 'text-red-400' : 'text-foreground'}`}>{Math.round(complete)}%</span>
@@ -39,7 +39,7 @@ const WeeklyGoalProgress = ({ goals = [], currency, className = '' }) => (
     <CardHeader title="Weekly Goal Progress" />
     {goals.length === 0 ? (
       <div className="rounded-lg border border-dashed border-border p-5">
-        <p className="text-sm font-semibold text-slate-200">Set weekly goals to track your progress.</p>
+        <p className="text-sm font-semibold text-foreground">Set weekly goals to track your progress.</p>
         <Link to="/settings?section=trading" className="mt-4 inline-flex rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-emerald-400">
           Goal Settings
         </Link>

@@ -66,28 +66,28 @@ const AiChatWidget = () => {
           {/* Header & Drag Handle */}
           <div 
             {...pointerHandlers}
-            className="bg-slate-900 flex justify-between items-center p-4 cursor-grab active:cursor-grabbing select-none"
+            className="bg-surface-elevated border-b border-border flex justify-between items-center p-4 cursor-grab active:cursor-grabbing select-none"
           >
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <GripHorizontal size={16} className="text-gray-400" />
-                <h3 className="font-bold text-white flex items-center gap-2">
-                  <Bot size={20} className="text-amber-400" /> JAHZ AI Chat
+                <GripHorizontal size={16} className="text-muted" />
+                <h3 className="font-bold text-foreground flex items-center gap-2">
+                  <Bot size={20} className="text-amber-500 dark:text-amber-400" /> JAHZ AI Chat
                 </h3>
               </div>
-              <div className="flex bg-slate-800 rounded-lg p-1 mt-2">
-                 <button onClick={() => setChatMode('ANALYTICS')} className={`flex-1 text-xs py-1 rounded transition ${chatMode === 'ANALYTICS' ? 'bg-indigo-500 text-white font-bold' : 'text-gray-400 hover:text-white'}`}>Analytics</button>
-                 <button onClick={() => setChatMode('SUPPORT')} className={`flex-1 text-xs py-1 rounded transition ${chatMode === 'SUPPORT' ? 'bg-indigo-500 text-white font-bold' : 'text-gray-400 hover:text-white'}`}>Support</button>
+              <div className="flex bg-surface-muted border border-border/60 rounded-lg p-1 mt-2">
+                 <button onClick={() => setChatMode('ANALYTICS')} className={`flex-1 text-xs py-1 rounded transition ${chatMode === 'ANALYTICS' ? 'bg-indigo-500 text-white font-bold' : 'text-muted hover:text-foreground'}`}>Analytics</button>
+                 <button onClick={() => setChatMode('SUPPORT')} className={`flex-1 text-xs py-1 rounded transition ${chatMode === 'SUPPORT' ? 'bg-indigo-500 text-white font-bold' : 'text-muted hover:text-foreground'}`}>Support</button>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white transition self-start p-1" aria-label="Close JAHZ AI chat">
+            <button onClick={() => setIsOpen(false)} className="text-muted hover:text-foreground transition self-start p-1" aria-label="Close JAHZ AI chat">
               <ChevronDown />
             </button>
           </div>
           
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-3 py-2 flex items-start gap-2">
             <AlertCircle size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-500 font-medium leading-snug">
+            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium leading-snug">
               {chatMode === 'ANALYTICS' ? 'Analytics queries evaluate your private DB metrics securely.' : 'Product Support Mode answers platform usage queries natively.'}
             </p>
           </div>
@@ -95,7 +95,7 @@ const AiChatWidget = () => {
           <div className="flex-1 p-4 overflow-y-auto min-h-[300px] max-h-[400px] bg-background space-y-4">
             {messages.map((m, i) => (
               <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${m.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-amber-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${m.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-surface-muted border border-border text-amber-500 dark:text-amber-400'}`}>
                    {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                 </div>
                 <div className={`p-3 rounded-xl text-sm shadow-xs ${m.role === 'user' ? 'bg-indigo-500 text-white rounded-tr-none' : 'bg-surface-muted text-foreground border border-border rounded-tl-none'}`}>
@@ -105,7 +105,7 @@ const AiChatWidget = () => {
             ))}
             {loading && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-800 text-amber-400 flex items-center justify-center flex-shrink-0"><Bot size={16} /></div>
+                <div className="w-8 h-8 rounded-full bg-surface-muted border border-border text-amber-500 dark:text-amber-400 flex items-center justify-center flex-shrink-0"><Bot size={16} /></div>
                 <div className="p-3 bg-surface-muted border border-border rounded-xl rounded-tl-none text-sm text-muted animate-pulse">Typing...</div>
               </div>
             )}
@@ -134,11 +134,11 @@ const AiChatWidget = () => {
           type="button"
           {...pointerHandlers}
           onClick={handleButtonClick}
-          className="bg-slate-900 dark:bg-gray-800 text-white p-4 rounded-full shadow-2xl hover:scale-105 transition hover:shadow-indigo-500/20 active:scale-95 group flex items-center justify-center"
+          className="bg-surface-elevated border border-border text-foreground p-4 rounded-full shadow-2xl hover:scale-105 transition hover:border-emerald-500/50 active:scale-95 group flex items-center justify-center"
           aria-label="Open JAHZ AI Assistant Chat"
           title="Drag to move • Click to open JAHZ AI Chat"
         >
-          <Bot size={28} className="text-amber-400 group-hover:animate-bounce" />
+          <Bot size={28} className="text-amber-500 dark:text-amber-400 group-hover:animate-bounce" />
         </button>
       )}
     </div>

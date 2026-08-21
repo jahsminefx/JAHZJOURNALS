@@ -68,6 +68,7 @@ const createOpenRouterProvider = () => {
         };
         if (tools && tools.length > 0) {
           payload.tools = tools;
+          payload.tool_choice = 'auto';
         }
 
         const response = await client.chat.completions.create(payload);

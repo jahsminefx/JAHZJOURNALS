@@ -5,6 +5,7 @@ const {
   generateTradeInsight, 
   generateWeeklyCoach, 
   generateEdgeFinder, 
+  getAiRequestStatus,
   generateTradingPlan, 
   generateVisionInsight, 
   getVisionInsight, 
@@ -19,6 +20,7 @@ const { sendMessage } = require('../controllers/chatController');
 const { aiFeaturesLimiter } = require('../middleware/rateLimitMiddleware');
 
 router.get('/overview', protect, getAiOverview);
+router.get('/requests/:requestId', protect, getAiRequestStatus);
 
 router.post('/trade-insight/:tradeId', protect, aiFeaturesLimiter, generateTradeInsight);
 router.post('/weekly-reviews/:reviewId/coach', protect, aiFeaturesLimiter, generateWeeklyCoach);

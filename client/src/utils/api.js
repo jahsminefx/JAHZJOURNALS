@@ -16,6 +16,15 @@ const getApiBaseURL = () => {
   return 'http://localhost:5000/api';
 };
 
+export const resolveImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  const base = getApiBaseURL().replace(/\/api\/?$/, '');
+  return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const api = axios.create({
   baseURL: getApiBaseURL(),
   withCredentials: true,

@@ -31,6 +31,9 @@ const processJob = async (job) => {
 
 let worker = null;
 
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 const startAIWorker = () => {
   if (redisConnection) {
     worker = new Worker('ai-processing', async (job) => {
@@ -45,8 +48,18 @@ const startAIWorker = () => {
       console.log(`[AI Worker] Job ${job.id} completed successfully`);
     });
 
-    worker.on('failed', (job, err) => {
+    worker.on('failed', async (job, err) => {
       console.error(`[AI Worker] Job ${job?.id} failed with error:`, err);
+      if (job?.data?.aiRequestId) {
+        await prisma.aiRequest.update({
+          where: { id: job.data.aiRequestId },
+          data: {
+            status: 'FAILED',
+            errorMessage: err.message || 'Background worker processing failed',
+            completedAt: new Date(),
+          }
+        }).catch(() => {});
+      }
     });
   }
 };

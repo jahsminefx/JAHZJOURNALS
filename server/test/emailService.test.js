@@ -82,7 +82,7 @@ test('email templates render HTML and plaintext correctly with user details', ()
   assert.ok(welcome.text.includes('Alex Trader'));
 
   const reset = passwordResetTemplate({ name: 'Jordan', resetUrl: 'http://localhost:5173/reset?token=xyz' });
-  assert.ok(reset.html.includes('Reset your password'));
+  assert.ok(reset.html.toLowerCase().includes('reset your password'));
   assert.ok(reset.html.includes('http://localhost:5173/reset?token=xyz'));
 
   const subConf = subscriptionConfirmationTemplate({ name: 'Taylor', planName: 'PRO' });

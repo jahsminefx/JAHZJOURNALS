@@ -54,16 +54,16 @@ const BlogPost = () => {
           <article className="lg:col-span-8 space-y-6">
             {/* Category & Title */}
             <div>
-              <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-3">
+              <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider mb-3">
                 {post.category}
               </span>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-tight">
                 {post.title}
               </h1>
             </div>
 
             {/* Author Meta Bar */}
-            <div className="flex items-center justify-between p-4 bg-gray-850 border border-gray-750 rounded-2xl">
+            <div className="flex items-center justify-between p-4 bg-surface-muted border border-border rounded-2xl">
               <div className="flex items-center gap-3">
                 <img 
                   src={post.author.avatar} 
@@ -71,12 +71,12 @@ const BlogPost = () => {
                   className="w-10 h-10 rounded-full border border-emerald-500/30"
                 />
                 <div>
-                  <div className="text-xs font-bold text-gray-100">{post.author.name}</div>
-                  <div className="text-[11px] text-gray-400">{post.author.title}</div>
+                  <div className="text-xs font-bold text-foreground">{post.author.name}</div>
+                  <div className="text-[11px] text-muted">{post.author.title}</div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 text-xs text-gray-400 font-medium">
+              <div className="flex items-center gap-4 text-xs text-muted font-medium">
                 <span className="flex items-center gap-1"><Calendar size={13}/> {post.publishedAt}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1"><Clock size={13}/> {post.readTime}</span>
@@ -84,7 +84,7 @@ const BlogPost = () => {
             </div>
 
             {/* Cover Image */}
-            <div className="aspect-video bg-gray-900 rounded-2xl overflow-hidden border border-gray-750 shadow-xl">
+            <div className="aspect-video bg-surface-muted rounded-2xl overflow-hidden border border-border shadow-xl">
               <img 
                 src={post.coverImage} 
                 alt={post.title}
@@ -94,17 +94,17 @@ const BlogPost = () => {
 
             {/* Rendered HTML Content */}
             <div 
-              className="prose prose-invert max-w-none text-gray-300 text-sm leading-relaxed space-y-4"
+              className="prose dark:prose-invert max-w-none text-foreground text-sm leading-relaxed space-y-4"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
 
             {/* Contextual Internal Link Banner */}
-            <div className="p-6 bg-gradient-to-r from-emerald-950/40 to-indigo-950/40 border border-emerald-500/30 rounded-2xl space-y-3">
-              <h4 className="text-base font-bold text-white flex items-center gap-2">
-                <CheckCircle2 className="text-emerald-400" size={18} />
+            <div className="p-6 bg-surface-muted border border-border rounded-2xl space-y-3">
+              <h4 className="text-base font-bold text-foreground flex items-center gap-2">
+                <CheckCircle2 className="text-emerald-500 dark:text-emerald-400" size={18} />
                 Ready to Journal Your Trades with AI?
               </h4>
-              <p className="text-xs text-gray-300">
+              <p className="text-xs text-muted">
                 Put these principles into practice. Log trades, track emotions, and get automated AI reviews with JAHZJOURNALS.
               </p>
               <div className="pt-2">
@@ -144,20 +144,20 @@ const BlogPost = () => {
         </div>
 
         {/* Related Posts Grid */}
-        <div className="pt-10 border-t border-gray-800">
-          <h3 className="text-xl font-bold text-white mb-6">Related Trading Guides</h3>
+        <div className="pt-10 border-t border-border">
+          <h3 className="text-xl font-bold text-foreground mb-6">Related Trading Guides</h3>
           <div className="grid md:grid-cols-3 gap-6">
             {relatedPosts.map(rel => (
               <Link 
                 key={rel.id}
                 to={`/blog/${rel.slug}`}
-                className="bg-gray-850 border border-gray-750 p-5 rounded-2xl hover:border-emerald-500/40 transition-all block group"
+                className="bg-surface-muted border border-border p-5 rounded-2xl hover:border-emerald-500/40 transition-all block group"
               >
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">{rel.category}</span>
-                <h4 className="text-sm font-bold text-gray-200 group-hover:text-emerald-400 transition-colors mt-1 line-clamp-2">
+                <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider">{rel.category}</span>
+                <h4 className="text-sm font-bold text-foreground group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors mt-1 line-clamp-2">
                   {rel.title}
                 </h4>
-                <p className="text-xs text-gray-400 mt-2 line-clamp-2">{rel.summary}</p>
+                <p className="text-xs text-muted mt-2 line-clamp-2">{rel.summary}</p>
               </Link>
             ))}
           </div>

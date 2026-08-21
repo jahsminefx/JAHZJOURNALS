@@ -48,6 +48,13 @@ const updateSettingsSection = async (req, res, sectionFields) => {
       }
     }
 
+    if (dataToUpdate.includeScreenshots !== undefined && dataToUpdate.allowScreenshotAnalysis === undefined) {
+      dataToUpdate.allowScreenshotAnalysis = dataToUpdate.includeScreenshots;
+    }
+    if (dataToUpdate.allowScreenshotAnalysis !== undefined && dataToUpdate.includeScreenshots === undefined) {
+      dataToUpdate.includeScreenshots = dataToUpdate.allowScreenshotAnalysis;
+    }
+
     if (Object.keys(dataToUpdate).length === 0) {
       return res.status(400).json({ message: 'No valid settings provided to update.' });
     }
@@ -110,6 +117,7 @@ const updateJournalPreferences = (req, res) => updateSettingsSection(req, res, [
   'includeEmotions',
   'includeRuleViolations',
   'includeScreenshots',
+  'allowScreenshotAnalysis',
   'weeklyAiSummary',
   'coachingTone',
   'assignedMentor',
@@ -141,8 +149,20 @@ const updateAppearance = (req, res) => updateSettingsSection(req, res, [
   'preferredNumberFormat',
 ]);
 
+const updateSecurity = (req, res) => updateSettingsSection(req, res, [
+  'loginAlerts',
+]);
+
+const updateBilling = (req, res) => updateSettingsSection(req, res, [
+  'billingEmail',
+  'renewalReminders',
+]);
+
 const updateDataPrivacy = (req, res) => updateSettingsSection(req, res, [
   'allowAiUseOfJournalData',
+  'allowScreenshotAnalysis',
+  'allowTradeDataAnalysis',
+  'enableJahzAi',
 ]);
 
 module.exports = {
@@ -152,5 +172,7 @@ module.exports = {
   updateJournalPreferences,
   updateNotifications,
   updateAppearance,
+  updateSecurity,
+  updateBilling,
   updateDataPrivacy,
 };

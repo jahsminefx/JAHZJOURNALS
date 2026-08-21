@@ -83,10 +83,10 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 sm:p-6 overflow-y-auto animate-fade-in">
-      <div className="relative flex w-full max-w-4xl flex-col rounded-[24px] bg-gray-900 border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] text-gray-200 my-8 overflow-hidden">
+      <div className="relative flex w-full max-w-4xl flex-col rounded-[24px] bg-surface-elevated border border-border shadow-2xl text-foreground my-8 overflow-hidden">
         
         {/* Header Ribbon */}
-        <div className="flex items-center justify-between p-6 bg-gradient-to-r from-gray-800/80 to-gray-900/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-20">
+        <div className="flex items-center justify-between p-6 bg-surface-muted/80 backdrop-blur-xl border-b border-border sticky top-0 z-20">
           <div className="flex items-center gap-4">
              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.2)]">
                <Anchor className="text-indigo-400" size={20} />
@@ -96,7 +96,7 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
                <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Map variables globally over subscription endpoints.</p>
              </div>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-500 bg-gray-800 rounded-full hover:bg-gray-700 hover:text-white transition-colors border border-white/5 hover:border-white/20">
+          <button onClick={onClose} className="p-2 text-muted bg-surface-muted rounded-full hover:bg-surface-muted/80 hover:text-foreground transition-colors border border-border">
             <X size={20} />
           </button>
         </div>
@@ -104,15 +104,15 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
         <form onSubmit={handleSubmit} className="p-8 space-y-8 max-h-[80vh] overflow-y-auto hide-scrollbar">
           
           {/* Main Identifier Box */}
-          <div className="grid sm:grid-cols-2 gap-6 p-6 border border-white/5 rounded-2xl bg-white/[0.02]">
+          <div className="grid sm:grid-cols-2 gap-6 p-6 border border-border rounded-2xl bg-surface-muted/30">
             <div className="space-y-2 sm:col-span-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Universal Promotion Title</label>
-              <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-gray-950 border border-gray-800 px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 outline-none transition-all placeholder-gray-600 text-gray-200" placeholder="e.g. Founding Trader Beta Phase 1" />
+              <label className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">Universal Promotion Title</label>
+              <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-surface-muted border border-border px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 outline-none transition-all placeholder:text-muted text-foreground" placeholder="e.g. Founding Trader Beta Phase 1" />
             </div>
             
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Structural Slug Index</label>
-              <input required disabled={isEditing} value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g,'-')})} className="w-full bg-gray-950 border border-gray-800 px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 outline-none font-mono disabled:opacity-50 disabled:border-transparent transition-all placeholder-gray-600" placeholder="e.g. founding-trader-2026" />
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted">Structural Slug Index</label>
+              <input required disabled={isEditing} value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g,'-')})} className="w-full bg-surface-muted border border-border px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 outline-none font-mono disabled:opacity-50 text-foreground transition-all placeholder:text-muted" placeholder="e.g. founding-trader-2026" />
             </div>
             
             <div className="space-y-2">

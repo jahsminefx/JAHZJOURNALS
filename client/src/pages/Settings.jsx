@@ -31,7 +31,7 @@ import StrategySettings from '../components/settings/StrategySettings';
 import { useConsent } from '../context/ConsentProvider';
 import { getConsentTimestamp } from '../utils/consentService';
 
-const inputClass = 'mt-2 block w-full rounded-lg border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition focus:border-green-400 disabled:cursor-not-allowed disabled:opacity-60';
+const inputClass = 'mt-2 block w-full rounded-xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground placeholder:text-muted outline-none transition focus:border-emerald-500 focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60 shadow-sm';
 
 const sectionNav = [
   { id: 'profile', label: 'Profile', icon: UserRound },
@@ -82,9 +82,9 @@ const getInitialSettingsSection = (searchParams) => {
 };
 
 const Field = ({ label, description, children }) => (
-  <label className="block text-sm text-muted">
-    <span className="font-medium text-foreground">{label}</span>
-    {description && <span className="mt-1 block text-xs leading-5 text-muted">{description}</span>}
+  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
+    <span className="text-foreground">{label}</span>
+    {description && <span className="mt-1 block text-xs leading-5 text-muted font-normal normal-case">{description}</span>}
     {children}
   </label>
 );
@@ -107,28 +107,28 @@ const Toggle = ({ label, description, checked, onChange }) => (
   <button
     type="button"
     onClick={() => onChange(!checked)}
-    className="flex w-full items-start justify-between gap-4 rounded-xl border border-border bg-surface p-4 text-left transition hover:border-foreground/20"
+    className="flex w-full items-start justify-between gap-4 rounded-xl border border-border bg-surface p-4 text-left transition hover:border-emerald-500/50 shadow-sm"
   >
     <span>
       <span className="block text-sm font-semibold text-foreground">{label}</span>
       {description && <span className="mt-1 block text-sm leading-6 text-muted">{description}</span>}
     </span>
-    <span className={`mt-1 flex h-6 w-11 shrink-0 items-center rounded-full p-1 transition ${checked ? 'bg-green-500' : 'bg-gray-700'}`}>
+    <span className={`mt-1 flex h-6 w-11 shrink-0 items-center rounded-full p-1 transition ${checked ? 'bg-emerald-500' : 'bg-surface-muted border border-border'}`}>
       <span className={`h-4 w-4 rounded-full bg-white transition ${checked ? 'translate-x-5' : ''}`} />
     </span>
   </button>
 );
 
 const SettingsCard = ({ title, description, children, actions }) => (
-  <section className="rounded-xl border border-border bg-surface-muted p-5 sm:p-6">
+  <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
     <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h2 className="text-xl font-bold text-foreground">{title}</h2>
-        {description && <p className="mt-2 text-sm leading-6 text-muted">{description}</p>}
+        <h2 className="text-xl font-black text-foreground tracking-tight">{title}</h2>
+        {description && <p className="mt-1.5 text-xs text-muted leading-relaxed">{description}</p>}
       </div>
       {actions}
     </div>
-    <div className="pt-5">
+    <div className="pt-6">
       {children}
     </div>
   </section>
@@ -138,9 +138,9 @@ const SaveButton = ({ section, savingSection, children = 'Save settings' }) => (
   <button
     type="submit"
     disabled={savingSection === section}
-    className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 transition hover:bg-green-400 disabled:opacity-70"
+    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2.5 text-xs font-bold text-slate-950 shadow-sm transition disabled:opacity-70"
   >
-    <Save size={16} />
+    <Save size={15} />
     {savingSection === section ? 'Saving...' : children}
   </button>
 );
@@ -238,11 +238,12 @@ const Settings = () => {
     }));
   };
 
-  const saveSectionToBackend = async (section, endpoint, message = 'Settings saved') => {
+  const saveSectionToBackend = async (section, endpoint, message = 'Settings saved', customPayload = null) => {
     setSavingSection(section);
     try {
       if (endpoint) {
-        await api.put(`/users/settings/${endpoint}`, settings[section]);
+        const payload = customPayload || settings[section];
+        await api.put(`/users/settings/${endpoint}`, payload);
       }
       saveSettings(settings);
       toast.success(message);
@@ -478,7 +479,7 @@ const Settings = () => {
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
             onChange={(event) => setAvatarFile(event.target.files?.[0] || null)}
-            className="mt-4 block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-gray-700 file:px-4 file:py-2 file:font-semibold file:text-foreground hover:file:bg-gray-600"
+            className="mt-4 block w-full text-xs text-muted file:mr-4 file:rounded-xl file:border file:border-border file:bg-surface-muted file:px-4 file:py-2 file:font-bold file:text-foreground hover:file:bg-surface-muted/80 cursor-pointer"
           />
         </div>
         <div className="grid gap-5 md:grid-cols-2">
@@ -612,8 +613,20 @@ const Settings = () => {
     </form>
   );
 
-  const renderJournal = () => (
-    <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('journal', 'journal', 'Journal preferences saved'); }} className="space-y-5">
+  const renderJournal = () => {
+    const handleJournalSave = (event) => {
+      event.preventDefault();
+      const journalCombinedPayload = {
+        ...settings.journal,
+        ...settings.screenshot,
+        ...settings.ai,
+        ...settings.mentor,
+      };
+      saveSectionToBackend('journal', 'journal', 'Journal preferences saved', journalCombinedPayload);
+    };
+
+    return (
+      <form onSubmit={handleJournalSave} className="space-y-5">
       <SettingsCard
         title="Journal Preferences"
         description="Set trade logging requirements, list behavior, screenshot defaults, AI review preferences, and mentor sharing."
@@ -738,6 +751,7 @@ const Settings = () => {
       </SettingsCard>
     </form>
   );
+};
 
   const renderNotifications = () => (
     <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('notifications', 'notifications', 'Notification settings saved'); }}>
@@ -820,7 +834,7 @@ const Settings = () => {
   );
 
   const renderSecurity = () => (
-    <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('security', null, 'Security settings saved'); }} className="space-y-5">
+    <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('security', 'security', 'Security settings saved'); }} className="space-y-5">
       <SettingsCard
         title="Security Settings"
         description="Manage password recovery, login alerts, sessions, and future account protection controls."
@@ -876,7 +890,7 @@ const Settings = () => {
     const promotion = activeSub?.promotion;
 
     return (
-    <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('billing', null, 'Billing preferences saved'); }}>
+    <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('billing', 'billing', 'Billing preferences saved'); }}>
       <SettingsCard
         title="Subscription and Billing"
         description="Review your plan and keep billing preferences ready for Paystack billing."
@@ -936,7 +950,8 @@ const Settings = () => {
         </div>
       </SettingsCard>
     </form>
-  )};
+  );
+};
 
   const renderDataPrivacy = () => {
     const { consent, acceptAll: consentAcceptAll, rejectNonEssential: consentRejectNonEssential, savePreferences: consentSavePreferences, resetConsent: consentReset, openPreferences: consentOpenPrefs } = useConsent();
@@ -984,6 +999,7 @@ const Settings = () => {
           actions={<SaveButton section="dataPrivacy" savingSection={savingSection} />}
         >
           <div className="space-y-5">
+            <Toggle label="Allow AI screenshot analysis" description="Enables AI vision models to review trade chart screenshots for trade breakdowns." checked={settings.dataPrivacy.allowScreenshotAnalysis ?? settings.ai.includeScreenshots} onChange={(value) => { updateSettingsSection('dataPrivacy', 'allowScreenshotAnalysis', value); updateSettingsSection('ai', 'includeScreenshots', value); }} />
             <Toggle label="Allow AI usage of journal data" description="Controls whether future AI features can use journal content for analysis." checked={settings.dataPrivacy.allowAiUseOfJournalData} onChange={(value) => updateSettingsSection('dataPrivacy', 'allowAiUseOfJournalData', value)} />
             <div className="grid gap-3 md:grid-cols-3">
               <button type="button" onClick={handleExportData} disabled={exporting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-3 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">
@@ -1074,7 +1090,7 @@ const Settings = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-        <aside className="hidden rounded-xl border border-border bg-surface-muted p-3 lg:block">
+        <aside className="hidden rounded-2xl border border-border bg-surface p-3 lg:block shadow-sm">
           <nav className="space-y-1">
             {sectionNav.map((section) => {
               const Icon = section.icon;
@@ -1085,11 +1101,13 @@ const Settings = () => {
                   key={section.id}
                   type="button"
                   onClick={() => setActiveSection(section.id)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition ${
-                    isActive ? 'bg-gray-700 text-green-400' : 'text-muted hover:bg-surface-muted hover:text-gray-900 dark:hover:text-foreground'
+                  className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-xs font-bold transition ${
+                    isActive
+                      ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                      : 'text-muted hover:bg-surface-muted hover:text-foreground'
                   }`}
                 >
-                  <Icon size={18} />
+                  <Icon size={17} />
                   {section.label}
                 </button>
               );

@@ -118,26 +118,26 @@ const GlobalFeedbackWidget = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-muted-foreground mb-1">Subject</label>
+              <label className="block text-xs font-bold text-muted mb-1">Subject</label>
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="What is this regarding?"
                 required
-                className="w-full bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-border text-gray-900 dark:text-foreground rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full bg-surface-muted border border-border text-foreground rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-muted-foreground mb-1">Description</label>
+              <label className="block text-xs font-bold text-muted mb-1">Description</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Please describe the issue or your idea in detail..."
                 required
                 rows={4}
-                className="w-full bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-border text-gray-900 dark:text-foreground rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 resize-none"
+                className="w-full bg-surface-muted border border-border text-foreground rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 resize-none"
               />
             </div>
 

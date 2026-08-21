@@ -144,22 +144,25 @@ const requestPasswordReset = async (req, res) => {
       const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
       if (user && !user.isDisabled) {
-        const rawToken = crypto.randomBytes(32).toString('hex');
-        const passwordResetTokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        // Generate clean 6-digit numeric OTP code
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const passwordResetTokenHash = crypto.createHash('sha256').update(otpCode).digest('hex');
 
         await prisma.user.update({
           where: { id: user.id },
           data: {
             passwordResetTokenHash,
-            passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+            passwordResetExpiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min expiry
             passwordResetUsedAt: null,
           },
         });
 
         const appUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-        const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
+        const resetUrl = `${appUrl}/reset-password?code=${otpCode}&email=${encodeURIComponent(user.email)}`;
         
-        await sendPasswordResetEmail(user, resetUrl);
+        console.log(`[Password Reset Request] User: ${user.email} | 6-Digit Code: ${otpCode} | Reset Link: ${resetUrl}`);
+
+        await sendPasswordResetEmail(user, resetUrl, otpCode);
       }
     }
 
@@ -172,13 +175,14 @@ const requestPasswordReset = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
-    const { token, password } = req.body;
+    const rawCode = String(req.body.code || req.body.token || req.body.otpCode || '').trim().replace(/\s+/g, '');
+    const password = req.body.password || req.body.newPassword;
 
-    if (!token || !password || password.length < 8) {
-      return res.status(400).json({ message: 'Please provide a valid token and a password with at least 8 characters.' });
+    if (!rawCode || !password || password.length < 8) {
+      return res.status(400).json({ message: 'Please provide a valid 6-digit code and a password with at least 8 characters.' });
     }
 
-    const passwordResetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const passwordResetTokenHash = crypto.createHash('sha256').update(rawCode).digest('hex');
     const user = await prisma.user.findFirst({
       where: {
         passwordResetTokenHash,
@@ -188,7 +192,7 @@ const resetPassword = async (req, res) => {
     });
 
     if (!user || user.isDisabled) {
-      return res.status(400).json({ message: 'This reset link is invalid or has expired.' });
+      return res.status(400).json({ message: 'This reset code is invalid or has expired.' });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -207,7 +211,7 @@ const resetPassword = async (req, res) => {
     res.json({ message: 'Your password has been securely reset.' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'We couldn\'t reset your password. Try requesting a new link.' });
+    res.status(500).json({ message: 'We couldn\'t reset your password. Try requesting a new code.' });
   }
 };
 

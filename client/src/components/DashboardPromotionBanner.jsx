@@ -74,29 +74,29 @@ const DashboardPromotionBanner = () => {
               )}
             </div>
 
-            <h3 className="text-lg font-black text-white mt-1 tracking-tight">
+            <h3 className="text-lg font-black text-foreground mt-1 tracking-tight">
               {topPromo.name}
             </h3>
             
-            <p className="text-xs text-gray-300 mt-1 max-w-xl line-clamp-2">
+            <p className="text-xs text-muted mt-1 max-w-xl line-clamp-2">
               {topPromo.description || `Unlock complimentary ${topPromo.planGranted} access during this limited launch promotion.`}
             </p>
 
             <div className="flex items-center gap-3 mt-3">
-              <div className="bg-black/40 border border-white/10 px-3 py-1 rounded-lg text-xs font-mono font-bold text-sky-400">
+              <div className="bg-surface-muted border border-border px-3 py-1 rounded-lg text-xs font-mono font-bold text-sky-500 dark:text-sky-400">
                 CODE: {topPromo.slug.toUpperCase()}
               </div>
-              <span className="text-xs font-bold text-emerald-400">
+              <span className="text-xs font-bold text-emerald-500 dark:text-emerald-400">
                 Yields {topPromo.planGranted} Tier
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-none border-gray-800">
+        <div className="flex items-center gap-3 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-none border-border">
           <button
             onClick={() => navigate(`/promotions/${topPromo.id}`)}
-            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold rounded-xl border border-gray-700 transition-all flex-1 sm:flex-none text-center"
+            className="px-4 py-2.5 bg-surface-muted hover:bg-surface-muted/80 text-foreground text-xs font-bold rounded-xl border border-border transition-all flex-1 sm:flex-none text-center"
           >
             View Details
           </button>

@@ -30,6 +30,9 @@ if (process.env.REDIS_URL) {
   console.warn('[AI Queue] REDIS_URL not set, falling back to synchronous processing');
 }
 
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 const triggerSyncFallback = async (jobName, jobData) => {
   // We dynamically require the worker to process it synchronously
   const { processJob } = require('../workers/aiWorker');
@@ -40,6 +43,16 @@ const triggerSyncFallback = async (jobName, jobData) => {
     await processJob({ name: jobName, data: jobData });
   } catch (error) {
     console.error(`[AI Queue Sync Fallback] Failed processing ${jobName}:`, error);
+    if (jobData && jobData.aiRequestId) {
+      await prisma.aiRequest.update({
+        where: { id: jobData.aiRequestId },
+        data: {
+          status: 'FAILED',
+          errorMessage: error.message || 'Synchronous execution failed',
+          completedAt: new Date(),
+        }
+      }).catch(() => {});
+    }
   }
 };
 

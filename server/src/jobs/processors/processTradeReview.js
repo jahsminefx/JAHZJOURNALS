@@ -96,27 +96,43 @@ Return ONLY validated JSON following the requested schema.`;
       }
     });
 
-    // Save final insight to AiTradeReview model to maintain UI compat for now
-    await prisma.aiTradeReview.updateMany({
-        where: { tradeId: tradeId, reviewStatus: 'PROCESSING' },
-        data: {
-            reviewStatus: 'COMPLETED',
-            provider: result.provider,
-            modelUsed: result.model,
-            summary: result.data.summary,
-            strengths: result.data.strengths.join(', \n'),
-            mistakes: result.data.mistakes.join(', \n'),
-            ruleFeedback: result.data.ruleFeedback.join(', \n'),
-            psychologyFeedback: result.data.psychologyFeedback.join(', \n'),
-            riskFeedback: result.data.riskFeedback.join(', \n'),
-            recommendation: result.data.recommendedAction,
-            disciplineScore: result.data.disciplineScore,
-            rawResponse: result.rawResponse,
-            generatedAt: new Date(),
-            structuredOutput: result.data,
-            tokenUsage: result.usage,
-        }
+    // Save final insight to AiTradeReview model to maintain UI compatibility
+    const existingReview = await prisma.aiTradeReview.findFirst({
+      where: { tradeId: tradeId },
+      orderBy: { createdAt: 'desc' }
     });
+
+    const reviewPayload = {
+      reviewStatus: 'COMPLETED',
+      provider: result.provider,
+      modelUsed: result.model,
+      summary: result.data.summary,
+      strengths: result.data.strengths.join(', \n'),
+      mistakes: result.data.mistakes.join(', \n'),
+      ruleFeedback: result.data.ruleFeedback?.join(', \n') || '',
+      psychologyFeedback: result.data.psychologyFeedback?.join(', \n') || '',
+      riskFeedback: result.data.riskFeedback?.join(', \n') || '',
+      recommendation: result.data.recommendedAction,
+      disciplineScore: result.data.disciplineScore,
+      rawResponse: result.rawResponse,
+      generatedAt: new Date(),
+      structuredOutput: result.data,
+      tokenUsage: result.usage,
+    };
+
+    if (existingReview) {
+      await prisma.aiTradeReview.update({
+        where: { id: existingReview.id },
+        data: reviewPayload
+      });
+    } else {
+      await prisma.aiTradeReview.create({
+        data: {
+          tradeId: tradeId,
+          ...reviewPayload
+        }
+      });
+    }
 
   } catch (error) {
     console.error('[Process Trade Review Error]', error);
@@ -130,8 +146,8 @@ Return ONLY validated JSON following the requested schema.`;
     });
     
     await prisma.aiTradeReview.updateMany({
-        where: { tradeId: tradeId, reviewStatus: 'PROCESSING' },
-        data: { reviewStatus: 'FAILED', errorMessage: error.message }
+      where: { tradeId: tradeId },
+      data: { reviewStatus: 'FAILED', errorMessage: error.message }
     });
   }
 };

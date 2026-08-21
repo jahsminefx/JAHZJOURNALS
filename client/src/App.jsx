@@ -39,6 +39,8 @@ const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const AccountsList = lazy(() => import('./pages/AccountsList'));
 const AccountForm = lazy(() => import('./pages/AccountForm'));
@@ -79,7 +81,7 @@ const AiHistoryPage = lazy(() => import('./pages/ai/AiHistoryPage'));
 const AiUsagePage = lazy(() => import('./pages/ai/AiUsagePage'));
 
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-900 text-gray-400">
+  <div className="min-h-screen flex items-center justify-center bg-background text-muted">
     Loading...
   </div>
 );
@@ -105,6 +107,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* Shared Public/Legal Pages (Accessible to both Anonymous and Authenticated Traders) */}
             <Route element={<SharedRouteLayout />}>

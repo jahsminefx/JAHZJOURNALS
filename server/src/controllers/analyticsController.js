@@ -127,13 +127,32 @@ const getSummaryAnalytics = async (req, res) => {
 const getEquityCurve = async (req, res) => {
   try {
     const { trades, account } = await fetchAnalyticsTrades(req);
-    const startingBalance = account ? Number(account.startingBalance || 0) : null;
+    const userId = req.user.id;
+    const accountId = req.query.accountId;
+
+    let selectedAccounts = [];
+    if (accountId && account) {
+      selectedAccounts = [account];
+    } else {
+      selectedAccounts = await prisma.tradingAccount.findMany({
+        where: { userId },
+        select: { id: true, name: true, startingBalance: true, currentBalance: true },
+      });
+    }
+
+    const equityCurvePoints = calculateEquityCurve(trades, selectedAccounts);
 
     res.json({
       success: true,
       filters: req.query,
       summary: calculateSummary(trades),
-      data: calculateEquityCurve(trades, startingBalance),
+      metrics: equityCurvePoints.metrics || {
+        totalDeposits: selectedAccounts.reduce((sum, a) => sum + Number(a.startingBalance || 0), 0),
+        totalWithdrawals: 0,
+        tradingPnl: calculateSummary(trades).netRealisedProfitLoss || 0,
+        currentAccountBalance: selectedAccounts.reduce((sum, a) => sum + Number(a.currentBalance || 0), 0),
+      },
+      data: equityCurvePoints,
     });
   } catch (error) {
     handleAnalyticsError(res, error, 'We hit a snag loading your equity curve.');

@@ -169,26 +169,64 @@ const Pricing = () => {
     }
   };
 
-  const getCta = (planName) => {
-    if (planName === 'Mentor / Academy') return 'Contact Support';
-    if (user) {
-      if (planName === 'Free') return 'Current Plan';
-      if (import.meta.env.VITE_LAUNCH_MODE === 'true') return 'Activate Founding Trader Access';
-      return `Upgrade to ${planName}`;
+  const planRank = {
+    'FREE': 1,
+    'STARTER': 2,
+    'PRO': 3,
+    'MENTOR': 4,
+  };
+
+  const planKeyMap = {
+    'Free': 'FREE',
+    'Starter': 'STARTER',
+    'Pro': 'PRO',
+    'Mentor / Academy': 'MENTOR',
+  };
+
+  const userPlanKey = (user?.subscriptionPlan || 'FREE').toUpperCase();
+  const userRank = planRank[userPlanKey] || 1;
+
+  const getPlanStatus = (planName) => {
+    if (planName === 'Mentor / Academy') {
+      return { cta: 'Contact Support', to: '/contact', onClick: undefined, highlighted: false };
     }
-    return 'Start Free';
-  };
 
-  const getTo = (planName) => {
-    if (planName === 'Mentor / Academy') return '/contact';
-    if (!user) return '/register';
-    if (planName === 'Free') return '/dashboard';
-    return undefined;
-  };
+    if (!user) {
+      return {
+        cta: planName === 'Free' ? 'Start Free' : `Get ${planName}`,
+        to: '/register',
+        onClick: undefined,
+        highlighted: planName === 'Pro'
+      };
+    }
 
-  const getOnClick = (planName) => {
-    if (planName === 'Mentor / Academy' || planName === 'Free' || !user) return undefined;
-    return () => handleUpgrade(planName);
+    const targetKey = planKeyMap[planName] || 'FREE';
+    const targetRank = planRank[targetKey] || 1;
+
+    if (userRank === targetRank) {
+      return {
+        cta: 'Current Plan',
+        to: '/dashboard',
+        onClick: undefined,
+        highlighted: true
+      };
+    }
+
+    if (userRank > targetRank) {
+      return {
+        cta: 'Included in Your Plan',
+        to: '/dashboard',
+        onClick: undefined,
+        highlighted: false
+      };
+    }
+
+    return {
+      cta: `Upgrade to ${planName}`,
+      to: undefined,
+      onClick: () => handleUpgrade(planName),
+      highlighted: targetKey === 'PRO'
+    };
   };
 
   return (
@@ -208,19 +246,17 @@ const Pricing = () => {
           title="Simple plans for disciplined traders and trading teams."
           description="Build the habit free, build discipline with Starter, or find your edge with Pro."
           primaryCta={user ? { label: 'Go to Dashboard', to: '/dashboard' } : { label: 'Start Free Today', to: '/register' }}
-          heroImage="/heroes/hero-pricing.png"
-          heroAlt="Trading journal pricing plans"
         />
 
         {/* Founding Trader Launch Banner */}
         {import.meta.env.VITE_LAUNCH_MODE === 'true' && user?.subscriptions?.[0]?.source === 'PROMOTION' ? (
           <section className="px-4 py-8">
             <div className="mx-auto max-w-3xl rounded-3xl border border-amber-500/30 bg-amber-500/5 p-8 text-center relative overflow-hidden shadow-xl">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/15 text-amber-400 text-2xl">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/15 text-amber-500 dark:text-amber-400 text-2xl">
                 🏅
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-white">Founding Trader Active</h2>
-              <p className="mt-2 text-sm text-gray-300">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">Founding Trader Active</h2>
+              <p className="mt-2 text-sm text-muted">
                 You currently enjoy complimentary <strong>PRO access</strong> as part of our launch program.
               </p>
               <div className="mt-6 flex justify-center">
@@ -233,24 +269,28 @@ const Pricing = () => {
         {/* Pricing Cards Grid */}
         <section className="py-12">
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {plans.map((plan) => (
-              <PricingCard
-                key={plan.name}
-                {...plan}
-                cta={getCta(plan.name)}
-                onClick={getOnClick(plan.name)}
-                to={getTo(plan.name)}
-              />
-            ))}
+            {plans.map((plan) => {
+              const status = getPlanStatus(plan.name);
+              return (
+                <PricingCard
+                  key={plan.name}
+                  {...plan}
+                  highlighted={status.highlighted}
+                  cta={status.cta}
+                  onClick={status.onClick}
+                  to={status.to}
+                />
+              );
+            })}
           </div>
 
           {/* Promo Code Section */}
-          <div className="mt-8 max-w-2xl mx-auto rounded-2xl border border-gray-800 bg-gray-900/80 p-6 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-8 max-w-2xl mx-auto rounded-2xl border border-border bg-surface p-6 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                 🏷️ Have an official promo code?
               </h3>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-muted mt-1">
                 Enter your code to unlock complimentary tier access or discounts.
               </p>
             </div>
@@ -260,12 +300,12 @@ const Pricing = () => {
                 value={promoCode}
                 onChange={(e) => setPromoCode(e.target.value)}
                 placeholder="e.g. FOUNDING50"
-                className="bg-gray-950 border border-gray-700 px-3 py-2 rounded-xl text-xs font-mono font-bold text-sky-400 uppercase placeholder-gray-600 outline-none focus:border-sky-500 w-full sm:w-36"
+                className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-xs font-mono font-bold text-sky-500 dark:text-sky-400 uppercase placeholder:text-muted outline-none focus:border-sky-500 w-full sm:w-36 text-foreground"
               />
               <button
                 type="submit"
                 disabled={redeemingPromo || !promoCode.trim()}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-gray-950 font-black text-xs rounded-xl shadow-md disabled:opacity-50 transition-all shrink-0"
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-xl shadow-md disabled:opacity-50 transition-all shrink-0"
               >
                 {redeemingPromo ? 'Applying...' : 'Apply'}
               </button>
@@ -274,40 +314,40 @@ const Pricing = () => {
         </section>
 
         {/* Interactive Feature Comparison Table */}
-        <section className="py-12 border-t border-gray-800">
+        <section className="py-12 border-t border-border">
           <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-black text-white">Compare Plan Features</h2>
-            <p className="mt-2 text-sm text-gray-400">Detailed breakdown of features across all JAHZJOURNALS plans</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-foreground">Compare Plan Features</h2>
+            <p className="mt-2 text-sm text-muted">Detailed breakdown of features across all JAHZJOURNALS plans</p>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-gray-900/60 shadow-xl">
+          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-xl">
             <table className="w-full text-xs text-left">
-              <thead className="bg-gray-850 text-gray-200 uppercase tracking-wider border-b border-gray-800 font-bold">
+              <thead className="bg-surface-muted text-muted uppercase tracking-wider border-b border-border font-bold">
                 <tr>
-                  <th className="p-4 border-r border-gray-800">Feature</th>
-                  <th className="p-4 text-center border-r border-gray-800">Free</th>
-                  <th className="p-4 text-center border-r border-gray-800">Starter</th>
-                  <th className="p-4 text-center border-r border-gray-800 text-emerald-400 font-extrabold">Pro</th>
+                  <th className="p-4 border-r border-border">Feature</th>
+                  <th className="p-4 text-center border-r border-border">Free</th>
+                  <th className="p-4 text-center border-r border-border">Starter</th>
+                  <th className="p-4 text-center border-r border-border text-emerald-500 dark:text-emerald-400 font-extrabold">Pro</th>
                   <th className="p-4 text-center">Mentor</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800 text-gray-300">
+              <tbody className="divide-y divide-border text-muted">
                 {featureMatrix.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-gray-850/50 transition-colors">
-                    <td className="p-4 font-semibold text-gray-200 border-r border-gray-800">{row.feature}</td>
+                  <tr key={idx} className="hover:bg-surface-muted/50 transition-colors">
+                    <td className="p-4 font-semibold text-foreground border-r border-border">{row.feature}</td>
                     
                     {['free', 'starter', 'pro', 'mentor'].map((tierKey) => {
                       const val = row[tierKey];
                       return (
-                        <td key={tierKey} className="p-4 text-center border-r border-gray-800">
+                        <td key={tierKey} className="p-4 text-center border-r border-border">
                           {typeof val === 'boolean' ? (
                             val ? (
-                              <Check size={16} className="mx-auto text-emerald-400 font-bold" />
+                              <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
                             ) : (
-                              <Minus size={16} className="mx-auto text-gray-600" />
+                              <Minus size={16} className="mx-auto text-muted/40" />
                             )
                           ) : (
-                            <span className={`font-bold ${tierKey === 'pro' ? 'text-emerald-400' : 'text-gray-300'}`}>{val}</span>
+                            <span className={`font-bold ${tierKey === 'pro' ? 'text-emerald-500 dark:text-emerald-400' : 'text-foreground'}`}>{val}</span>
                           )}
                         </td>
                       );
@@ -320,9 +360,9 @@ const Pricing = () => {
         </section>
 
         {/* FAQs */}
-        <section className="py-12 border-t border-gray-800">
+        <section className="py-12 border-t border-border">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
+            <h2 className="text-2xl font-bold text-foreground">Frequently Asked Questions</h2>
           </div>
           <div className="mx-auto max-w-4xl space-y-4">
             {faqs.map(([question, answer]) => (

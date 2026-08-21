@@ -28,6 +28,7 @@ import MentorMockup from '../components/MentorMockup';
 import StatCard from '../components/StatCard';
 import TestimonialCard from '../components/TestimonialCard';
 import SEO from '../components/SEO';
+import { useAuth } from '../context/useAuth';
 
 const problems = [
   'Taking too many random trades',
@@ -166,6 +167,8 @@ const DisciplineFocusArea = ({ focusArea, onReviewViolations }) => (
 );
 
 const Home = () => {
+  const { user } = useAuth();
+
   const handleReviewViolations = () => {
     // Route to a dedicated violations review page when it exists.
   };
@@ -190,17 +193,24 @@ const Home = () => {
         <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.18),transparent_33%),linear-gradient(180deg,rgba(2,6,23,0.76),rgba(17,24,39,0.82)_70%,rgba(2,6,23,0.92))]" />
         <div className="relative z-20 mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="text-center lg:text-left">
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-300">Forex journal and analytics</p>
-            <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-6xl">
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-500 dark:text-emerald-300">Forex journal and analytics</p>
+            <h1 className="mt-5 text-4xl font-black tracking-tight text-foreground sm:text-6xl">
               Stop Guessing. Start Journaling Like a Disciplined Forex Trader.
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-gray-300 lg:mx-0">
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted lg:mx-0">
               Track every trade, screenshot, emotion, mistake, and setup, then discover what actually makes you profitable.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-              <Button to="/register" size="lg" className="w-full sm:w-auto">Start Journaling Free</Button>
-              <Button to="/features" variant="secondary" size="lg" className="w-full sm:w-auto">View Features</Button>
-            </div>
+            {user ? (
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                <Button to="/dashboard" size="lg" className="w-full sm:w-auto">Go to Dashboard</Button>
+                <Button to="/trades/new" variant="secondary" size="lg" className="w-full sm:w-auto">Log New Trade</Button>
+              </div>
+            ) : (
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                <Button to="/register" size="lg" className="w-full sm:w-auto">Start Journaling Free</Button>
+                <Button to="/features" variant="secondary" size="lg" className="w-full sm:w-auto">View Features</Button>
+              </div>
+            )}
             <p className="mt-5 text-sm text-gray-500">No signals. No hype. Built for structured review.</p>
           </div>
           <DashboardMockup />

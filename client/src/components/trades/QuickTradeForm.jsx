@@ -89,20 +89,22 @@ const QuickTradeForm = ({ initialData, accounts, strategies, isEditMode, tradeId
   };
 
   return (
-    <div className="bg-surface-muted p-6 sm:p-8 rounded-xl shadow-lg border border-border">
+    <div className="bg-surface p-6 sm:p-8 rounded-2xl shadow-sm border border-border">
       <form className="space-y-8">
         <TradeSetupSection register={register} control={control} accounts={accounts} status={status} />
         <TradePriceRiskSection register={register} status={status} setValue={setValue} watch={watch} />
         <CalculatedTradeSummary watch={watch} status={status} />
         <TradeQuickContextSection register={register} watch={watch} strategies={strategies} screenshotFiles={screenshotFiles} setScreenshotFiles={setScreenshotFiles} />
 
-        <div className="pt-4 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-border">
-          <button type="button" onClick={() => navigate(-1)} className="w-full sm:w-auto px-5 py-2.5 border border-border rounded-lg text-sm font-medium text-muted hover:bg-surface-muted transition">Go Back</button>
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-border">
+          <button type="button" onClick={() => navigate(-1)} className="w-full sm:w-auto px-5 py-2.5 border border-border bg-surface-muted hover:bg-surface-muted/80 rounded-xl text-xs font-bold text-foreground transition shadow-sm">
+            Go Back
+          </button>
           <button 
             type="button" 
             onClick={handleSubmit((data) => onSubmit(data, 'SAVE'))} 
             disabled={isSaving} 
-            className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 text-white dark:bg-gray-700 dark:text-foreground rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 dark:hover:bg-gray-600 transition disabled:opacity-70"
+            className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-xs font-bold shadow-sm transition disabled:opacity-70"
           >
             {isSaving ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Save Trade')}
           </button>
@@ -110,7 +112,7 @@ const QuickTradeForm = ({ initialData, accounts, strategies, isEditMode, tradeId
             type="button" 
             onClick={handleSubmit((data) => onSubmit(data, 'REVIEW'))} 
             disabled={isSaving} 
-            className="w-full sm:w-auto px-5 py-2.5 bg-green-500 text-gray-900 rounded-lg text-sm font-bold shadow-md hover:bg-green-400 transition disabled:opacity-70"
+            className="w-full sm:w-auto px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black shadow-sm transition disabled:opacity-70"
           >
             Save & Begin Review
           </button>

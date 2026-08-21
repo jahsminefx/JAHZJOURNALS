@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Maximize2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../../../utils/api';
+import api, { resolveImageUrl } from '../../../utils/api';
+import ImageModal from '../../common/ImageModal';
 
 const screenshotTypeOptions = [
   'HIGHER_TIMEFRAME_ANALYSIS', 'BEFORE_ENTRY', 'ENTRY', 
@@ -53,7 +54,18 @@ const ScreenshotManager = ({ existingScreenshots, setExistingScreenshots, screen
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {existingScreenshots.map((screenshot) => (
             <div key={screenshot.id} className="rounded-lg border border-border bg-surface p-3">
-              <img src={screenshot.imageUrl} alt={screenshot.note || screenshot.screenshotType} className="aspect-video w-full rounded-md object-cover border border-border" />
+              <div
+                className="group relative cursor-pointer overflow-hidden rounded-md border border-border"
+                onClick={() => setActiveModalImage(screenshot)}
+                title="Click to view full size"
+              >
+                <img src={resolveImageUrl(screenshot.imageUrl)} alt={screenshot.note || screenshot.screenshotType} className="aspect-video w-full rounded-md object-cover transition-transform group-hover:scale-105" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-surface/90 px-3 py-1 text-xs font-semibold text-foreground shadow-lg">
+                    <Maximize2 size={14} /> Expand
+                  </span>
+                </div>
+              </div>
               <div className="mt-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-muted">{screenshot.screenshotType.replace('_', ' ')}</p>
                 <button type="button" disabled={deletingScreenshotId === screenshot.id} onClick={() => deleteExistingScreenshot(screenshot.id)} className="text-xs text-red-400 hover:text-red-300 disabled:opacity-60">
@@ -89,6 +101,14 @@ const ScreenshotManager = ({ existingScreenshots, setExistingScreenshots, screen
           ))}
         </div>
       )}
+
+      <ImageModal
+        isOpen={!!activeModalImage}
+        onClose={() => setActiveModalImage(null)}
+        imageUrl={activeModalImage?.imageUrl}
+        title={activeModalImage?.screenshotType}
+        note={activeModalImage?.note}
+      />
     </section>
   );
 };

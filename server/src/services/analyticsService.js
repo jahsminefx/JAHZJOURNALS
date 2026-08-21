@@ -111,22 +111,54 @@ const calculateSummary = (trades = []) => {
   };
 };
 
-const calculateEquityCurve = (trades = [], startingBalance = null) => {
-  let cumulativeProfitLoss = 0;
-  return [...trades]
-    .sort((a, b) => getTradeTimestamp(a) - getTradeTimestamp(b))
-    .map((trade) => {
-      cumulativeProfitLoss += Number(trade.profitLossAmount || 0);
-      const timestamp = getTradeTimestamp(trade);
-      return {
-        tradeId: trade.id,
-        timestamp,
-        label: timestamp.toISOString(),
-        profitLoss: round(trade.profitLossAmount),
-        cumulativeProfitLoss: round(cumulativeProfitLoss),
-        equity: startingBalance === null ? round(cumulativeProfitLoss) : round(startingBalance + cumulativeProfitLoss),
-      };
+const calculateEquityCurve = (trades = [], accountsInput = null) => {
+  let totalDeposits = 0;
+  let totalWithdrawals = 0;
+
+  if (Array.isArray(accountsInput)) {
+    accountsInput.forEach((acc) => {
+      totalDeposits += Number(acc.startingBalance || 0);
+      totalWithdrawals += Number(acc.totalWithdrawals || 0);
     });
+  } else if (accountsInput !== null && typeof accountsInput === 'object') {
+    totalDeposits = Number(accountsInput.startingBalance || 0);
+    totalWithdrawals = Number(accountsInput.totalWithdrawals || 0);
+  } else if (typeof accountsInput === 'number') {
+    totalDeposits = accountsInput;
+  }
+
+  const netFunding = totalDeposits - totalWithdrawals;
+  let cumulativeProfitLoss = 0;
+  const sortedTrades = [...trades].sort((a, b) => getTradeTimestamp(a) - getTradeTimestamp(b));
+
+  const points = sortedTrades.map((trade) => {
+    const tradePnl = Number(trade.profitLossAmount || 0);
+    cumulativeProfitLoss += tradePnl;
+    const timestamp = getTradeTimestamp(trade);
+    const accountBalance = netFunding + cumulativeProfitLoss;
+
+    return {
+      tradeId: trade.id,
+      timestamp,
+      label: timestamp.toISOString(),
+      profitLoss: round(tradePnl),
+      cumulativeProfitLoss: round(cumulativeProfitLoss),
+      accountBalance: round(accountBalance),
+      equity: round(accountBalance),
+    };
+  });
+
+  const tradingPnl = round(cumulativeProfitLoss);
+  const currentAccountBalance = round(netFunding + cumulativeProfitLoss);
+
+  points.metrics = {
+    totalDeposits: round(totalDeposits),
+    totalWithdrawals: round(totalWithdrawals),
+    tradingPnl,
+    currentAccountBalance,
+  };
+
+  return points;
 };
 
 const calculateDrawdown = (equityCurve = [], startingBalance = null) => {

@@ -24,18 +24,18 @@ const PageHeader = ({
             '--hero-position-desktop': heroPosition.desktop || 'center top',
           }}
         />
-        <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.18),transparent_34%),linear-gradient(180deg,rgba(2,6,23,0.76),rgba(17,24,39,0.82)_68%,rgba(2,6,23,0.92))]" />
+        <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.18),transparent_34%)]" />
       </>
     ) : (
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.18),transparent_34%),linear-gradient(180deg,#020617,#111827_68%,#020617)]" />
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.14),transparent_40%)]" />
     )}
     <div className="relative z-20 mx-auto max-w-4xl text-center">
-      {eyebrow && <p className="text-xs font-bold uppercase tracking-[0.26em] text-emerald-300">{eyebrow}</p>}
-      <h1 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
+      {eyebrow && <p className="text-xs font-bold uppercase tracking-[0.26em] text-emerald-500 dark:text-emerald-300">{eyebrow}</p>}
+      <h1 className="mt-4 text-4xl font-black tracking-tight text-foreground sm:text-5xl lg:text-6xl">
         {title}
       </h1>
       {description && (
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-gray-300 sm:text-lg">
+        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-muted sm:text-lg">
           {description}
         </p>
       )}

@@ -17,11 +17,11 @@ const PricingCard = ({
 }) => (
   <div className={`relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 ${
     highlighted
-      ? 'border-emerald-400/60 bg-emerald-400/[0.08] shadow-[0_0_40px_rgba(52,211,153,0.15)] ring-1 ring-emerald-400/50'
-      : 'border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] shadow-sm dark:shadow-none'
+      ? 'border-emerald-400/60 bg-emerald-500/10 shadow-lg ring-1 ring-emerald-400/50'
+      : 'border-border bg-surface shadow-sm'
   }`}>
     {highlighted && (
-      <div className="absolute -top-3.5 right-6 rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-gray-950 shadow-md">
+      <div className="absolute -top-3.5 right-6 rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-slate-950 shadow-md">
         Recommended
       </div>
     )}
@@ -29,7 +29,7 @@ const PricingCard = ({
     <div className="space-y-1">
       <h3 className="text-xl font-black text-foreground tracking-tight">{name}</h3>
       {tagline && (
-        <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">{tagline}</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-emerald-500 dark:text-emerald-400">{tagline}</p>
       )}
     </div>
 
@@ -41,20 +41,20 @@ const PricingCard = ({
     </div>
 
     {limits && limits.length > 0 && (
-      <div className="mt-4 pt-4 border-t border-gray-800 space-y-1.5 text-xs text-gray-300 font-medium">
+      <div className="mt-4 pt-4 border-t border-border space-y-1.5 text-xs text-muted font-medium">
         {limits.map((limit, idx) => (
           <div key={idx} className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
             <span>{limit}</span>
           </div>
         ))}
       </div>
     )}
 
-    <ul className="mt-6 flex-1 space-y-3 pt-4 border-t border-gray-800/60">
+    <ul className="mt-6 flex-1 space-y-3 pt-4 border-t border-border">
       {features.map((feature) => (
         <li key={feature} className="flex gap-2.5 text-xs text-muted">
-          <Check size={16} className="mt-0.5 shrink-0 text-emerald-400" />
+          <Check size={16} className="mt-0.5 shrink-0 text-emerald-500 dark:text-emerald-400" />
           <span>{feature}</span>
         </li>
       ))}

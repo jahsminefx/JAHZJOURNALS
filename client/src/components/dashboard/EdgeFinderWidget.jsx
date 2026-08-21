@@ -69,7 +69,7 @@ const EdgeFinderWidget = () => {
           <button 
             onClick={generateReport}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-gray-700 text-white dark:text-foreground rounded-lg font-bold shadow-md hover:bg-slate-800 transition disabled:opacity-70"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-slate-950 rounded-lg font-bold shadow-md transition disabled:opacity-70"
           >
             {loading ? 'Initializing...' : <><Target size={16} /> Find My Edge</>}
           </button>

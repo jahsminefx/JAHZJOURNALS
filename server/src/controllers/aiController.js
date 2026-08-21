@@ -17,8 +17,9 @@ const checkAiLimit = async (userId, userOrPlan, featureType) => {
      }
   }
   if (featureType === 'SCREENSHOT_REVIEW') {
-     if (!userSettings || userSettings.allowScreenshotAnalysis === false) {
-       return { allowed: false, payload: { message: 'Screenshot analysis is disabled in your privacy settings. Please enable it to use this feature.' } };
+     const isAllowed = userSettings ? (userSettings.allowScreenshotAnalysis === true || userSettings.includeScreenshots === true) : true;
+     if (!isAllowed) {
+       return { allowed: false, payload: { message: 'Screenshot analysis is disabled in your privacy settings. Enable "Include screenshots" or "Allow screenshot analysis" in Settings to use this feature.' } };
      }
   }
 
@@ -265,6 +266,16 @@ const generateEdgeFinder = async (req, res) => {
       return res.status(403).json(limitCheck.payload);
     }
 
+    const closedTradeCount = await prisma.trade.count({
+      where: { tradingAccount: { userId: req.user.id }, status: 'CLOSED' }
+    });
+
+    if (closedTradeCount < 10) {
+      return res.status(400).json({ 
+        message: `Not enough trading data yet to identify a reliable edge. (You currently have ${closedTradeCount} closed trade${closedTradeCount === 1 ? '' : 's'}; 10 required).` 
+      });
+    }
+
     const existingReq = await prisma.aiRequest.findFirst({
       where: {
         userId: req.user.id,
@@ -274,7 +285,11 @@ const generateEdgeFinder = async (req, res) => {
     });
 
     if (existingReq) {
-      return res.status(400).json({ message: 'An edge analysis is already running.' });
+      return res.status(400).json({ 
+        message: 'An edge analysis is already processing.',
+        requestId: existingReq.id,
+        status: existingReq.status
+      });
     }
 
     const aiRequest = await prisma.aiRequest.create({
@@ -302,6 +317,48 @@ const generateEdgeFinder = async (req, res) => {
   } catch (error) {
     console.error('AI Edge Finder Error:', error);
     res.status(500).json({ message: 'Error queueing edge finder.' });
+  }
+};
+
+const getAiRequestStatus = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    let aiReq = await prisma.aiRequest.findUnique({
+      where: { id: requestId }
+    });
+
+    if (!aiReq || aiReq.userId !== req.user.id) {
+      return res.status(404).json({ message: 'AI Request not found' });
+    }
+
+    // Stalled Request Recovery: If queued/processing for over 3 minutes, fail safely
+    const isStalled = (aiReq.status === 'QUEUED' || aiReq.status === 'PROCESSING') &&
+      (Date.now() - new Date(aiReq.createdAt).getTime() > 180000);
+
+    if (isStalled) {
+      aiReq = await prisma.aiRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'FAILED',
+          errorMessage: 'Jahz AI request timed out. Please try again.',
+          completedAt: new Date()
+        }
+      });
+    }
+
+    return res.json({
+      id: aiReq.id,
+      status: aiReq.status,
+      featureType: aiReq.featureType,
+      structuredOutput: aiReq.structuredOutput,
+      errorMessage: aiReq.errorMessage,
+      createdAt: aiReq.createdAt,
+      completedAt: aiReq.completedAt
+    });
+  } catch (error) {
+    console.error('getAiRequestStatus Error:', error);
+    res.status(500).json({ message: 'Error checking AI request status' });
   }
 };
 
@@ -514,6 +571,25 @@ const getJournalDraft = async (req, res) => {
   }
 };
 
+const attachTradeDataToRequests = async (requests) => {
+  if (!requests || requests.length === 0) return [];
+  const tradeIds = [...new Set(requests.map(r => r.tradeId).filter(Boolean))];
+  if (tradeIds.length === 0) {
+    return requests.map(r => ({ ...r, trade: null }));
+  }
+
+  const trades = await prisma.trade.findMany({
+    where: { id: { in: tradeIds } },
+    select: { id: true, pair: true, direction: true, result: true }
+  });
+
+  const tradeMap = new Map(trades.map(t => [t.id, t]));
+  return requests.map(r => ({
+    ...r,
+    trade: r.tradeId ? tradeMap.get(r.tradeId) || null : null
+  }));
+};
+
 const getAiOverview = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -527,11 +603,12 @@ const getAiOverview = async (req, res) => {
     const nextMonth = new Date(startOfMonth);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-    const recentRequests = await prisma.aiRequest.findMany({
+    const rawRecentRequests = await prisma.aiRequest.findMany({
       where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
       take: 10
     });
+    const recentRequests = await attachTradeDataToRequests(rawRecentRequests);
 
     const processingCount = await prisma.aiRequest.count({
       where: { userId: req.user.id, status: { in: ['QUEUED', 'PROCESSING'] } }
@@ -560,7 +637,7 @@ const getAiOverview = async (req, res) => {
        resetDate: nextMonth.toISOString()
     });
   } catch (error) {
-    console.error(error);
+    console.error('AI Overview Error:', error);
     res.status(500).json({ message: 'Error retrieving AI Overview' });
   }
 };
@@ -592,6 +669,13 @@ const getAiUsage = async (req, res) => {
        totalCurrentMonth += row._count;
     }
     
+    const rawRequests = await prisma.aiRequest.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+    const requests = await attachTradeDataToRequests(rawRequests);
+
     const nextMonth = new Date(startOfMonth);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
 
@@ -600,9 +684,11 @@ const getAiUsage = async (req, res) => {
        limit,
        totalCurrentMonth,
        usageByFeature,
-       resetDate: nextMonth.toISOString()
+       resetDate: nextMonth.toISOString(),
+       requests
     });
   } catch (error) {
+    console.error('AI Usage Error:', error);
     res.status(500).json({ message: 'Error retrieving usage statistics' });
   }
 };
@@ -622,6 +708,7 @@ module.exports = {
   generateTradeInsight,
   generateWeeklyCoach,
   generateEdgeFinder,
+  getAiRequestStatus,
   generateTradingPlan,
   generateVisionInsight,
   getVisionInsight,

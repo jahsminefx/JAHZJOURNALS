@@ -34,11 +34,27 @@ const supportTools = [
 ];
 
 const sendMessage = async (req, res) => {
+  let aiReq = null;
   try {
     const { messages, chatMode = 'ANALYTICS' } = req.body;
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ message: 'Messages array is required.' });
     }
+
+    const featureType = chatMode === 'ANALYTICS' ? 'CHAT_SUPPORT' : 'SUPPORT_ASSISTANT';
+
+    // 1. Create AiRequest ledger entry
+    aiReq = await prisma.aiRequest.create({
+      data: {
+        userId: req.user.id,
+        featureType,
+        status: 'PROCESSING',
+        provider: process.env.AI_PROVIDER || 'openrouter',
+        model: process.env.OPENROUTER_TEXT_MODEL || 'openai/gpt-4o-mini',
+        promptVersion: '1.0',
+        startedAt: new Date()
+      }
+    }).catch(() => null);
 
     let systemMessage;
     let tools;
@@ -60,26 +76,29 @@ const sendMessage = async (req, res) => {
     const payloadMessages = [systemMessage, ...messages];
     const provider = getProvider();
 
-    // 1. Send the first Completion Request
-    const response1 = await provider.generateChatCompletion(payloadMessages, tools);
+    // Send Completion Request with 30s timeout
+    const completionPromise = provider.generateChatCompletion(payloadMessages, tools);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Jahz AI chat request timed out after 30 seconds.')), 30000)
+    );
+
+    const response1 = await Promise.race([completionPromise, timeoutPromise]);
     const message1 = response1.message;
     
+    let finalContent = '';
+    let totalUsage = response1.usage;
+
     // If it wants to call a tool
     if (message1.tool_calls && message1.tool_calls.length > 0) {
-       payloadMessages.push(message1); // Append assistant's tool call request
+       payloadMessages.push(message1);
 
-       // Loop over tool calls
        for (const toolCall of message1.tool_calls) {
           if (toolCall.function.name === 'getDashboardAnalytics') {
-             let args = {};
-             try { args = JSON.parse(toolCall.function.arguments); } catch(e) {}
-             
              const analyticsData = await buildDashboardAnalytics({ 
                  userId: req.user.id, 
                  query: {} 
              });
              
-             // Fetch user's recent trades so AI can locate specific trades/amounts
              const recentTrades = await prisma.trade.findMany({
                where: { tradingAccount: { userId: req.user.id } },
                orderBy: { exitTime: 'desc' },
@@ -131,19 +150,41 @@ const sendMessage = async (req, res) => {
           }
        }
 
-       // 2. Send the second Completion Request containing the tool result
        const response2 = await provider.generateChatCompletion(payloadMessages, []);
-       const finalContent = response2.message?.content || 'I evaluated your trading data based on your request.';
-       return res.json({ message: finalContent });
+       finalContent = response2.message?.content || 'I evaluated your trading data based on your request.';
+       if (response2.usage) totalUsage = response2.usage;
+    } else {
+       finalContent = message1?.content || 'I analyzed your query, but no response text was generated.';
     }
 
-    // Direct response without tools
-    const directContent = message1?.content || 'I analyzed your query, but no response text was generated.';
-    return res.json({ message: directContent });
+    if (aiReq) {
+      await prisma.aiRequest.update({
+        where: { id: aiReq.id },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          rawResponse: { content: finalContent },
+          inputTokens: totalUsage?.prompt_tokens,
+          outputTokens: totalUsage?.completion_tokens
+        }
+      }).catch(() => {});
+    }
+
+    return res.json({ message: finalContent });
 
   } catch (error) {
     console.error('Chat AI Error:', error);
-    res.status(500).json({ message: 'Failed to communicate with JAHZ AI.' });
+    if (aiReq) {
+      await prisma.aiRequest.update({
+        where: { id: aiReq.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: error.message || 'Failed to communicate with JAHZ AI.',
+          completedAt: new Date()
+        }
+      }).catch(() => {});
+    }
+    res.status(500).json({ message: error.message || 'Failed to communicate with JAHZ AI.' });
   }
 };
 

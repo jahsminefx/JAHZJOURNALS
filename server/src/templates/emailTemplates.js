@@ -200,26 +200,31 @@ ${baseFooter}
 /**
  * Password Reset Template
  */
-const passwordResetTemplate = ({ name, resetUrl }) => {
+const passwordResetTemplate = ({ name, resetUrl, otpCode }) => {
   const safeName = name ? name.trim() : 'Trader';
+  const displayCode = otpCode ? String(otpCode).trim() : '';
   const html = `
 ${baseHeader}
-  <span class="badge" style="background-color: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #f87171;">Security Notice</span>
-  <h1 class="h1">Reset your password</h1>
+  <span class="badge" style="background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #34d399;">Security Code</span>
+  <h1 class="h1">Reset Your Password</h1>
   <p class="p">Hello ${safeName},</p>
-  <p class="p">We received a request to reset the password for your JAHZJOURNALS account.</p>
+  <p class="p">We received a request to reset your JAHZJOURNALS password. Here is your 6-digit verification code:</p>
+  
+  <div style="background-color: #0f172a; border: 2px solid #1e293b; border-radius: 16px; padding: 24px; text-align: center; margin: 24px 0;">
+    <div style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #10b981;">
+      ${displayCode || '------'}
+    </div>
+    <p style="font-size: 12px; color: #64748b; margin-top: 10px; margin-bottom: 0; font-weight: 600;">Code expires in 10 minutes</p>
+  </div>
+
   <div class="btn-container">
-    <a href="${resetUrl}" target="_blank" class="btn" style="background-color: #ef4444; color: #ffffff;">Reset Password</a>
+    <a href="${resetUrl}" target="_blank" class="btn" style="background-color: #10b981; color: #064e3b;">Reset My Password</a>
   </div>
-  <p class="p" style="font-size: 13px;">This reset link expires in 1 hour. If you did not request a password reset, your account is safe and no action is required.</p>
-  <div class="fallback-box">
-    Or copy and paste this link into your browser:<br>
-    <a href="${resetUrl}" style="color: #38bdf8;">${resetUrl}</a>
-  </div>
+  <p class="p" style="font-size: 13px;">If you did not request a password reset, your account is safe and no action is required.</p>
 ${baseFooter}
   `;
 
-  const text = `Hello ${safeName},\n\nYou requested a password reset for your JAHZJOURNALS account.\n\nReset your password here:\n${resetUrl}\n\nThis link will expire in 1 hour. If you did not request this, please ignore this email.`;
+  const text = `Hello ${safeName},\n\nYou requested a password reset for your JAHZJOURNALS account.\n\nYour 6-Digit Password Reset Code is: ${displayCode}\n\nReset your password here:\n${resetUrl}\n\nThis code will expire in 10 minutes. If you did not request this, please ignore this email.`;
   return { html, text };
 };
 
