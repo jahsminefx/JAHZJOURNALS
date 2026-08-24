@@ -124,9 +124,100 @@ const checkAiLimit = async (userId, userOrPlan, featureType) => {
   return { allowed: true };
 };
 
+const cleanupStalledAiRequests = async (userId = null, maxAgeMs = 60000) => {
+  try {
+    const cutoffDate = new Date(Date.now() - maxAgeMs);
+    const whereClause = {
+      status: { in: ['QUEUED', 'PROCESSING'] },
+      createdAt: { lt: cutoffDate }
+    };
+
+    if (userId) {
+      whereClause.userId = userId;
+    }
+
+    const stalledRequests = await prisma.aiRequest.findMany({
+      where: whereClause,
+      select: { id: true, tradeId: true, weeklyReviewId: true, featureType: true }
+    });
+
+    if (stalledRequests.length > 0) {
+      const stalledIds = stalledRequests.map(r => r.id);
+      await prisma.aiRequest.updateMany({
+        where: { id: { in: stalledIds } },
+        data: {
+          status: 'FAILED',
+          errorMessage: 'Jahz AI generation timed out after 60 seconds. Please try again.',
+          completedAt: new Date()
+        }
+      });
+
+      for (const req of stalledRequests) {
+        if (req.tradeId) {
+          await prisma.aiTradeReview.updateMany({
+            where: { tradeId: req.tradeId, reviewStatus: 'PROCESSING' },
+            data: { reviewStatus: 'FAILED', errorMessage: 'AI request timed out.' }
+          }).catch(() => {});
+        }
+      }
+    }
+
+    return stalledRequests.length;
+  } catch (err) {
+    console.error('Error cleaning up stalled AI requests:', err);
+    return 0;
+  }
+};
+
+const cancelStalledAiRequests = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const stalledRequests = await prisma.aiRequest.findMany({
+      where: {
+        userId,
+        status: { in: ['QUEUED', 'PROCESSING'] }
+      },
+      select: { id: true, tradeId: true }
+    });
+
+    if (stalledRequests.length > 0) {
+      const stalledIds = stalledRequests.map(r => r.id);
+      await prisma.aiRequest.updateMany({
+        where: { id: { in: stalledIds } },
+        data: {
+          status: 'FAILED',
+          errorMessage: 'Generation cancelled by user.',
+          completedAt: new Date()
+        }
+      });
+
+      for (const r of stalledRequests) {
+        if (r.tradeId) {
+          await prisma.aiTradeReview.updateMany({
+            where: { tradeId: r.tradeId, reviewStatus: 'PROCESSING' },
+            data: { reviewStatus: 'FAILED', errorMessage: 'Generation cancelled by user.' }
+          }).catch(() => {});
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Cleared ${stalledRequests.length} stuck AI generation(s).`,
+      cancelledCount: stalledRequests.length
+    });
+  } catch (error) {
+    console.error('Cancel Stalled AI Requests Error:', error);
+    res.status(500).json({ message: 'Failed to cancel stuck AI generations.' });
+  }
+};
+
 const generateTradeInsight = async (req, res) => {
   try {
     const { tradeId } = req.params;
+
+    // Clean up any old stalled requests for user before checking existing
+    await cleanupStalledAiRequests(req.user.id, 60000);
 
     const trade = await prisma.trade.findUnique({
       where: { id: tradeId },
@@ -200,6 +291,8 @@ const generateWeeklyCoach = async (req, res) => {
   try {
     const { reviewId } = req.params;
 
+    await cleanupStalledAiRequests(req.user.id, 60000);
+
     const review = await prisma.weeklyReview.findUnique({
       where: { id: reviewId },
       include: {
@@ -261,6 +354,8 @@ const generateWeeklyCoach = async (req, res) => {
 
 const generateEdgeFinder = async (req, res) => {
   try {
+    await cleanupStalledAiRequests(req.user.id, 60000);
+
     const limitCheck = await checkAiLimit(req.user.id, req.user, 'EDGE_FINDER');
     if (!limitCheck.allowed) {
       return res.status(403).json(limitCheck.payload);
@@ -332,19 +427,25 @@ const getAiRequestStatus = async (req, res) => {
       return res.status(404).json({ message: 'AI Request not found' });
     }
 
-    // Stalled Request Recovery: If queued/processing for over 3 minutes, fail safely
+    // Stalled Request Recovery: If queued/processing for over 60 seconds, fail safely
     const isStalled = (aiReq.status === 'QUEUED' || aiReq.status === 'PROCESSING') &&
-      (Date.now() - new Date(aiReq.createdAt).getTime() > 180000);
+      (Date.now() - new Date(aiReq.createdAt).getTime() > 60000);
 
     if (isStalled) {
       aiReq = await prisma.aiRequest.update({
         where: { id: requestId },
         data: {
           status: 'FAILED',
-          errorMessage: 'Jahz AI request timed out. Please try again.',
+          errorMessage: 'Jahz AI request timed out after 60 seconds. Please try again.',
           completedAt: new Date()
         }
       });
+      if (aiReq.tradeId) {
+        await prisma.aiTradeReview.updateMany({
+          where: { tradeId: aiReq.tradeId, reviewStatus: 'PROCESSING' },
+          data: { reviewStatus: 'FAILED', errorMessage: 'Jahz AI request timed out.' }
+        }).catch(() => {});
+      }
     }
 
     return res.json({
@@ -366,6 +467,8 @@ const generateTradingPlan = async (req, res) => {
   try {
     const { strategy, pairs, risk, goals } = req.body;
     
+    await cleanupStalledAiRequests(req.user.id, 60000);
+
     const limitCheck = await checkAiLimit(req.user.id, req.user, 'TRADING_PLAN');
     if (!limitCheck.allowed) {
       return res.status(403).json(limitCheck.payload);
@@ -410,6 +513,8 @@ const generateVisionInsight = async (req, res) => {
     if (!screenshotId) {
        return res.status(400).json({ message: 'Screenshot ID is required.' });
     }
+
+    await cleanupStalledAiRequests(req.user.id, 60000);
 
     const screenshot = await prisma.tradeScreenshot.findUnique({
       where: { id: screenshotId },
@@ -527,6 +632,8 @@ const generateJournalDraft = async (req, res) => {
   try {
     const { draftType, tradeData } = req.body;
     
+    await cleanupStalledAiRequests(req.user.id, 60000);
+
     // Check consent limit
     const limitCheck = await checkAiLimit(req.user.id, req.user, 'JOURNAL_ASSISTANT');
     if (!limitCheck.allowed) return res.status(403).json(limitCheck.payload);
@@ -592,6 +699,9 @@ const attachTradeDataToRequests = async (requests) => {
 
 const getAiOverview = async (req, res) => {
   try {
+    // Auto-clean any stalled AI requests for user before counting processing
+    await cleanupStalledAiRequests(req.user.id, 60000);
+
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       include: { userSettings: true }
@@ -644,6 +754,8 @@ const getAiOverview = async (req, res) => {
 
 const getAiUsage = async (req, res) => {
   try {
+    await cleanupStalledAiRequests(req.user.id, 60000);
+
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -705,6 +817,8 @@ const clearAiHistory = async (req, res) => {
 };
 
 module.exports = {
+  cleanupStalledAiRequests,
+  cancelStalledAiRequests,
   generateTradeInsight,
   generateWeeklyCoach,
   generateEdgeFinder,

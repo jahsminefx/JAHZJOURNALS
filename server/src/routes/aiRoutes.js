@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const { 
+  cleanupStalledAiRequests,
+  cancelStalledAiRequests,
   generateTradeInsight, 
   generateWeeklyCoach, 
   generateEdgeFinder, 
@@ -20,6 +22,7 @@ const { sendMessage } = require('../controllers/chatController');
 const { aiFeaturesLimiter } = require('../middleware/rateLimitMiddleware');
 
 router.get('/overview', protect, getAiOverview);
+router.post('/cancel-stalled', protect, cancelStalledAiRequests);
 router.get('/requests/:requestId', protect, getAiRequestStatus);
 
 router.post('/trade-insight/:tradeId', protect, aiFeaturesLimiter, generateTradeInsight);
