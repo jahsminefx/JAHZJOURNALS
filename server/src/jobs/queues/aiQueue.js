@@ -57,11 +57,12 @@ const triggerSyncFallback = async (jobName, jobData) => {
 };
 
 const enqueueAiJob = async (jobName, jobData) => {
-  if (aiQueue) {
+  // Use Redis BullMQ queue ONLY if USE_BULLMQ_WORKER=true is explicitly configured for a separate worker container.
+  // Otherwise, run in-process background execution so single-container deployments (e.g. Dokku web process) generate AI responses immediately!
+  if (aiQueue && process.env.USE_BULLMQ_WORKER === 'true') {
     return await aiQueue.add(jobName, jobData);
   } else {
-    // If no Redis, process synchronously in the background (fire and forget for this HTTP request)
-    triggerSyncFallback(jobName, jobData).catch(err => console.error("Sync fallback error", err));
+    triggerSyncFallback(jobName, jobData).catch(err => console.error("[AI Queue] Background execution error:", err));
     return { id: `sync-${Date.now()}` };
   }
 };

@@ -5,6 +5,7 @@ const { processWeeklyCoach } = require('../processors/processWeeklyCoach');
 const { processEdgeFinder } = require('../processors/processEdgeFinder');
 const { processVisionAnalysis } = require('../processors/processVisionAnalysis');
 const { processJournalDraft } = require('../processors/processJournalDraft');
+const { processTradingPlan } = require('../processors/processTradingPlan');
 
 const processJob = async (job) => {
   const { name, data } = job;
@@ -16,14 +17,15 @@ const processJob = async (job) => {
     case 'processEdgeFinder':
       return await processEdgeFinder(data);
     case 'processVisionAnalysis':
-        console.log(`Processing Vision Analysis for requestId: ${job.data.aiRequestId}`);
-        await processVisionAnalysis(job.data);
-        break;
-      case 'processJournalDraft':
-        console.log(`Processing Journal Draft for requestId: ${job.data.aiRequestId}`);
-        await processJournalDraft(job.data);
-        break;
-      default:
+      console.log(`Processing Vision Analysis for requestId: ${job.data.aiRequestId}`);
+      return await processVisionAnalysis(job.data);
+    case 'processJournalDraft':
+      console.log(`Processing Journal Draft for requestId: ${job.data.aiRequestId}`);
+      return await processJournalDraft(job.data);
+    case 'processTradingPlan':
+      console.log(`Processing Trading Plan for requestId: ${job.data.aiRequestId}`);
+      return await processTradingPlan(job.data);
+    default:
       console.warn(`[AI Worker] Unknown job name: ${name}`);
       return null;
   }
