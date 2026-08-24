@@ -39,11 +39,20 @@ const ContactMessagesTab = () => {
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
   const [staffUsers, setStaffUsers] = useState([]);
+  const [availableTemplates, setAvailableTemplates] = useState([]);
   const chatBottomRef = useRef(null);
 
   useEffect(() => {
     fetchStaffUsers();
+    fetchTemplates();
   }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await api.get('/admin/communications/templates');
+      setAvailableTemplates(res.data || []);
+    } catch (_) {}
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -577,32 +586,54 @@ const ContactMessagesTab = () => {
               {/* Dual-Mode Reply Component */}
               <form onSubmit={handleSendReply} className="p-4 bg-gray-800/90 border-t border-gray-700/80 space-y-3">
                 {/* Reply Mode Toggle Tabs */}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsInternalNote(false)}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                      !isInternalNote
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-gray-900 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    <MessageSquare size={13} />
-                    Reply to Customer
-                  </button>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsInternalNote(false)}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        !isInternalNote
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-gray-900 text-gray-400 hover:text-gray-200'
+                      }`}
+                    >
+                      <MessageSquare size={13} />
+                      Reply to Customer
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsInternalNote(true)}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                      isInternalNote
-                        ? 'bg-amber-600 text-white shadow-sm'
-                        : 'bg-gray-900 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    <Lock size={13} />
-                    Internal Staff Note (Staff Only)
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsInternalNote(true)}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        isInternalNote
+                          ? 'bg-amber-600 text-white shadow-sm'
+                          : 'bg-gray-900 text-gray-400 hover:text-gray-200'
+                      }`}
+                    >
+                      <Lock size={13} />
+                      Internal Staff Note (Staff Only)
+                    </button>
+                  </div>
+
+                  {availableTemplates.length > 0 && (
+                    <select
+                      onChange={(e) => {
+                        const tmpl = availableTemplates.find(t => t.id === e.target.value);
+                        if (tmpl) {
+                          const text = tmpl.content.replace(/\{\{user\.name\}\}/g, selectedThread?.name || 'Trader').replace(/\{\{user\.email\}\}/g, selectedThread?.email || '');
+                          setReplyText((prev) => prev ? `${prev}\n\n${text}` : text);
+                        }
+                        e.target.value = '';
+                      }}
+                      defaultValue=""
+                      className="bg-gray-900 border border-gray-700 text-gray-300 text-[11px] font-semibold rounded-lg px-2.5 py-1 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="" disabled>Insert Quick Template...</option>
+                      {availableTemplates.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="relative">

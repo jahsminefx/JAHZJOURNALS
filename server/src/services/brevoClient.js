@@ -55,7 +55,7 @@ const sendBrevoEmail = async ({ to, subject, html, text, replyTo, templateId, pa
 
   const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@jahzjournal.com';
   const senderName = process.env.BREVO_SENDER_NAME || 'JAHZJOURNALS';
-  const replyToEmail = replyTo || process.env.BREVO_REPLY_TO_EMAIL || 'support@jahzjournal.com';
+  const replyToEmail = replyTo || process.env.BREVO_REPLY_TO_EMAIL || process.env.ADMIN_EMAIL || null;
 
   const maxRetries = 2;
   let attempt = 0;
@@ -73,8 +73,11 @@ const sendBrevoEmail = async ({ to, subject, html, text, replyTo, templateId, pa
           sender: { email: senderEmail, name: senderName },
           to: [{ email: to }],
           subject,
-          replyTo: { email: replyToEmail },
         };
+
+        if (replyToEmail && replyToEmail.trim() !== '') {
+          emailData.replyTo = { email: replyToEmail.trim() };
+        }
 
         if (templateId) {
           emailData.templateId = templateId;
@@ -95,7 +98,10 @@ const sendBrevoEmail = async ({ to, subject, html, text, replyTo, templateId, pa
         sendSmtpEmail.sender = { email: senderEmail, name: senderName };
         sendSmtpEmail.to = [{ email: to }];
         sendSmtpEmail.subject = subject;
-        sendSmtpEmail.replyTo = { email: replyToEmail };
+
+        if (replyToEmail && replyToEmail.trim() !== '') {
+          sendSmtpEmail.replyTo = { email: replyToEmail.trim() };
+        }
 
         if (templateId) {
           sendSmtpEmail.templateId = templateId;
@@ -119,6 +125,63 @@ const sendBrevoEmail = async ({ to, subject, html, text, replyTo, templateId, pa
       };
     } catch (err) {
       lastError = err;
+      
+      // Native HTTPS REST API fallback
+      try {
+        const https = require('https');
+        const emailPayload = {
+          sender: { email: senderEmail, name: senderName },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html || `<p>${text}</p>`,
+          textContent: text || ''
+        };
+        if (replyToEmail && replyToEmail.trim() !== '') {
+          emailPayload.replyTo = { email: replyToEmail.trim() };
+        }
+
+        const restResult = await new Promise((resolve, reject) => {
+          const payloadStr = JSON.stringify(emailPayload);
+          const req = https.request('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+              'accept': 'application/json',
+              'api-key': apiKey,
+              'content-type': 'application/json',
+              'content-length': Buffer.byteLength(payloadStr)
+            }
+          }, (res) => {
+            let responseBody = '';
+            res.on('data', chunk => responseBody += chunk);
+            res.on('end', () => {
+              try {
+                const parsed = JSON.parse(responseBody);
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                  resolve({ messageId: parsed.messageId || 'sent' });
+                } else {
+                  reject(new Error(parsed.message || `Status ${res.statusCode}`));
+                }
+              } catch (e) {
+                reject(new Error('Invalid JSON response from Brevo REST API'));
+              }
+            });
+          });
+          req.on('error', reject);
+          req.write(payloadStr);
+          req.end();
+        });
+
+        console.log(`[Brevo Success REST] Type: "${subject}" | Recipient: ${hashRecipient(to)} | MessageID: ${restResult.messageId}`);
+        return {
+          success: true,
+          provider: 'brevo',
+          messageId: restResult.messageId,
+          errorCode: null,
+        };
+      } catch (restErr) {
+        console.error(`[Brevo REST Fallback Error]:`, restErr.message);
+      }
+
       const status = err.status || err.response?.status;
       
       // Do not retry 400 bad requests or invalid recipients

@@ -193,11 +193,11 @@ const Home = () => {
         <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.18),transparent_33%),linear-gradient(180deg,rgba(2,6,23,0.76),rgba(17,24,39,0.82)_70%,rgba(2,6,23,0.92))]" />
         <div className="relative z-20 mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="text-center lg:text-left">
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-500 dark:text-emerald-300">Forex journal and analytics</p>
-            <h1 className="mt-5 text-4xl font-black tracking-tight text-foreground sm:text-6xl">
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-400">Forex journal and analytics</p>
+            <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-6xl drop-shadow-sm">
               Stop Guessing. Start Journaling Like a Disciplined Forex Trader.
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted lg:mx-0">
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:mx-0 font-medium">
               Track every trade, screenshot, emotion, mistake, and setup, then discover what actually makes you profitable.
             </p>
             {user ? (
@@ -211,7 +211,7 @@ const Home = () => {
                 <Button to="/features" variant="secondary" size="lg" className="w-full sm:w-auto">View Features</Button>
               </div>
             )}
-            <p className="mt-5 text-sm text-gray-500">No signals. No hype. Built for structured review.</p>
+            <p className="mt-5 text-sm font-medium text-slate-300">No signals. No hype. Built for structured review.</p>
           </div>
           <DashboardMockup />
         </div>
@@ -226,9 +226,9 @@ const Home = () => {
           />
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {problems.map((problem) => (
-              <div key={problem} className="flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.06] p-4 dark:border-red-400/15 dark:bg-red-400/[0.04]">
-                <AlertTriangle size={20} className="shrink-0" style={{ color: 'var(--problem-icon, #ef4444)' }} />
-                <span className="text-sm font-medium" style={{ color: 'var(--problem-text, #334155)' }}>{problem}</span>
+              <div key={problem} className="flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 dark:border-red-400/20 dark:bg-red-400/[0.06]">
+                <AlertTriangle size={20} className="shrink-0 text-rose-500 dark:text-rose-400" />
+                <span className="text-sm font-semibold text-foreground">{problem}</span>
               </div>
             ))}
           </div>
@@ -246,8 +246,8 @@ const Home = () => {
             />
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {['Log trades', 'Upload chart screenshots', 'Track rules', 'Track emotions', 'Analyze performance', 'Prepare smart reviews'].map((item) => (
-                <div key={item} className="flex items-center gap-3 text-sm text-muted">
-                  <CheckCircle2 size={18} className="text-emerald-300" />
+                <div key={item} className="flex items-center gap-3 text-sm font-semibold text-foreground">
+                  <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                   {item}
                 </div>
               ))}

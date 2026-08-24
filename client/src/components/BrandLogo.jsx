@@ -33,8 +33,9 @@ const BrandLogo = ({ to = '/', size = 'sm', showText = true, className = '' }) =
         />
       </span>
       {showText && (
-        <span className={`${selected.text} font-black tracking-wide text-foreground`}>
-          JAHZJOURNALS
+        <span className={`${selected.text} font-black tracking-wide inline-flex items-center`}>
+          <span className="text-rose-600 dark:text-rose-400">JAHZ</span>
+          <span className="text-emerald-600 dark:text-emerald-400">JOURNALS</span>
         </span>
       )}
     </>

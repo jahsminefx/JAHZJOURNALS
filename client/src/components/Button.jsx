@@ -2,9 +2,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const variants = {
-  primary: 'bg-emerald-400 text-slate-950 font-bold hover:bg-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.22)]',
+  primary: 'bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 shadow-md shadow-emerald-500/20',
   secondary: 'border border-border bg-surface text-foreground hover:bg-surface-muted',
-  ghost: 'text-muted hover:text-foreground hover:bg-surface-muted',
+  ghost: 'text-slate-900 dark:text-slate-100 font-bold hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-surface-muted',
 };
 
 const sizes = {

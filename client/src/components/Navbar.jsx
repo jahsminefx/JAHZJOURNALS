@@ -23,10 +23,10 @@ const Navbar = () => {
   if (user) return null;
 
   const linkClass = ({ isActive }) =>
-    `text-sm font-medium transition-colors ${isActive ? 'text-emerald-500 dark:text-emerald-300' : 'text-muted hover:text-foreground dark:hover:text-foreground'}`;
+    `text-sm font-bold transition-colors ${isActive ? 'text-emerald-600 dark:text-emerald-400 font-extrabold underline underline-offset-4 decoration-emerald-500' : 'text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400'}`;
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-border dark:border-border bg-background/80 backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-surface/95 dark:bg-slate-950/95 shadow-sm backdrop-blur-xl">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <BrandLogo />
 
@@ -54,7 +54,7 @@ const Navbar = () => {
       </nav>
 
       {open && (
-        <div className="border-t border-border dark:border-border bg-background px-4 py-4 lg:hidden">
+        <div className="border-t border-border bg-surface dark:bg-slate-950 px-4 py-4 lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-3">
             {links.map((link) => (
               <NavLink
@@ -62,7 +62,7 @@ const Navbar = () => {
                 to={link.to}
                 onClick={() => setOpen(false)}
                 className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? 'bg-emerald-500/10 text-emerald-500 dark:bg-emerald-400/10 dark:text-emerald-300' : 'text-muted hover:bg-surface-muted dark:hover:bg-surface-muted'}`
+                  `rounded-lg px-3 py-2 text-sm font-bold ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold' : 'text-slate-900 dark:text-slate-100 hover:bg-surface-muted'}`
                 }
               >
                 {link.label}

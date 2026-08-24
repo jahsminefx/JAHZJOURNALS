@@ -195,6 +195,7 @@ function App() {
                 <Route path="platform/:tab?" element={<PlatformSettingsHub />} />
                 <Route path="infrastructure" element={<InfrastructureHub />} />
                 <Route path="business/:tab?" element={<BusinessIntelligenceHub />} />
+                <Route path="analytics" element={<BusinessIntelligenceHub />} />
                 <Route path="communications/:tab?" element={<CommunicationsHub />} />
               </Route>
             </Route>

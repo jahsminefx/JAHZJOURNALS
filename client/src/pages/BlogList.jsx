@@ -82,51 +82,51 @@ const BlogList = () => {
           {filteredPosts.map(post => (
             <article 
               key={post.id}
-              className="bg-gray-850 border border-gray-750 rounded-2xl overflow-hidden hover:border-emerald-500/40 transition-all group flex flex-col shadow-lg shadow-black/20"
+              className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-emerald-500/40 transition-all group flex flex-col shadow-sm dark:shadow-black/20"
             >
-              <div className="aspect-video bg-gray-900 relative overflow-hidden">
+              <div className="aspect-video bg-surface-muted relative overflow-hidden">
                 <img 
                   src={post.coverImage} 
                   alt={post.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-[0.9]"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-emerald-400 px-2.5 py-1 rounded-full text-[10px] font-bold border border-emerald-500/30">
+                <span className="absolute top-3 left-3 bg-surface/90 dark:bg-black/60 backdrop-blur-md text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-full text-[10px] font-bold border border-emerald-500/30 shadow-sm">
                   {post.category}
                 </span>
               </div>
 
               <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3 text-[11px] text-gray-400 font-medium">
+                  <div className="flex items-center gap-3 text-[11px] text-muted font-medium">
                     <span className="flex items-center gap-1"><Calendar size={13}/> {post.publishedAt}</span>
                     <span>•</span>
                     <span className="flex items-center gap-1"><Clock size={13}/> {post.readTime}</span>
                   </div>
 
-                  <h2 className="text-lg font-bold text-gray-100 group-hover:text-emerald-400 transition-colors line-clamp-2">
+                  <h2 className="text-lg font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
                     <Link to={`/blog/${post.slug}`}>
                       {post.title}
                     </Link>
                   </h2>
 
-                  <p className="text-xs text-gray-400 leading-relaxed line-clamp-3">
+                  <p className="text-xs text-muted leading-relaxed line-clamp-3">
                     {post.summary}
                   </p>
                 </div>
 
-                <div className="pt-4 border-t border-gray-750 flex items-center justify-between">
+                <div className="pt-4 border-t border-border flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <img 
                       src={post.author.avatar} 
                       alt={post.author.name}
                       className="w-6 h-6 rounded-full border border-emerald-500/30"
                     />
-                    <span className="text-[11px] font-semibold text-gray-300">{post.author.name}</span>
+                    <span className="text-[11px] font-semibold text-foreground">{post.author.name}</span>
                   </div>
 
                   <Link 
                     to={`/blog/${post.slug}`}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
                   >
                     Read <ArrowRight size={13} />
                   </Link>

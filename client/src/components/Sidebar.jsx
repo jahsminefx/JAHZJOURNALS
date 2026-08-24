@@ -234,7 +234,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
         {/* Version & App Branding at Bottom */}
         {!isCollapsed && (
           <div className="pt-1 px-1 text-[10px] text-muted-foreground flex justify-between items-center opacity-75 font-semibold">
-            <span>JAHZJOURNALS</span>
+            <span><span className="text-rose-500">JAHZ</span><span className="text-emerald-500">JOURNALS</span></span>
             <span>v1.3.0</span>
           </div>
         )}

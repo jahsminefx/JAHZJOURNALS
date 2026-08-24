@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, TrendingUp, TrendingDown, ExternalLink, Sparkles, CheckCircle2, XCircle, AlertTriangle, Brain, Target, ShieldCheck } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, ExternalLink, Sparkles, CheckCircle2, XCircle, AlertTriangle, Brain, Target, ShieldCheck, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { useAuth } from '../context/useAuth';
+import { generateWeeklyPdfReport } from '../utils/pdfReportService';
 
 const getMondayDate = () => {
   const date = new Date();
@@ -35,6 +37,40 @@ const WeeklyReview = () => {
   const [saving, setSaving] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiInsight, setAiInsight] = useState(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const { user } = useAuth();
+
+  const handleExportPdf = async () => {
+    if (!selectedReview) {
+      toast.error('Please select or generate a weekly review first.');
+      return;
+    }
+
+    const plan = user?.subscriptionPlan || 'FREE';
+    const role = user?.role;
+    const isAllowed = ['PRO', 'MENTOR'].includes(plan) || ['SUPER_ADMIN', 'ADMIN', 'MENTOR'].includes(role);
+
+    if (!isAllowed) {
+      toast.error('PDF Report Export is exclusive to PRO & MENTOR plans. Please upgrade your account.');
+      return;
+    }
+
+    try {
+      setExportingPdf(true);
+      toast.loading('Generating Weekly PDF Report...', { id: 'pdf-gen' });
+      await generateWeeklyPdfReport({
+        user,
+        weeklyData: selectedReview,
+        aiCoaching: aiInsight
+      });
+      toast.success('Weekly PDF report exported successfully!', { id: 'pdf-gen' });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate weekly PDF report.', { id: 'pdf-gen' });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   const fetchReviews = async () => {
     const params = new URLSearchParams();
@@ -178,9 +214,20 @@ const WeeklyReview = () => {
 
       {/* Page Header & Build Form Panel */}
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">Weekly Reflection</h1>
-          <p className="mt-1 text-xs sm:text-sm text-muted">Gather the week's data, find the lessons disguised as losses, and plan your next week.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">Weekly Reflection</h1>
+            <p className="mt-1 text-xs sm:text-sm text-muted">Gather the week's data, find the lessons disguised as losses, and plan your next week.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={exportingPdf || !selectedReview}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-500 hover:bg-emerald-500/20 transition disabled:opacity-50 self-start sm:self-auto"
+          >
+            <Download size={14} />
+            <span>{exportingPdf ? 'Generating PDF...' : 'Export PDF Weekly Report'}</span>
+          </button>
         </div>
 
         <form onSubmit={generateReview} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] pt-4 border-t border-border items-end">

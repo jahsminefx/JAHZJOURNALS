@@ -168,6 +168,30 @@ router.get('/business/executive', authorize('SUPER_ADMIN', 'ADMIN'), getExecutiv
 router.get('/business/trading', authorize('SUPER_ADMIN', 'ADMIN'), getTradingIntelligence);
 router.get('/business/ai', authorize('SUPER_ADMIN', 'ADMIN'), getAiIntelligence);
 
+const {
+  getCampaigns,
+  createCampaign,
+  sendCampaign,
+  deleteCampaign
+} = require('../controllers/communications/adminEmailCampaignController');
+
+const {
+  getTemplates,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate
+} = require('../controllers/communications/adminTemplateController');
+
+const {
+  getAnalytics
+} = require('../controllers/communications/adminCommunicationsAnalyticsController');
+
+const {
+  getSettings,
+  updateSettings,
+  testBrevoConnection
+} = require('../controllers/communications/adminCommunicationSettingsController');
+
 // Communications Hub
 // Contacts
 router.get('/communications/contact', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), getContactMessages);
@@ -178,6 +202,26 @@ router.patch('/communications/contact/:id/priority', authorize('SUPER_ADMIN', 'A
 router.patch('/communications/contact/:id/category', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), updateMessageCategory);
 router.patch('/communications/contact/:id/assign', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), assignMessage);
 router.post('/communications/contact/bulk', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), bulkAction);
+
+// Email Campaigns
+router.get('/communications/emails', authorize('SUPER_ADMIN', 'ADMIN'), getCampaigns);
+router.post('/communications/emails', authorize('SUPER_ADMIN', 'ADMIN'), createCampaign);
+router.post('/communications/emails/:id/send', authorize('SUPER_ADMIN'), sendCampaign);
+router.delete('/communications/emails/:id', authorize('SUPER_ADMIN'), deleteCampaign);
+
+// Message Templates
+router.get('/communications/templates', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), getTemplates);
+router.post('/communications/templates', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), createTemplate);
+router.put('/communications/templates/:id', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), updateTemplate);
+router.delete('/communications/templates/:id', authorize('SUPER_ADMIN', 'ADMIN'), deleteTemplate);
+
+// Communications Analytics
+router.get('/communications/analytics', authorize('SUPER_ADMIN', 'ADMIN'), getAnalytics);
+
+// Communications Settings
+router.get('/communications/settings', authorize('SUPER_ADMIN', 'ADMIN'), getSettings);
+router.put('/communications/settings', authorize('SUPER_ADMIN'), updateSettings);
+router.post('/communications/settings/test-brevo', authorize('SUPER_ADMIN', 'ADMIN'), testBrevoConnection);
 
 // Announcements
 router.get('/communications/announcements', authorize('SUPER_ADMIN', 'ADMIN'), getAllAnnouncements);

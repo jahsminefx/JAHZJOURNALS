@@ -2,9 +2,9 @@ import React from 'react';
 
 const StatCard = ({ label, value, tone = 'emerald' }) => {
   const tones = {
-    emerald: 'text-emerald-600 dark:text-emerald-300',
-    cyan: 'text-cyan-600 dark:text-cyan-300',
-    red: 'text-red-600 dark:text-red-300',
+    emerald: 'text-emerald-700 dark:text-emerald-300',
+    cyan: 'text-cyan-700 dark:text-cyan-300',
+    red: 'text-rose-700 dark:text-red-300',
     white: 'text-foreground',
   };
 

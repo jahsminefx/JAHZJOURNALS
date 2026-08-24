@@ -137,7 +137,7 @@ const baseFooter = `
       <div class="footer">
         <p style="margin: 0 0 8px 0;">&copy; ${new Date().getFullYear()} JAHZJOURNALS. All rights reserved.</p>
         <p style="margin: 0 0 8px 0;">The institutional trading journal & analytics workspace for disciplined traders.</p>
-        <p style="margin: 0;">Questions? Contact <a href="mailto:support@jahzjournal.com">support@jahzjournal.com</a></p>
+        <p style="margin: 0;">For support, visit the <a href="https://jahzjournal.com/contact" style="color: #38bdf8; text-decoration: underline;">JAHZJOURNALS Support Center</a> from your account.</p>
       </div>
     </div>
   </div>

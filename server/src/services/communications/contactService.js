@@ -243,7 +243,7 @@ const contactService = {
             category: 'INFO',
             title: `Reply to: ${contact.subject}`,
             message: message.length > 150 ? message.substring(0, 150) + '...' : message,
-            actionUrl: '/notifications',
+            actionUrl: `/notifications?threadId=${contactMessageId}`,
             senderId: adminId,
           }
         });

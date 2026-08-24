@@ -24,17 +24,28 @@ async function main() {
 
   if (process.env.NODE_ENV !== 'production') {
     await prisma.user.upsert({
-      where: { email: 'admin@jahzjournals.com' },
-      update: {},
+      where: { email: 'admin@jahzjournal.com' },
+      update: { passwordHash, role: 'SUPER_ADMIN', onboardingCompleted: true },
       create: {
         name: 'Development Admin',
-        email: 'admin@jahzjournals.com',
-        passwordHash, // Uses same password123 default
+        email: 'admin@jahzjournal.com',
+        passwordHash,
         role: 'SUPER_ADMIN',
         onboardingCompleted: true,
       },
     });
-    console.log('Development Admin created: admin@jahzjournals.com');
+    await prisma.user.upsert({
+      where: { email: 'admin@jahzjournals.com' },
+      update: { passwordHash, role: 'SUPER_ADMIN', onboardingCompleted: true },
+      create: {
+        name: 'Development Admin Plural',
+        email: 'admin@jahzjournals.com',
+        passwordHash,
+        role: 'SUPER_ADMIN',
+        onboardingCompleted: true,
+      },
+    });
+    console.log('Development Admin accounts created.');
   }
 
   // Create trading account

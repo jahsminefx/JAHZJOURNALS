@@ -55,21 +55,21 @@ const Login = () => {
     <AuthLayout title="Welcome back" subtitle="Your journal is waiting. Pick up where you left off.">
       <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
         <div>
-          <label htmlFor="email" className="block text-xs font-semibold text-muted mb-1">Email</label>
+          <label htmlFor="email" className="block text-xs font-bold text-foreground mb-1.5">Email</label>
           <input
             id="email"
             type="email"
-            placeholder="yourname@domain.com"
+            placeholder="name@example.com"
             {...register('email')}
-            className="w-full rounded-xl border border-border dark:border-white/10 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-emerald-400"
+            className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
           />
-          {errors.email && <p className="mt-1.5 text-xs font-semibold text-rose-400">{errors.email.message}</p>}
+          {errors.email && <p className="mt-1.5 text-xs font-semibold text-rose-500">{errors.email.message}</p>}
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <label htmlFor="password" className="block text-xs font-semibold text-muted">Password</label>
-            <Link to="/forgot-password" className="text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors">
+          <div className="flex items-center justify-between mb-1.5">
+            <label htmlFor="password" className="block text-xs font-bold text-foreground">Password</label>
+            <Link to="/forgot-password" className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
               Forgot password?
             </Link>
           </div>
@@ -80,7 +80,7 @@ const Login = () => {
               type={showPassword ? 'text' : 'password'}
               placeholder="Enter your password"
               {...register('password')}
-              className="w-full rounded-xl border border-border dark:border-white/10 bg-background px-4 py-3 pr-11 text-sm text-foreground outline-none transition focus:border-emerald-400"
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 pr-11 text-sm text-foreground placeholder:text-muted outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
             />
             <button
               type="button"
@@ -91,20 +91,20 @@ const Login = () => {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          {errors.password && <p className="mt-1.5 text-xs font-semibold text-rose-400">{errors.password.message}</p>}
+          {errors.password && <p className="mt-1.5 text-xs font-semibold text-rose-500">{errors.password.message}</p>}
         </div>
 
         <button
           type="submit"
           disabled={isLoading}
-          className="flex w-full justify-center rounded-xl bg-emerald-400 px-5 py-3.5 text-xs font-bold text-gray-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-emerald-500/20"
+          className="flex w-full justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-500 dark:hover:bg-emerald-400 px-5 py-3.5 text-sm font-extrabold text-slate-950 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 shadow-md shadow-emerald-500/20"
         >
           {isLoading ? 'Signing you in...' : 'Step Inside'}
         </button>
 
         <p className="text-center text-xs text-muted">
           New here?{' '}
-          <Link to="/register" className="font-bold text-emerald-400 hover:text-emerald-300">
+          <Link to="/register" className="font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
             Create your sanctuary
           </Link>
         </p>

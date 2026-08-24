@@ -7,12 +7,14 @@ import {
   Filter, FilterX, ChevronDown, ChevronUp, TrendingUp, TrendingDown, 
   DollarSign, Award, Target, BarChart2, ShieldAlert, Sparkles, 
   Clock, Compass, Layers, Zap, CheckCircle2, AlertCircle, 
-  ArrowUpRight, ArrowDownRight, Activity, Calendar
+  ArrowUpRight, ArrowDownRight, Activity, Calendar, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { useAuth } from '../context/useAuth';
+import { generatePerformancePdfReport } from '../utils/pdfReportService';
 
 const groupOptions = [
   { id: 'pair', label: 'Pair / Symbol' },
@@ -50,6 +52,38 @@ const Analytics = () => {
   const [drawdown, setDrawdown] = useState(null);
   const [directionPerformance, setDirectionPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const { user } = useAuth();
+
+  const handleExportPdf = async () => {
+    const plan = user?.subscriptionPlan || 'FREE';
+    const role = user?.role;
+    const isAllowed = ['PRO', 'MENTOR'].includes(plan) || ['SUPER_ADMIN', 'ADMIN', 'MENTOR'].includes(role);
+
+    if (!isAllowed) {
+      toast.error('PDF Report Export is exclusive to PRO & MENTOR plans. Please upgrade your account.');
+      return;
+    }
+
+    try {
+      setExportingPdf(true);
+      toast.loading('Generating Performance PDF...', { id: 'pdf-gen' });
+      await generatePerformancePdfReport({
+        user,
+        performance,
+        equityMetrics,
+        drawdown,
+        filters,
+        breakdownData: performance?.data || []
+      });
+      toast.success('PDF report exported successfully!', { id: 'pdf-gen' });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-gen' });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   // Curve Mode & Date Preset Controls
   const [curveMode, setCurveMode] = useState('cumulative'); // 'cumulative' | 'balance'
@@ -325,6 +359,16 @@ const Analytics = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-500 hover:bg-emerald-500/20 transition disabled:opacity-50"
+            >
+              <Download size={14} />
+              <span>{exportingPdf ? 'Generating PDF...' : 'Export PDF Report'}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}

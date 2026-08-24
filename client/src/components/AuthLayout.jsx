@@ -19,15 +19,15 @@ const AuthLayout = ({ title, subtitle, children }) => (
 
           <BrandLogo size="md" className="relative z-10" />
           <div className="relative z-10">
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">Your trading sanctuary</p>
-            <h2 className="mt-4 text-4xl font-black tracking-tight text-white">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-400">Your trading sanctuary</p>
+            <h2 className="mt-4 text-4xl font-black tracking-tight text-white leading-tight">
               Clarity begins with honest reflection.
             </h2>
-            <p className="mt-4 text-muted">
+            <p className="mt-4 text-sm font-medium text-slate-200 leading-relaxed">
               Your journal, your charts, your emotions, your growth — all in one sacred space.
             </p>
           </div>
-          <p className="relative z-10 text-sm text-muted">Not signals. Not hype. Just honest, structured self-review.</p>
+          <p className="relative z-10 text-xs font-semibold text-slate-300">Not signals. Not hype. Just honest, structured self-review.</p>
         </div>
         <div className="p-6 sm:p-8 lg:p-10">
           <BrandLogo className="mb-8 lg:hidden" />

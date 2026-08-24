@@ -246,6 +246,9 @@ const Pricing = () => {
           title="Simple plans for disciplined traders and trading teams."
           description="Build the habit free, build discipline with Starter, or find your edge with Pro."
           primaryCta={user ? { label: 'Go to Dashboard', to: '/dashboard' } : { label: 'Start Free Today', to: '/register' }}
+          heroImage="/heroes/hero-pricing.png"
+          heroAlt="JAHZJOURNALS pricing plans for traders"
+          heroPosition={{ mobile: '70% top', tablet: '62% top', desktop: 'center top' }}
         />
 
         {/* Founding Trader Launch Banner */}

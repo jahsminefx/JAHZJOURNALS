@@ -73,7 +73,7 @@ const ForgotPasswordPage = () => {
             <input
               id="email"
               type="email"
-              placeholder="anintajahsmine@gmail.com"
+              placeholder="name@example.com"
               {...register('email')}
               className="w-full rounded-xl border border-border dark:border-white/10 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-emerald-400"
             />

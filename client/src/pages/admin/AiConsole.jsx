@@ -225,15 +225,31 @@ const ConfigTab = () => {
         <div className="p-6 rounded-xl border border-border bg-surface">
            <h3 className="font-bold border-b border-border pb-4 mb-6 flex items-center gap-2"><Settings size={18} className="text-purple-500"/> Dynamic Rollout Tiers</h3>
            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-             {Object.entries(config.enabledFeatures || {}).map(([key, value]) => (
+             {Object.entries({
+                chat: 'EVERYONE',
+                visionAi: 'PRO_ONLY',
+                edgeFinder: 'EVERYONE',
+                tradeReview: 'PRO_ONLY',
+                weeklyCoach: 'PRO_ONLY',
+                journaling: 'EVERYONE',
+                planGenerator: 'EVERYONE',
+                ...(config.enabledFeatures || {})
+             }).map(([key, value]) => (
                 <div key={key} className="flex flex-col gap-2 p-4 border border-border rounded-lg bg-surface-muted/30">
                    <div className="capitalize text-sm font-bold tracking-wide text-foreground">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
                    <select 
                      value={typeof value === 'boolean' ? (value ? 'EVERYONE' : 'DISABLED') : value} 
-                     onChange={e => setConfig({...config, enabledFeatures: {...config.enabledFeatures, [key]: e.target.value}})}
+                     onChange={e => setConfig({
+                        ...config, 
+                        enabledFeatures: {
+                           ...config.enabledFeatures, 
+                           [key]: e.target.value
+                        }
+                     })}
                      className="w-full bg-surface border border-border rounded-lg outline-none focus:border-purple-500 px-3 py-1.5 font-bold text-xs text-muted-foreground transition"
                    >
                      <option value="EVERYONE">Enabled for Everyone</option>
+                     <option value="STARTER_AND_PRO">Enabled for STARTER & PRO</option>
                      <option value="PRO_ONLY">Enabled for PRO Only</option>
                      <option value="FOUNDING_TRADERS_ONLY">Founding Traders Only</option>
                      <option value="BETA_TESTERS_ONLY">Beta Testers Only</option>

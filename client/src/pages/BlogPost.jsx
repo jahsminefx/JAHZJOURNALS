@@ -43,7 +43,7 @@ const BlogPost = () => {
         />
 
         <div className="mb-6">
-          <Link to="/blog" className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-emerald-400 transition-colors">
+          <Link to="/blog" className="inline-flex items-center gap-1.5 text-xs font-bold text-muted hover:text-foreground transition-colors">
             <ArrowLeft size={14} /> Back to Blog Directory
           </Link>
         </div>
