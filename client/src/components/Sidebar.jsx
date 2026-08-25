@@ -121,14 +121,14 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   const sidebarContent = (
     <div className="flex flex-col h-full overflow-y-auto hide-scrollbar select-none">
       {/* Sidebar Header & Brand */}
-      <div className="p-4 border-b border-border flex items-center justify-between h-16 shrink-0">
+      <div className="px-3.5 py-4 border-b border-border flex items-center justify-between h-16 shrink-0">
         <BrandLogo to="/dashboard" size="sm" showText={!isCollapsed} />
         
         {/* Toggle Button for Desktop/Tablet */}
         <button
           type="button"
           onClick={toggleCollapse}
-          className="hidden lg:flex items-center justify-center h-8 w-8 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition-colors"
+          className="hidden lg:flex items-center justify-center h-8 w-8 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition-colors shrink-0"
           title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
           {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -139,7 +139,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
           <button
             type="button"
             onClick={onCloseMobile}
-            className="lg:hidden flex items-center justify-center h-8 w-8 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition-colors"
+            className="lg:hidden flex items-center justify-center h-8 w-8 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition-colors shrink-0"
           >
             <X size={20} />
           </button>
@@ -247,7 +247,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
       {/* Permanent Desktop & Tablet Sidebar */}
       <aside 
         className={`hidden lg:flex flex-col shrink-0 bg-background border-r border-border h-full transition-all duration-300 ease-in-out ${
-          isCollapsed ? 'w-20' : 'w-64'
+          isCollapsed ? 'w-20' : 'w-68'
         }`}
       >
         {sidebarContent}
