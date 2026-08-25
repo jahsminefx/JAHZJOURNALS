@@ -1,6 +1,21 @@
 @import "tailwindcss";
+@import url('https://fonts.cdnfonts.com/css/ethnocentric');
+
+@font-face {
+  font-family: 'Ethnocentric';
+  font-style: normal;
+  font-weight: 400 900;
+  src: local('Ethnocentric Rg'), local('Ethnocentric'), url('https://fonts.cdnfonts.com/s/6220/ethnocentric%20rg.woff') format('woff');
+  font-display: swap;
+}
+
+.font-ethnocentric {
+  font-family: 'Ethnocentric', 'Ethnocentric Rg', 'Orbitron', 'Syncopate', sans-serif;
+  letter-spacing: -0.02em;
+}
 
 @theme {
+  --font-ethnocentric: 'Ethnocentric', 'Ethnocentric Rg', 'Orbitron', 'Syncopate', sans-serif;
   --color-background: rgb(var(--background));
   --color-surface: rgb(var(--surface));
   --color-surface-muted: rgb(var(--surface-muted));
