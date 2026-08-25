@@ -62,7 +62,7 @@ Do NOT recalculate statistics. Explain the provided patterns and deliver direct,
     const userPrompt = `Weekly Stats:
 - Total Trades: ${weeklyReview.totalTrades}
 - Wins: ${weeklyReview.wins} / Losses: ${weeklyReview.losses}
-- Win Rate: ${(weeklyReview.winRate * 100).toFixed(2)}%
+- Win Rate: ${(weeklyReview.winRate > 1 ? weeklyReview.winRate : weeklyReview.winRate * 100).toFixed(2)}%
 - Net P/L: $${weeklyReview.netProfitLoss}
 - Profit Factor: ${weeklyReview.profitFactor || 'N/A'}
 - Best Pair: ${weeklyReview.bestPair || 'N/A'} / Worst Pair: ${weeklyReview.worstPair || 'N/A'}
