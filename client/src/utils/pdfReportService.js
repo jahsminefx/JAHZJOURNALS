@@ -9,6 +9,8 @@ import html2canvas from 'html2canvas';
  * 3. Super Admin Business Intelligence
  */
 
+const LOGO_MARK_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAADwElEQVRYR7WXX0hTYRzHv21O3VzO9Zqduf26s7nRlr0quuvFFpaZGXnnDNOjB4pOUO9I0yN056e3687p1vL0VqKQMj3+Rv+ef/5+cu8+IkP/sQHveb7vBtDukMCcDtzmCgACsAA8eQEQ3X/6/3kAmAigF4A0vBAA6PgJ6cHzPATASf2LIPaLEPSLf0/dBSrg38D4m1w7DxF4D+n2/buhh50vBui4v0ne/Y9ZsLBA5yyLpOn1ANy1lT+P3N+Py7ezy8tx16P3+1L4x39sRojOr3wzC8DtqP7b2jNAuT73lJ2FEwDhdQC8Fsdf5qHNT3axzdZWO93w9Da4L0P3Q2+sL8/Q0K5upP7Y9owtTcFCItYd3s3SWJgCw5anadSWLdbmxW7wAH7fL3jDT3jzLz/Qge9s3j3LlhQEwM8AZG8H+sQD0A1A/gOABMC4/kMAQD0GAC01CAAgvw829ZygW+KkzIDLg8gb731bmq2b1y8DlyVesG+77qItXg/s5r2Hj0QoY51o+Zet0y4W1kftB698d2uW99aVaoZ7d+C01y+w5YvD5zMA0Qc4t8VwL7pYl/u262u6eKWWg91/vG/wz9/3U0X68KWDWnRA4j2A6wLAdwDE3hD4fAA6AYj/A6C5AD6h/6N22z1D4y7p7P0/hB/x76Sj09Uf3rLgY2dmt0y23Zp56V4/w96x0S1u9+Q3dlybFwO6y6Pvu+Xy0o78zB2fD1DQA4ipmQegfRbg2lYjPn8n2bIuhxb2yNKSv2W+5IOPdc/ojM1omrU06wTgA0gfTR4ARACIQIS62drK+QAAoYIxr/nQBcgf0a4f5t886J2N158z+F1//aKvvvjTPvxCgC4A3wPQ62+0EIBzABr8+Qh38b+2eT12u0y2rN/h7FqW2aV53gE0BtR/tQnNv3m68819r5i7038166X03Fp+z713n66G169vS2a+1L8CgPEHkBAAs3v0t/b1lF0e/5Sdr6u189yX6/81aZ0H4m8Gfg/4tUcA4S80r8f1L92437s5K1wB2JbBw44n0TEtnhxE9b1k0CPhqF90kM8A+gQAw772Yv85r8yv5+769P41+W32z9z4a796o2l9pGk9h12P9hL3v2mH9152O8wz2G1+3vP3nly5Nn9+VlG6y5w9wLgSggAAL+d/wM/6d/o0EAAfAAAAAElFTkSuQmCC';
+
 // Helper to draw standard JAHZJOURNALS PDF Header
 const drawPdfHeader = (doc, title, subtitle, pageNum, totalPages) => {
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -17,27 +19,45 @@ const drawPdfHeader = (doc, title, subtitle, pageNum, totalPages) => {
   doc.setFillColor(15, 23, 42); // Slate 900
   doc.rect(0, 0, pageWidth, 28, 'F');
 
-  // Green accent bar
+  // Emerald Accent Bar
   doc.setFillColor(16, 185, 129); // Emerald 500
   doc.rect(0, 27, pageWidth, 1.5, 'F');
 
-  // Title Text
+  // Embedded Brand Logo Icon
+  try {
+    doc.addImage(LOGO_MARK_BASE64, 'PNG', 14, 5, 16, 16);
+  } catch (err) {
+    console.warn('Could not render logo in PDF header:', err);
+  }
+
+  // Brand Logo Text: JAHZ (Red) JOURNALS (Green)
+  const textX = 34;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(255, 255, 255);
-  doc.text('JAHZJOURNALS', 14, 15);
+  doc.setFontSize(13);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  // "JAHZ" in Red (#EF4444)
+  doc.setTextColor(239, 68, 68);
+  doc.text('JAHZ', textX, 14);
+
+  const jahzWidth = doc.getTextWidth('JAHZ');
+
+  // "JOURNALS" in Emerald (#10B981)
+  doc.setTextColor(16, 185, 129);
+  doc.text('JOURNALS', textX + jahzWidth + 1, 14);
+
+  // Document Title Subheader below logo
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184); // Slate 400
-  doc.text(title.toUpperCase(), 14, 22);
+  doc.text(title.toUpperCase(), textX, 21);
 
-  // Date & Page Numbers
+  // Date & Page Numbers on Right
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(203, 213, 225);
-  doc.text(subtitle || new Date().toLocaleDateString(), pageWidth - 14, 15, { align: 'right' });
+  doc.text(subtitle || new Date().toLocaleDateString(), pageWidth - 14, 14, { align: 'right' });
   if (pageNum && totalPages) {
-    doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - 14, 22, { align: 'right' });
+    doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - 14, 21, { align: 'right' });
   }
 };
 
@@ -113,13 +133,21 @@ export const generatePerformancePdfReport = async ({
     y += 4;
 
     const summaryStats = performance?.summary || {};
+    const netPnlVal = summaryStats.netRealisedProfitLoss !== undefined
+      ? Number(summaryStats.netRealisedProfitLoss)
+      : Number(summaryStats.totalPnl || summaryStats.netPnl || 0);
+
+    const maxDdVal = drawdown?.maximumDrawdown !== undefined
+      ? Number(drawdown.maximumDrawdown)
+      : Number(drawdown?.maxDrawdown || 0);
+
     const metrics = [
       { label: 'Total Trades', value: String(summaryStats.totalTrades || 0) },
       { label: 'Win Rate', value: `${Number(summaryStats.winRate || 0).toFixed(1)}%` },
-      { label: 'Net P&L', value: `$${Number(summaryStats.totalPnl || 0).toFixed(2)}` },
-      { label: 'Profit Factor', value: String(summaryStats.profitFactor || '0.00') },
-      { label: 'Max Drawdown', value: `$${Number(drawdown?.maxDrawdown || 0).toFixed(2)}` },
-      { label: 'Expectancy', value: `$${Number(summaryStats.expectancy || 0).toFixed(2)}` },
+      { label: 'Net P&L', value: `${netPnlVal >= 0 ? '+' : ''}$${netPnlVal.toFixed(2)}` },
+      { label: 'Profit Factor', value: summaryStats.profitFactor === null ? 'N/A' : String(summaryStats.profitFactor || '0.00') },
+      { label: 'Max Drawdown', value: `$${maxDdVal.toFixed(2)}` },
+      { label: 'Expectancy', value: `${Number(summaryStats.expectancy || 0) >= 0 ? '+' : ''}$${Number(summaryStats.expectancy || 0).toFixed(2)}` },
     ];
 
     const colWidth = (pageWidth - 28 - 10) / 3;
@@ -141,7 +169,7 @@ export const generatePerformancePdfReport = async ({
 
       doc.setFontSize(10);
       if (m.label === 'Net P&L') {
-        doc.setTextColor(Number(summaryStats.totalPnl || 0) >= 0 ? 16 : 225, Number(summaryStats.totalPnl || 0) >= 0 ? 185 : 29, Number(summaryStats.totalPnl || 0) >= 0 ? 129 : 72);
+        doc.setTextColor(netPnlVal >= 0 ? 16 : 225, netPnlVal >= 0 ? 185 : 29, netPnlVal >= 0 ? 129 : 72);
       } else {
         doc.setTextColor(15, 23, 42);
       }
@@ -209,11 +237,13 @@ export const generatePerformancePdfReport = async ({
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(30, 41, 59);
-        doc.text(String(item.group || item.pair || 'Group'), 18, y + 4.5);
-        doc.text(String(item.trades || item.count || 0), 70, y + 4.5);
+        const itemLabel = String(item.label || item.group || item.pair || item.key || 'Group');
+        const itemTrades = String(item.totalTrades ?? item.trades ?? item.count ?? 0);
+        doc.text(itemLabel, 18, y + 4.5);
+        doc.text(itemTrades, 70, y + 4.5);
         doc.text(`${Number(item.winRate || 0).toFixed(1)}%`, 110, y + 4.5);
 
-        const pnl = Number(item.pnl || item.netPnl || 0);
+        const pnl = Number(item.netRealisedProfitLoss ?? item.pnl ?? item.netPnl ?? 0);
         doc.setTextColor(pnl >= 0 ? 16 : 225, pnl >= 0 ? 185 : 29, pnl >= 0 ? 129 : 72);
         doc.text(`${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`, pageWidth - 18, y + 4.5, { align: 'right' });
 
@@ -291,7 +321,7 @@ export const generateWeeklyPdfReport = async ({ user, weeklyData, aiCoaching }) 
       doc.text(s.value, xPos + 4, y + 11);
     });
 
-    y += 20;
+    y += 22;
 
     // Safely Parse AI Coaching Data
     let parsedAi = aiCoaching;
@@ -305,10 +335,10 @@ export const generateWeeklyPdfReport = async ({ user, weeklyData, aiCoaching }) 
 
     if (parsedAi && typeof parsedAi === 'object') {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
+      doc.setFontSize(10.5);
       doc.setTextColor(15, 23, 42);
       doc.text('JAHZ AI WEEKLY COACHING & INSIGHTS', 14, y);
-      y += 5;
+      y += 7;
 
       const aiSections = [
         { title: 'Weekly Execution Summary', text: parsedAi.weeklySummary || parsedAi.summary },
@@ -319,56 +349,96 @@ export const generateWeeklyPdfReport = async ({ user, weeklyData, aiCoaching }) 
 
       if (aiSections.length > 0) {
         aiSections.forEach(sec => {
-          if (y > pageHeight - 30) return;
+          if (y > pageHeight - 35) {
+            doc.addPage();
+            drawPdfHeader(doc, 'WEEKLY TRADING PERFORMANCE REVIEW', `Trader: ${user?.name || 'Trader'}`, 2, 2);
+            drawPdfFooter(doc);
+            y = 36;
+          }
 
+          // Section Title
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8);
+          doc.setFontSize(8.5);
           doc.setTextColor(124, 58, 237); // Purple 600
-          doc.text(sec.title.toUpperCase(), 16, y + 4);
-          y += 6;
+          doc.text(sec.title.toUpperCase(), 16, y);
+          y += 5.5; // Clear separation baseline between title and body
 
+          // Section Body Text with generous line-height
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8);
           doc.setTextColor(30, 41, 59);
 
           const lines = doc.splitTextToSize(String(sec.text), pageWidth - 36);
-          doc.text(lines, 16, y);
-          y += lines.length * 4 + 4;
+          lines.forEach((line, lineIdx) => {
+            if (y > pageHeight - 20) {
+              doc.addPage();
+              drawPdfHeader(doc, 'WEEKLY TRADING PERFORMANCE REVIEW', `Trader: ${user?.name || 'Trader'}`, 2, 2);
+              drawPdfFooter(doc);
+              y = 36;
+            }
+            doc.text(line, 16, y);
+            y += 4.5;
+          });
+
+          y += 5; // Spacing after section block
         });
       }
-      y += 4;
+      y += 3;
     }
 
     // Trader Reflection Notes (if logged)
     const reflections = [
-      { label: 'Main Mistake', val: weeklyData?.mainMistake },
-      { label: 'Personal Lesson', val: weeklyData?.personalLesson },
-      { label: "Next Week's Focus", val: weeklyData?.nextWeekFocus },
-      { label: 'General Reflection', val: weeklyData?.generalReflection }
+      { label: 'Main Mistake Logged', val: weeklyData?.mainMistake },
+      { label: 'Personal Lesson Learned', val: weeklyData?.personalLesson },
+      { label: "Next Week's Focus Area", val: weeklyData?.nextWeekFocus },
+      { label: 'General Execution Reflection', val: weeklyData?.generalReflection }
     ].filter(r => Boolean(r.val && String(r.val).trim()));
 
-    if (reflections.length > 0 && y < pageHeight - 40) {
+    if (reflections.length > 0) {
+      if (y > pageHeight - 40) {
+        doc.addPage();
+        drawPdfHeader(doc, 'WEEKLY TRADING PERFORMANCE REVIEW', `Trader: ${user?.name || 'Trader'}`, 2, 2);
+        drawPdfFooter(doc);
+        y = 36;
+      }
+
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
+      doc.setFontSize(10.5);
       doc.setTextColor(15, 23, 42);
       doc.text('TRADER SELF-REFLECTIONS & NOTES', 14, y);
-      y += 5;
+      y += 7;
 
       reflections.forEach(r => {
-        if (y > pageHeight - 25) return;
+        if (y > pageHeight - 25) {
+          doc.addPage();
+          drawPdfHeader(doc, 'WEEKLY TRADING PERFORMANCE REVIEW', `Trader: ${user?.name || 'Trader'}`, 2, 2);
+          drawPdfFooter(doc);
+          y = 36;
+        }
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
+        doc.setFontSize(8.5);
         doc.setTextColor(100, 116, 139);
-        doc.text(r.label.toUpperCase(), 16, y + 4);
-        y += 6;
+        doc.text(r.label.toUpperCase(), 16, y);
+        y += 5.5;
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(30, 41, 59);
+
         const lines = doc.splitTextToSize(String(r.val), pageWidth - 36);
-        doc.text(lines, 16, y);
-        y += lines.length * 4 + 3;
+        lines.forEach((line) => {
+          if (y > pageHeight - 20) {
+            doc.addPage();
+            drawPdfHeader(doc, 'WEEKLY TRADING PERFORMANCE REVIEW', `Trader: ${user?.name || 'Trader'}`, 2, 2);
+            drawPdfFooter(doc);
+            y = 36;
+          }
+          doc.text(line, 16, y);
+          y += 4.5;
+        });
+
+        y += 4;
       });
     }
 
