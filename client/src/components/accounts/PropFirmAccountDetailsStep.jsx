@@ -2,6 +2,7 @@ import React from 'react';
 import { useFormContext } from 'react-hook-form';
 import TemplateSelector from './TemplateSelector';
 import { CurrencyInput, SelectInput, TextInput } from './FormControls';
+import { SUPPORTED_CURRENCIES } from '../../services/currencyConversionService';
 
 const propFirmOptions = [
   'FTMO',
@@ -44,10 +45,11 @@ const PropFirmAccountDetailsStep = ({ onApplyTemplate }) => {
           <TextInput label="Programme or model name" error={errors.programmeName?.message} {...register('programmeName')} />
           <CurrencyInput label="Account size" error={errors.accountSize?.message} {...register('accountSize')} />
           <SelectInput label="Account currency" error={errors.currency?.message} {...register('currency')}>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-            <option value="GBP">GBP</option>
-            <option value="NGN">NGN</option>
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.code} ({c.symbol.trim()}) — {c.name}
+              </option>
+            ))}
           </SelectInput>
           <SelectInput label="Trading platform" error={errors.platform?.message} {...register('platform')}>
             {['MT4', 'MT5', 'CTRADER', 'MATCH_TRADER', 'TRADELOCKER', 'DXTRADE', 'RITHMIC', 'NINJATRADER', 'OTHER'].map((platform) => (

@@ -18,10 +18,11 @@ import {
   generateRiskScenarios,
   evaluateTradeRiskCheck 
 } from '../services/riskCalculatorService.js';
+import { SUPPORTED_CURRENCIES, getCurrencySymbol } from '../services/currencyConversionService.js';
 
 const RISK_PRESETS = [0.25, 0.5, 1.0, 1.5, 2.0];
 const RR_PRESETS = [1, 2, 3, 5];
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'NGN', 'JPY', 'CAD', 'AUD', 'NZD', 'CHF'];
+const CURRENCIES = SUPPORTED_CURRENCIES.map(c => c.code);
 
 const RiskCalculator = () => {
   const navigate = useNavigate();
@@ -256,11 +257,12 @@ const RiskCalculator = () => {
 
   // Copy Summary
   const handleCopySummary = () => {
+    const sym = getCurrencySymbol(accountCurrency);
     const text = `[JAHZJOURNALS RISK CALCULATOR]
 Pair: ${pair} (${direction}) | Position Size: ${calc.safeLotSize} lots
 Entry: ${entryPrice} | SL: ${stopLoss} (${calc.stopLossPips} pips)
-Target Risk: $${calc.targetCapitalAtRisk} (${riskPercent}%)
-Actual Risk: $${calc.estimatedTotalRisk} (Buffer: $${calc.unusedRiskBuffer})
+Target Risk: ${sym}${calc.targetCapitalAtRisk} (${riskPercent}%)
+Actual Risk: ${sym}${calc.estimatedTotalRisk} (Buffer: ${sym}${calc.unusedRiskBuffer})
 R:R Ratio: 1:${calc.riskRewardRatio || 'N/A'}
 Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 'WARN' ? '⚠️ REVIEW REQUIRED' : '🚨 BLOCKED'}`;
 
@@ -354,9 +356,10 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
                     const rawBal = acc.currentBalance ?? acc.accountBalance ?? acc.startingBalance ?? 0;
                     const numBal = Number(rawBal);
                     const formattedBal = Number.isNaN(numBal) ? '0' : numBal.toLocaleString();
+                    const accSym = getCurrencySymbol(acc.currency || 'USD');
                     return (
                       <option key={acc.id} value={acc.id}>
-                        {accName} (${formattedBal}) {acc.isPropFirmAccount ? '🏆 Prop Firm' : ''}
+                        {accName} ({accSym}{formattedBal}) {acc.isPropFirmAccount ? '🏆 Prop Firm' : ''}
                       </option>
                     );
                   })}
@@ -394,7 +397,7 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-muted">Risk Percentage (%)</label>
-                  <span className="text-[11px] font-bold text-amber-400 font-mono">${calc.targetCapitalAtRisk}</span>
+                  <span className="text-[11px] font-bold text-amber-400 font-mono">{getCurrencySymbol(accountCurrency)}{calc.targetCapitalAtRisk}</span>
                 </div>
                 <input
                   type="number"
@@ -573,11 +576,11 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
             <div className="grid grid-cols-2 gap-2 text-xs pt-3 border-t border-border/80">
               <div className="p-2.5 bg-surface-muted rounded-xl border border-border">
                 <span className="text-muted block text-[10px]">Target Risk ({riskPercent}%)</span>
-                <span className="font-bold font-mono text-foreground">${calc.targetCapitalAtRisk}</span>
+                <span className="font-bold font-mono text-foreground">{getCurrencySymbol(accountCurrency)}{calc.targetCapitalAtRisk}</span>
               </div>
               <div className="p-2.5 bg-surface-muted rounded-xl border border-border">
                 <span className="text-muted block text-[10px]">Actual Executable Risk</span>
-                <span className="font-bold font-mono text-rose-400">${calc.estimatedTotalRisk}</span>
+                <span className="font-bold font-mono text-rose-400">{getCurrencySymbol(accountCurrency)}{calc.estimatedTotalRisk}</span>
               </div>
               <div className="p-2.5 bg-surface-muted rounded-xl border border-border">
                 <span className="text-muted block text-[10px]">Stop Loss Distance</span>
@@ -719,7 +722,7 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
               </div>
               <div className="bg-surface p-3 rounded-xl border border-border">
                 <span className="text-muted block text-[10px]">Tick Value / Lot</span>
-                <span className="font-mono font-bold text-foreground">${calc.tickValuePerLot}</span>
+                <span className="font-mono font-bold text-foreground">{getCurrencySymbol(accountCurrency)}{calc.tickValuePerLot}</span>
               </div>
               <div className="bg-surface p-3 rounded-xl border border-border">
                 <span className="text-muted block text-[10px]">Lot Step</span>
@@ -819,7 +822,7 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-muted mb-1">Commission ($ / Lot)</label>
+                  <label className="block font-semibold text-muted mb-1">Commission ({getCurrencySymbol(accountCurrency)} / Lot)</label>
                   <input
                     type="number"
                     step="0.5"
@@ -850,10 +853,10 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
                     {scenarioMatrix.map((sc, idx) => (
                       <tr key={idx} className={Number(riskPercent) === sc.riskPercent ? 'bg-amber-500/10 font-bold' : 'hover:bg-surface/50'}>
                         <td className="p-2 text-amber-400 font-bold">{sc.riskPercent}%</td>
-                        <td className="p-2 font-mono">${sc.targetCapitalAtRisk}</td>
+                        <td className="p-2 font-mono">{getCurrencySymbol(accountCurrency)}{sc.targetCapitalAtRisk}</td>
                         <td className="p-2 font-mono text-emerald-400">{sc.safeLotSize} lots</td>
-                        <td className="p-2 font-mono text-rose-400">${sc.estimatedTotalRisk}</td>
-                        <td className="p-2 font-mono text-sky-400">+${sc.unusedRiskBuffer}</td>
+                        <td className="p-2 font-mono text-rose-400">{getCurrencySymbol(accountCurrency)}{sc.estimatedTotalRisk}</td>
+                        <td className="p-2 font-mono text-sky-400">+{getCurrencySymbol(accountCurrency)}{sc.unusedRiskBuffer}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -898,7 +901,7 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
               {reverseMode === 'REVERSE_RISK' && reverseRiskResult && (
                 <div className="p-3 bg-surface rounded-xl border border-border space-y-1">
                   <span className="text-muted block text-[11px]">Calculated Monetary Risk for {manualLotSize} lots:</span>
-                  <span className="font-bold font-mono text-rose-400 text-sm">${reverseRiskResult.riskAmount} ({reverseRiskResult.riskPercent}%)</span>
+                  <span className="font-bold font-mono text-rose-400 text-sm">{getCurrencySymbol(accountCurrency)}{reverseRiskResult.riskAmount} ({reverseRiskResult.riskPercent}%)</span>
                 </div>
               )}
             </div>

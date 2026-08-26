@@ -1,6 +1,4 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { CurrencyInput, PercentageInput, SelectInput, TextInput } from './FormControls';
+import { SUPPORTED_CURRENCIES } from '../../services/currencyConversionService';
 
 const defaultValues = {
   name: '',
@@ -46,10 +44,11 @@ const RegularAccountForm = ({ initialValues, isSaving, onSubmit, onCancel, submi
         <CurrencyInput label="Starting balance" required {...register('startingBalance')} placeholder="1000" />
         <CurrencyInput label="Current balance" {...register('currentBalance')} placeholder="Leave empty if it matches your starting balance" />
         <SelectInput label="Currency" {...register('currency')}>
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-          <option value="GBP">GBP</option>
-          <option value="NGN">NGN</option>
+          {SUPPORTED_CURRENCIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.code} ({c.symbol.trim()}) — {c.name}
+            </option>
+          ))}
         </SelectInput>
         <SelectInput label="Trading platform" {...register('platform')}>
           <option value="">Select platform</option>
