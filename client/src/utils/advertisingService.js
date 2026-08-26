@@ -63,11 +63,7 @@ export const loadAdSense = () => {
     }
 
     // 4. Check for publisher ID
-    const publisherId = import.meta.env.VITE_ADSENSE_PUBLISHER_ID;
-    if (!publisherId) {
-      console.warn('AdSense Publisher ID not found in environment variables.');
-      return false;
-    }
+    const publisherId = import.meta.env.VITE_ADSENSE_PUBLISHER_ID || 'ca-pub-6725573719511845';
 
     // 5. Inject the script safely
     const script = document.createElement('script');
