@@ -254,6 +254,9 @@ const Dashboard = () => {
         onAccountChange={setAccountId}
         onDateRangeChange={handleDateRangeChange}
         onCustomDateChange={handleCustomDateChange}
+        fxMetadata={dashboard?.fxMetadata}
+        isMultiAccountNormalized={dashboard?.isMultiAccountNormalized}
+        summary={summary}
       />
 
       <AnnouncementBanner />

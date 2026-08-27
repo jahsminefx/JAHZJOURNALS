@@ -1,4 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
+const currencyService = require('../services/fx/currencyService');
+
 const prisma = new PrismaClient();
 
 const buildTradeListWhere = (query, userId) => {
@@ -84,6 +86,10 @@ const createTrade = async (req, res) => {
       exitTime,
     } = req.body;
 
+    if (!tradingAccountId) {
+      return res.status(400).json({ message: 'Trading account selection is mandatory' });
+    }
+
     const account = await prisma.tradingAccount.findFirst({
       where: { id: tradingAccountId, userId: req.user.id }
     });
@@ -93,6 +99,22 @@ const createTrade = async (req, res) => {
     }
 
     const parseNum = (val) => (val !== undefined && val !== null && val !== '' && !Number.isNaN(Number(val))) ? parseFloat(val) : null;
+
+    const tradeStatus = status || 'ACTIVE';
+    const tradeResult = result || 'OPEN';
+    const isClosed = tradeStatus === 'CLOSED' || ['WIN', 'LOSS', 'BREAKEVEN'].includes(tradeResult);
+
+    // Compute historical FX metadata if trade is closed
+    let fxRateToReporting = null;
+    let fxRateSource = null;
+    let fxRateTimestamp = null;
+
+    if (isClosed) {
+      const fxDetails = await currencyService.getExchangeRateDetails(account.currency || 'USD', 'USD');
+      fxRateToReporting = fxDetails.rate;
+      fxRateSource = fxDetails.source;
+      fxRateTimestamp = new Date();
+    }
 
     const trade = await prisma.trade.create({
       data: {
@@ -110,8 +132,8 @@ const createTrade = async (req, res) => {
         profitLossPercent: parseNum(profitLossPercent),
         riskRewardRatio: parseNum(riskRewardRatio),
         pips: parseNum(pips),
-        result: result || 'OPEN',
-        status: status || 'ACTIVE',
+        result: tradeResult,
+        status: tradeStatus,
         session: session || null,
         strategyId: strategyId || null,
         setupId: setupId || null,
@@ -126,8 +148,11 @@ const createTrade = async (req, res) => {
         isAPlusSetup: isAPlusSetup !== undefined ? Boolean(isAPlusSetup) : null,
         newsRelated: newsRelated !== undefined ? Boolean(newsRelated) : null,
         grade: grade || null,
-        entryTime: entryTime ? new Date(entryTime) : (status === 'PLANNED' ? null : new Date()),
+        entryTime: entryTime ? new Date(entryTime) : (tradeStatus === 'PLANNED' ? null : new Date()),
         exitTime: exitTime ? new Date(exitTime) : null,
+        fxRateToReporting,
+        fxRateSource,
+        fxRateTimestamp,
       },
     });
 
@@ -180,7 +205,8 @@ const updateTrade = async (req, res) => {
       where: {
         id: req.params.id,
         tradingAccount: { userId: req.user.id }
-      }
+      },
+      include: { tradingAccount: true }
     });
 
     if (!existingTrade) {
@@ -223,6 +249,22 @@ const updateTrade = async (req, res) => {
 
     const parseNum = (val) => (val !== undefined && val !== null && val !== '' && !Number.isNaN(Number(val))) ? parseFloat(val) : null;
 
+    const nextStatus = status || existingTrade.status;
+    const nextResult = result || existingTrade.result;
+    const isNowClosed = nextStatus === 'CLOSED' || ['WIN', 'LOSS', 'BREAKEVEN'].includes(nextResult);
+
+    let fxRateToReporting = existingTrade.fxRateToReporting;
+    let fxRateSource = existingTrade.fxRateSource;
+    let fxRateTimestamp = existingTrade.fxRateTimestamp;
+
+    // Capture historical FX metadata if trade is now being closed and didn't already have it
+    if (isNowClosed && !fxRateToReporting) {
+      const fxDetails = await currencyService.getExchangeRateDetails(existingTrade.tradingAccount?.currency || 'USD', 'USD');
+      fxRateToReporting = fxDetails.rate;
+      fxRateSource = fxDetails.source;
+      fxRateTimestamp = new Date();
+    }
+
     const updatedTrade = await prisma.trade.update({
       where: { id: req.params.id },
       data: {
@@ -257,6 +299,9 @@ const updateTrade = async (req, res) => {
         grade: grade !== undefined ? grade : undefined,
         entryTime: entryTime !== undefined ? (entryTime ? new Date(entryTime) : null) : undefined,
         exitTime: exitTime !== undefined ? (exitTime ? new Date(exitTime) : null) : undefined,
+        fxRateToReporting,
+        fxRateSource,
+        fxRateTimestamp,
       }
     });
 
@@ -328,7 +373,7 @@ const exportTradesCsv = async (req, res) => {
   try {
     const trades = await prisma.trade.findMany({
       where: buildTradeListWhere(req.query, req.user.id),
-      include: { tradingAccount: { select: { name: true } } },
+      include: { tradingAccount: { select: { name: true, currency: true } } },
       orderBy: { entryTime: 'desc' },
     });
 
@@ -337,12 +382,13 @@ const exportTradesCsv = async (req, res) => {
     }
 
     const headers = [
-      'id', 'account', 'pair', 'direction', 'entryPrice', 'stopLoss', 
+      'id', 'account', 'currency', 'pair', 'direction', 'entryPrice', 'stopLoss', 
       'takeProfit', 'exitPrice', 'lotSize', 'riskAmount', 'rewardAmount',
       'profitLossAmount', 'profitLossPercent', 'riskRewardRatio', 'pips',
-      'status', 'result', 'session', 'higherTimeframe', 'entryTimeframe',
-      'htfBias', 'entryReason', 'exitReason', 'notesBefore', 'notesAfter',
-      'followedPlan', 'isAPlusSetup', 'newsRelated', 'grade', 'entryTime', 'exitTime'
+      'status', 'result', 'session', 'fxRateToReporting', 'fxRateSource', 'fxRateTimestamp',
+      'higherTimeframe', 'entryTimeframe', 'htfBias', 'entryReason', 'exitReason',
+      'notesBefore', 'notesAfter', 'followedPlan', 'isAPlusSetup', 'newsRelated', 'grade',
+      'entryTime', 'exitTime'
     ];
 
     const escapeCsvField = (val) => {
@@ -360,6 +406,7 @@ const exportTradesCsv = async (req, res) => {
       const row = [
         t.id,
         t.tradingAccount?.name || '',
+        t.tradingAccount?.currency || 'USD',
         t.pair || '',
         t.direction || '',
         t.entryPrice ?? '',
@@ -376,6 +423,9 @@ const exportTradesCsv = async (req, res) => {
         t.status || '',
         t.result || '',
         t.session || '',
+        t.fxRateToReporting ?? '',
+        t.fxRateSource || '',
+        t.fxRateTimestamp ? new Date(t.fxRateTimestamp).toISOString() : '',
         t.higherTimeframe || '',
         t.entryTimeframe || '',
         t.htfBias || '',

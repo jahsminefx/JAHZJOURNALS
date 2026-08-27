@@ -31,6 +31,7 @@ const processTradeReview = async ({ aiRequestId, tradeId, userId }) => {
     const trade = await prisma.trade.findUnique({
       where: { id: tradeId },
       include: {
+        tradingAccount: { select: { name: true, currency: true } },
         ruleViolations: { include: { tradeRule: true } },
         emotionLogs: true,
       }
@@ -41,16 +42,18 @@ const processTradeReview = async ({ aiRequestId, tradeId, userId }) => {
     }
 
     const safeTrade = redactSensitiveData(trade);
+    const tradeCurrency = trade.tradingAccount?.currency || 'USD';
 
     const systemPrompt = `You are a disciplined, elite prop-firm trading mentor.
 Analyze the following trade execution and provide structural feedback.
 Return ONLY validated JSON following the requested schema.`;
 
     const userPrompt = `Trade Details:
+- Account Currency: ${tradeCurrency}
 - Pair: ${safeTrade.pair}
 - Direction: ${safeTrade.direction}
 - Result: ${safeTrade.result}
-- Profit/Loss: $${safeTrade.profitLossAmount}
+- Profit/Loss: ${safeTrade.profitLossAmount} ${tradeCurrency}
 - Risk/Reward: ${safeTrade.riskRewardRatio || 'Unknown'}
 - Expected Grade: ${safeTrade.grade || 'Unknown'}
 - Emotion Logs: ${JSON.stringify(safeTrade.emotionLogs.map(l => ({ emotion: l.emotion, intensity: l.intensity, stage: l.stage })))}

@@ -46,12 +46,20 @@ export const getDateRange = (range, now = new Date()) => {
 
 export const formatCurrency = (value, currency = 'USD', options = {}) => {
   const number = Number(value || 0);
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: options.maximumFractionDigits ?? 2,
-    signDisplay: options.signDisplay || 'auto',
-  }).format(number);
+  const safeCurrency = String(currency || 'USD').trim().toUpperCase();
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: safeCurrency,
+      maximumFractionDigits: options.maximumFractionDigits ?? 2,
+      signDisplay: options.signDisplay || 'auto',
+    }).format(number);
+  } catch (err) {
+    const formattedNum = number.toLocaleString(undefined, {
+      maximumFractionDigits: options.maximumFractionDigits ?? 2,
+    });
+    return `${formattedNum} ${safeCurrency}`;
+  }
 };
 
 export const formatNumber = (value, maximumFractionDigits = 1) => Number(value || 0).toLocaleString(undefined, {

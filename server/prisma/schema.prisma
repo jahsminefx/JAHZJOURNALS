@@ -406,6 +406,7 @@ model TradingAccount {
   @@index([userId])
   @@index([userId, createdAt])
   @@index([userId, accountCategory])
+  @@index([userId, currency])
 }
 
 model PropFirmAccount {
@@ -576,6 +577,10 @@ model Trade {
   grade             TradeGrade?
   entryTime         DateTime?
   exitTime          DateTime?
+
+  fxRateToReporting Float?
+  fxRateSource      String?
+  fxRateTimestamp   DateTime?
 
   screenshots          TradeScreenshot[]
   ruleViolations       TradeRuleViolation[]

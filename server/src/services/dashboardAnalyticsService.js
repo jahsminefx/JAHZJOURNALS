@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const currencyService = require('./fx/currencyService');
 const {
   bucketByDate,
   buildPerformanceCurve,
@@ -11,7 +12,6 @@ const {
   isClosedTrade,
   normalizeTradeResult,
   round,
-  safeDivide,
 } = require('../utils/dashboardMath');
 
 const prisma = new PrismaClient();
@@ -57,8 +57,6 @@ const filterTradesByPeriod = (trades, startDate, endDate) => trades.filter((trad
   return true;
 });
 
-const getStartingBalance = (accounts) => accounts.reduce((total, account) => total + Number(account.startingBalance || 0), 0);
-
 const validateAccountFilter = async (userId, accountId) => {
   const accounts = await prisma.tradingAccount.findMany({
     where: { userId },
@@ -100,6 +98,61 @@ const fetchTrades = (userId, accountIds) => prisma.trade.findMany({
   },
   orderBy: [{ exitTime: 'asc' }, { entryTime: 'asc' }, { createdAt: 'asc' }],
 });
+
+/**
+ * Normalizes starting balance across multi-currency accounts
+ */
+const getNormalizedStartingBalance = async (accounts, targetCurrency) => {
+  let totalUSD = 0;
+  for (const account of accounts) {
+    const rawBalance = Number(account.startingBalance || 0);
+    const accCurrency = account.currency || 'USD';
+    if (accCurrency === targetCurrency) {
+      totalUSD += rawBalance;
+    } else {
+      const converted = await currencyService.convertAmount(rawBalance, accCurrency, targetCurrency);
+      totalUSD += (converted.convertedAmount || rawBalance);
+    }
+  }
+  return round(totalUSD, 2);
+};
+
+/**
+ * Normalizes trade profit/loss values to target currency
+ * Uses historical fxRateToReporting when present, else live/cached conversion
+ */
+const normalizeTradesForAnalytics = async (trades, targetCurrency) => {
+  const normalized = [];
+  for (const trade of trades) {
+    const rawPnl = Number(trade.profitLossAmount || 0);
+    const rawRisk = Number(trade.riskAmount || 0);
+    const accCurrency = trade.tradingAccount?.currency || 'USD';
+
+    let convertedPnl = rawPnl;
+    let convertedRisk = rawRisk;
+
+    if (accCurrency !== targetCurrency) {
+      if (trade.fxRateToReporting && targetCurrency === 'USD') {
+        convertedPnl = rawPnl * Number(trade.fxRateToReporting);
+        convertedRisk = rawRisk * Number(trade.fxRateToReporting);
+      } else {
+        const pnlRes = await currencyService.convertAmount(rawPnl, accCurrency, targetCurrency);
+        const riskRes = await currencyService.convertAmount(rawRisk, accCurrency, targetCurrency);
+        convertedPnl = pnlRes.convertedAmount ?? rawPnl;
+        convertedRisk = riskRes.convertedAmount ?? rawRisk;
+      }
+    }
+
+    normalized.push({
+      ...trade,
+      profitLossAmount: round(convertedPnl, 2),
+      riskAmount: round(convertedRisk, 2),
+      nativeCurrency: accCurrency,
+      nativeProfitLossAmount: rawPnl,
+    });
+  }
+  return normalized;
+};
 
 const bucketTradesByDate = (trades) => {
   const buckets = new Map();
@@ -258,6 +311,7 @@ const buildRecentTrades = (trades) => [...trades]
     exitTime: trade.exitTime ? trade.exitTime.toISOString() : null,
     createdAt: trade.createdAt ? trade.createdAt.toISOString() : null,
     timestamp: getTradeTimestamp(trade).toISOString(),
+    currency: trade.nativeCurrency || 'USD',
   }));
 
 const buildGoalProgress = async ({ userId, accountId, trades }) => {
@@ -350,10 +404,17 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
   const previousPeriod = getPreviousPeriod(startDate, endDate);
   const { accounts, selectedAccounts } = await validateAccountFilter(userId, accountId);
   const accountIds = selectedAccounts.map((account) => account.id);
-  const allTrades = await fetchTrades(userId, accountIds);
+
+  // If single account selected, use native currency; if all accounts selected, use USD reporting currency
+  const isMultiAccount = !accountId && selectedAccounts.length > 1;
+  const targetCurrency = isMultiAccount ? 'USD' : (selectedAccounts[0]?.currency || accounts[0]?.currency || 'USD');
+
+  const rawTrades = await fetchTrades(userId, accountIds);
+  const allTrades = await normalizeTradesForAnalytics(rawTrades, targetCurrency);
   const currentTrades = filterTradesByPeriod(allTrades, startDate, endDate);
   const previousTrades = previousPeriod ? filterTradesByPeriod(allTrades, previousPeriod.startDate, previousPeriod.endDate) : [];
-  const startingBalance = getStartingBalance(selectedAccounts);
+  
+  const startingBalance = await getNormalizedStartingBalance(selectedAccounts, targetCurrency);
   const currentSummary = calculateSummary(currentTrades, startingBalance);
   const equityCurve = calculateEquityCurve(currentTrades, startingBalance);
   const drawdown = calculateDrawdown(equityCurve, startingBalance);
@@ -371,6 +432,9 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
       { ...previousSummary, maximumDrawdownPercentage: previousDrawdown.maximumDrawdownPercentage },
     )
     : null;
+
+  // Retrieve FX conversion metadata for status UI
+  const fxDetails = await currencyService.getExchangeRateDetails(targetCurrency, 'USD');
 
   return {
     filters: {
@@ -394,7 +458,14 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
     })),
     selectedAccountIds: accountIds,
     startingBalance,
-    currency: selectedAccounts[0]?.currency || accounts[0]?.currency || 'USD',
+    currency: targetCurrency,
+    isMultiAccountNormalized: isMultiAccount,
+    fxMetadata: {
+      source: fxDetails.source,
+      timeAgo: fxDetails.timeAgo,
+      isStale: fxDetails.isStale,
+      status: fxDetails.status,
+    },
     summary: {
       netProfitLoss: currentSummary.netProfitLoss,
       returnPercentage: currentSummary.returnPercentage,

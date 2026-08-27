@@ -28,12 +28,14 @@ const processWeeklyCoach = async ({ aiRequestId, weeklyReviewId, userId }) => {
 
     const weeklyReview = await prisma.weeklyReview.findUnique({
       where: { id: weeklyReviewId },
-      include: { bestTrade: true, worstTrade: true } // ensure relations aren't exposing extra PII
+      include: { tradingAccount: { select: { name: true, currency: true } }, bestTrade: true, worstTrade: true }
     });
 
     if (!weeklyReview) {
       throw new Error('Weekly review not found');
     }
+
+    const reviewCurrency = weeklyReview.tradingAccount?.currency || 'USD (Reporting Currency)';
 
     // Determine sample size issues deterministically
     let warning = null;
@@ -60,10 +62,11 @@ Provide strict, validated JSON matching the required schema.
 Do NOT recalculate statistics. Explain the provided patterns and deliver direct, actionable goals. Provide supportive, non-diagnostic phrasing.`;
 
     const userPrompt = `Weekly Stats:
+- Account Currency / Context: ${reviewCurrency}
 - Total Trades: ${weeklyReview.totalTrades}
 - Wins: ${weeklyReview.wins} / Losses: ${weeklyReview.losses}
 - Win Rate: ${(weeklyReview.winRate > 1 ? weeklyReview.winRate : weeklyReview.winRate * 100).toFixed(2)}%
-- Net P/L: $${weeklyReview.netProfitLoss}
+- Net P/L: ${weeklyReview.netProfitLoss} ${reviewCurrency}
 - Profit Factor: ${weeklyReview.profitFactor || 'N/A'}
 - Best Pair: ${weeklyReview.bestPair || 'N/A'} / Worst Pair: ${weeklyReview.worstPair || 'N/A'}
 - Biggest Mistake Logged: ${weeklyReview.mainMistake || 'N/A'}

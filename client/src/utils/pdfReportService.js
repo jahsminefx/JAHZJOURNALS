@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { formatCurrency } from './dashboard';
 
 /**
  * JAHZJOURNALS PDF Report Generator Service
@@ -87,7 +88,8 @@ export const generatePerformancePdfReport = async ({
   drawdown,
   filters = {},
   breakdownData = [],
-  chartElementRef = null
+  chartElementRef = null,
+  currency = 'USD',
 }) => {
   try {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -115,13 +117,13 @@ export const generatePerformancePdfReport = async ({
 
     const filterTexts = [
       `Date Range: ${filters.startDate || 'All Time'} to ${filters.endDate || 'Present'}`,
+      `Currency: ${currency} ${filters.accountId ? '(Native Account Currency)' : '(Reporting Currency: USD Normalized)'}`,
       `Pair: ${filters.pair || 'All Pairs'}`,
-      `Session: ${filters.session || 'All Sessions'}`,
       `Strategy: ${filters.strategy || 'All Strategies'}`,
       `Setup: ${filters.setup || 'All Setups'}`
     ];
-    doc.text(filterTexts.slice(0, 3).join('  |  '), 18, y + 12);
-    doc.text(filterTexts.slice(3).join('  |  '), 18, y + 17);
+    doc.text(filterTexts.slice(0, 2).join('  |  '), 18, y + 12);
+    doc.text(filterTexts.slice(2).join('  |  '), 18, y + 17);
 
     y += 28;
 
@@ -144,10 +146,10 @@ export const generatePerformancePdfReport = async ({
     const metrics = [
       { label: 'Total Trades', value: String(summaryStats.totalTrades || 0) },
       { label: 'Win Rate', value: `${Number(summaryStats.winRate || 0).toFixed(1)}%` },
-      { label: 'Net P&L', value: `${netPnlVal >= 0 ? '+' : ''}$${netPnlVal.toFixed(2)}` },
+      { label: 'Net P&L', value: formatCurrency(netPnlVal, currency, { signDisplay: netPnlVal === 0 ? 'auto' : 'always' }) },
       { label: 'Profit Factor', value: summaryStats.profitFactor === null ? 'N/A' : String(summaryStats.profitFactor || '0.00') },
-      { label: 'Max Drawdown', value: `$${maxDdVal.toFixed(2)}` },
-      { label: 'Expectancy', value: `${Number(summaryStats.expectancy || 0) >= 0 ? '+' : ''}$${Number(summaryStats.expectancy || 0).toFixed(2)}` },
+      { label: 'Max Drawdown', value: formatCurrency(maxDdVal, currency) },
+      { label: 'Expectancy', value: formatCurrency(Number(summaryStats.expectancy || 0), currency, { signDisplay: 'always' }) },
     ];
 
     const colWidth = (pageWidth - 28 - 10) / 3;
@@ -245,7 +247,7 @@ export const generatePerformancePdfReport = async ({
 
         const pnl = Number(item.netRealisedProfitLoss ?? item.pnl ?? item.netPnl ?? 0);
         doc.setTextColor(pnl >= 0 ? 16 : 225, pnl >= 0 ? 185 : 29, pnl >= 0 ? 129 : 72);
-        doc.text(`${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`, pageWidth - 18, y + 4.5, { align: 'right' });
+        doc.text(formatCurrency(pnl, currency, { signDisplay: pnl === 0 ? 'auto' : 'always' }), pageWidth - 18, y + 4.5, { align: 'right' });
 
         y += 6;
       });
@@ -263,11 +265,13 @@ export const generatePerformancePdfReport = async ({
 /**
  * 2. GENERATE WEEKLY REVIEW PDF REPORT
  */
-export const generateWeeklyPdfReport = async ({ user, weeklyData, aiCoaching }) => {
+export const generateWeeklyPdfReport = async ({ user, weeklyData, aiCoaching, currency = 'USD' }) => {
   try {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
+
+    const weeklyCurrency = weeklyData?.account?.currency || currency || 'USD';
 
     drawPdfHeader(doc, 'WEEKLY TRADING PERFORMANCE REVIEW', `Trader: ${user?.name || 'Trader'}`, 1, 1);
     drawPdfFooter(doc);
@@ -289,7 +293,7 @@ export const generateWeeklyPdfReport = async ({ user, weeklyData, aiCoaching }) 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text(`Date Executed: ${new Date(weeklyData?.createdAt || Date.now()).toLocaleDateString()}  |  Account: ${weeklyData?.account?.name || 'All Accounts'}`, 18, y + 14);
+    doc.text(`Date Executed: ${new Date(weeklyData?.createdAt || Date.now()).toLocaleDateString()}  |  Account: ${weeklyData?.account?.name || 'All Accounts'} (${weeklyCurrency})`, 18, y + 14);
 
     y += 26;
 
@@ -299,7 +303,7 @@ export const generateWeeklyPdfReport = async ({ user, weeklyData, aiCoaching }) 
       : Number(weeklyData?.netPnl || 0);
 
     const stats = [
-      { label: 'Weekly P&L', value: `${netPnlVal >= 0 ? '+' : ''}$${netPnlVal.toFixed(2)}`, color: netPnlVal >= 0 ? [16, 185, 129] : [225, 29, 72] },
+      { label: 'Weekly P&L', value: formatCurrency(netPnlVal, weeklyCurrency, { signDisplay: netPnlVal === 0 ? 'auto' : 'always' }), color: netPnlVal >= 0 ? [16, 185, 129] : [225, 29, 72] },
       { label: 'Trades Executed', value: String(weeklyData?.totalTrades || 0), color: [15, 23, 42] },
       { label: 'Win Rate', value: `${Number(weeklyData?.winRate || 0).toFixed(1)}%`, color: [15, 23, 42] },
       { label: 'Discipline Score', value: weeklyData?.disciplineScore !== undefined && weeklyData?.disciplineScore !== null ? `${weeklyData.disciplineScore}/100` : 'N/A', color: [245, 158, 11] }
