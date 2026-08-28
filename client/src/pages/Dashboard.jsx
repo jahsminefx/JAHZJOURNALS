@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Activity, ShieldAlert, Target, TrendingDown, TrendingUp, Trophy } from 'lucide-react';
 import api from '../utils/api';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
@@ -168,7 +168,7 @@ const Dashboard = () => {
       closedTrades,
       grossProfit,
       grossLoss,
-      profitFactor: summary.profitFactor,
+      profitFactor: summary?.profitFactor,
     });
     const profitFactorContext = !closedTrades
       ? noClosedTradeText
@@ -261,6 +261,27 @@ const Dashboard = () => {
 
       <AnnouncementBanner />
       <DashboardPromotionBanner />
+
+      {/* Daily Review Prompt Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/70 to-slate-900 border border-indigo-800/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-xl shrink-0">
+            📝
+          </div>
+          <div>
+            <h4 className="text-sm font-extrabold text-white">Complete Today's Daily Review</h4>
+            <p className="text-xs text-slate-300">
+              Reflect on your trade execution, review metrics, and receive JAHZ AI performance coaching.
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/daily-review"
+          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition text-center whitespace-nowrap shrink-0"
+        >
+          Review Today's Trades →
+        </Link>
+      </div>
 
       {loading && <DashboardSkeleton />}
 

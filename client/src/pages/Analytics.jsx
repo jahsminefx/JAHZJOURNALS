@@ -328,9 +328,9 @@ const Analytics = () => {
       }
     }
 
-    if (summary.profitFactor && Number(summary.profitFactor) > 1.5) {
+    if (summary?.profitFactor && Number(summary.profitFactor) > 1.5) {
       insights.push(`Solid risk management: Your Profit Factor of ${summary.profitFactor} indicates strong expectancy per dollar risked.`);
-    } else if (summary.profitFactor && Number(summary.profitFactor) < 1.0) {
+    } else if (summary?.profitFactor && Number(summary.profitFactor) < 1.0) {
       insights.push(`Caution: Profit Factor is below 1.00 (${summary.profitFactor}). Consider reducing position size on lower-confidence setups.`);
     }
 
@@ -514,7 +514,7 @@ const Analytics = () => {
               </div>
               <div>
                 <p className="mt-3 text-2xl font-black tracking-tight text-foreground">
-                  {summary.profitFactor === null ? 'N/A' : Number(summary.profitFactor || 0).toFixed(2)}
+                  {summary?.profitFactor === null || summary?.profitFactor === undefined ? 'N/A' : Number(summary.profitFactor || 0).toFixed(2)}
                 </p>
                 <p className="mt-1 text-[11px] text-muted font-medium">Gross win / Gross loss</p>
               </div>
@@ -984,7 +984,7 @@ const Analytics = () => {
                       <td className={`px-6 py-4 font-bold ${row.netRealisedProfitLoss >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
                         {row.netRealisedProfitLoss >= 0 ? '+' : ''}${Number(row.netRealisedProfitLoss || 0).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 text-muted">{row.profitFactor === null ? 'N/A' : Number(row.profitFactor || 0).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-muted">{row?.profitFactor === null || row?.profitFactor === undefined ? 'N/A' : Number(row.profitFactor || 0).toFixed(2)}</td>
                       <td className="px-6 py-4 text-muted">${Number(row.expectancy || 0).toFixed(2)}</td>
                       <td className="px-6 py-4 text-muted">{row.averageRiskRewardRatio === null ? 'N/A' : `1 : ${row.averageRiskRewardRatio}`}</td>
                     </tr>

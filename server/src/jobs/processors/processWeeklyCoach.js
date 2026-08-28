@@ -65,9 +65,9 @@ Do NOT recalculate statistics. Explain the provided patterns and deliver direct,
 - Account Currency / Context: ${reviewCurrency}
 - Total Trades: ${weeklyReview.totalTrades}
 - Wins: ${weeklyReview.wins} / Losses: ${weeklyReview.losses}
-- Win Rate: ${(weeklyReview.winRate > 1 ? weeklyReview.winRate : weeklyReview.winRate * 100).toFixed(2)}%
-- Net P/L: ${weeklyReview.netProfitLoss} ${reviewCurrency}
-- Profit Factor: ${weeklyReview.profitFactor || 'N/A'}
+- Win Rate: ${weeklyReview.winRate != null ? Number(weeklyReview.winRate > 1 ? weeklyReview.winRate : weeklyReview.winRate * 100).toFixed(2) : '0.00'}%
+- Net P/L: ${weeklyReview.netProfitLoss ?? 0} ${reviewCurrency}
+- Profit Factor: ${weeklyReview.profitFactor ?? 'N/A'}
 - Best Pair: ${weeklyReview.bestPair || 'N/A'} / Worst Pair: ${weeklyReview.worstPair || 'N/A'}
 - Biggest Mistake Logged: ${weeklyReview.mainMistake || 'N/A'}
 - Most Common Emotion: ${weeklyReview.mostCommonEmotion || 'N/A'}

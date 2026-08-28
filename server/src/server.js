@@ -109,12 +109,17 @@ app.use('/api', maintenanceMiddleware);
 const { getHealthStatus } = require('./controllers/healthController');
 app.get('/api/health', getHealthStatus);
 
+const { handleSharedOpenGraphMeta } = require('./middleware/openGraphMiddleware');
+app.use(handleSharedOpenGraphMeta);
+
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/users/settings', require('./routes/settingsRoutes'));
 app.use('/api/accounts', require('./routes/tradingAccountRoutes'));
 app.use('/api/prop-firm-phases', require('./routes/propFirmPhaseRoutes'));
 app.use('/api/trades', require('./routes/tradeRoutes'));
+app.use('/api/daily-reviews', require('./routes/dailyReviewRoutes'));
+app.use('/api/shared', require('./routes/socialShareRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/mentors', require('./routes/mentorRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));

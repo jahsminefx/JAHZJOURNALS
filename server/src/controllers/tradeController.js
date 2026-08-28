@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const currencyService = require('../services/fx/currencyService');
+const { calculatePips } = require('../utils/pipCalculator');
 
 const prisma = new PrismaClient();
 
@@ -100,6 +101,14 @@ const createTrade = async (req, res) => {
 
     const parseNum = (val) => (val !== undefined && val !== null && val !== '' && !Number.isNaN(Number(val))) ? parseFloat(val) : null;
 
+    const parsedPips = parseNum(pips);
+    const computedPips = parsedPips !== null ? parsedPips : calculatePips({
+      pair,
+      direction,
+      entryPrice: parseNum(entryPrice),
+      exitPrice: parseNum(exitPrice),
+    });
+
     const tradeStatus = status || 'ACTIVE';
     const tradeResult = result || 'OPEN';
     const isClosed = tradeStatus === 'CLOSED' || ['WIN', 'LOSS', 'BREAKEVEN'].includes(tradeResult);
@@ -131,7 +140,7 @@ const createTrade = async (req, res) => {
         profitLossAmount: parseNum(profitLossAmount),
         profitLossPercent: parseNum(profitLossPercent),
         riskRewardRatio: parseNum(riskRewardRatio),
-        pips: parseNum(pips),
+        pips: computedPips,
         result: tradeResult,
         status: tradeStatus,
         session: session || null,
@@ -265,6 +274,17 @@ const updateTrade = async (req, res) => {
       fxRateTimestamp = new Date();
     }
 
+    const parsedPips = pips !== undefined ? parseNum(pips) : undefined;
+    const computedPips = parsedPips !== undefined && parsedPips !== null
+      ? parsedPips
+      : calculatePips({
+          pair: pair ? pair.toUpperCase().trim() : existingTrade.pair,
+          direction: direction || existingTrade.direction,
+          entryPrice: entryPrice !== undefined ? parseNum(entryPrice) : existingTrade.entryPrice,
+          exitPrice: exitPrice !== undefined ? parseNum(exitPrice) : existingTrade.exitPrice,
+          pips: existingTrade.pips,
+        });
+
     const updatedTrade = await prisma.trade.update({
       where: { id: req.params.id },
       data: {
@@ -280,7 +300,7 @@ const updateTrade = async (req, res) => {
         profitLossAmount: profitLossAmount !== undefined ? parseNum(profitLossAmount) : undefined,
         profitLossPercent: profitLossPercent !== undefined ? parseNum(profitLossPercent) : undefined,
         riskRewardRatio: riskRewardRatio !== undefined ? parseNum(riskRewardRatio) : undefined,
-        pips: pips !== undefined ? parseNum(pips) : undefined,
+        pips: computedPips !== null ? computedPips : undefined,
         result: result || undefined,
         status: status || undefined,
         session: session !== undefined ? session : undefined,

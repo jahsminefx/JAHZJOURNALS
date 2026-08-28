@@ -483,7 +483,7 @@ const calculatePeriodComparison = (current, previous) => ({
   netProfitLossChange: round(current.netProfitLoss - previous.netProfitLoss),
   winRateChange: round(current.winRate - previous.winRate, 1),
   totalTradesChange: current.totalTrades - previous.totalTrades,
-  profitFactorChange: current.profitFactor === null || previous.profitFactor === null
+  profitFactorChange: (current.profitFactor == null || previous.profitFactor == null)
     ? null
     : round(current.profitFactor - previous.profitFactor, 2),
   drawdownChange: round((current.maximumDrawdownPercentage || 0) - (previous.maximumDrawdownPercentage || 0), 2),

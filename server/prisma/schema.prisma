@@ -160,6 +160,7 @@ enum AiFeatureType {
   ANALYTICS_ASSISTANT
   MENTOR_SUMMARY
   SUPPORT_ASSISTANT
+  DAILY_REVIEW
 }
 
 enum AiRequestStatus {
@@ -276,6 +277,9 @@ model User {
   updatedAt             DateTime              @updatedAt
   subscriptionHistories SubscriptionHistory[]
   userBadges            UserBadge[]
+  dailyReviews          DailyReview[]
+  sharedTrades          SharedTrade[]
+  sharedDailyReviews    SharedDailyReview[]
 
   @@index([timezone])
 }
@@ -397,6 +401,7 @@ model TradingAccount {
 
   trades          Trade[]
   weeklyReviews   WeeklyReview[]
+  dailyReviews    DailyReview[]
   propFirmAccount PropFirmAccount?
   tradingGoals    TradingGoal[]
 
@@ -590,6 +595,7 @@ model Trade {
   checklistResponses   TradeChecklistResponse[]
   bestInWeeklyReviews  WeeklyReview[]           @relation("WeeklyReviewBestTrade")
   worstInWeeklyReviews WeeklyReview[]           @relation("WeeklyReviewWorstTrade")
+  sharedTrades         SharedTrade[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -747,11 +753,98 @@ model WeeklyReview {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId, scopeKey, weekStartDate])
+}
+
+enum DailyReviewStatus {
+  DRAFT
+  COMPLETED
+  REVIEWED
+}
+
+model DailyReview {
+  id                    String            @id @default(uuid())
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                String
+  tradingAccount        TradingAccount?   @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
+  tradingAccountId      String?
+  scopeKey              String            @default("all")
+  reviewDate            DateTime          @db.Date
+  status                DailyReviewStatus @default(DRAFT)
+  whatWentWell          String?
+  whatWentWrong         String?
+  lessonsLearned        String?
+  tomorrowFocus         String?
+  followedPlan          Boolean?
+  emotionalState        String?
+  marketConditions      String?
+  generalNotes          String?
+
+  totalTrades           Int               @default(0)
+  winRate               Float             @default(0)
+  netProfitLoss         Float             @default(0)
+  profitFactor          Float?
+  totalPips             Float?
+  averageRiskReward     Float?
+
+  aiSummary             String?
+  aiStructuredOutput    Json?
+  aiGeneratedAt         DateTime?
+  aiRequestId           String?
+
+  sharedDailyReviews    SharedDailyReview[]
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@unique([userId, scopeKey, reviewDate])
   @@index([userId])
-  @@index([weekStartDate])
-  @@index([userId, weekStartDate])
-  @@index([tradingAccountId, weekStartDate])
+  @@index([reviewDate])
+  @@index([userId, reviewDate])
+  @@index([tradingAccountId, reviewDate])
+}
+
+model SharedTrade {
+  id                String    @id @default(uuid())
+  trade             Trade     @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeId           String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  shareToken        String    @unique
+  isActive          Boolean   @default(true)
+  includeScreenshot Boolean   @default(false)
+  shareCount        Int       @default(0)
+  viewCount         Int       @default(0)
+  lastViewedAt      DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([tradeId])
+  @@index([userId])
+  @@index([shareToken])
+}
+
+model SharedDailyReview {
+  id                 String      @id @default(uuid())
+  dailyReview        DailyReview @relation(fields: [dailyReviewId], references: [id], onDelete: Cascade)
+  dailyReviewId      String
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+  shareToken         String      @unique
+  isActive           Boolean     @default(true)
+  includeAiReview    Boolean     @default(false)
+  includeNotes       Boolean     @default(false)
+  includeScreenshots Boolean     @default(false)
+  shareCount         Int         @default(0)
+  viewCount          Int         @default(0)
+  lastViewedAt       DateTime?
+
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([dailyReviewId])
+  @@index([userId])
+  @@index([shareToken])
 }
 
 model ReportExport {

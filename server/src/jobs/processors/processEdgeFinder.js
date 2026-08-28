@@ -47,13 +47,13 @@ You will be provided with a trader's baseline metrics and their best determinist
 Explain these edges in non-mathematical, actionable terms to the user. Do not invent new metrics. Clearly state when these are "candidate edges" and emphasize sticking to the plan. Make it professional and encouraging.`;
 
     const userPrompt = `Baseline Stats (${baseline.total} closed trades):
-Win Rate: ${(baseline.winRate * 100).toFixed(1)}%, Profit Factor: ${baseline.profitFactor.toFixed(2)}, Expectancy: ${baseline.expectancyR.toFixed(2)}R
+Win Rate: ${(baseline.winRate * 100).toFixed(1)}%, Profit Factor: ${baseline.profitFactor != null ? Number(baseline.profitFactor).toFixed(2) : 'N/A'}, Expectancy: ${(baseline.expectancyR || 0).toFixed(2)}R
 
 Candidate Edges (Top Combinations):
 ${candidates.map((edge, i) => `Edge ${i+1}: [ ${edge.combination} ]
 - Sample Size: ${edge.metrics.total} trades
 - Win Rate: ${(edge.metrics.winRate * 100).toFixed(1)}% (+${(edge.improvementOverBaseline.winRateDiff * 100).toFixed(1)}% over baseline)
-- Profit Factor: ${edge.metrics.profitFactor.toFixed(2)}
+- Profit Factor: ${edge.metrics.profitFactor != null ? Number(edge.metrics.profitFactor).toFixed(2) : 'N/A'}
 - Expectancy: ${edge.metrics.expectancyR.toFixed(2)}R (+${edge.improvementOverBaseline.expectancyDiff.toFixed(2)}R over baseline)
 - Net P/L: $${edge.metrics.netProfit.toFixed(2)}
 - Max Drawdown: $${edge.metrics.maxDrawdown.toFixed(2)}`).join('\n\n')}`;

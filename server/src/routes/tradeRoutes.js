@@ -16,6 +16,12 @@ const csvUpload = require('../middleware/csvUploadMiddleware');
 const screenshotRoutes = require('./screenshotRoutes');
 const { preTradeCheck } = require('../controllers/preTradeController');
 
+const {
+  shareTrade,
+  updateTradeShare,
+  revokeTradeShare,
+} = require('../controllers/socialShareController');
+
 router.post('/pre-trade-check', protect, preTradeCheck);
 
 router.route('/')
@@ -29,6 +35,10 @@ router.route('/:id')
   .get(protect, getTradeById)
   .put(protect, updateTrade)
   .delete(protect, deleteTrade);
+
+router.post('/:id/share', protect, shareTrade);
+router.patch('/:id/share', protect, updateTradeShare);
+router.delete('/:id/share', protect, revokeTradeShare);
 
 router.put('/:id/review', protect, updateTradeReview);
 

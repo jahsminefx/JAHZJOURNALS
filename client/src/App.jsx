@@ -53,6 +53,9 @@ const TradeReviewPage = lazy(() => import('./pages/TradeReviewPage'));
 const TradeDetail = lazy(() => import('./pages/TradeDetail'));
 const RiskCalculator = lazy(() => import('./pages/RiskCalculator'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const DailyReviewPage = lazy(() => import('./pages/DailyReviewPage'));
+const SharedTradePage = lazy(() => import('./pages/shared/SharedTradePage'));
+const SharedDailyReviewPage = lazy(() => import('./pages/shared/SharedDailyReviewPage'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const WeeklyReview = lazy(() => import('./pages/WeeklyReview'));
 const RulesPage = lazy(() => import('./pages/RulesPage'));
@@ -109,6 +112,8 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/shared/trade/:shareToken" element={<SharedTradePage />} />
+            <Route path="/shared/daily-review/:shareToken" element={<SharedDailyReviewPage />} />
 
             {/* Shared Public/Legal Pages (Accessible to both Anonymous and Authenticated Traders) */}
             <Route element={<SharedRouteLayout />}>
@@ -160,6 +165,7 @@ function App() {
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/risk-calculator" element={<RiskCalculator />} />
                 <Route path="/weekly-review" element={<WeeklyReview />} />
+                <Route path="/daily-review" element={<DailyReviewPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/promotions" element={<PromotionsPage />} />
                 <Route path="/promotions/:id" element={<PromotionDetailPage />} />

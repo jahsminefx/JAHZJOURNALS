@@ -47,7 +47,7 @@ const SessionEdgeChart = ({ data = [], currency, className = '' }) => {
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
                   <div className="min-w-0">
                     <p className="break-words font-semibold leading-5 text-foreground">{session.label}</p>
-                    <p className="text-xs leading-5 text-muted">{formatCurrency(session.netProfitLoss, currency)} | PF {formatProfitFactor(session.profitFactor)}</p>
+                    <p className="text-xs leading-5 text-muted">{formatCurrency(session?.netProfitLoss, currency)} | PF {formatProfitFactor(session?.profitFactor)}</p>
                   </div>
                   <span className="col-start-2 text-xs font-bold text-foreground 2xl:col-start-auto 2xl:text-right 2xl:text-sm">{session.percentage}% ({session.totalTrades})</span>
                 </div>

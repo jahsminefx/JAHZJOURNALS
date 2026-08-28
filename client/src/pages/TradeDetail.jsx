@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Edit3, Image as ImageIcon, Trash2, Brain, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Edit3, Image as ImageIcon, Trash2, Brain, Maximize2, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { resolveImageUrl } from '../utils/api';
 import DeleteTradeDialog from '../components/trades/DeleteTradeDialog';
 import ImageModal from '../components/common/ImageModal';
+import ShareTradeModal from '../components/share/ShareTradeModal';
 
 const TradeDetail = () => {
   const { id } = useParams();
@@ -13,6 +14,7 @@ const TradeDetail = () => {
   const [loading, setLoading] = useState(true);
   const [deletingTrade, setDeletingTrade] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [analyzingScreenshotId, setAnalyzingScreenshotId] = useState(null);
   const [visionInsights, setVisionInsights] = useState({});
@@ -176,6 +178,14 @@ const TradeDetail = () => {
           <Link to={`/trades/${id}/review`} className="hidden sm:inline-flex items-center justify-center gap-2 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-bold text-green-400 hover:bg-green-500/20">
             Deep Review
           </Link>
+          <button
+            type="button"
+            onClick={() => setShowShareModal(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-500/50 bg-indigo-500/10 px-4 py-2 text-sm font-bold text-indigo-300 hover:bg-indigo-500/20"
+          >
+            <Share2 size={18} />
+            Share Trade
+          </button>
           <Link to={`/trades/${id}/edit`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400">
             <Edit3 size={18} />
             Quick Edit
@@ -418,6 +428,12 @@ const TradeDetail = () => {
         imageUrl={activeModalImage?.imageUrl}
         title={activeModalImage?.screenshotType}
         note={activeModalImage?.note}
+      />
+
+      <ShareTradeModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        trade={trade}
       />
     </div>
   );

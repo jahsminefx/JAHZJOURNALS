@@ -463,8 +463,8 @@ const WeeklyReview = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div className="bg-surface-muted p-3.5 rounded-xl border border-border">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">Profit Factor</span>
-                    <span className={`text-base font-black ${Number(selectedReview.profitFactor || 0) >= 1.5 ? 'text-emerald-500 dark:text-emerald-400' : Number(selectedReview.profitFactor || 0) >= 1.0 ? 'text-amber-500' : 'text-rose-500'}`}>
-                      {selectedReview.profitFactor === null ? 'N/A' : Number(selectedReview.profitFactor || 0).toFixed(2)}
+                    <span className={`text-base font-black ${Number(selectedReview?.profitFactor || 0) >= 1.5 ? 'text-emerald-500 dark:text-emerald-400' : Number(selectedReview?.profitFactor || 0) >= 1.0 ? 'text-amber-500' : 'text-rose-500'}`}>
+                      {selectedReview?.profitFactor === null || selectedReview?.profitFactor === undefined ? 'N/A' : Number(selectedReview.profitFactor || 0).toFixed(2)}
                     </span>
                   </div>
 

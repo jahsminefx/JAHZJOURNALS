@@ -15,6 +15,7 @@ const routeTitles = {
   '/analytics': 'Performance Analytics',
   '/risk-calculator': 'Position Calculator',
   '/weekly-review': 'Weekly Journal',
+  '/daily-review': 'Daily Review',
   '/notifications': 'Notifications',
   '/ai': 'JAHZ AI Assistant',
   '/settings': 'Account Settings',

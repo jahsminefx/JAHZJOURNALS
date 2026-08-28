@@ -147,7 +147,7 @@ export const generatePerformancePdfReport = async ({
       { label: 'Total Trades', value: String(summaryStats.totalTrades || 0) },
       { label: 'Win Rate', value: `${Number(summaryStats.winRate || 0).toFixed(1)}%` },
       { label: 'Net P&L', value: formatCurrency(netPnlVal, currency, { signDisplay: netPnlVal === 0 ? 'auto' : 'always' }) },
-      { label: 'Profit Factor', value: summaryStats.profitFactor === null ? 'N/A' : String(summaryStats.profitFactor || '0.00') },
+      { label: 'Profit Factor', value: summaryStats?.profitFactor === null || summaryStats?.profitFactor === undefined ? 'N/A' : String(summaryStats.profitFactor || '0.00') },
       { label: 'Max Drawdown', value: formatCurrency(maxDdVal, currency) },
       { label: 'Expectancy', value: formatCurrency(Number(summaryStats.expectancy || 0), currency, { signDisplay: 'always' }) },
     ];
