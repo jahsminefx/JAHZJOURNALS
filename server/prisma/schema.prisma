@@ -399,6 +399,21 @@ model TradingAccount {
   dailyDrawdown       Float?
   minimumTradingDays  Int?
 
+  syncToken       String?   @unique
+  syncEnabled     Boolean   @default(false)
+  lastSyncedAt    DateTime?
+  mtServerName    String?
+  mtAccountNumber String?
+
+  cloudSyncEnabled      Boolean   @default(false)
+  cloudSyncStatus       String    @default("DISCONNECTED")
+  cloudAccountId        String?
+  cloudServer           String?
+  cloudLogin            String?
+  cloudInvestorPassword String?
+  cloudLastSyncedAt     DateTime?
+  cloudError            String?
+
   trades          Trade[]
   weeklyReviews   WeeklyReview[]
   dailyReviews    DailyReview[]
@@ -412,6 +427,7 @@ model TradingAccount {
   @@index([userId, createdAt])
   @@index([userId, accountCategory])
   @@index([userId, currency])
+  @@index([syncToken])
 }
 
 model PropFirmAccount {
@@ -587,6 +603,11 @@ model Trade {
   fxRateSource      String?
   fxRateTimestamp   DateTime?
 
+  externalId        String?
+  initialStopLoss   Float?
+  initialTakeProfit Float?
+  slTpHistory       Json?
+
   screenshots          TradeScreenshot[]
   ruleViolations       TradeRuleViolation[]
   emotionLogs          EmotionLog[]
@@ -602,6 +623,7 @@ model Trade {
 
   @@index([tradingAccountId])
   @@index([tradingAccountId, entryTime])
+  @@index([externalId])
   @@index([entryTime])
   @@index([exitTime])
   @@index([pair])

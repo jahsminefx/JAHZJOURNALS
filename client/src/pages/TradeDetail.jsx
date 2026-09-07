@@ -394,13 +394,62 @@ const TradeDetail = () => {
 
         <div className="space-y-6">
           <div className="bg-surface-muted p-6 rounded-xl border border-border shadow-lg">
-            <h3 className="text-lg font-bold text-green-400 border-b border-border pb-2 mb-4">Outcome</h3>
+            <h3 className="text-lg font-bold text-green-400 border-b border-border pb-2 mb-4">Outcome & Execution</h3>
             <div className="space-y-3">
               <div className="flex justify-between"><span className="text-muted">Status</span><span className="font-medium text-foreground">{trade.status}</span></div>
               <div className="flex justify-between"><span className="text-muted">Result</span><span className={`font-bold ${trade.result === 'WIN' ? 'text-green-400' : trade.result === 'LOSS' ? 'text-red-400' : 'text-muted'}`}>{trade.result}</span></div>
               <div className="flex justify-between"><span className="text-muted">P/L</span><span className={`font-bold ${trade.profitLossAmount > 0 ? 'text-green-400' : trade.profitLossAmount < 0 ? 'text-red-400' : 'text-muted'}`}>{trade.profitLossAmount > 0 ? '+$' : '$'}{trade.profitLossAmount || 0}</span></div>
               <div className="flex justify-between"><span className="text-muted">Risk/Reward</span><span className="font-medium text-foreground">{trade.riskRewardRatio || 'N/A'}</span></div>
-              <div className="flex justify-between"><span className="text-muted">Risk</span><span className="font-medium text-foreground">{trade.riskAmount || 'N/A'}</span></div>
+              <div className="flex justify-between"><span className="text-muted">Risk Amount</span><span className="font-medium text-foreground">{trade.riskAmount || 'N/A'}</span></div>
+              
+              {/* SL / TP & Modification Details */}
+              <div className="pt-3 border-t border-border/80 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted">Entry Price:</span>
+                  <span className="font-bold font-mono text-foreground">{trade.entryPrice ?? 'N/A'}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted">Stop Loss:</span>
+                  <span className="font-bold font-mono text-rose-400 flex items-center gap-1">
+                    {trade.stopLoss ?? 'N/A'}
+                    {trade.initialStopLoss && trade.initialStopLoss !== trade.stopLoss && (
+                      <span className="text-[10px] text-muted line-through font-normal">({trade.initialStopLoss})</span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted">Take Profit:</span>
+                  <span className="font-bold font-mono text-emerald-400 flex items-center gap-1">
+                    {trade.takeProfit ?? 'N/A'}
+                    {trade.initialTakeProfit && trade.initialTakeProfit !== trade.takeProfit && (
+                      <span className="text-[10px] text-muted line-through font-normal">({trade.initialTakeProfit})</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* SL/TP Modification Log */}
+              {Array.isArray(trade.slTpHistory) && trade.slTpHistory.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border/80 space-y-2">
+                  <p className="text-xs font-bold text-foreground">Modification Log</p>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {trade.slTpHistory.map((item, idx) => (
+                      <div key={idx} className="rounded-lg bg-surface p-2 text-[11px] space-y-0.5 border border-border/50">
+                        <div className="flex justify-between font-semibold text-emerald-400">
+                          <span>{item.note || 'Modified'}</span>
+                          <span className="text-[10px] text-muted">{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        {item.newStopLoss !== undefined && item.previousStopLoss !== undefined && (
+                          <p className="text-muted">SL: {item.previousStopLoss} &rarr; <span className="text-foreground font-mono font-bold">{item.newStopLoss}</span></p>
+                        )}
+                        {item.newTakeProfit !== undefined && item.previousTakeProfit !== undefined && (
+                          <p className="text-muted">TP: {item.previousTakeProfit} &rarr; <span className="text-foreground font-mono font-bold">{item.newTakeProfit}</span></p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -25,8 +25,8 @@ const ImportTradesModal = ({ defaultAccountId, isOpen, onClose, onImportSuccess 
     if (e.target.files && e.target.files.length > 0) {
       const selectedFile = e.target.files[0];
       const ext = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
-      if (ext !== '.csv' && ext !== '.txt') {
-        toast.error('Please select a valid CSV file (.csv).');
+      if (ext !== '.csv' && ext !== '.txt' && ext !== '.html' && ext !== '.htm') {
+        toast.error('Please select a valid CSV (.csv) or MetaTrader HTML (.html / .htm) file.');
         return;
       }
       setFile(selectedFile);
@@ -36,7 +36,7 @@ const ImportTradesModal = ({ defaultAccountId, isOpen, onClose, onImportSuccess 
   const handleImport = async (e) => {
     e.preventDefault();
     if (!file) {
-      toast.error('Please select a CSV file to upload.');
+      toast.error('Please select a file to upload.');
       return;
     }
     if (!accountId) {
@@ -60,7 +60,7 @@ const ImportTradesModal = ({ defaultAccountId, isOpen, onClose, onImportSuccess 
       if (onImportSuccess) onImportSuccess();
       onClose();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to import trades. Please check the CSV format.');
+      toast.error(error.response?.data?.message || 'Failed to import trades. Please check the file format.');
     } finally {
       setIsUploading(false);
       setFile(null);
@@ -104,14 +104,14 @@ const ImportTradesModal = ({ defaultAccountId, isOpen, onClose, onImportSuccess 
 
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-surface-muted/30 p-6 text-center transition-colors hover:border-emerald-500/50">
             <Upload size={32} className="mb-2.5 text-emerald-500" />
-            <p className="mb-1 text-sm font-bold text-foreground">Upload CSV File</p>
-            <p className="mb-4 text-xs text-muted">MT4, MT5, cTrader, and generic CSV formats supported.</p>
+            <p className="mb-1 text-sm font-bold text-foreground">Upload CSV or MT HTML File</p>
+            <p className="mb-4 text-xs text-muted">MT4/MT5 HTML Detailed Statements & CSV formats supported.</p>
             
             <label className="cursor-pointer rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-4 py-2 text-xs font-bold hover:bg-emerald-500/20 transition-all">
               Choose File
               <input 
                 type="file" 
-                accept=".csv,text/csv,text/plain,application/vnd.ms-excel,application/csv" 
+                accept=".csv,text/csv,text/plain,application/vnd.ms-excel,application/csv,.html,.htm,text/html" 
                 className="hidden" 
                 onChange={handleFileChange} 
               />

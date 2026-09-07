@@ -7,10 +7,13 @@ import DeleteTradeDialog from '../components/trades/DeleteTradeDialog';
 import ImportTradesModal from '../components/trades/ImportTradesModal';
 import { SkeletonTable, SkeletonCard } from '../components/SkeletonLoader';
 import { loadSettings, fetchAndSyncSettings } from '../utils/settings';
+import { formatCurrency } from '../utils/dashboard';
+import { getCurrencySymbol } from '../services/currencyConversionService';
 
 const TradesList = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [trades, setTrades] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingTradeId, setDeletingTradeId] = useState(null);
   const [tradePendingDelete, setTradePendingDelete] = useState(null);
@@ -21,6 +24,7 @@ const TradesList = () => {
   const queryString = searchParams.toString();
   const pairFilter = searchParams.get('pair');
   const dateFilter = searchParams.get('date');
+  const accountIdFilter = searchParams.get('accountId') || '';
 
   useEffect(() => {
     fetchAndSyncSettings().then((synced) => {
@@ -28,7 +32,21 @@ const TradesList = () => {
         setViewMode(synced.journal.defaultTradeListView.toLowerCase());
       }
     });
+
+    api.get('/accounts')
+      .then(({ data }) => setAccounts(Array.isArray(data) ? data : data.accounts || []))
+      .catch((err) => console.error('Failed to load accounts for filter:', err));
   }, []);
+
+  const handleAccountFilterChange = (newAccountId) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (newAccountId) {
+      nextParams.set('accountId', newAccountId);
+    } else {
+      nextParams.delete('accountId');
+    }
+    setSearchParams(nextParams);
+  };
 
   const fetchTrades = useCallback(async () => {
     try {
@@ -76,6 +94,9 @@ const TradesList = () => {
     );
   });
 
+  const selectedAccountObj = accounts.find((a) => a.id === accountIdFilter);
+  const selectedAccountName = selectedAccountObj?.name || selectedAccountObj?.accountName || selectedAccountObj?.propFirmName;
+
   return (
     <div className="space-y-6 text-foreground font-sans">
       {/* Top Action & Filter Bar */}
@@ -83,18 +104,36 @@ const TradesList = () => {
         <div>
           <h2 className="text-xl sm:text-2xl font-black">Your Trade Journal</h2>
           <p className="text-xs sm:text-sm text-muted mt-1">
-            {pairFilter || dateFilter
-              ? `Filtered by ${pairFilter ? `pair ${pairFilter}` : ''}${pairFilter && dateFilter ? ' and ' : ''}${dateFilter ? `date ${dateFilter}` : ''}`
+            {pairFilter || dateFilter || accountIdFilter
+              ? `Filtered by ${selectedAccountName ? `account "${selectedAccountName}"` : ''}${selectedAccountName && (pairFilter || dateFilter) ? ' & ' : ''}${pairFilter ? `pair ${pairFilter}` : ''}${pairFilter && dateFilter ? ' & ' : ''}${dateFilter ? `date ${dateFilter}` : ''}`
               : 'Your executions, your lessons, your growth'}
           </p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {(pairFilter || dateFilter) && (
+          {(pairFilter || dateFilter || accountIdFilter) && (
             <Link to="/trades" className="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted hover:border-emerald-500/60 hover:text-foreground">
-              Clear Filter
+              Clear Filters
             </Link>
           )}
+
+          {/* Account Selector Filter */}
+          <select
+            value={accountIdFilter}
+            onChange={(e) => handleAccountFilterChange(e.target.value)}
+            className="bg-surface-muted/60 border border-border rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-foreground focus:border-emerald-500 focus:outline-none transition-colors max-w-[170px] sm:max-w-[200px] truncate"
+            title="Filter by Trading Account"
+          >
+            <option value="">All Accounts</option>
+            {accounts.map((acc) => {
+              const accName = acc.name || acc.accountName || acc.propFirmName || 'Trading Account';
+              return (
+                <option key={acc.id} value={acc.id}>
+                  {accName} ({acc.currency || 'USD'})
+                </option>
+              );
+            })}
+          </select>
 
           {/* View Mode Toggle Controls */}
           <div className="flex items-center rounded-xl border border-border bg-surface-muted/60 p-1">
@@ -221,7 +260,7 @@ const TradesList = () => {
                         <span className={`font-mono font-bold ${
                           trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
                         }`}>
-                          {trade.profitLossAmount > 0 ? '+' : ''}${trade.profitLossAmount || 0}
+                          {formatCurrency(trade.profitLossAmount, trade.tradingAccount?.currency || 'USD', { signDisplay: 'always' })}
                         </span>
                       </div>
                       <div>
@@ -286,7 +325,7 @@ const TradesList = () => {
                     <span className={`font-mono font-bold text-sm ${
                       trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
                     }`}>
-                      {trade.profitLossAmount > 0 ? '+' : ''}${trade.profitLossAmount || 0}
+                      {formatCurrency(trade.profitLossAmount, trade.tradingAccount?.currency || 'USD', { signDisplay: 'always' })}
                     </span>
 
                     <div className="flex items-center gap-2 text-xs">
@@ -345,7 +384,7 @@ const TradesList = () => {
                         <span className={`font-mono font-bold text-sm ${
                           trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
                         }`}>
-                          {trade.profitLossAmount > 0 ? '+' : ''}${trade.profitLossAmount || 0}
+                          {formatCurrency(trade.profitLossAmount, trade.tradingAccount?.currency || 'USD', { signDisplay: 'always' })}
                         </span>
                       </div>
                     </div>
@@ -384,7 +423,7 @@ const TradesList = () => {
                         <th className="px-6 py-3.5 font-bold">Pair / Dir</th>
                         <th className="px-6 py-3.5 font-bold">Date</th>
                         <th className="px-6 py-3.5 font-bold">Result</th>
-                        <th className="px-6 py-3.5 font-bold">P/L ($)</th>
+                        <th className="px-6 py-3.5 font-bold">P/L</th>
                         <th className="px-6 py-3.5 font-bold">Status</th>
                         <th className="px-6 py-3.5 font-bold text-right">Actions</th>
                       </tr>
@@ -413,7 +452,7 @@ const TradesList = () => {
                           <td className={`px-6 py-4 font-mono font-bold text-sm ${
                             trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
                           }`}>
-                            {trade.profitLossAmount > 0 ? '+' : ''}${trade.profitLossAmount || 0}
+                            {formatCurrency(trade.profitLossAmount, trade.tradingAccount?.currency || 'USD', { signDisplay: 'always' })}
                           </td>
                           <td className="px-6 py-4 text-muted text-xs font-medium">{trade.status}</td>
                           <td className="px-6 py-4 text-right">

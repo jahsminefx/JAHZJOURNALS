@@ -3,6 +3,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { Info } from 'lucide-react';
 import { DashboardCard, CardHeader } from './DashboardShell';
 import { formatCurrency, formatNumber } from '../../utils/dashboard';
+import { getCurrencySymbol } from '../../services/currencyConversionService';
 
 const chartPeriods = [
   { label: '7D', range: '7d' },
@@ -16,6 +17,17 @@ const curveViews = [
   { key: 'cumulativePnl', label: 'Cumulative P/L' },
   { key: 'accountBalance', label: 'Account Balance' },
 ];
+
+const formatChartYAxisTick = (val, curr) => {
+  const num = Number(val || 0);
+  const abs = Math.abs(num);
+  const sign = num < 0 ? '-' : '';
+  const sym = getCurrencySymbol(curr).trim();
+  if (abs >= 1_000_000_000) return `${sign}${sym}${(abs / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000) return `${sign}${sym}${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 10_000) return `${sign}${sym}${(abs / 1_000).toFixed(1)}k`;
+  return `${sign}${sym}${abs.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+};
 
 const eventLabels = {
   account_start: 'Account start',
@@ -247,10 +259,8 @@ const EquityCurveChart = ({
   const gradientId = `performanceFill-${view}-${chartId}`;
   const glowId = `performanceGlow-${view}-${chartId}`;
   const yDomain = isCumulative ? getCumulativeDomain(points) : getBalanceDomain(points);
-  const curveType = isCumulative ? 'monotone' : 'stepAfter';
-  const chartMargin = isCumulative
-    ? { left: 0, right: 8, top: 12, bottom: 4 }
-    : { left: 2, right: 10, top: 12, bottom: 4 };
+  const curveType = 'monotone';
+  const chartMargin = { left: 10, right: 15, top: 12, bottom: 4 };
   const formatAxisTick = (value) => formatTimestamp(value, {
     includeTime: !isCumulative && (activeRange === '7d' || repeatedDateKeys.has(getDateKey(value))),
   });
@@ -339,7 +349,7 @@ const EquityCurveChart = ({
                 </defs>
                 <CartesianGrid stroke="rgb(var(--border))" strokeOpacity={0.72} vertical={false} />
                 <XAxis dataKey="date" tickFormatter={formatAxisTick} stroke="rgb(var(--muted-foreground))" tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} minTickGap={32} />
-                <YAxis domain={yDomain} stroke="rgb(var(--muted-foreground))" tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value, currency, { maximumFractionDigits: 0 })} width={62} />
+                <YAxis domain={yDomain} stroke="rgb(var(--muted-foreground))" tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(value) => formatChartYAxisTick(value, currency)} width={75} />
                 <Tooltip
                   cursor={{ stroke: cursorStroke, strokeOpacity: 0.42, strokeWidth: 1 }}
                   content={<PerformanceTooltip view={view} currency={currency} />}

@@ -155,6 +155,109 @@ const mapCsvRowToTrade = (row, accountId) => {
   };
 };
 
+const parseMtHtml = (htmlContent, accountId) => {
+  const trades = [];
+  const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+
+  let match;
+
+  const getNumLocal = (val) => {
+    if (val === null || val === undefined || val === '' || val === 'null') return null;
+    const n = Number(String(val).replace(/[^0-9.-]+/g, ''));
+    return isNaN(n) ? null : n;
+  };
+
+  while ((match = trRegex.exec(htmlContent)) !== null) {
+    const trContent = match[1];
+    const cells = [];
+    let tdMatch;
+    while ((tdMatch = tdRegex.exec(trContent)) !== null) {
+      const text = tdMatch[1]
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/gi, ' ')
+        .trim();
+      cells.push(text);
+    }
+
+    if (cells.length < 8) continue;
+
+    // Detect MT4 / MT5 trade row format
+    // MT4 Standard: [0] Ticket, [1] Open Time, [2] Type (buy/sell), [3] Size, [4] Item/Symbol, [5] Price, [6] S/L, [7] T/P, [8] Close Time, [9] Price, [10] Commission, [11] Taxes, [12] Swap, [13] Profit
+    let ticket = cells[0];
+    let openTimeStr = cells[1];
+    let rawType = (cells[2] || '').toLowerCase();
+    let lotSize = getNumLocal(cells[3]);
+    let pair = String(cells[4] || '').toUpperCase().trim();
+    let entryPrice = getNumLocal(cells[5]);
+    let stopLoss = getNumLocal(cells[6]);
+    let takeProfit = getNumLocal(cells[7]);
+    let exitTimeStr = cells[8];
+    let exitPrice = getNumLocal(cells[9]);
+    let commission = 0;
+    let swap = 0;
+    let profit = 0;
+
+    // If cell[1] is buy/sell, shifts occur
+    if (rawType !== 'buy' && rawType !== 'sell') {
+      rawType = (cells[1] || '').toLowerCase();
+      if (rawType === 'buy' || rawType === 'sell') {
+        openTimeStr = cells[0];
+        lotSize = getNumLocal(cells[2]);
+        pair = String(cells[3] || '').toUpperCase().trim();
+        entryPrice = getNumLocal(cells[4]);
+        stopLoss = getNumLocal(cells[5]);
+        takeProfit = getNumLocal(cells[6]);
+        exitTimeStr = cells[7];
+        exitPrice = getNumLocal(cells[8]);
+      } else {
+        continue;
+      }
+    }
+
+    if (rawType !== 'buy' && rawType !== 'sell') continue;
+    if (!pair || pair.length < 3 || pair.includes('TOTAL') || pair.includes('BALANCE')) continue;
+
+    if (cells.length >= 14) {
+      commission = getNumLocal(cells[10]) || 0;
+      swap = getNumLocal(cells[12]) || 0;
+      profit = getNumLocal(cells[13]) || 0;
+    } else if (cells.length >= 10) {
+      profit = getNumLocal(cells[cells.length - 1]) || 0;
+    }
+
+    const direction = rawType === 'buy' ? 'BUY' : 'SELL';
+    const entryTime = new Date(openTimeStr);
+    const exitTime = exitTimeStr ? new Date(exitTimeStr) : null;
+    const netProfit = profit + swap + commission;
+    const isClosed = Boolean(exitTime && !isNaN(exitTime.getTime()));
+    const result = isClosed ? (netProfit > 0 ? 'WIN' : netProfit < 0 ? 'LOSS' : 'BREAKEVEN') : 'OPEN';
+    const status = isClosed ? 'CLOSED' : 'ACTIVE';
+
+    trades.push({
+      tradingAccountId: accountId,
+      externalId: ticket && !isNaN(Number(ticket)) ? ticket : null,
+      pair,
+      direction,
+      entryPrice,
+      stopLoss,
+      takeProfit,
+      initialStopLoss: stopLoss,
+      initialTakeProfit: takeProfit,
+      exitPrice,
+      lotSize,
+      profitLossAmount: isClosed ? netProfit : null,
+      status,
+      result,
+      entryTime: !isNaN(entryTime.getTime()) ? entryTime : new Date(),
+      exitTime: exitTime && !isNaN(exitTime.getTime()) ? exitTime : null,
+      notesBefore: 'Imported from MetaTrader HTML Report',
+    });
+  }
+
+  return trades;
+};
+
 const importTrades = async (req, res) => {
   try {
     const { accountId } = req.body;
@@ -172,32 +275,42 @@ const importTrades = async (req, res) => {
     }
 
     if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ message: 'No CSV file uploaded or file is empty.' });
+      return res.status(400).json({ message: 'No file uploaded or file is empty.' });
     }
 
-    const rows = await parseTradeCsv(req.file.buffer);
-    
-    // Map valid rows
-    const pendingTrades = rows
-      .map((row) => mapCsvRowToTrade(row, account.id))
-      .filter((t) => t !== null && !isNaN(t.entryTime?.getTime()));
+    const fileContentStr = req.file.buffer.toString('utf-8');
+    const isHtml = fileContentStr.includes('<html') || fileContentStr.includes('<table') || fileContentStr.includes('<!DOCTYPE') || req.file.originalname?.endsWith('.htm') || req.file.originalname?.endsWith('.html');
+
+    let pendingTrades = [];
+
+    if (isHtml) {
+      pendingTrades = parseMtHtml(fileContentStr, account.id);
+    } else {
+      const rows = await parseTradeCsv(req.file.buffer);
+      pendingTrades = rows
+        .map((row) => mapCsvRowToTrade(row, account.id))
+        .filter((t) => t !== null && !isNaN(t.entryTime?.getTime()));
+    }
 
     if (pendingTrades.length === 0) {
-      return res.status(400).json({ message: 'No valid trades found to import. Please check your CSV format.' });
+      return res.status(400).json({ message: 'No valid trades found in file. Please check your CSV or MetaTrader HTML format.' });
     }
 
-    // Fetch existing trades to deduplicate based on (pair + entryTime)
+    // Fetch existing trades to deduplicate based on (pair + entryTime) or externalId
     const existingTrades = await prisma.trade.findMany({
       where: { tradingAccountId: account.id },
-      select: { pair: true, entryTime: true },
+      select: { pair: true, entryTime: true, externalId: true },
     });
 
     const existingKeys = new Set(
       existingTrades.map(t => `${t.pair}_${t.entryTime?.getTime()}`)
     );
+    const existingTickets = new Set(
+      existingTrades.filter(t => t.externalId).map(t => t.externalId)
+    );
 
     const newTrades = pendingTrades.filter(
-      (t) => !existingKeys.has(`${t.pair}_${t.entryTime?.getTime()}`)
+      (t) => (!t.externalId || !existingTickets.has(t.externalId)) && !existingKeys.has(`${t.pair}_${t.entryTime?.getTime()}`)
     );
 
     if (newTrades.length === 0) {
@@ -231,7 +344,7 @@ const importTrades = async (req, res) => {
       skippedCount: pendingTrades.length - newTrades.length,
     });
   } catch (error) {
-    console.error('Error during trade CSV import:', error);
+    console.error('Error during trade import:', error);
     res.status(500).json({ message: 'An error occurred during trade import.' });
   }
 };

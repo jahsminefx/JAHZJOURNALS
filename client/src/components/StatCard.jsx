@@ -8,10 +8,18 @@ const StatCard = ({ label, value, tone = 'emerald' }) => {
     white: 'text-foreground',
   };
 
+  const valStr = String(value || '');
+  const fontSizeClass = valStr.length > 14 ? 'text-base sm:text-lg' : valStr.length > 10 ? 'text-lg sm:text-xl' : 'text-2xl';
+
   return (
-    <div className="rounded-xl border border-border dark:border-white/10 bg-surface/70 p-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{label}</p>
-      <p className={`mt-2 text-2xl font-bold ${tones[tone]}`}>{value}</p>
+    <div className="rounded-xl border border-border dark:border-white/10 bg-surface/70 p-4 min-w-0">
+      <p className="text-xs uppercase tracking-[0.18em] text-gray-500 truncate">{label}</p>
+      <p 
+        title={valStr}
+        className={`mt-2 font-mono font-bold whitespace-nowrap truncate ${fontSizeClass} ${tones[tone] || tones.white}`}
+      >
+        {value}
+      </p>
     </div>
   );
 };

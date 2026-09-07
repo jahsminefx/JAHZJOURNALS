@@ -55,7 +55,15 @@ const valueTones = {
   amber: 'text-amber-700 dark:text-amber-300',
 };
 
-
+const getValueFontSizeClass = (valueString) => {
+  const str = String(valueString || '');
+  const len = str.length;
+  if (len > 18) return 'text-xs sm:text-sm font-bold';
+  if (len > 14) return 'text-sm sm:text-base font-extrabold';
+  if (len > 11) return 'text-base sm:text-lg lg:text-xl font-black';
+  if (len > 8) return 'text-lg sm:text-xl lg:text-2xl font-black';
+  return 'text-xl sm:text-2xl lg:text-[1.75rem] font-black';
+};
 
 const MetricCard = ({
   icon: Icon,
@@ -63,12 +71,14 @@ const MetricCard = ({
   value,
   accent = 'neutral',
   valueTone,
+  status,
   statusTone,
   supportingText,
 }) => {
   const theme = accentClasses[accent] || accentClasses.neutral;
   const valueClass = valueTones[valueTone] || theme.value;
   const badgeClass = accentClasses[statusTone]?.badge || accentClasses.neutral.badge;
+  const fontSizeClass = getValueFontSizeClass(value);
 
   return (
     <article className="group relative flex min-h-[9.5rem] min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-surface p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-300 dark:border-slate-400/15 dark:shadow-[0_18px_40px_rgba(2,6,23,0.26)] dark:hover:border-slate-300/25 dark:hover:shadow-[0_22px_48px_rgba(2,6,23,0.34)]">
@@ -78,20 +88,23 @@ const MetricCard = ({
           <Icon size={21} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">{label}</p>
-          <p className={`mt-2 max-w-full break-words font-mono text-[1.65rem] font-black leading-none tracking-normal sm:text-[1.85rem] ${valueClass}`}>
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted truncate">{label}</p>
+          <p
+            title={String(value)}
+            className={`mt-1.5 min-w-0 font-mono leading-tight tracking-tight whitespace-nowrap truncate ${fontSizeClass} ${valueClass}`}
+          >
             {value}
           </p>
         </div>
         {status && (
-          <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${badgeClass}`}>
+          <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] ${badgeClass}`}>
             {status}
           </span>
         )}
       </div>
 
-      <div className="relative mt-4 flex items-end justify-between gap-3">
-        <p className="min-w-0 flex-1 text-xs font-semibold leading-5 text-muted">{supportingText}</p>
+      <div className="relative mt-3 flex items-end justify-between gap-3">
+        <p className="min-w-0 flex-1 text-xs font-semibold leading-relaxed text-muted line-clamp-2">{supportingText}</p>
       </div>
     </article>
   );

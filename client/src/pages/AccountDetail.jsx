@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, SlidersHorizontal, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import MTSyncSettings from '../components/accounts/MTSyncSettings';
 
 const formatMoney = (value, currency = 'USD') => {
   const number = Number(value || 0);
@@ -286,6 +287,13 @@ const AccountDetail = () => {
       </div>
 
       {isPropFirm && account.propFirmAccount ? <PropFirmAccountDetail account={account} /> : <RegularAccountDetail account={account} />}
+
+      {/* MetaTrader Live Sync Settings */}
+      <div className="pt-2">
+        <MTSyncSettings account={account} onAccountUpdated={() => {
+          api.get(`/accounts/${id}`).then(({ data }) => setAccount(data)).catch(console.error);
+        }} />
+      </div>
     </div>
   );
 };
