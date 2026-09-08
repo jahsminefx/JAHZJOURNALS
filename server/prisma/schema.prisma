@@ -271,6 +271,7 @@ model User {
   userSettings       UserSettings?
   strategies         Strategy[]
   notificationRecipients NotificationRecipient[]
+  pushSubscriptions     PushSubscription[]
   authoredContactNotes   ContactInternalNote[] @relation("ContactNoteAuthor")
 
   createdAt             DateTime              @default(now())
@@ -1433,5 +1434,20 @@ model CommunicationSetting {
   autoDeleteAnnouncementsMonths Int      @default(6)
   updatedAt                     DateTime @updatedAt
 }
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
 
 

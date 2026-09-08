@@ -128,8 +128,12 @@ app.use('/api/promotions', require('./routes/traderPromotionRoutes'));
 app.use('/api/strategies', require('./routes/strategyRoutes'));
 app.use('/api/setups', require('./routes/setupRoutes'));
 app.use('/api/notifications', require('./routes/userNotificationRoutes'));
+app.use('/api/push-notifications', require('./routes/pushNotificationRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
 app.use('/api', require('./routes/miscRoutes'));
+
+const { initDailyReminderScheduler } = require('./services/reminderSchedulerService');
+initDailyReminderScheduler();
 
 // Serve built Vite React frontend in production
 if (process.env.NODE_ENV === 'production') {

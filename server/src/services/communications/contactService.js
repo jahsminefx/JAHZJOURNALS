@@ -255,6 +255,15 @@ const contactService = {
             status: 'UNREAD',
           }
         });
+
+        // Trigger Web Push Notification
+        const { sendPushToUser } = require('../pushNotificationService');
+        sendPushToUser(targetUserId, {
+          title: `💬 Support Reply: ${contact.subject}`,
+          message: message.length > 150 ? message.substring(0, 150) + '...' : message,
+          url: `/notifications?threadId=${contactMessageId}`,
+          category: 'SUPPORT_REPLY'
+        }).catch(err => console.error('Support reply push error:', err));
       }
     } catch (notifErr) {
       console.error('Error generating notification for contact reply:', notifErr);

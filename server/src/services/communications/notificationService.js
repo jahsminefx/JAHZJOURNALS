@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { sendPushToAll } = require('../pushNotificationService');
 
 const notificationService = {
   async getAdminNotifications() {
@@ -40,8 +41,6 @@ const notificationService = {
       });
     } else {
       // Global push to all users
-      // Note: For 100k users, this should be done in a background job via BullMQ
-      // Doing synchronously here as an MVP representation limits
       const allUsers = await prisma.user.findMany({ select: { id: true } });
       const globalRecipients = allUsers.map(u => ({
         notificationId: notification.id,
@@ -53,6 +52,16 @@ const notificationService = {
         data: globalRecipients
       });
     }
+
+    // 3. Dispatch Web Push notification to browser devices asynchronously
+    sendPushToAll({
+      title: `🔔 ${title}`,
+      message,
+      url: '/notifications',
+      category
+    }, userIds).catch(err => {
+      console.error('Asynchronous Web Push dispatch error:', err);
+    });
 
     return notification;
   },

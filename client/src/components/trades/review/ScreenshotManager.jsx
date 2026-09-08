@@ -11,6 +11,7 @@ const screenshotTypeOptions = [
 
 const ScreenshotManager = ({ existingScreenshots, setExistingScreenshots, screenshotFiles, setScreenshotFiles }) => {
   const [deletingScreenshotId, setDeletingScreenshotId] = useState(null);
+  const [activeModalImage, setActiveModalImage] = useState(null);
 
   const addScreenshotFile = (event) => {
     const files = Array.from(event.target.files || []);

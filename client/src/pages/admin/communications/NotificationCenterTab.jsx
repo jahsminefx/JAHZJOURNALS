@@ -76,14 +76,31 @@ const NotificationCenterTab = () => {
       <div className="flex justify-between items-center">
         <div>
            <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-indigo-400">System Notification Center</h2>
-           <p className="text-xs text-gray-400 mt-0.5">Manage infrastructure alerts and push manual in-app notifications globally.</p>
+           <p className="text-xs text-gray-400 mt-0.5">Manage infrastructure alerts, Web Push broadcasts, and daily discipline reminders.</p>
         </div>
-        <button 
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition shadow-lg shadow-indigo-600/20"
-        >
-          <Send size={16} /> Push Manual Notification
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={async () => {
+              try {
+                toast.loading('Triggering daily trading reminders...', { id: 'daily-rem' });
+                const res = await api.post('/push-notifications/trigger-daily-reminders');
+                toast.success(res.data.message || 'Daily reminders dispatched!', { id: 'daily-rem' });
+              } catch (err) {
+                toast.error(err.response?.data?.message || 'Failed to trigger reminders.', { id: 'daily-rem' });
+              }
+            }}
+            className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-xl font-bold text-xs transition shadow-sm"
+          >
+            <Bell size={15} /> Send Daily Reminders Now
+          </button>
+
+          <button 
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition shadow-lg shadow-indigo-600/20"
+          >
+            <Send size={16} /> Push Manual Notification
+          </button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-4 gap-6">

@@ -21,8 +21,12 @@ const TradeReviewPage = () => {
 
         if (!tradeRes.data) throw new Error('Trade not found');
 
+        const rulesList = Array.isArray(rulesRes?.data)
+          ? rulesRes.data
+          : (rulesRes?.data?.data || rulesRes?.data?.rules || []);
+
         setTrade(tradeRes.data);
-        setActiveRules((rulesRes.data || []).filter((rule) => rule.active));
+        setActiveRules(rulesList.filter((rule) => rule && rule.active));
       } catch (err) {
         console.error(err);
         toast.error('Couldn\'t load your trade for review. Heading back...');
