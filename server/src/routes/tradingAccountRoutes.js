@@ -13,6 +13,7 @@ const {
 } = require('../controllers/mtSyncController');
 const {
   connectCloudSync,
+  syncCloudTradesNow,
   disconnectCloudSync,
   getCloudSyncStatus,
 } = require('../controllers/mtCloudSyncController');
@@ -26,6 +27,7 @@ router.post('/:id/sync-token', protect, generateSyncToken);
 router.delete('/:id/sync-token', protect, revokeSyncToken);
 
 router.post('/:id/cloud-sync/connect', protect, connectCloudSync);
+router.post('/:id/cloud-sync/sync-now', protect, syncCloudTradesNow);
 router.delete('/:id/cloud-sync/disconnect', protect, disconnectCloudSync);
 router.get('/:id/cloud-sync/status', protect, getCloudSyncStatus);
 

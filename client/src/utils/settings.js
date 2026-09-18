@@ -60,7 +60,7 @@ export const defaultSettings = {
     inAppNotifications: true,
   },
   appearance: {
-    theme: 'dark',
+    theme: 'system',
     dashboardDensity: 'comfortable',
     tradeTableDensity: 'comfortable',
     chartAnimations: true,

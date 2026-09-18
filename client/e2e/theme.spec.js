@@ -43,10 +43,10 @@ test.describe('Global Theme System', () => {
       await page.locator('button:has-text("Save settings")').click();
 
       // Emulate OS preference toggle using Playwright native colorScheme mock
-      await context.emulateMedia({ colorScheme: 'light' });
+      await page.emulateMedia({ colorScheme: 'light' });
       await expect(html).toHaveClass(/light/);
 
-      await context.emulateMedia({ colorScheme: 'dark' });
+      await page.emulateMedia({ colorScheme: 'dark' });
       await expect(html).toHaveClass(/dark/);
 
     } catch (e) {
@@ -64,5 +64,40 @@ test.describe('Global Theme System', () => {
         const errorBoundary = page.locator('text=Something went wrong');
         await expect(errorBoundary).toHaveCount(0);
      }
+  });
+
+  test('landing page and login page default to device theme (light and dark)', async ({ page }) => {
+    // 1. Emulate Light Mode device
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveClass(/light/);
+
+    // Verify navbar retains dark background and white link styling in light mode
+    const header = page.locator('header');
+    await expect(header).toBeVisible();
+    await expect(header).toHaveClass(/bg-slate-950/);
+
+    const homeLink = page.locator('header nav a:has-text("Home")');
+    await expect(homeLink).toBeVisible();
+    // Home is active so has text-emerald-400
+    await expect(homeLink).toHaveClass(/text-emerald-400/);
+
+    const featuresLink = page.locator('header nav a:has-text("Features")');
+    await expect(featuresLink).toBeVisible();
+    await expect(featuresLink).toHaveClass(/text-slate-100/);
+
+    // Visit login in light mode
+    await page.goto('/login');
+    await expect(page.locator('html')).toHaveClass(/light/);
+
+    // 2. Emulate Dark Mode device
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveClass(/dark/);
+    await expect(header).toHaveClass(/bg-slate-950/);
+
+    // Visit login in dark mode
+    await page.goto('/login');
+    await expect(page.locator('html')).toHaveClass(/dark/);
   });
 });

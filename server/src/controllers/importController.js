@@ -296,38 +296,69 @@ const importTrades = async (req, res) => {
       return res.status(400).json({ message: 'No valid trades found in file. Please check your CSV or MetaTrader HTML format.' });
     }
 
-    // Fetch existing trades to deduplicate based on (pair + entryTime) or externalId
+    // Fetch existing trades to cross-check
     const existingTrades = await prisma.trade.findMany({
       where: { tradingAccountId: account.id },
-      select: { pair: true, entryTime: true, externalId: true },
     });
 
-    const existingKeys = new Set(
-      existingTrades.map(t => `${t.pair}_${t.entryTime?.getTime()}`)
-    );
-    const existingTickets = new Set(
-      existingTrades.filter(t => t.externalId).map(t => t.externalId)
-    );
+    const { findMatchingTrade } = require('./mtCloudSyncController');
 
-    const newTrades = pendingTrades.filter(
-      (t) => (!t.externalId || !existingTickets.has(t.externalId)) && !existingKeys.has(`${t.pair}_${t.entryTime?.getTime()}`)
-    );
+    const newTrades = [];
+    const tradesToEnrich = [];
+    let skippedCount = 0;
 
-    if (newTrades.length === 0) {
-      return res.status(200).json({ message: 'All trades in this file have already been imported.' });
+    for (const t of pendingTrades) {
+      const match = findMatchingTrade(t, existingTrades);
+      if (match) {
+        skippedCount++;
+        const needsUpdate = (!match.externalId && t.externalId) ||
+          (t.exitPrice !== null && match.exitPrice === null) ||
+          (t.profitLossAmount !== null && match.profitLossAmount === null);
+
+        if (needsUpdate) {
+          tradesToEnrich.push({
+            id: match.id,
+            data: {
+              ...(t.externalId && { externalId: t.externalId }),
+              ...(t.exitPrice !== null && { exitPrice: t.exitPrice }),
+              ...(t.profitLossAmount !== null && { profitLossAmount: t.profitLossAmount, result: t.result, status: t.status }),
+              ...(t.exitTime && { exitTime: t.exitTime }),
+            },
+            pnlDelta: (t.profitLossAmount || 0) - (match.profitLossAmount || 0),
+          });
+        }
+      } else {
+        newTrades.push(t);
+      }
+    }
+
+    if (newTrades.length === 0 && tradesToEnrich.length === 0) {
+      return res.status(200).json({ message: 'All trades in this file have already been matched and imported.' });
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.trade.createMany({
-        data: newTrades,
-      });
+      if (newTrades.length > 0) {
+        await tx.trade.createMany({
+          data: newTrades,
+        });
+      }
 
-      const netProfitLoss = newTrades.reduce((sum, t) => {
+      let netProfitLoss = newTrades.reduce((sum, t) => {
         if (t.status === 'CLOSED' && typeof t.profitLossAmount === 'number') {
           return sum + t.profitLossAmount;
         }
         return sum;
       }, 0);
+
+      for (const enrich of tradesToEnrich) {
+        await tx.trade.update({
+          where: { id: enrich.id },
+          data: enrich.data,
+        });
+        if (enrich.pnlDelta !== 0) {
+          netProfitLoss += enrich.pnlDelta;
+        }
+      }
 
       if (netProfitLoss !== 0) {
         await tx.tradingAccount.update({
@@ -339,9 +370,10 @@ const importTrades = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `Successfully imported ${newTrades.length} trades (${pendingTrades.length - newTrades.length} skipped as duplicates).`,
+      message: `Successfully imported ${newTrades.length} new trades${tradesToEnrich.length > 0 ? `, ${tradesToEnrich.length} existing trades updated` : ''} (${skippedCount} duplicates matched).`,
       importedCount: newTrades.length,
-      skippedCount: pendingTrades.length - newTrades.length,
+      enrichedCount: tradesToEnrich.length,
+      skippedCount: skippedCount,
     });
   } catch (error) {
     console.error('Error during trade import:', error);

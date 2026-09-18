@@ -13,10 +13,25 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isDisconnectingCloud, setIsDisconnectingCloud] = useState(false);
+  const [isSyncingNow, setIsSyncingNow] = useState(false);
 
   if (!account) return null;
 
   const isCloudConnected = account.cloudSyncEnabled && (account.cloudSyncStatus === 'CONNECTED' || account.cloudSyncStatus === 'CONNECTING');
+
+  const handleSyncNow = async () => {
+    setIsSyncingNow(true);
+    toast.loading('Fetching & cross-checking trades from MetaTrader...', { id: 'cloudSyncToast' });
+    try {
+      const response = await api.post(`/accounts/${account.id}/cloud-sync/sync-now`);
+      toast.success(response.data.message || 'MetaTrader trades synced successfully!', { id: 'cloudSyncToast' });
+      if (onAccountUpdated) onAccountUpdated();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to sync trades from MetaTrader.', { id: 'cloudSyncToast' });
+    } finally {
+      setIsSyncingNow(false);
+    }
+  };
 
   const handleDisconnectCloud = async () => {
     if (!window.confirm('Are you sure you want to disconnect MetaTrader Cloud Sync for this account?')) {
@@ -169,15 +184,26 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
                 )}
               </p>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDisconnectCloud}
-                disabled={isDisconnectingCloud}
-                className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
-              >
-                Disconnect Cloud Sync
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={handleSyncNow}
+                  disabled={isSyncingNow}
+                  className="text-xs"
+                >
+                  <RefreshCw size={13} className={`mr-1.5 ${isSyncingNow ? 'animate-spin' : ''}`} />
+                  {isSyncingNow ? 'Syncing...' : 'Sync Trades Now'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDisconnectCloud}
+                  disabled={isDisconnectingCloud}
+                  className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+                >
+                  Disconnect
+                </Button>
+              </div>
             </div>
           </div>
         ) : (

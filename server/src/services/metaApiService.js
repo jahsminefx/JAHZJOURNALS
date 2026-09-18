@@ -59,6 +59,90 @@ const provisionCloudAccount = async ({ platform, server, login, password, accoun
 };
 
 /**
+ * Fetch Account History Deals / Orders from MetaTrader
+ */
+const fetchAccountHistory = async (cloudAccountId, daysBack = 90) => {
+  if (META_API_TOKEN && cloudAccountId && !cloudAccountId.startsWith('dev_cloud_')) {
+    try {
+      const endTime = new Date().toISOString();
+      const startTime = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
+
+      const response = await axios.get(
+        `https://mt-client-api-v1.agium.biz/users/current/accounts/${cloudAccountId}/history-deals/time/${startTime}/${endTime}`,
+        {
+          headers: {
+            'auth-token': META_API_TOKEN,
+          },
+        }
+      );
+
+      return response.data || [];
+    } catch (error) {
+      console.error('MetaApi Fetch History Error:', error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  // Dev Mock History Generator (Returns sample historical trades for testing)
+  const now = Date.now();
+  const sampleTrades = [
+    {
+      ticket: `MT5_${Math.floor(100000 + Math.random() * 900000)}`,
+      symbol: 'EURUSD',
+      type: 'BUY',
+      lots: 0.50,
+      openPrice: 1.0850,
+      closePrice: 1.0895,
+      stopLoss: 1.0820,
+      takeProfit: 1.0910,
+      profit: 225.00,
+      swap: -2.10,
+      commission: -3.50,
+      openTime: new Date(now - 86400000 * 3).toISOString(),
+      closeTime: new Date(now - 86400000 * 3 + 7200000).toISOString(),
+      isClosed: true,
+      comment: 'MT5 Cloud Auto-Sync Trade',
+    },
+    {
+      ticket: `MT5_${Math.floor(100000 + Math.random() * 900000)}`,
+      symbol: 'XAUUSD',
+      type: 'SELL',
+      lots: 0.20,
+      openPrice: 2650.50,
+      closePrice: 2638.00,
+      stopLoss: 2660.00,
+      takeProfit: 2630.00,
+      profit: 250.00,
+      swap: 0.00,
+      commission: -4.00,
+      openTime: new Date(now - 86400000 * 2).toISOString(),
+      closeTime: new Date(now - 86400000 * 2 + 14400000).toISOString(),
+      isClosed: true,
+      comment: 'MT5 Cloud Auto-Sync Trade',
+    },
+    {
+      ticket: `MT5_${Math.floor(100000 + Math.random() * 900000)}`,
+      symbol: 'GBPUSD',
+      type: 'BUY',
+      lots: 0.30,
+      openPrice: 1.3120,
+      closePrice: 1.3090,
+      stopLoss: 1.3080,
+      takeProfit: 1.3200,
+      profit: -90.00,
+      swap: -1.20,
+      commission: -3.00,
+      openTime: new Date(now - 86400000 * 1).toISOString(),
+      closeTime: new Date(now - 86400000 * 1 + 3600000).toISOString(),
+      isClosed: true,
+      comment: 'MT5 Cloud Auto-Sync Trade',
+    },
+  ];
+
+  return sampleTrades;
+};
+
+/**
  * Remove Cloud MetaTrader Account Connection
  */
 const removeCloudAccount = async (cloudAccountId) => {
@@ -77,5 +161,6 @@ const removeCloudAccount = async (cloudAccountId) => {
 
 module.exports = {
   provisionCloudAccount,
+  fetchAccountHistory,
   removeCloudAccount,
 };

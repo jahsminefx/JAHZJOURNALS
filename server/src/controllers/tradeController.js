@@ -165,12 +165,8 @@ const createTrade = async (req, res) => {
       },
     });
 
-    if (trade.status === 'CLOSED' && trade.profitLossAmount) {
-      await prisma.tradingAccount.update({
-        where: { id: tradingAccountId },
-        data: { currentBalance: { increment: trade.profitLossAmount } }
-      });
-    }
+    const { reconcileAccountBalance } = require('../services/accountBalanceService');
+    await reconcileAccountBalance(tradingAccountId);
 
     res.status(201).json(trade);
   } catch (error) {
@@ -210,15 +206,14 @@ const getTradeById = async (req, res) => {
 
 const updateTrade = async (req, res) => {
   try {
-    const existingTrade = await prisma.trade.findFirst({
+    const trade = await prisma.trade.findFirst({
       where: {
         id: req.params.id,
         tradingAccount: { userId: req.user.id }
-      },
-      include: { tradingAccount: true }
+      }
     });
 
-    if (!existingTrade) {
+    if (!trade) {
       return res.status(404).json({ message: 'Trade not found' });
     }
 
@@ -256,44 +251,44 @@ const updateTrade = async (req, res) => {
       exitTime,
     } = req.body;
 
-    const parseNum = (val) => (val !== undefined && val !== null && val !== '' && !Number.isNaN(Number(val))) ? parseFloat(val) : null;
+    const parseNum = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
 
-    const nextStatus = status || existingTrade.status;
-    const nextResult = result || existingTrade.result;
-    const isNowClosed = nextStatus === 'CLOSED' || ['WIN', 'LOSS', 'BREAKEVEN'].includes(nextResult);
+    const finalEntryPrice = entryPrice !== undefined ? parseNum(entryPrice) : trade.entryPrice;
+    const finalExitPrice = exitPrice !== undefined ? parseNum(exitPrice) : trade.exitPrice;
+    const finalPair = pair !== undefined ? (pair ? String(pair).toUpperCase().trim() : null) : trade.pair;
+    const finalStatus = status || trade.status;
 
-    let fxRateToReporting = existingTrade.fxRateToReporting;
-    let fxRateSource = existingTrade.fxRateSource;
-    let fxRateTimestamp = existingTrade.fxRateTimestamp;
-
-    // Capture historical FX metadata if trade is now being closed and didn't already have it
-    if (isNowClosed && !fxRateToReporting) {
-      const fxDetails = await currencyService.getExchangeRateDetails(existingTrade.tradingAccount?.currency || 'USD', 'USD');
-      fxRateToReporting = fxDetails.rate;
-      fxRateSource = fxDetails.source;
-      fxRateTimestamp = new Date();
+    let computedPips = pips !== undefined ? parseNum(pips) : null;
+    if (computedPips === null && finalEntryPrice !== null && finalExitPrice !== null && finalPair) {
+      computedPips = calculatePips(finalPair, finalEntryPrice, finalExitPrice, direction || trade.direction);
     }
 
-    const parsedPips = pips !== undefined ? parseNum(pips) : undefined;
-    const computedPips = parsedPips !== undefined && parsedPips !== null
-      ? parsedPips
-      : calculatePips({
-          pair: pair ? pair.toUpperCase().trim() : existingTrade.pair,
-          direction: direction || existingTrade.direction,
-          entryPrice: entryPrice !== undefined ? parseNum(entryPrice) : existingTrade.entryPrice,
-          exitPrice: exitPrice !== undefined ? parseNum(exitPrice) : existingTrade.exitPrice,
-          pips: existingTrade.pips,
-        });
+    let fxRateToReporting = undefined;
+    let fxRateSource = undefined;
+    let fxRateTimestamp = undefined;
+
+    if (finalPair) {
+      const account = await prisma.tradingAccount.findUnique({
+        where: { id: trade.tradingAccountId },
+        select: { currency: true },
+      });
+      if (account) {
+        const fxInfo = await currencyService.getConversionRateForTrade(finalPair, account.currency || 'USD');
+        fxRateToReporting = fxInfo.rate;
+        fxRateSource = fxInfo.source;
+        fxRateTimestamp = fxInfo.timestamp;
+      }
+    }
 
     const updatedTrade = await prisma.trade.update({
       where: { id: req.params.id },
       data: {
-        pair: pair ? pair.toUpperCase().trim() : undefined,
-        direction: direction || undefined,
-        entryPrice: entryPrice !== undefined ? parseNum(entryPrice) : undefined,
+        pair: finalPair,
+        direction: direction ? String(direction).toUpperCase() : undefined,
+        entryPrice: finalEntryPrice,
         stopLoss: stopLoss !== undefined ? parseNum(stopLoss) : undefined,
         takeProfit: takeProfit !== undefined ? parseNum(takeProfit) : undefined,
-        exitPrice: exitPrice !== undefined ? parseNum(exitPrice) : undefined,
+        exitPrice: finalExitPrice,
         lotSize: lotSize !== undefined ? parseNum(lotSize) : undefined,
         riskAmount: riskAmount !== undefined ? parseNum(riskAmount) : undefined,
         rewardAmount: rewardAmount !== undefined ? parseNum(rewardAmount) : undefined,
@@ -302,7 +297,7 @@ const updateTrade = async (req, res) => {
         riskRewardRatio: riskRewardRatio !== undefined ? parseNum(riskRewardRatio) : undefined,
         pips: computedPips !== null ? computedPips : undefined,
         result: result || undefined,
-        status: status || undefined,
+        status: finalStatus,
         session: session !== undefined ? session : undefined,
         strategyId: strategyId !== undefined ? strategyId : undefined,
         setupId: setupId !== undefined ? setupId : undefined,
@@ -319,11 +314,12 @@ const updateTrade = async (req, res) => {
         grade: grade !== undefined ? grade : undefined,
         entryTime: entryTime !== undefined ? (entryTime ? new Date(entryTime) : null) : undefined,
         exitTime: exitTime !== undefined ? (exitTime ? new Date(exitTime) : null) : undefined,
-        fxRateToReporting,
-        fxRateSource,
-        fxRateTimestamp,
+        ...(fxRateToReporting !== undefined && { fxRateToReporting, fxRateSource, fxRateTimestamp }),
       }
     });
+
+    const { reconcileAccountBalance } = require('../services/accountBalanceService');
+    await reconcileAccountBalance(trade.tradingAccountId);
 
     res.json(updatedTrade);
   } catch (error) {
@@ -345,9 +341,14 @@ const deleteTrade = async (req, res) => {
       return res.status(404).json({ message: 'Trade not found' });
     }
 
+    const accountId = trade.tradingAccountId;
+
     await prisma.trade.delete({
       where: { id: req.params.id }
     });
+
+    const { reconcileAccountBalance } = require('../services/accountBalanceService');
+    await reconcileAccountBalance(accountId);
 
     res.json({ message: 'Trade removed successfully' });
   } catch (error) {

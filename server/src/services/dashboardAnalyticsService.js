@@ -57,7 +57,12 @@ const filterTradesByPeriod = (trades, startDate, endDate) => trades.filter((trad
   return true;
 });
 
+const { reconcileUserAccounts } = require('./accountBalanceService');
+
 const validateAccountFilter = async (userId, accountId) => {
+  // Automatically reconcile ground-truth currentBalance for user's accounts
+  await reconcileUserAccounts(userId);
+
   const accounts = await prisma.tradingAccount.findMany({
     where: { userId },
     select: {

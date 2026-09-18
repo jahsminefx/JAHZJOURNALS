@@ -26,7 +26,7 @@ const sizes = {
   },
 };
 
-const BrandLogo = ({ to = '/', size = 'sm', showText = true, className = '' }) => {
+const BrandLogo = ({ to = '/', size = 'sm', showText = true, forceDark = false, className = '' }) => {
   const selected = sizes[size] || sizes.sm;
   const content = (
     <>
@@ -39,8 +39,8 @@ const BrandLogo = ({ to = '/', size = 'sm', showText = true, className = '' }) =
       </span>
       {showText && (
         <span className={`${selected.text} font-ethnocentric font-black tracking-tighter inline-flex items-center uppercase select-none whitespace-nowrap shrink-0`}>
-          <span className="text-rose-600 dark:text-rose-400">JAHZ</span>
-          <span className="text-emerald-600 dark:text-emerald-400">JOURNALS</span>
+          <span className={forceDark ? "text-rose-400" : "text-rose-600 dark:text-rose-400"}>JAHZ</span>
+          <span className={forceDark ? "text-emerald-400" : "text-emerald-600 dark:text-emerald-400"}>JOURNALS</span>
         </span>
       )}
     </>

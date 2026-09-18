@@ -9,11 +9,14 @@ const {
 
 const hasValue = (value) => value !== undefined && value !== null && value !== '';
 
+const { reconcileUserAccounts, reconcileAccountBalance } = require('../services/accountBalanceService');
+
 // @desc    Get all trading accounts for logged in user
 // @route   GET /api/accounts
 // @access  Private
 const getAccounts = async (req, res) => {
   try {
+    await reconcileUserAccounts(req.user.id);
     const accounts = await prisma.tradingAccount.findMany({
       where: { userId: req.user.id },
       include: {
@@ -76,6 +79,7 @@ const createAccount = async (req, res) => {
 // @access  Private
 const getAccountById = async (req, res) => {
   try {
+    await reconcileAccountBalance(req.params.id);
     const account = await prisma.tradingAccount.findFirst({
       where: {
         id: req.params.id,
