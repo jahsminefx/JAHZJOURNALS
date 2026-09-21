@@ -143,6 +143,69 @@ const fetchAccountHistory = async (cloudAccountId, daysBack = 90) => {
 };
 
 /**
+ * Fetch Currently Open / Floating Positions from MetaTrader
+ * These are live trades that haven't been closed yet
+ */
+const fetchOpenPositions = async (cloudAccountId) => {
+  if (META_API_TOKEN && cloudAccountId && !cloudAccountId.startsWith('dev_cloud_')) {
+    try {
+      const response = await axios.get(
+        `https://mt-client-api-v1.agium.biz/users/current/accounts/${cloudAccountId}/open-trades`,
+        {
+          headers: {
+            'auth-token': META_API_TOKEN,
+          },
+        }
+      );
+
+      // Normalize open positions to look like deal history items
+      const positions = response.data || [];
+      return positions.map(pos => ({
+        ticket: String(pos.id || pos.ticket || ''),
+        symbol: pos.symbol,
+        type: pos.type === 'POSITION_TYPE_BUY' ? 'BUY' : pos.type === 'POSITION_TYPE_SELL' ? 'SELL' : pos.type,
+        lots: pos.volume,
+        openPrice: pos.openPrice,
+        closePrice: null,
+        stopLoss: pos.stopLoss,
+        takeProfit: pos.takeProfit,
+        profit: pos.profit || 0,
+        swap: pos.swap || 0,
+        commission: pos.commission || 0,
+        openTime: pos.time || pos.openTime,
+        closeTime: null,
+        isClosed: false,
+        comment: pos.comment || 'Open Position (Auto-Synced)',
+      }));
+    } catch (error) {
+      console.error('MetaApi Fetch Open Positions Error:', error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  // Dev Mock: Return one open position for testing
+  return [
+    {
+      ticket: `MT5_OPEN_${Math.floor(100000 + Math.random() * 900000)}`,
+      symbol: 'USDJPY',
+      type: 'BUY',
+      lots: 0.10,
+      openPrice: 149.250,
+      closePrice: null,
+      stopLoss: 148.800,
+      takeProfit: 150.000,
+      profit: 15.00,
+      swap: 0,
+      commission: -1.50,
+      openTime: new Date(Date.now() - 3600000).toISOString(),
+      closeTime: null,
+      isClosed: false,
+      comment: 'Open Position (Auto-Synced)',
+    },
+  ];
+};
+
+/**
  * Remove Cloud MetaTrader Account Connection
  */
 const removeCloudAccount = async (cloudAccountId) => {
@@ -162,5 +225,6 @@ const removeCloudAccount = async (cloudAccountId) => {
 module.exports = {
   provisionCloudAccount,
   fetchAccountHistory,
+  fetchOpenPositions,
   removeCloudAccount,
 };

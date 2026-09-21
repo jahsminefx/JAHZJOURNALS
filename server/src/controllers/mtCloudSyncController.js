@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { encryptCredential, decryptCredential } = require('../utils/cryptoUtils');
-const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory } = require('../services/metaApiService');
+const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions } = require('../services/metaApiService');
 
 const getNum = (val) => {
   if (val === null || val === undefined || val === '' || val === 'null') return null;
@@ -57,7 +57,7 @@ const findMatchingTrade = (incoming, existingTrades, timeToleranceMs = 10 * 60 *
 /**
  * Perform Historical Backfill & Smart Cross-Check Sync for Cloud MT Account
  */
-const syncAccountTrades = async (accountId) => {
+const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
   const account = await prisma.tradingAccount.findUnique({
     where: { id: accountId },
   });
@@ -66,10 +66,19 @@ const syncAccountTrades = async (accountId) => {
     return { success: false, importedCount: 0, skippedCount: 0, message: 'Cloud sync is disabled for this account.' };
   }
 
-  // Fetch MT historical deals / trades
-  const rawTrades = await fetchAccountHistory(account.cloudAccountId || `dev_cloud_${account.cloudLogin}`);
+  const cloudId = account.cloudAccountId || `dev_cloud_${account.cloudLogin}`;
+
+  // Fetch BOTH closed history deals AND currently open positions
+  const [historyDeals, openPositions] = await Promise.all([
+    fetchAccountHistory(cloudId),
+    fetchOpenPositions(cloudId),
+  ]);
+
+  // Merge: closed deals + open positions (open positions won't have closeTime/exitPrice)
+  const rawTrades = [...(historyDeals || []), ...(openPositions || [])];
+
   if (!rawTrades || rawTrades.length === 0) {
-    return { success: true, importedCount: 0, skippedCount: 0, message: 'No trades found in MT account history.' };
+    return { success: true, importedCount: 0, skippedCount: 0, message: 'No trades found in MT account.' };
   }
 
   // Fetch existing trades to cross-check
@@ -398,10 +407,91 @@ const getCloudSyncStatus = async (req, res) => {
   }
 };
 
+/**
+ * Background Auto-Sync: Sync ALL cloud-connected accounts
+ * Called by the cron scheduler every 5 minutes
+ */
+const syncAllCloudAccounts = async () => {
+  try {
+    // Find all accounts that have cloud sync enabled and are connected
+    const connectedAccounts = await prisma.tradingAccount.findMany({
+      where: {
+        cloudSyncEnabled: true,
+        cloudSyncStatus: { in: ['CONNECTED', 'CONNECTING'] },
+        cloudAccountId: { not: null },
+      },
+      select: {
+        id: true,
+        name: true,
+        cloudLogin: true,
+        userId: true,
+      },
+    });
+
+    if (connectedAccounts.length === 0) {
+      return { totalAccounts: 0, synced: 0, errors: 0 };
+    }
+
+    let syncedCount = 0;
+    let errorCount = 0;
+    let totalImported = 0;
+    let totalEnriched = 0;
+
+    for (const account of connectedAccounts) {
+      try {
+        const result = await syncAccountTrades(account.id, { isCronJob: true });
+
+        if (result.success && (result.importedCount > 0 || result.enrichedCount > 0)) {
+          console.log(
+            `[AUTO-SYNC] ${account.name} (${account.cloudLogin}): +${result.importedCount} new, ~${result.enrichedCount || 0} updated, =${result.skippedCount} matched`
+          );
+          totalImported += result.importedCount || 0;
+          totalEnriched += result.enrichedCount || 0;
+        }
+
+        syncedCount++;
+
+        // Clear any previous error
+        await prisma.tradingAccount.update({
+          where: { id: account.id },
+          data: { cloudError: null },
+        });
+      } catch (accountError) {
+        errorCount++;
+        console.error(`[AUTO-SYNC] Error syncing ${account.name} (${account.cloudLogin}):`, accountError.message);
+
+        // Log error to the account so user can see it in the UI
+        await prisma.tradingAccount.update({
+          where: { id: account.id },
+          data: { cloudError: `Auto-sync failed: ${accountError.message}` },
+        }).catch(() => {}); // Don't let meta-error crash the loop
+      }
+    }
+
+    if (totalImported > 0 || totalEnriched > 0) {
+      console.log(
+        `[AUTO-SYNC] Complete: ${connectedAccounts.length} accounts checked, ${totalImported} trades imported, ${totalEnriched} enriched, ${errorCount} errors`
+      );
+    }
+
+    return {
+      totalAccounts: connectedAccounts.length,
+      synced: syncedCount,
+      errors: errorCount,
+      totalImported,
+      totalEnriched,
+    };
+  } catch (error) {
+    console.error('[AUTO-SYNC] Critical error in background sync:', error);
+    return { totalAccounts: 0, synced: 0, errors: 1 };
+  }
+};
+
 module.exports = {
   connectCloudSync,
   syncCloudTradesNow,
   disconnectCloudSync,
   getCloudSyncStatus,
+  syncAllCloudAccounts,
   findMatchingTrade,
 };

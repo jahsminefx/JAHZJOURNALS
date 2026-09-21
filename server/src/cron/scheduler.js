@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { sendWeeklyReviewReminderEmail } = require('../services/emailService');
 const { cleanupStalledAiRequests } = require('../controllers/aiController');
+const { syncAllCloudAccounts } = require('../controllers/mtCloudSyncController');
 
 // Schedulers & Background Sweepers
 const startSchedulers = () => {
@@ -20,6 +21,20 @@ const startSchedulers = () => {
       }
     } catch (error) {
       console.error('[CRON] Error during stalled AI request cleanup:', error);
+    }
+  });
+
+  // ── MetaTrader Cloud Auto-Sync ── Runs every 5 minutes ──
+  // Automatically syncs new trades from all connected MT4/MT5 accounts
+  // Picks up new trades, closed trades, and open positions
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const result = await syncAllCloudAccounts();
+      if (result.totalAccounts > 0 && (result.totalImported > 0 || result.totalEnriched > 0)) {
+        console.log(`[CRON] MT Auto-Sync: ${result.totalImported} imported, ${result.totalEnriched} enriched across ${result.totalAccounts} accounts`);
+      }
+    } catch (error) {
+      console.error('[CRON] Error during MT cloud auto-sync:', error);
     }
   });
 
