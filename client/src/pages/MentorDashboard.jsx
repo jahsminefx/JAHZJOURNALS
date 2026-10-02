@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Users, UserPlus, FileText, Send, Wand2 } from 'lucide-react';
+import { Users, UserPlus, FileText, Send, Wand2, HelpCircle } from 'lucide-react';
 import api from '../utils/api';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import Button from '../components/Button';
 import SectionHeader from '../components/SectionHeader';
 
@@ -87,17 +86,23 @@ const MentorDashboard = () => {
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center text-muted">Loading Workspace...</div>;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Navbar />
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-8">
-        <SectionHeader title="Mentor Workspace" description="Manage your academy cohorts and review student journals." align="left" />
-        
-        <div className="flex justify-between items-center bg-surface border border-border p-4 rounded-xl">
-          <p className="text-muted text-sm">You manage {groups.length} active groups.</p>
+    <div className="space-y-6 pb-8">
+      <SectionHeader title="Mentor Workspace" description="Manage your academy cohorts and review student journals." align="left" />
+      
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface border border-border p-4 rounded-xl">
+        <p className="text-muted text-sm">You manage {groups.length} active groups.</p>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/contact"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface-muted hover:bg-surface border border-border text-foreground transition-colors"
+          >
+            <HelpCircle size={15} /> Contact Us
+          </Link>
           <Button onClick={createGroup} className="bg-indigo-600 hover:bg-indigo-500 text-foreground">
             <Users size={16} className="mr-2" /> New Group
           </Button>
         </div>
+      </div>
 
         {groups.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-border rounded-xl">
@@ -182,8 +187,6 @@ const MentorDashboard = () => {
             </div>
           </div>
         )}
-      </main>
-      <Footer />
     </div>
   );
 };

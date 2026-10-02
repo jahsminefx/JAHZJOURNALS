@@ -110,6 +110,11 @@ const updateSubscription = async (req, res) => {
     const currentSub = await prisma.subscription.findUnique({ where: { id } });
     if (!currentSub) return res.status(404).json({ message: 'Subscription not found' });
 
+    const VALID_REASONS = ['PROMOTION_EXPIRED', 'ADMIN_GRANTED', 'PAYMENT_COMPLETED', 'PAYMENT_FAILED', 'PROMOTION_REDEEMED', 'REFERRAL_REWARD', 'INITIAL_SIGNUP'];
+    const isEnumReason = reason && VALID_REASONS.includes(reason);
+    const historyReason = isEnumReason ? reason : 'ADMIN_GRANTED';
+    const historyNotes = typeof reason === 'string' && reason.trim() ? reason.trim() : null;
+
     // Enforce history creation
     const newHistory = await prisma.subscriptionHistory.create({
       data: {
@@ -117,7 +122,8 @@ const updateSubscription = async (req, res) => {
         previousPlan: currentSub.plan,
         newPlan: plan || currentSub.plan,
         source: source || currentSub.source,
-        reason: reason || 'ADMIN_GRANTED',
+        reason: historyReason,
+        notes: historyNotes,
         promotionId: promotionId !== undefined ? promotionId : currentSub.promotionId,
         paymentReference: paymentReference || currentSub.paymentReference,
         changedBy: req.user.email
@@ -137,6 +143,15 @@ const updateSubscription = async (req, res) => {
       }
     });
 
+    // Keep user table subscription state in sync
+    await prisma.user.update({
+      where: { id: currentSub.userId },
+      data: {
+        ...(plan && { subscriptionPlan: plan }),
+        ...(status && { subscriptionStatus: status })
+      }
+    });
+
     // Write to generic Audit log as well
     await logAudit({
       adminId: req.user.id,
@@ -150,6 +165,7 @@ const updateSubscription = async (req, res) => {
 
     res.json({ message: 'Subscription updated successfully', subscription: updatedSub });
   } catch (error) {
+    console.error('updateSubscription error:', error);
     res.status(500).json({ message: 'Failed to update subscription' });
   }
 };

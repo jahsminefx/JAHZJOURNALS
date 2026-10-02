@@ -11,9 +11,9 @@ const PLANS = {
     priceFormatted: '₦0 / month',
     tagline: 'Build the habit.',
     description: 'Designed for beginner traders who want to start journaling and understand their trading performance.',
-    tradeLimit: 50, // trades per calendar month
+    tradeLimit: 20, // trades per calendar month
     accountLimit: 1, // active trading accounts
-    screenshotLimit: 2, // screenshots per trade
+    screenshotLimit: 1, // screenshots per trade
     analyticsLevel: 'BASIC', // BASIC | DETAILED | ADVANCED
     emotionTracking: false,
     ruleViolations: false,
@@ -29,9 +29,9 @@ const PLANS = {
     priceFormatted: '₦3,000 / month',
     tagline: 'Build discipline.',
     description: 'Designed for active traders who want to understand their emotions, mistakes, and execution patterns.',
-    tradeLimit: 300,
+    tradeLimit: 100,
     accountLimit: 3,
-    screenshotLimit: 6,
+    screenshotLimit: 3,
     analyticsLevel: 'DETAILED',
     emotionTracking: true,
     ruleViolations: true,

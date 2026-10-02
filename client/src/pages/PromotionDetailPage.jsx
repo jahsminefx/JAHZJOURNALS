@@ -33,6 +33,12 @@ const PromotionDetailPage = () => {
 
   const handleRedeem = async () => {
     if (!promo) return;
+    const isDiscount = promo.discountType === 'PERCENTAGE_DISCOUNT' || (promo.discountPercent && promo.discountPercent < 100);
+    if (isDiscount) {
+      navigate(`/pricing?promo=${encodeURIComponent(promo.slug || promo.id)}`);
+      return;
+    }
+
     try {
       setRedeeming(true);
       const { data } = await api.post(`/promotions/${promo.id}/redeem`);
@@ -72,6 +78,8 @@ const PromotionDetailPage = () => {
     );
   }
 
+  const isDiscount = promo.discountType === 'PERCENTAGE_DISCOUNT' || (promo.discountPercent && promo.discountPercent < 100);
+
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
       <SEO title={`${promo.name} | JAHZJOURNALS`} description={promo.description} />
@@ -87,7 +95,7 @@ const PromotionDetailPage = () => {
         <div className="relative overflow-hidden rounded-3xl border border-border bg-surface p-8 sm:p-10 backdrop-blur-xl shadow-2xl">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <span className="px-4 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest">
-              {promo.planGranted} TIER BENEFIT
+              {isDiscount ? `🔥 ${promo.discountPercent}% OFF DISCOUNT` : `${promo.planGranted} TIER BENEFIT`}
             </span>
 
             {promo.status === 'ALREADY_REDEEMED' ? (
@@ -112,7 +120,9 @@ const PromotionDetailPage = () => {
           </div>
 
           <p className="text-sm text-muted mt-5 leading-relaxed">
-            {promo.description || `Unlock complimentary ${promo.planGranted} tier access and features on your JAHZJOURNALS account.`}
+            {promo.description || (isDiscount
+              ? `Enjoy ${promo.discountPercent}% off on ${(promo.applicablePlans || [promo.planGranted]).join(' & ')} tiers on JAHZJOURNALS.`
+              : `Unlock complimentary ${promo.planGranted} tier access and features on your JAHZJOURNALS account.`)}
           </p>
 
           {promo.benefits && promo.benefits.length > 0 && (
@@ -131,7 +141,9 @@ const PromotionDetailPage = () => {
 
           <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="text-xs text-muted">
-              {promo.autoExpire && promo.durationDays ? (
+              {isDiscount ? (
+                <span>Eligibility: <strong>{promo.discountPercent}% Discount on {(promo.applicablePlans || [promo.planGranted]).join(' & ')}</strong></span>
+              ) : promo.autoExpire && promo.durationDays ? (
                 <span>Duration: <strong>{promo.durationDays} Days Access</strong></span>
               ) : (
                 <span>Duration: <strong className="text-emerald-500 dark:text-emerald-400">Permanent Grant</strong></span>
@@ -152,7 +164,7 @@ const PromotionDetailPage = () => {
                 onClick={handleRedeem}
                 className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-sm font-black rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {redeeming ? 'Redeeming Offer...' : 'Redeem & Upgrade Now'} <ArrowRight size={16} />
+                {redeeming ? 'Processing...' : isDiscount ? `Claim ${promo.discountPercent}% Off at Checkout` : 'Redeem & Upgrade Now'} <ArrowRight size={16} />
               </button>
             )}
           </div>

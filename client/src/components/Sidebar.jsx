@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, LineChart, Briefcase, PlusCircle, Calculator, Compass, Settings, 
   LogOut, Wallet, ShieldCheck, Layers, Sparkles, User as UserIcon, X, 
-  ChevronLeft, ChevronRight, HelpCircle, Bell, Tag, CalendarCheck
+  ChevronLeft, ChevronRight, HelpCircle, Bell, Tag, CalendarCheck, Users
 } from 'lucide-react';
 
 import toast from 'react-hot-toast';
@@ -96,6 +96,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     { name: 'Daily Review', path: '/daily-review', icon: CalendarCheck },
     { name: 'Weekly Review', path: '/weekly-review', icon: Compass },
     { name: 'JAHZ AI', path: '/ai', icon: Sparkles, prefix: '/ai' },
+    { name: 'Mentor Workspace', path: '/mentor-workspace', icon: Users, prefix: '/mentor-workspace' },
     { name: 'Offers & Promos', path: '/promotions', icon: Tag, prefix: '/promotions' },
     { name: 'Notifications', path: '/notifications', icon: Bell },
     { name: 'Upgrade Plan', path: '/pricing', icon: Sparkles },

@@ -13,17 +13,47 @@ const PLAN_MAPPINGS = {
 
 const initializeSubscription = async (req, res) => {
   try {
-    const { plan, email } = req.body;
+    const { plan, email, promoCode } = req.body;
     const planConfig = PLAN_MAPPINGS[plan];
     if (!planConfig) {
       return res.status(400).json({ message: 'Invalid subscription plan selected.' });
     }
 
+    let appliedPromo = null;
+    let amountInKobo = planConfig.amountInKobo;
+
+    if (promoCode && promoCode.trim()) {
+      const cleanCode = promoCode.toLowerCase().trim();
+      const promo = await prisma.promotion.findFirst({
+        where: {
+          OR: [{ slug: cleanCode }, { id: promoCode.trim() }],
+          isActive: true
+        }
+      });
+
+      if (promo) {
+        const now = new Date();
+        const isNotExpired = !promo.endsAt || new Date(promo.endsAt) >= now;
+        const isStarted = !promo.startsAt || new Date(promo.startsAt) <= now;
+        const hasRedemptions = !promo.maxRedemptions || promo.currentRedemptions < promo.maxRedemptions;
+        const promoPlans = promo.applicablePlans && promo.applicablePlans.length > 0 ? promo.applicablePlans : [promo.planGranted];
+        const isPlanApplicable = promoPlans.includes(plan);
+
+        if (isNotExpired && isStarted && hasRedemptions && isPlanApplicable) {
+          if (promo.discountType === 'PERCENTAGE_DISCOUNT' || (promo.discountPercent && promo.discountPercent > 0 && promo.discountPercent < 100)) {
+            const percent = promo.discountPercent || 50;
+            amountInKobo = Math.round(planConfig.amountInKobo * (1 - (percent / 100)));
+            appliedPromo = promo;
+          }
+        }
+      }
+    }
+
     const activation = await determineActivationMethod(req.user, plan);
     
-    if (activation.method === 'PROMOTION') {
+    if (!appliedPromo && activation.method === 'PROMOTION') {
       return res.json({ success: true, authorization_url: null, message: activation.message });
-    } else if (activation.method === 'ALREADY_ACTIVE') {
+    } else if (activation.method === 'ALREADY_ACTIVE' && (!appliedPromo || req.user.subscriptionPlan === plan)) {
       return res.status(400).json({ message: activation.message });
     } else {
       const userEmail = email || req.user.email;
@@ -38,12 +68,14 @@ const initializeSubscription = async (req, res) => {
           },
           body: JSON.stringify({
             email: userEmail,
-            amount: planConfig.amountInKobo,
-            plan: planConfig.planCode || undefined,
+            amount: amountInKobo,
+            plan: appliedPromo ? undefined : (planConfig.planCode || undefined),
             callback_url: `${clientUrl}/pricing?payment=success`,
             metadata: {
               userId: req.user.id,
               requestedPlan: plan,
+              promotionId: appliedPromo ? appliedPromo.id : undefined,
+              discountPercent: appliedPromo ? appliedPromo.discountPercent : undefined,
             },
           }),
         });
@@ -54,7 +86,9 @@ const initializeSubscription = async (req, res) => {
             success: true,
             authorization_url: data.data.authorization_url,
             reference: data.data.reference,
-            message: 'Paystack checkout initialized successfully.',
+            message: appliedPromo
+              ? `Paystack checkout initialized with ${appliedPromo.discountPercent}% discount!`
+              : 'Paystack checkout initialized successfully.',
           });
         } else {
           console.warn('Paystack Initialize API Error Response:', data);
@@ -63,7 +97,13 @@ const initializeSubscription = async (req, res) => {
 
       // Safe fallback for testing/development when test keys are used
       const authorization_url = `https://checkout.paystack.com/mock-url-${plan.toLowerCase()}`;
-      return res.json({ success: true, authorization_url, message: activation.message || 'Proceed to payment gateway' });
+      return res.json({
+        success: true,
+        authorization_url,
+        message: appliedPromo
+          ? `Proceed to payment gateway (${appliedPromo.discountPercent || 50}% discount applied)`
+          : (activation.message || 'Proceed to payment gateway')
+      });
     }
   } catch (error) {
     console.error('Subscription Init Error:', error);
@@ -90,6 +130,9 @@ const verifySubscription = async (req, res) => {
         const { metadata, amount } = data.data;
         const userId = metadata?.userId || req.user.id;
         const requestedPlan = metadata?.requestedPlan || 'PRO';
+        const promotionId = metadata?.promotionId;
+
+        const existingPayment = await prisma.payment.findUnique({ where: { reference } });
 
         const [paymentRecord, updatedUser] = await prisma.$transaction([
           prisma.payment.upsert({
@@ -112,6 +155,25 @@ const verifySubscription = async (req, res) => {
             },
           }),
         ]);
+
+        if (!existingPayment && promotionId) {
+          await prisma.promotion.update({
+            where: { id: promotionId },
+            data: { currentRedemptions: { increment: 1 } }
+          }).catch(err => console.warn('Failed incrementing promo redemptions:', err));
+
+          await prisma.subscriptionHistory.create({
+            data: {
+              userId,
+              previousPlan: req.user?.subscriptionPlan || 'FREE',
+              newPlan: requestedPlan,
+              source: 'PROMOTION',
+              reason: 'PROMOTION_DISCOUNT_PURCHASE',
+              promotionId,
+              changedBy: 'USER'
+            }
+          }).catch(err => console.warn('Failed recording promo history:', err));
+        }
 
         // Dispatch confirmation email asynchronously without blocking transaction response
         sendSubscriptionConfirmationEmail(updatedUser, requestedPlan).catch(err => {
@@ -172,13 +234,18 @@ const handlePaystackWebhook = async (req, res) => {
     if (event.event === 'charge.success') {
       const { metadata, reference, amount } = event.data;
       if (metadata && metadata.userId) {
+        const userId = metadata.userId;
+        const requestedPlan = metadata.requestedPlan;
+        const promotionId = metadata.promotionId;
+
+        const existingPayment = await prisma.payment.findUnique({ where: { reference } });
         
         const [paymentRecord, updatedUser] = await prisma.$transaction([
           prisma.payment.upsert({
             where: { reference },
             update: { status: 'SUCCESS', paidAt: new Date() },
             create: {
-              userId: metadata.userId,
+              userId,
               amount: amount / 100,
               provider: 'PAYSTACK',
               reference,
@@ -187,18 +254,37 @@ const handlePaystackWebhook = async (req, res) => {
             },
           }),
           prisma.user.update({
-            where: { id: metadata.userId },
+            where: { id: userId },
             data: {
-              subscriptionPlan: metadata.requestedPlan,
+              subscriptionPlan: requestedPlan,
               subscriptionStatus: 'ACTIVE',
             }
           })
         ]);
         
-        console.log(`Payment confirmed and account upgraded for user ${metadata.userId}`);
+        if (!existingPayment && promotionId) {
+          await prisma.promotion.update({
+            where: { id: promotionId },
+            data: { currentRedemptions: { increment: 1 } }
+          }).catch(err => console.warn('Webhook promo increment error:', err));
+
+          await prisma.subscriptionHistory.create({
+            data: {
+              userId,
+              previousPlan: updatedUser.subscriptionPlan,
+              newPlan: requestedPlan,
+              source: 'PROMOTION',
+              reason: 'PROMOTION_DISCOUNT_PURCHASE',
+              promotionId,
+              changedBy: 'USER'
+            }
+          }).catch(err => console.warn('Webhook promo history error:', err));
+        }
+
+        console.log(`Payment confirmed and account upgraded for user ${userId}`);
 
         // Dispatch confirmation email asynchronously
-        sendSubscriptionConfirmationEmail(updatedUser, metadata.requestedPlan).catch(err => {
+        sendSubscriptionConfirmationEmail(updatedUser, requestedPlan).catch(err => {
           console.warn('Subscription webhook confirmation email warning:', err?.message || err);
         });
       }

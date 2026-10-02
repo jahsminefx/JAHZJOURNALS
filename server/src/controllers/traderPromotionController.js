@@ -3,6 +3,53 @@ const prisma = new PrismaClient();
 const { logAudit } = require('../services/auditService');
 
 /**
+ * GET /api/promotions/public-active
+ * Returns currently active, public promotion for display on Pricing & Landing pages.
+ */
+const getPublicActivePromotion = async (req, res) => {
+  try {
+    const now = new Date();
+    const promo = await prisma.promotion.findFirst({
+      where: {
+        isActive: true,
+        requiresInvite: false,
+        OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+        AND: [
+          { OR: [{ endsAt: null }, { endsAt: { gte: now } }] }
+        ]
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!promo || (promo.maxRedemptions && promo.currentRedemptions >= promo.maxRedemptions)) {
+      return res.json({ active: false, promotion: null });
+    }
+
+    const applicablePlans = promo.applicablePlans && promo.applicablePlans.length > 0 ? promo.applicablePlans : [promo.planGranted];
+
+    res.json({
+      active: true,
+      promotion: {
+        id: promo.id,
+        name: promo.name,
+        slug: promo.slug,
+        description: promo.description,
+        category: promo.category,
+        discountType: promo.discountType || 'FULL_GRANT',
+        discountPercent: promo.discountPercent || null,
+        applicablePlans,
+        planGranted: promo.planGranted,
+        startsAt: promo.startsAt,
+        endsAt: promo.endsAt
+      }
+    });
+  } catch (error) {
+    console.error('getPublicActivePromotion error:', error);
+    res.status(500).json({ active: false, promotion: null });
+  }
+};
+
+/**
  * GET /api/promotions/available
  * Returns live, eligible promotions for the authenticated trader.
  */
@@ -50,6 +97,9 @@ const getAvailablePromotions = async (req, res) => {
           slug: p.slug,
           description: p.description,
           planGranted: p.planGranted,
+          applicablePlans: p.applicablePlans && p.applicablePlans.length > 0 ? p.applicablePlans : [p.planGranted],
+          discountType: p.discountType || 'FULL_GRANT',
+          discountPercent: p.discountPercent || null,
           benefits: p.benefits || [],
           category: p.category,
           startsAt: p.startsAt,
@@ -160,6 +210,9 @@ const getPromotionDetails = async (req, res) => {
       slug: promotion.slug,
       description: promotion.description,
       planGranted: promotion.planGranted,
+      applicablePlans: promotion.applicablePlans && promotion.applicablePlans.length > 0 ? promotion.applicablePlans : [promotion.planGranted],
+      discountType: promotion.discountType || 'FULL_GRANT',
+      discountPercent: promotion.discountPercent || null,
       benefits: promotion.benefits || [],
       category: promotion.category,
       startsAt: promotion.startsAt,
@@ -205,6 +258,10 @@ async function executeRedemption(userId, promotionIdentifier, changedByEmail) {
 
     if (promotion.maxRedemptions && promotion.currentRedemptions >= promotion.maxRedemptions) {
       throw new Error('PROMOTION_LIMIT_EXCEEDED');
+    }
+
+    if (promotion.discountType === 'PERCENTAGE_DISCOUNT' || (promotion.discountPercent && promotion.discountPercent > 0 && promotion.discountPercent < 100)) {
+      throw new Error('DISCOUNT_REQUIRES_CHECKOUT');
     }
 
     // Check duplicate redemption by user
@@ -315,6 +372,13 @@ const redeemPromotionById = async (req, res) => {
       promotion: result.promotion
     });
   } catch (error) {
+    if (error.message === 'DISCOUNT_REQUIRES_CHECKOUT') {
+      return res.status(400).json({
+        message: 'This is a discount promotion and cannot be directly unlocked for free. Please proceed to the Pricing page to pay with this discount applied.',
+        type: 'PERCENTAGE_DISCOUNT',
+        redirectUrl: `/pricing?promo=${req.params.id}`
+      });
+    }
     if (error.message === 'PROMOTION_NOT_FOUND') return res.status(404).json({ message: 'Promotion not found.' });
     if (error.message === 'PROMOTION_INACTIVE') return res.status(400).json({ message: 'This promotion is currently inactive.' });
     if (error.message === 'PROMOTION_EXPIRED') return res.status(400).json({ message: 'This promotion has expired.' });
@@ -338,15 +402,64 @@ const redeemPromotionByCode = async (req, res) => {
       return res.status(400).json({ message: 'Promo code is required.' });
     }
 
+    const cleanCode = code.toLowerCase().trim();
+    const promotion = await prisma.promotion.findFirst({
+      where: {
+        OR: [{ id: cleanCode }, { slug: cleanCode }],
+      }
+    });
+
+    if (!promotion) {
+      return res.status(404).json({ message: 'Invalid promo code. Please check the spelling.' });
+    }
+
+    if (!promotion.isActive) {
+      return res.status(400).json({ message: 'This promo code is currently inactive.' });
+    }
+
+    const now = new Date();
+    if (promotion.endsAt && new Date(promotion.endsAt) < now) {
+      return res.status(400).json({ message: 'This promo code has expired.' });
+    }
+
+    if (promotion.startsAt && new Date(promotion.startsAt) > now) {
+      return res.status(400).json({ message: 'This promo code is not active yet.' });
+    }
+
+    if (promotion.maxRedemptions && promotion.currentRedemptions >= promotion.maxRedemptions) {
+      return res.status(400).json({ message: 'Maximum redemptions reached for this promo code.' });
+    }
+
+    if (promotion.discountType === 'PERCENTAGE_DISCOUNT' || (promotion.discountPercent && promotion.discountPercent > 0 && promotion.discountPercent < 100)) {
+      const applicablePlans = promotion.applicablePlans && promotion.applicablePlans.length > 0 ? promotion.applicablePlans : [promotion.planGranted];
+      return res.json({
+        type: 'PERCENTAGE_DISCOUNT',
+        code: promotion.slug,
+        discountPercent: promotion.discountPercent || 50,
+        planGranted: promotion.planGranted,
+        applicablePlans,
+        promotion,
+        message: `🎉 Promo code '${code.toUpperCase()}' applied! You get ${promotion.discountPercent || 50}% off on eligible plans.`
+      });
+    }
+
     const userId = req.user.id;
     const result = await executeRedemption(userId, code.trim(), req.user.email);
 
     res.json({
+      type: 'FULL_GRANT',
       message: `🎉 Code '${code.toUpperCase()}' successfully redeemed! You are now on the ${result.promotion.planGranted} plan.`,
       subscription: result.subscription,
       promotion: result.promotion
     });
   } catch (error) {
+    if (error.message === 'DISCOUNT_REQUIRES_CHECKOUT') {
+      return res.status(400).json({
+        message: 'This is a discount promotion and cannot be directly unlocked for free. Please proceed to the Pricing page to pay with this discount applied.',
+        type: 'PERCENTAGE_DISCOUNT',
+        redirectUrl: `/pricing?promo=${req.body.code}`
+      });
+    }
     if (error.message === 'PROMOTION_NOT_FOUND') return res.status(404).json({ message: 'Invalid promo code. Please check the spelling.' });
     if (error.message === 'PROMOTION_INACTIVE') return res.status(400).json({ message: 'This promo code is currently inactive.' });
     if (error.message === 'PROMOTION_EXPIRED') return res.status(400).json({ message: 'This promo code has expired.' });
@@ -360,6 +473,7 @@ const redeemPromotionByCode = async (req, res) => {
 };
 
 module.exports = {
+  getPublicActivePromotion,
   getAvailablePromotions,
   getMyRedeemedPromotions,
   getPromotionDetails,

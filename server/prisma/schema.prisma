@@ -1103,12 +1103,15 @@ model TradeChecklistResponse {
 }
 
 model Promotion {
-  id          String           @id @default(uuid())
-  name        String
-  slug        String           @unique
-  description String?
-  planGranted SubscriptionPlan
-  benefits    String[]         @default([])
+  id              String           @id @default(uuid())
+  name            String
+  slug            String           @unique
+  description     String?
+  planGranted     SubscriptionPlan
+  applicablePlans SubscriptionPlan[] @default([])
+  discountPercent Int?
+  discountType    String?          @default("FULL_GRANT")
+  benefits        String[]         @default([])
 
   badgeId String?
   badge   Badge?  @relation(fields: [badgeId], references: [id], onDelete: SetNull)
@@ -1139,6 +1142,7 @@ model SubscriptionHistory {
   newPlan      SubscriptionPlan
   source       SubscriptionSource
   reason       SubscriptionReason?
+  notes        String?
 
   promotionId String?
   promotion   Promotion? @relation(fields: [promotionId], references: [id], onDelete: SetNull)

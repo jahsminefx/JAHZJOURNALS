@@ -6,6 +6,7 @@ const PricingCard = ({
   name,
   tagline,
   price,
+  originalPrice,
   period = '/month',
   description,
   features,
@@ -35,7 +36,10 @@ const PricingCard = ({
 
     <p className="mt-3 text-xs leading-5 text-muted min-h-[40px]">{description}</p>
 
-    <div className="mt-6 flex items-baseline gap-1">
+    <div className="mt-6 flex items-baseline gap-2">
+      {originalPrice && (
+        <span className="text-base sm:text-lg line-through text-muted/70 font-semibold">{originalPrice}</span>
+      )}
       <span className="text-3xl font-black text-foreground">{price}</span>
       {price !== 'Custom' && <span className="text-xs text-muted font-medium">{period}</span>}
     </div>

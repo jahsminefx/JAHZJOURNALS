@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Gift, Zap, CheckCircle2, Clock, ArrowRight, Tag, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -8,6 +9,7 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import SEO from '../components/SEO';
 
 const PromotionsPage = () => {
+  const navigate = useNavigate();
   const [promotions, setPromotions] = useState([]);
   const [redemptions, setRedemptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,10 +39,16 @@ const PromotionsPage = () => {
     fetchPromotions();
   }, []);
 
-  const handleRedeemById = async (promoId) => {
+  const handleRedeemPromo = async (promo) => {
+    const isDiscount = promo.discountType === 'PERCENTAGE_DISCOUNT' || (promo.discountPercent && promo.discountPercent < 100);
+    if (isDiscount) {
+      navigate(`/pricing?promo=${encodeURIComponent(promo.slug || promo.id)}`);
+      return;
+    }
+
     try {
-      setRedeemingId(promoId);
-      const { data } = await api.post(`/promotions/${promoId}/redeem`);
+      setRedeemingId(promo.id);
+      const { data } = await api.post(`/promotions/${promo.id}/redeem`);
       toast.success(data.message || 'Promotion unlocked successfully!');
       fetchPromotions();
       setTimeout(() => {
@@ -55,13 +63,21 @@ const PromotionsPage = () => {
 
   const handleRedeemByCodeSubmit = async (e) => {
     e.preventDefault();
-    if (!promoCodeInput.trim()) {
+    const cleanCode = promoCodeInput.trim();
+    if (!cleanCode) {
       return toast.error('Please enter a promo code.');
     }
 
     try {
       setRedeemingCode(true);
-      const { data } = await api.post('/promotions/redeem-code', { code: promoCodeInput.trim() });
+      const { data } = await api.post('/promotions/redeem-code', { code: cleanCode });
+      
+      if (data.type === 'PERCENTAGE_DISCOUNT') {
+        toast.success(data.message || `🎉 ${data.discountPercent}% discount code applied! Proceeding to pricing...`);
+        navigate(`/pricing?promo=${encodeURIComponent(data.code || cleanCode)}`);
+        return;
+      }
+
       toast.success(data.message || 'Promo code redeemed!');
       setPromoCodeInput('');
       fetchPromotions();
@@ -69,6 +85,11 @@ const PromotionsPage = () => {
         window.location.reload();
       }, 1200);
     } catch (error) {
+      if (error.response?.data?.type === 'PERCENTAGE_DISCOUNT' && error.response?.data?.redirectUrl) {
+        toast.info(error.response.data.message);
+        navigate(error.response.data.redirectUrl);
+        return;
+      }
       toast.error(error.response?.data?.message || 'Invalid or expired promo code.');
     } finally {
       setRedeemingCode(false);
@@ -137,69 +158,84 @@ const PromotionsPage = () => {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {promotions.map((promo) => (
-                <div
-                  key={promo.id}
-                  className={`relative overflow-hidden rounded-2xl border p-6 transition-all flex flex-col justify-between shadow-sm hover:shadow-md ${
-                    promo.isRedeemed
-                      ? 'border-border bg-surface-muted/60 opacity-85'
-                      : 'border-border bg-surface hover:border-emerald-500/50'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-3 mb-4">
-                      <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                        {promo.planGranted} TIER BENEFIT
-                      </span>
-                      {promo.isRedeemed ? (
-                        <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                          <CheckCircle2 size={14} /> Redeemed
-                        </span>
-                      ) : promo.endsAt ? (
-                        <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                          <Clock size={12} /> Ends {format(new Date(promo.endsAt), 'MMM dd, yyyy')}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <h3 className="text-xl font-black text-foreground">{promo.name}</h3>
-                    <p className="text-xs text-muted mt-2 leading-relaxed">
-                      {promo.description || `Unlock complimentary ${promo.planGranted} plan features on JAHZJOURNALS.`}
-                    </p>
-
-                    {promo.benefits && promo.benefits.length > 0 && (
-                      <ul className="mt-4 space-y-2 border-t border-border pt-3">
-                        {promo.benefits.map((b, idx) => (
-                          <li key={idx} className="text-xs text-muted flex items-center gap-2">
-                            <CheckCircle2 size={13} className="text-emerald-500 dark:text-emerald-400 shrink-0" /> {b}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-4">
+              {promotions.map((promo) => {
+                const isDiscount = promo.discountType === 'PERCENTAGE_DISCOUNT' || (promo.discountPercent && promo.discountPercent < 100);
+                return (
+                  <div
+                    key={promo.id}
+                    className={`relative overflow-hidden rounded-2xl border p-6 transition-all flex flex-col justify-between shadow-sm hover:shadow-md ${
+                      promo.isRedeemed
+                        ? 'border-border bg-surface-muted/60 opacity-85'
+                        : 'border-border bg-surface hover:border-emerald-500/50'
+                    }`}
+                  >
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-muted block">PROMO CODE</span>
-                      <span className="text-sm font-mono font-bold text-sky-500 dark:text-sky-400">{promo.slug.toUpperCase()}</span>
+                      <div className="flex items-center justify-between gap-3 mb-4">
+                        <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                          {isDiscount ? `🔥 ${promo.discountPercent}% OFF DISCOUNT` : `${promo.planGranted} TIER BENEFIT`}
+                        </span>
+                        {promo.isRedeemed ? (
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                            <CheckCircle2 size={14} /> Redeemed
+                          </span>
+                        ) : promo.endsAt ? (
+                          <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                            <Clock size={12} /> Ends {format(new Date(promo.endsAt), 'MMM dd, yyyy')}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <h3 className="text-xl font-black text-foreground">{promo.name}</h3>
+                      <p className="text-xs text-muted mt-2 leading-relaxed">
+                        {promo.description || (isDiscount
+                          ? `Enjoy ${promo.discountPercent}% off on ${(promo.applicablePlans || [promo.planGranted]).join(' & ')} tiers on JAHZJOURNALS.`
+                          : `Unlock complimentary ${promo.planGranted} plan features on JAHZJOURNALS.`)}
+                      </p>
+
+                      {promo.benefits && promo.benefits.length > 0 && (
+                        <ul className="mt-4 space-y-2 border-t border-border pt-3">
+                          {promo.benefits.map((b, idx) => (
+                            <li key={idx} className="text-xs text-muted flex items-center gap-2">
+                              <CheckCircle2 size={13} className="text-emerald-500 dark:text-emerald-400 shrink-0" /> {b}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
 
-                    {promo.isRedeemed ? (
-                      <button disabled className="px-5 py-2.5 bg-surface-muted text-muted text-xs font-bold rounded-xl cursor-default border border-border">
-                        Active
-                      </button>
-                    ) : (
-                      <button
-                        disabled={redeemingId === promo.id}
-                        onClick={() => handleRedeemById(promo.id)}
-                        className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
-                      >
-                        {redeemingId === promo.id ? 'Unlocking...' : 'Redeem Offer'} <ArrowRight size={14} />
-                      </button>
-                    )}
+                    <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-4">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-muted block">PROMO CODE</span>
+                        <span className="text-sm font-mono font-bold text-sky-500 dark:text-sky-400">{promo.slug.toUpperCase()}</span>
+                      </div>
+
+                      {promo.isRedeemed ? (
+                        <button disabled className="px-5 py-2.5 bg-surface-muted text-muted text-xs font-bold rounded-xl cursor-default border border-border">
+                          Active
+                        </button>
+                      ) : (
+                        <button
+                          disabled={redeemingId === promo.id}
+                          onClick={() => handleRedeemPromo(promo)}
+                          className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          {redeemingId === promo.id ? (
+                            'Processing...'
+                          ) : isDiscount ? (
+                            <>
+                              Claim {promo.discountPercent}% Off <ArrowRight size={14} />
+                            </>
+                          ) : (
+                            <>
+                              Redeem Offer <ArrowRight size={14} />
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

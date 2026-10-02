@@ -2,22 +2,22 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { PLANS, getPlanConfig, getEffectivePlanKey, buildLimitReachedPayload } = require('../src/config/plans');
 
-test('Free Plan has correct limits (50 trades/mo, 1 account, 2 screenshots/trade)', () => {
+test('Free Plan has correct limits (20 trades/mo, 1 account, 1 screenshot/trade)', () => {
   const config = getPlanConfig('FREE');
-  assert.strictEqual(config.tradeLimit, 50);
+  assert.strictEqual(config.tradeLimit, 20);
   assert.strictEqual(config.accountLimit, 1);
-  assert.strictEqual(config.screenshotLimit, 2);
+  assert.strictEqual(config.screenshotLimit, 1);
   assert.strictEqual(config.aiAccess, false);
   assert.strictEqual(config.propFirmAccess, false);
   assert.strictEqual(config.reportsAccess, false);
   assert.strictEqual(config.mentorAccess, false);
 });
 
-test('Starter Plan has correct limits (300 trades/mo, 3 accounts, 6 screenshots/trade)', () => {
+test('Starter Plan has correct limits (100 trades/mo, 3 accounts, 3 screenshots/trade)', () => {
   const config = getPlanConfig('STARTER');
-  assert.strictEqual(config.tradeLimit, 300);
+  assert.strictEqual(config.tradeLimit, 100);
   assert.strictEqual(config.accountLimit, 3);
-  assert.strictEqual(config.screenshotLimit, 6);
+  assert.strictEqual(config.screenshotLimit, 3);
   assert.strictEqual(config.emotionTracking, true);
   assert.strictEqual(config.ruleViolations, true);
   assert.strictEqual(config.propFirmAccess, false);

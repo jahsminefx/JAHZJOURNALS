@@ -94,19 +94,34 @@ const getPromotion = async (req, res) => {
 
 const createPromotion = async (req, res) => {
   try {
-    const { name, slug, description, planGranted, category, benefits, isActive, startsAt, endsAt, requiresInvite, maxRedemptions, autoActivate, autoExpire, revokeBadgeOnExpiry } = req.body;
+    const { name, slug, description, planGranted, applicablePlans, category, benefits, isActive, startsAt, endsAt, requiresInvite, maxRedemptions, autoActivate, autoExpire, revokeBadgeOnExpiry, discountPercent, discountType } = req.body;
     
     if (!name || !slug) {
       return res.status(400).json({ message: 'Name and slug are required.' });
     }
 
     const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'MENTOR'];
-    if (planGranted && !VALID_PLANS.includes(planGranted)) {
-      return res.status(400).json({ message: `Invalid target plan. Must be one of: ${VALID_PLANS.join(', ')}` });
+
+    let parsedApplicablePlans = [];
+    if (Array.isArray(applicablePlans)) {
+      parsedApplicablePlans = applicablePlans.filter(p => VALID_PLANS.includes(p));
+    } else if (typeof applicablePlans === 'string' && VALID_PLANS.includes(applicablePlans)) {
+      parsedApplicablePlans = [applicablePlans];
+    } else if (planGranted && VALID_PLANS.includes(planGranted)) {
+      parsedApplicablePlans = [planGranted];
+    } else {
+      parsedApplicablePlans = ['FREE'];
     }
+
+    const primaryPlanGranted = parsedApplicablePlans[parsedApplicablePlans.length - 1] || planGranted || 'FREE';
 
     if (maxRedemptions !== null && maxRedemptions !== undefined && parseInt(maxRedemptions) <= 0) {
       return res.status(400).json({ message: 'Max redemptions must be greater than 0.' });
+    }
+
+    const parsedDiscountPercent = discountPercent !== undefined && discountPercent !== null && discountPercent !== '' ? parseInt(discountPercent) : null;
+    if (parsedDiscountPercent !== null && (isNaN(parsedDiscountPercent) || parsedDiscountPercent < 1 || parsedDiscountPercent > 100)) {
+      return res.status(400).json({ message: 'Discount percentage must be between 1 and 100.' });
     }
 
     const startDate = startsAt ? new Date(startsAt) : null;
@@ -125,7 +140,8 @@ const createPromotion = async (req, res) => {
         name,
         slug: cleanSlug,
         description,
-        planGranted: planGranted || 'FREE',
+        planGranted: primaryPlanGranted,
+        applicablePlans: parsedApplicablePlans,
         category: category || 'MARKETING',
         benefits: benefits || [],
         isActive: isActive !== undefined ? isActive : true,
@@ -135,7 +151,9 @@ const createPromotion = async (req, res) => {
         maxRedemptions: maxRedemptions ? parseInt(maxRedemptions) : null,
         autoActivate: !!autoActivate,
         autoExpire: !!autoExpire,
-        revokeBadgeOnExpiry: !!revokeBadgeOnExpiry
+        revokeBadgeOnExpiry: !!revokeBadgeOnExpiry,
+        discountType: discountType || (parsedDiscountPercent ? 'PERCENTAGE_DISCOUNT' : 'FULL_GRANT'),
+        discountPercent: parsedDiscountPercent
       }
     });
 
@@ -170,8 +188,30 @@ const updatePromotion = async (req, res) => {
     const oldPromo = await prisma.promotion.findUnique({ where: { id } });
     if (!oldPromo) return res.status(404).json({ message: 'Promotion not found' });
 
+    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'MENTOR'];
+    if (updateData.applicablePlans) {
+      if (Array.isArray(updateData.applicablePlans)) {
+        updateData.applicablePlans = updateData.applicablePlans.filter(p => VALID_PLANS.includes(p));
+      } else if (typeof updateData.applicablePlans === 'string' && VALID_PLANS.includes(updateData.applicablePlans)) {
+        updateData.applicablePlans = [updateData.applicablePlans];
+      }
+      if (updateData.applicablePlans.length > 0) {
+        updateData.planGranted = updateData.applicablePlans[updateData.applicablePlans.length - 1];
+      }
+    }
+
     if (updateData.maxRedemptions !== undefined && updateData.maxRedemptions !== null && parseInt(updateData.maxRedemptions) <= 0) {
       return res.status(400).json({ message: 'Max redemptions must be greater than 0.' });
+    }
+
+    if (updateData.discountPercent !== undefined && updateData.discountPercent !== null && updateData.discountPercent !== '') {
+      const dp = parseInt(updateData.discountPercent);
+      if (isNaN(dp) || dp < 1 || dp > 100) {
+        return res.status(400).json({ message: 'Discount percentage must be between 1 and 100.' });
+      }
+      updateData.discountPercent = dp;
+    } else if (updateData.discountPercent === '') {
+      updateData.discountPercent = null;
     }
 
     const startDate = updateData.startsAt ? new Date(updateData.startsAt) : oldPromo.startsAt;

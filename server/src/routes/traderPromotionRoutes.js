@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
+  getPublicActivePromotion,
   getAvailablePromotions,
   getMyRedeemedPromotions,
   getPromotionDetails,
@@ -9,7 +10,10 @@ const {
   redeemPromotionByCode
 } = require('../controllers/traderPromotionController');
 
-// All trader promotion routes require authentication
+// Public route for Pricing and Landing pages (no authentication required)
+router.get('/public-active', getPublicActivePromotion);
+
+// All other trader promotion routes require authentication
 router.use(protect);
 
 router.get('/available', getAvailablePromotions);

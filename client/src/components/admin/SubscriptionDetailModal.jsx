@@ -204,7 +204,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                          </div>
                       </div>
                       <div className="mt-2 text-xs leading-5">
-                         <strong className="text-muted-foreground mr-1">Audit Argument:</strong> {hs.reason || 'No justification provided (Legacy)'}
+                         <strong className="text-muted-foreground mr-1">Audit Argument:</strong> {hs.notes || hs.reason || 'No justification provided (Legacy)'}
                       </div>
                     </div>
                   </div>

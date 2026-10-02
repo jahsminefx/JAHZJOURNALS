@@ -6,7 +6,8 @@ import { format } from 'date-fns';
 
 const PromotionModal = ({ promotionId, onClose, onMutate }) => {
   const [formData, setFormData] = useState({
-    name: '', slug: '', description: '', planGranted: 'FREE', category: 'MARKETING',
+    name: '', slug: '', description: '', planGranted: 'STARTER', applicablePlans: ['STARTER', 'PRO'], category: 'MARKETING',
+    discountType: 'PERCENTAGE_DISCOUNT', discountPercent: '50',
     isActive: true, startsAt: '', endsAt: '', maxRedemptions: '', requiresInvite: false,
     autoActivate: false, autoExpire: false, revokeBadgeOnExpiry: false
   });
@@ -22,9 +23,14 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
       setLoading(true);
       api.get(`/admin/promotions/${promotionId}`).then(({ data }) => {
         setRedemptionsCount(data.currentRedemptions);
+        const plansList = data.applicablePlans && data.applicablePlans.length > 0 ? data.applicablePlans : [data.planGranted || 'FREE'];
         setFormData({
           name: data.name || '', slug: data.slug || '', description: data.description || '',
-          planGranted: data.planGranted || 'FREE', category: data.category || 'MARKETING', isActive: data.isActive,
+          planGranted: data.planGranted || 'FREE',
+          applicablePlans: plansList,
+          category: data.category || 'MARKETING', isActive: data.isActive,
+          discountType: data.discountType || (data.discountPercent ? 'PERCENTAGE_DISCOUNT' : 'FULL_GRANT'),
+          discountPercent: data.discountPercent !== null && data.discountPercent !== undefined ? data.discountPercent : '',
           startsAt: data.startsAt ? new Date(data.startsAt).toISOString().slice(0,16) : '',
           endsAt: data.endsAt ? new Date(data.endsAt).toISOString().slice(0,16) : '',
           maxRedemptions: data.maxRedemptions || '', requiresInvite: data.requiresInvite,
@@ -42,7 +48,9 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
       setSaving(true);
       const payload = {
         ...formData,
+        applicablePlans: formData.applicablePlans && formData.applicablePlans.length > 0 ? formData.applicablePlans : ['STARTER'],
         maxRedemptions: formData.maxRedemptions ? parseInt(formData.maxRedemptions) : null,
+        discountPercent: formData.discountPercent !== '' ? parseInt(formData.discountPercent) : null,
       };
 
       if (isEditing) {
@@ -130,20 +138,71 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
           </div>
 
           {/* Allocation Settings */}
-          <div className="grid sm:grid-cols-2 gap-6 relative">
+          <div className="space-y-6 relative">
             <div className="absolute inset-0 bg-emerald-500/5 blur-3xl rounded-full z-0 pointer-events-none" />
             
-            <div className="space-y-2 z-10">
-              <label className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2"><Crown size={14} /> Grant Target Allocation</label>
-              <select value={formData.planGranted} onChange={e => setFormData({...formData, planGranted: e.target.value})} className="w-full bg-gray-950 border border-emerald-500/30 px-5 py-3 rounded-xl text-sm font-bold text-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 outline-none transition-all hover:bg-gray-900/80">
-                 <option value="FREE">FREE Base Access</option>
-                 <option value="STARTER">STARTER Access</option>
-                 <option value="PRO">PRO Premium Access</option>
-              </select>
+            <div className="grid sm:grid-cols-3 gap-6">
+              <div className="space-y-2 z-10">
+                <label className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2"><Crown size={14} /> Promotion Type</label>
+                <select value={formData.discountType} onChange={e => setFormData({...formData, discountType: e.target.value})} className="w-full bg-gray-950 border border-emerald-500/30 px-5 py-3 rounded-xl text-sm font-bold text-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 outline-none transition-all hover:bg-gray-900/80">
+                   <option value="FULL_GRANT">🎁 Full Grant (100% Free)</option>
+                   <option value="PERCENTAGE_DISCOUNT">🏷️ Percentage Discount (%)</option>
+                </select>
+              </div>
+
+              {formData.discountType === 'PERCENTAGE_DISCOUNT' && (
+                <div className="space-y-2 z-10">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2"><Zap size={14} /> Discount Percentage (%)</label>
+                  <input type="number" min="1" max="100" required value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: e.target.value})} className="w-full bg-gray-950 border border-indigo-500/40 px-5 py-3 rounded-xl text-sm font-bold text-indigo-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 outline-none transition-all placeholder-gray-600" placeholder="e.g. 50 for 50% off" />
+                </div>
+              )}
+
+               <div className="space-y-2 z-10">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex justify-between">Bounded Redemptions <span className="font-normal italic">(Blank = Infinity)</span></label>
+                <input type="number" min="1" value={formData.maxRedemptions} onChange={e => setFormData({...formData, maxRedemptions: e.target.value})} className="w-full bg-gray-950 border border-gray-800 px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 outline-none transition-all placeholder-gray-600" placeholder="e.g. 500 max limit" />
+              </div>
             </div>
-             <div className="space-y-2 z-10">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex justify-between">Bounded Redemptions <span className="font-normal italic">(Blank = Infinity)</span></label>
-              <input type="number" min="1" value={formData.maxRedemptions} onChange={e => setFormData({...formData, maxRedemptions: e.target.value})} className="w-full bg-gray-950 border border-gray-800 px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 outline-none transition-all placeholder-gray-600" placeholder="e.g. 500 max limit" />
+
+            {/* Affected Target Plans Multi-Select Checkboxes */}
+            <div className="space-y-2 z-10">
+              <label className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2">
+                <Crown size={14} /> Affected Target Plans <span className="text-gray-400 font-normal italic">(Select all plans this promo code applies to)</span>
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 border border-emerald-500/30 p-4 rounded-xl">
+                {[
+                  { id: 'FREE', label: 'Free Base Access' },
+                  { id: 'STARTER', label: 'STARTER Access' },
+                  { id: 'PRO', label: 'PRO Premium Access' },
+                  { id: 'MENTOR', label: 'MENTOR Access' },
+                ].map(plan => {
+                  const isChecked = (formData.applicablePlans || []).includes(plan.id);
+                  return (
+                    <label key={plan.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-emerald-500/10 border-emerald-500 text-emerald-300 font-bold shadow-[0_0_10px_rgba(16,185,129,0.15)]' : 'border-gray-800 text-gray-400 hover:border-gray-700 bg-gray-900/30'}`}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const current = formData.applicablePlans || [];
+                          let updated;
+                          if (e.target.checked) {
+                            updated = [...current, plan.id];
+                          } else {
+                            updated = current.filter(p => p !== plan.id);
+                          }
+                          if (updated.length === 0) updated = ['STARTER'];
+                          setFormData({
+                            ...formData,
+                            applicablePlans: updated,
+                            planGranted: updated[updated.length - 1]
+                          });
+                        }}
+                        className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                      />
+                      <span className="text-xs">{plan.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

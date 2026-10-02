@@ -20,7 +20,7 @@ const plans = [
     tagline: 'Build the habit.',
     price: '₦0',
     description: 'Designed for beginner traders who want to start journaling and understand their performance.',
-    limits: ['50 trades / month', '1 trading account', '2 screenshots per trade'],
+    limits: ['20 trades / month', '1 trading account', '1 screenshot per trade'],
     features: [
       'Basic trade entry & journal',
       'Basic analytics & equity curve',
@@ -35,7 +35,7 @@ const plans = [
     tagline: 'Build discipline.',
     price: '₦3,000',
     description: 'Designed for active traders who want to understand their emotions, mistakes, and execution patterns.',
-    limits: ['300 trades / month', '3 trading accounts', '6 screenshots per trade'],
+    limits: ['100 trades / month', '3 trading accounts', '3 screenshots per trade'],
     features: [
       'All Free plan capabilities',
       'Trading psychology & emotion tracking',
@@ -82,9 +82,9 @@ const plans = [
 ];
 
 const featureMatrix = [
-  { feature: 'Monthly Trade Log Limit', free: '50', starter: '300', pro: 'Unlimited', mentor: 'Custom' },
+  { feature: 'Monthly Trade Log Limit', free: '20', starter: '100', pro: 'Unlimited', mentor: 'Custom' },
   { feature: 'Trading Accounts', free: '1', starter: '3', pro: 'Unlimited', mentor: 'Custom' },
-  { feature: 'Screenshots per Trade', free: '2', starter: '6', pro: '10', mentor: 'Custom' },
+  { feature: 'Screenshots per Trade', free: '1', starter: '3', pro: '10', mentor: 'Custom' },
   { feature: 'Basic Analytics & Equity Curve', free: true, starter: true, pro: true, mentor: true },
   { feature: 'Detailed Analytics & Sessions', free: false, starter: true, pro: true, mentor: true },
   { feature: 'Emotion & Psychology Tracking', free: false, starter: true, pro: true, mentor: true },
@@ -100,7 +100,7 @@ const featureMatrix = [
 ];
 
 const faqs = [
-  ['Can I start for free?', 'Yes! The Free plan allows you to log up to 50 trades per month with basic analytics so you can build the journaling habit.'],
+  ['Can I start for free?', 'Yes! The Free plan allows you to log up to 20 trades per month with basic analytics so you can build the journaling habit.'],
   ['How does the monthly trade limit work?', 'The monthly trade limit counts trades created within the current calendar month. Once reached, you can upgrade to Starter or Pro to continue logging.'],
   ['Is Paystack supported for payment?', 'Yes. Paystack is integrated for seamless payments in Naira (NGN) and card transactions across Africa.'],
   ['What is the Founding Trader Program?', 'During launch mode, early users receive complimentary Pro access to test advanced AI reviews and prop-firm tracking.'],
@@ -113,19 +113,34 @@ const Pricing = () => {
 
   const [promoCode, setPromoCode] = React.useState('');
   const [redeemingPromo, setRedeemingPromo] = React.useState(false);
+  const [appliedPromo, setAppliedPromo] = React.useState(null);
+  const [activePublicPromo, setActivePublicPromo] = React.useState(null);
+  const [timeLeft, setTimeLeft] = React.useState(null);
 
   const handleRedeemCode = async (e) => {
-    e.preventDefault();
-    if (!promoCode.trim()) return toast.error('Please enter a promo code');
-    if (!user) return navigate('/login');
+    if (e) e.preventDefault();
+    const codeToTest = (promoCode || '').trim();
+    if (!codeToTest) return toast.error('Please enter a promo code');
 
     try {
       setRedeemingPromo(true);
-      const { data } = await api.post('/promotions/redeem-code', { code: promoCode.trim() });
-      toast.success(data.message || 'Promo code redeemed!');
-      setPromoCode('');
-      await refreshUser();
-      setTimeout(() => window.location.reload(), 1200);
+      const { data } = await api.post('/promotions/redeem-code', { code: codeToTest });
+      
+      if (data.type === 'PERCENTAGE_DISCOUNT') {
+        setAppliedPromo({
+          code: data.code || codeToTest,
+          discountPercent: data.discountPercent || 50,
+          applicablePlans: data.applicablePlans || [data.planGranted],
+          promotion: data.promotion,
+          isAutomatic: false
+        });
+        toast.success(data.message || `🎉 ${data.discountPercent}% discount code applied!`);
+      } else {
+        toast.success(data.message || 'Promo code redeemed!');
+        setPromoCode('');
+        await refreshUser();
+        setTimeout(() => window.location.reload(), 1200);
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Invalid or expired promo code.');
     } finally {
@@ -136,6 +151,8 @@ const Pricing = () => {
   React.useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const reference = searchParams.get('reference') || searchParams.get('trxref');
+    const promoParam = searchParams.get('promo') || searchParams.get('code');
+
     if (reference) {
       api.get(`/subscriptions/verify/${encodeURIComponent(reference)}`)
         .then(async ({ data }) => {
@@ -148,14 +165,85 @@ const Pricing = () => {
           toast.error(err.response?.data?.message || 'Payment verification failed.');
         });
     }
+
+    // Fetch active public promotion (e.g. 50% Off Starter & Pro)
+    api.get('/promotions/public-active')
+      .then(({ data }) => {
+        if (data && data.active && data.promotion) {
+          setActivePublicPromo(data.promotion);
+          // If no specific promo param in URL, auto-apply this public promotion
+          if (!promoParam) {
+            setAppliedPromo({
+              code: data.promotion.slug,
+              discountPercent: data.promotion.discountPercent || 50,
+              applicablePlans: data.promotion.applicablePlans || [data.promotion.planGranted],
+              promotion: data.promotion,
+              isAutomatic: true
+            });
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch public promotion:', err);
+      });
+
+    if (promoParam) {
+      setPromoCode(promoParam);
+      api.get(`/promotions/${encodeURIComponent(promoParam)}`)
+        .then(({ data }) => {
+          if (data && (data.discountType === 'PERCENTAGE_DISCOUNT' || data.discountPercent)) {
+            setAppliedPromo({
+              code: data.slug || promoParam,
+              discountPercent: data.discountPercent || 50,
+              applicablePlans: data.applicablePlans || [data.planGranted],
+              promotion: data,
+              isAutomatic: false
+            });
+            toast.success(`🎉 Promo '${data.name}' active! ${data.discountPercent || 50}% off applied.`);
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
+
+  // Countdown timer effect
+  React.useEffect(() => {
+    const promoTarget = activePublicPromo || appliedPromo?.promotion;
+    if (!promoTarget?.endsAt) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const calcTime = () => {
+      const diff = new Date(promoTarget.endsAt).getTime() - new Date().getTime();
+      if (diff <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
+        return;
+      }
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+        seconds: Math.floor((diff / 1000) % 60),
+        expired: false
+      });
+    };
+
+    calcTime();
+    const interval = setInterval(calcTime, 1000);
+    return () => clearInterval(interval);
+  }, [activePublicPromo?.endsAt, appliedPromo?.promotion?.endsAt]);
 
   const handleUpgrade = async (planName) => {
     const apiPlanMapping = { 'Starter': 'STARTER', 'Pro': 'PRO' };
     const planKey = apiPlanMapping[planName];
     if (!planKey) return;
     try {
-      const { data } = await api.post('/subscriptions/initialize', { plan: planKey });
+      const payload = { plan: planKey };
+      if (appliedPromo?.code) {
+        payload.promoCode = appliedPromo.code;
+      }
+      const { data } = await api.post('/subscriptions/initialize', payload);
       await refreshUser();
       
       if (data.authorization_url) {
@@ -191,16 +279,28 @@ const Pricing = () => {
       return { cta: 'Contact Support', to: '/contact', onClick: undefined, highlighted: false };
     }
 
+    const targetKey = planKeyMap[planName] || 'FREE';
+    const isApplicable = appliedPromo?.applicablePlans && appliedPromo.applicablePlans.length > 0
+      ? appliedPromo.applicablePlans.includes(targetKey)
+      : (targetKey === 'STARTER' || targetKey === 'PRO');
+
     if (!user) {
+      let ctaText = planName === 'Free' ? 'Start Free' : `Get ${planName}`;
+      if (appliedPromo && isApplicable && appliedPromo.discountPercent) {
+        ctaText = `Get ${planName} (${appliedPromo.discountPercent}% Off)`;
+      }
+      const toUrl = appliedPromo
+        ? `/register?promo=${encodeURIComponent(appliedPromo.code)}&plan=${targetKey.toLowerCase()}`
+        : '/register';
+
       return {
-        cta: planName === 'Free' ? 'Start Free' : `Get ${planName}`,
-        to: '/register',
+        cta: ctaText,
+        to: toUrl,
         onClick: undefined,
         highlighted: planName === 'Pro'
       };
     }
 
-    const targetKey = planKeyMap[planName] || 'FREE';
     const targetRank = planRank[targetKey] || 1;
 
     if (userRank === targetRank) {
@@ -221,8 +321,18 @@ const Pricing = () => {
       };
     }
 
+    let upgradeLabel = `Upgrade to ${planName}`;
+    if (appliedPromo && isApplicable && appliedPromo.discountPercent) {
+      const discountedPrice = planName === 'Starter' ? '₦1,500' : planName === 'Pro' ? '₦4,000' : '';
+      if (discountedPrice) {
+        upgradeLabel = `Upgrade to ${planName} (${discountedPrice})`;
+      } else {
+        upgradeLabel = `Upgrade (${appliedPromo.discountPercent}% Off)`;
+      }
+    }
+
     return {
-      cta: `Upgrade to ${planName}`,
+      cta: upgradeLabel,
       to: undefined,
       onClick: () => handleUpgrade(planName),
       highlighted: targetKey === 'PRO'
@@ -269,15 +379,126 @@ const Pricing = () => {
           </section>
         ) : null}
 
+        {/* Active Promotional Offer Banner with Expiration Countdown */}
+        {(activePublicPromo || appliedPromo) && (
+          <section className="px-4 py-2 mb-6">
+            <div className="mx-auto max-w-5xl rounded-3xl border border-emerald-500/40 bg-gradient-to-br from-gray-950 via-emerald-950/30 to-slate-950 p-6 sm:p-8 relative overflow-hidden shadow-2xl backdrop-blur-xl">
+              {/* Subtle ambient lighting */}
+              <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+              <div className="absolute -left-16 -bottom-16 h-52 w-52 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="space-y-3 max-w-2xl">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 shadow-sm">
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      Active Promo • {appliedPromo?.discountPercent || activePublicPromo?.discountPercent || 50}% OFF
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-sky-500/15 border border-sky-500/30 text-xs font-mono font-bold text-sky-400">
+                      CODE: {(appliedPromo?.code || activePublicPromo?.slug || 'PROMO').toUpperCase()}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-400">
+                      ✓ Automatically applied to Starter & Pro
+                    </span>
+                  </div>
+
+                  <h2 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+                    {appliedPromo?.promotion?.name || activePublicPromo?.name || '50% Off Launch Promotion'}
+                  </h2>
+
+                  <p className="text-sm text-muted leading-relaxed">
+                    {appliedPromo?.promotion?.description || activePublicPromo?.description || 'Lock in 50% discount on Starter and Pro tiers. Discount is automatically calculated and applied at checkout.'}
+                  </p>
+
+                  {/* Context notice for logged-in vs visitors */}
+                  {user ? (
+                    <div className="pt-1 flex items-center gap-2 text-xs font-medium text-emerald-400/90">
+                      <span>👤 Logged in as <strong>{user.email}</strong> ({user.subscriptionPlan || 'FREE'} Tier)</span>
+                      <span>•</span>
+                      <span>Your 50% discount will reflect directly during Paystack payment</span>
+                    </div>
+                  ) : (
+                    <div className="pt-1 flex items-center gap-2 text-xs font-medium text-sky-400">
+                      <span>⚡ Not signed in? Choose a plan below to register and lock in 50% off immediately.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Live Expiration Countdown Timer */}
+                {timeLeft && !timeLeft.expired && (
+                  <div className="bg-surface/90 border border-border/80 rounded-2xl p-4 sm:p-5 text-center shrink-0 w-full lg:w-auto shadow-xl">
+                    <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2.5 flex items-center justify-center gap-1.5">
+                      <span>⏳</span> Promo Expires In
+                    </div>
+                    <div className="flex items-center justify-center gap-2 font-mono">
+                      <div className="flex flex-col items-center">
+                        <span className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-lg sm:text-xl font-black text-emerald-400 min-w-[48px]">
+                          {timeLeft.days}
+                        </span>
+                        <span className="text-[10px] text-muted font-sans font-bold uppercase mt-1">Days</span>
+                      </div>
+                      <span className="text-lg font-bold text-muted mb-4">:</span>
+                      <div className="flex flex-col items-center">
+                        <span className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-lg sm:text-xl font-black text-emerald-400 min-w-[48px]">
+                          {String(timeLeft.hours).padStart(2, '0')}
+                        </span>
+                        <span className="text-[10px] text-muted font-sans font-bold uppercase mt-1">Hours</span>
+                      </div>
+                      <span className="text-lg font-bold text-muted mb-4">:</span>
+                      <div className="flex flex-col items-center">
+                        <span className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-lg sm:text-xl font-black text-emerald-400 min-w-[48px]">
+                          {String(timeLeft.minutes).padStart(2, '0')}
+                        </span>
+                        <span className="text-[10px] text-muted font-sans font-bold uppercase mt-1">Mins</span>
+                      </div>
+                      <span className="text-lg font-bold text-muted mb-4">:</span>
+                      <div className="flex flex-col items-center">
+                        <span className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-lg sm:text-xl font-black text-emerald-400 min-w-[48px] animate-pulse">
+                          {String(timeLeft.seconds).padStart(2, '0')}
+                        </span>
+                        <span className="text-[10px] text-muted font-sans font-bold uppercase mt-1">Secs</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Pricing Cards Grid */}
         <section className="py-12">
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {plans.map((plan) => {
               const status = getPlanStatus(plan.name);
+              let displayPrice = plan.price;
+              let originalPrice = null;
+              const planKey = planKeyMap[plan.name] || 'FREE';
+              const applicable = appliedPromo?.applicablePlans && appliedPromo.applicablePlans.length > 0 
+                ? appliedPromo.applicablePlans.includes(planKey) 
+                : (planKey === 'STARTER' || planKey === 'PRO');
+              
+              if (appliedPromo && appliedPromo.discountPercent && applicable) {
+                if (plan.name === 'Starter') {
+                  originalPrice = '₦3,000';
+                  const orig = 3000;
+                  const disc = Math.round(orig * (1 - appliedPromo.discountPercent / 100));
+                  displayPrice = `₦${disc.toLocaleString()}`;
+                } else if (plan.name === 'Pro') {
+                  originalPrice = '₦8,000';
+                  const orig = 8000;
+                  const disc = Math.round(orig * (1 - appliedPromo.discountPercent / 100));
+                  displayPrice = `₦${disc.toLocaleString()}`;
+                }
+              }
+
               return (
                 <PricingCard
                   key={plan.name}
                   {...plan}
+                  price={displayPrice}
+                  originalPrice={originalPrice}
+                  tagline={appliedPromo && applicable ? `🔥 ${appliedPromo.discountPercent}% OFF APPLIED` : plan.tagline}
                   highlighted={status.highlighted}
                   cta={status.cta}
                   onClick={status.onClick}

@@ -25,6 +25,10 @@ const Register = () => {
   const navigate = useNavigate();
   const { user, registerUser } = useAuth();
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const promoParam = searchParams.get('promo') || searchParams.get('code');
+  const planParam = searchParams.get('plan');
+
   React.useEffect(() => {
     if (user) {
       if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
@@ -49,7 +53,11 @@ const Register = () => {
       };
       await registerUser(payload);
       toast.success('Your sanctuary is ready. Let\'s begin.');
-      navigate('/onboarding', { replace: true });
+      if (promoParam) {
+        navigate(`/pricing?promo=${encodeURIComponent(promoParam)}`, { replace: true });
+      } else {
+        navigate('/onboarding', { replace: true });
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'We couldn\'t create your account right now — please try again.');
     } finally {
@@ -59,6 +67,14 @@ const Register = () => {
 
   return (
     <AuthLayout title="Begin your journey" subtitle="A space for clarity, growth, and honest reflection.">
+      {promoParam && (
+        <div className="mb-4 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
+          <span>🔥</span>
+          <span>
+            Special Offer: <strong>{promoParam.toUpperCase()}</strong> active! Create your account to claim your 50% discount.
+          </span>
+        </div>
+      )}
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <div>
           <label htmlFor="name" className="block text-xs font-bold text-foreground mb-1.5">Your name</label>

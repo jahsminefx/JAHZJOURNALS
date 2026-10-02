@@ -6,11 +6,10 @@ import { AuthProvider } from './context/AuthProvider';
 import { ConsentProvider } from './context/ConsentProvider';
 import { useAuth } from './context/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
-
-const Layout = lazy(() => import('./components/Layout'));
-const SharedRouteLayout = lazy(() => import('./components/SharedRouteLayout'));
-const AdminRoute = lazy(() => import('./components/AdminRoute'));
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+import Layout from './components/Layout';
+import SharedRouteLayout from './components/SharedRouteLayout';
+import AdminRoute from './components/AdminRoute';
+import AdminLayout from './pages/admin/AdminLayout';
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
 const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
@@ -136,7 +135,6 @@ function App() {
 
             <Route element={<ProtectedRoute />}>
               <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/mentor-workspace" element={<MentorDashboard />} />
               <Route
                 element={(
                   <RequireOnboarding>
@@ -144,6 +142,7 @@ function App() {
                   </RequireOnboarding>
                 )}
               >
+                <Route path="/mentor-workspace" element={<MentorDashboard />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/accounts" element={<AccountsList />} />
                 <Route path="/accounts/new" element={<AccountForm />} />

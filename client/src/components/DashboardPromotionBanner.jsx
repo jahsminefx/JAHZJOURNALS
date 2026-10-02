@@ -30,12 +30,17 @@ const DashboardPromotionBanner = () => {
   }, []);
 
   const handleRedeem = async (promo) => {
+    // If it's a percentage discount, navigate directly to pricing with promo attached
+    if (promo.discountType === 'PERCENTAGE_DISCOUNT' || (promo.discountPercent && promo.discountPercent < 100)) {
+      navigate(`/pricing?promo=${encodeURIComponent(promo.slug || promo.id)}`);
+      return;
+    }
+
     try {
       setRedeemingId(promo.id);
       const { data } = await api.post(`/promotions/${promo.id}/redeem`);
       toast.success(data.message || 'Promotion redeemed successfully!');
       fetchPromotions();
-      // Reload user auth state / redirect to pricing or dashboard
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -50,6 +55,7 @@ const DashboardPromotionBanner = () => {
 
   // Show top promotion in carousel/banner
   const topPromo = promotions[0];
+  const isDiscount = topPromo.discountType === 'PERCENTAGE_DISCOUNT' || (topPromo.discountPercent && topPromo.discountPercent < 100);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-gray-900 via-emerald-950/40 to-gray-900 p-5 sm:p-6 backdrop-blur-xl shadow-lg transition-all mb-6 group">
@@ -65,7 +71,7 @@ const DashboardPromotionBanner = () => {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[10px] uppercase font-black tracking-widest text-emerald-400">
-                🎉 Exclusive Offer
+                {isDiscount ? `🔥 ${topPromo.discountPercent}% OFF OFFER` : '🎉 Exclusive Offer'}
               </span>
               {topPromo.endsAt && (
                 <span className="text-xs text-gray-400 flex items-center gap-1 font-medium">
@@ -79,7 +85,9 @@ const DashboardPromotionBanner = () => {
             </h3>
             
             <p className="text-xs text-muted mt-1 max-w-xl line-clamp-2">
-              {topPromo.description || `Unlock complimentary ${topPromo.planGranted} access during this limited launch promotion.`}
+              {topPromo.description || (isDiscount 
+                ? `Enjoy ${topPromo.discountPercent}% off on ${(topPromo.applicablePlans || [topPromo.planGranted]).join(' & ')} tiers.`
+                : `Unlock complimentary ${topPromo.planGranted} access during this limited launch promotion.`)}
             </p>
 
             <div className="flex items-center gap-3 mt-3">
@@ -87,7 +95,9 @@ const DashboardPromotionBanner = () => {
                 CODE: {topPromo.slug.toUpperCase()}
               </div>
               <span className="text-xs font-bold text-emerald-500 dark:text-emerald-400">
-                Yields {topPromo.planGranted} Tier
+                {isDiscount 
+                  ? `${topPromo.discountPercent}% Off ${(topPromo.applicablePlans || [topPromo.planGranted]).join(' & ')}`
+                  : `Yields ${topPromo.planGranted} Tier`}
               </span>
             </div>
           </div>
@@ -107,7 +117,11 @@ const DashboardPromotionBanner = () => {
             className="relative overflow-hidden px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-gray-950 text-xs font-black rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all flex items-center justify-center gap-1.5 flex-1 sm:flex-none disabled:opacity-50"
           >
             {redeemingId === topPromo.id ? (
-              'Redeeming...'
+              'Processing...'
+            ) : isDiscount ? (
+              <>
+                Claim {topPromo.discountPercent}% Off <ArrowRight size={14} />
+              </>
             ) : (
               <>
                 Redeem Offer <ArrowRight size={14} />

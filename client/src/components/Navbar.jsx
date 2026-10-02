@@ -7,12 +7,13 @@ import { useAuth } from '../context/useAuth';
 
 const links = [
   { label: 'Home', to: '/' },
+  { label: 'About', to: '/about' },
   { label: 'Features', to: '/features' },
   { label: 'Pricing', to: '/pricing' },
+  { label: 'Contact', to: '/contact' },
   { label: 'Prop Firm', to: '/prop-firm-traders' },
   { label: 'Mentors', to: '/mentors' },
   { label: 'Blog', to: '/blog' },
-  { label: 'About', to: '/about' },
 ];
 
 const Navbar = () => {
