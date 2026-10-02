@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { logAudit } = require('../services/auditService');
 const { dispatchPromotionNotifications } = require('../services/promotionService');
+const { sweepAndDowngradeExpiredPromotions } = require('../services/subscriptionCron');
 
 const getPromotions = async (req, res) => {
   try {
@@ -242,6 +243,9 @@ const updatePromotion = async (req, res) => {
       ipAddress: req.ip
     });
 
+    // Auto-trigger background sweep in case promo was deactivated or expired
+    sweepAndDowngradeExpiredPromotions().catch(() => {});
+
     res.json(promotion);
   } catch (error) {
     console.error('updatePromotion error:', error);
@@ -262,11 +266,13 @@ const deletePromotion = async (req, res) => {
        });
        
        await logAudit({ adminId: req.user.id, action: 'ARCHIVE_PROMOTION', resource: 'Promotion', resourceId: id, ipAddress: req.ip });
+       sweepAndDowngradeExpiredPromotions().catch(() => {});
        return res.json({ message: 'Promotion has redemptions and was ARCHIVED securely.', promotion: archived });
     }
 
     await prisma.promotion.delete({ where: { id } });
     await logAudit({ adminId: req.user.id, action: 'DELETE_PROMOTION_EMPTY', resource: 'Promotion', resourceId: id, ipAddress: req.ip });
+    sweepAndDowngradeExpiredPromotions().catch(() => {});
     
     res.json({ message: 'Unused promotion wiped.' });
   } catch(error) {
@@ -485,6 +491,26 @@ const revokeBadge = async (req, res) => {
   }
 };
 
+const sweepExpiredPromotions = async (req, res) => {
+  try {
+    const result = await sweepAndDowngradeExpiredPromotions();
+    await logAudit({
+      adminId: req.user.id,
+      action: 'SWEEP_EXPIRED_PROMOTIONS',
+      resource: 'Subscription',
+      newValue: JSON.stringify(result),
+      ipAddress: req.ip
+    });
+    res.json({
+      message: `Promotion sweep completed: ${result.downgradedUsersCount} expired upgrade(s) downgraded back to Free.`,
+      result
+    });
+  } catch (error) {
+    console.error('sweepExpiredPromotions error:', error);
+    res.status(500).json({ message: 'Failed to execute promotion expiry sweep.' });
+  }
+};
+
 module.exports = {
   getPromotions,
   getPromotionMetrics,
@@ -495,6 +521,7 @@ module.exports = {
   grantPromotion,
   getGranteesByPromotion,
   awardBadge,
-  revokeBadge
+  revokeBadge,
+  sweepExpiredPromotions
 };
 

@@ -37,7 +37,7 @@ const AccountsList = () => {
         await api.delete(`/accounts/${account.id}`);
       }
       setAccounts((current) => current.filter((item) => item.id !== account.id));
-      toast.success('Account removed from your sanctuary.');
+      toast.success('Account removed successfully.');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Couldn\'t remove that account right now.');
     }
@@ -74,7 +74,7 @@ const AccountsList = () => {
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-muted">Gathering your accounts...</div>
+        <div className="py-12 text-center text-muted">Loading your accounts...</div>
       ) : accounts.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-surface-muted py-16 text-center">
           <Wallet size={48} className="mx-auto mb-4 text-muted" />

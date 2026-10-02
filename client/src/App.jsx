@@ -65,6 +65,7 @@ const NotificationsPage = lazy(() => import('./pages/Notifications'));
 const PromotionsPage = lazy(() => import('./pages/PromotionsPage'));
 const PromotionDetailPage = lazy(() => import('./pages/PromotionDetailPage'));
 const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
+const JoinCohortPage = lazy(() => import('./pages/JoinCohortPage'));
 const Legal = lazy(() => import('./pages/Legal'));
 const BlogList = lazy(() => import('./pages/BlogList'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
@@ -113,6 +114,7 @@ function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/shared/trade/:shareToken" element={<SharedTradePage />} />
             <Route path="/shared/daily-review/:shareToken" element={<SharedDailyReviewPage />} />
+            <Route path="/join/cohort/:groupId" element={<JoinCohortPage />} />
 
             {/* Shared Public/Legal Pages (Accessible to both Anonymous and Authenticated Traders) */}
             <Route element={<SharedRouteLayout />}>

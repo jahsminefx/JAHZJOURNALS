@@ -15,12 +15,12 @@ const CustomerSuccessDashboard = () => {
    if (!kpis) return <div className="h-40 flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-r-transparent"></div></div>;
 
    const metrics = [
-      { label: 'Pending Support Tickets', value: kpis.waitingAdmin, icon: Ticket, sub: `${kpis.totalOpenTickets} Global Open`, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-      { label: 'Awaiting User Response', value: kpis.waitingUser, icon: MessageSquare, sub: `Customer Action Required`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-      { label: 'Triaged Bugs', value: kpis.newBugs, icon: Bug, sub: `New Priority Isolations`, color: 'text-red-500', bg: 'bg-red-500/10' },
-      { label: 'Feature Validations', value: kpis.newFeatures, icon: Lightbulb, sub: `Under Review`, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-      { label: 'Unread Contact Proxies', value: kpis.newContacts, icon: AlertCircle, sub: `Public Gateway`, color: 'text-pink-500', bg: 'bg-pink-500/10' },
-      { label: 'Resolved Volume', value: kpis.resolved, icon: Activity, sub: `${kpis.averageSatisfaction > 0 ? (kpis.averageSatisfaction).toFixed(1) + '/5 ★ CSAT' : 'No CSAT Registered'}`, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+      { label: 'Open Support Tickets', value: kpis.waitingAdmin, icon: Ticket, sub: `${kpis.totalOpenTickets} Total Open`, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+      { label: 'Awaiting User Reply', value: kpis.waitingUser, icon: MessageSquare, sub: `Waiting for Trader`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+      { label: 'Reported Bugs', value: kpis.newBugs, icon: Bug, sub: `Needs Investigation`, color: 'text-red-500', bg: 'bg-red-500/10' },
+      { label: 'Feature Ideas', value: kpis.newFeatures, icon: Lightbulb, sub: `Under Review`, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+      { label: 'New Contact Messages', value: kpis.newContacts, icon: AlertCircle, sub: `From Contact Form`, color: 'text-pink-500', bg: 'bg-pink-500/10' },
+      { label: 'Resolved Tickets', value: kpis.resolved, icon: Activity, sub: `${kpis.averageSatisfaction > 0 ? (kpis.averageSatisfaction).toFixed(1) + '/5 ★ CSAT' : 'No ratings yet'}`, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
    ];
 
    return (
@@ -28,10 +28,10 @@ const CustomerSuccessDashboard = () => {
          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
              <div>
                <h1 className="text-2xl font-black text-emerald-500 tracking-wide flex items-center gap-3">
-                 <LifeBuoy size={28} /> Customer Success Headquarters
+                 <LifeBuoy size={28} /> Customer Support & Feedback
                </h1>
                <p className="text-emerald-500/70 text-sm mt-2 font-medium max-w-2xl">
-                 Omnichannel support aggregation mapping native Bug Reports, Timelines, and Support Tickets entirely within JAHZJournal structural limits. Backwards compatible implicitly.
+                 Manage customer support tickets, reported bugs, feature requests, and contact inquiries in one central place.
                </p>
              </div>
          </div>
@@ -54,11 +54,10 @@ const CustomerSuccessDashboard = () => {
             })}
          </div>
 
-         {/* Chart Placeholder for future implementation avoiding heavy dependencies mapping pure KPIs */}
-         <div className="h-64 mt-6 border border-border bg-surface-muted rounded-xl flex items-center justify-center p-8 text-center flex-col">
-            <Activity className="opacity-20 mb-4" size={40} />
-            <h3 className="font-bold text-muted-foreground">Analytic Arrays Active</h3>
-            <p className="text-xs text-muted-foreground opacity-60 max-w-sm mt-2">Dynamic Line Chart endpoints mapping resolution times and satisfaction trends exist natively underneath Phase 5 APIs.</p>
+         <div className="h-48 mt-6 border border-border bg-surface-muted/30 rounded-xl flex items-center justify-center p-8 text-center flex-col">
+            <Activity className="opacity-20 mb-3" size={36} />
+            <h3 className="font-bold text-muted-foreground text-sm">Response Time & Satisfaction Trends</h3>
+            <p className="text-xs text-muted-foreground opacity-70 max-w-sm mt-1">Detailed charts tracking resolution speeds and satisfaction ratings will appear here as more tickets are resolved.</p>
          </div>
       </div>
    );

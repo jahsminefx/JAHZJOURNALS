@@ -26,7 +26,7 @@ const PlatformSettingsHub = () => {
                 setConfigs(cfg.data);
                 setHistory(hist.data);
              } catch (e) {
-                toast.error('Failed synthesizing Config APIs.');
+                toast.error('Failed to load platform settings.');
              } finally {
                 setLoading(false);
              }
@@ -37,32 +37,32 @@ const PlatformSettingsHub = () => {
     const handleUpdate = async (key, payloadObj) => {
         try {
             await api.put('/admin/platform/config', { key, value: payloadObj });
-            toast.success(`Platform Block [${key}] Synchronized Natively!`);
+            toast.success(`Settings updated successfully!`);
             setConfigs(prev => ({ ...prev, [key]: payloadObj }));
             
             // Refresh history explicitly
             const hist = await api.get('/admin/platform/config/history');
             setHistory(hist.data);
         } catch (e) {
-            toast.error('Failed pushing mutation block to native nodes.');
+            toast.error('Failed to update platform settings.');
         }
     };
 
-    if (loading || !configs) return <div className="p-8 text-center animate-pulse tracking-widest text-muted-foreground uppercase font-black">Initializing Control Hub...</div>;
+    if (loading || !configs) return <div className="p-8 text-center animate-pulse tracking-widest text-muted-foreground uppercase font-black">Loading Platform Settings...</div>;
 
     const navTabs = [
-        { id: 'overview', label: 'Platform Hub', icon: ShieldCheck },
-        { id: 'features', label: 'Feature Flags', icon: Flag },
+        { id: 'overview', label: 'Overview', icon: ShieldCheck },
+        { id: 'features', label: 'Feature Access', icon: Flag },
         { id: 'settings', label: 'System Settings', icon: Settings },
-        { id: 'integrations', label: 'Integrations', icon: HardDrive },
-        { id: 'history', label: 'Audit Trace', icon: RefreshCw },
+        { id: 'integrations', label: 'Integrations & Services', icon: HardDrive },
+        { id: 'history', label: 'Settings History', icon: RefreshCw },
     ];
 
     return (
         <div className="space-y-6 animate-in fade-in">
            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <h1 className="text-2xl font-black text-foreground flex items-center gap-3">
-                 <Settings className="text-blue-500" /> Platform Infrastructure
+                 <Settings className="text-blue-500" /> Platform Settings
               </h1>
               <div className="flex bg-surface-muted border border-border p-1 rounded-xl">
                  {navTabs.map(t => {
@@ -83,23 +83,23 @@ const PlatformSettingsHub = () => {
            <div className="bg-surface rounded-xl border border-border p-6 shadow-sm">
                {activeTab === 'overview' && (
                   <div className="space-y-6">
-                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Global Matrix Status</h2>
+                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Current Platform Status</h2>
                       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                           <div className="p-5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                              <h3 className="text-xs uppercase tracking-widest font-black text-blue-500 mb-2">Launch Mode</h3>
-                              <p className="text-2xl font-black text-foreground">{configs.LAUNCH_SETTINGS?.launchMode ? 'ACTIVE' : 'OFF'}</p>
+                              <h3 className="text-xs uppercase tracking-widest font-black text-blue-500 mb-2">Live Site Mode</h3>
+                              <p className="text-2xl font-black text-foreground">{configs.LAUNCH_SETTINGS?.launchMode ? 'LIVE' : 'OFF'}</p>
                           </div>
                           <div className="p-5 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                              <h3 className="text-xs uppercase tracking-widest font-black text-amber-500 mb-2">Maintenance</h3>
+                              <h3 className="text-xs uppercase tracking-widest font-black text-amber-500 mb-2">Maintenance Mode</h3>
                               <p className="text-2xl font-black text-foreground">{configs.LAUNCH_SETTINGS?.maintenanceMode ? 'ENABLED' : 'DISABLED'}</p>
                           </div>
                           <div className="p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                              <h3 className="text-xs uppercase tracking-widest font-black text-emerald-500 mb-2">Registration</h3>
-                              <p className="text-2xl font-black text-foreground">{configs.LAUNCH_SETTINGS?.registrationEnabled ? 'OPEN' : 'LOCKED'}</p>
+                              <h3 className="text-xs uppercase tracking-widest font-black text-emerald-500 mb-2">User Registration</h3>
+                              <p className="text-2xl font-black text-foreground">{configs.LAUNCH_SETTINGS?.registrationEnabled ? 'OPEN' : 'CLOSED'}</p>
                           </div>
                           <div className="p-5 bg-purple-500/10 border border-purple-500/20 rounded-xl">
-                              <h3 className="text-xs uppercase tracking-widest font-black text-purple-500 mb-2">Auth Boundary</h3>
-                              <p className="text-2xl font-black text-foreground">{configs.AUTH_SETTINGS?.emailVerificationRequired ? 'STRICT' : 'FLUID'}</p>
+                              <h3 className="text-xs uppercase tracking-widest font-black text-purple-500 mb-2">Email Verification</h3>
+                              <p className="text-2xl font-black text-foreground">{configs.AUTH_SETTINGS?.emailVerificationRequired ? 'REQUIRED' : 'OPTIONAL'}</p>
                           </div>
                       </div>
                   </div>
@@ -107,13 +107,13 @@ const PlatformSettingsHub = () => {
 
                {activeTab === 'features' && (
                   <div className="space-y-6">
-                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Dynamic Role Arrays</h2>
+                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Feature Access by Plan & Role</h2>
                       <div className="grid md:grid-cols-2 gap-6">
                           {['aiChat', 'visionAi', 'socialLogin', 'referrals', 'mentorWorkspace'].map(feature => (
                               <div key={feature} className="p-4 border border-border rounded-xl bg-surface-muted/30 flex justify-between items-center">
                                   <div>
                                      <h3 className="font-bold text-foreground capitalize">{feature.replace(/([A-Z])/g, ' $1').trim()}</h3>
-                                     <p className="text-xs text-muted-foreground mt-1">Cross-System Rollout String Hook</p>
+                                     <p className="text-xs text-muted-foreground mt-1">Control who has access to this feature</p>
                                   </div>
                                   <select 
                                      value={configs.FEATURES_CONFIG?.[feature] || 'EVERYONE'}
@@ -124,8 +124,8 @@ const PlatformSettingsHub = () => {
                                      className="bg-surface border border-border px-3 py-1.5 rounded-lg text-sm font-bold text-blue-500 focus:border-blue-500 outline-none"
                                   >
                                       <option value="EVERYONE">Enabled for Everyone</option>
-                                      <option value="PRO_ONLY">PRO Only</option>
-                                      <option value="FOUNDING_TRADERS">Founding Traders</option>
+                                      <option value="PRO_ONLY">Pro Members Only</option>
+                                      <option value="FOUNDING_TRADERS">Founding Traders Only</option>
                                       <option value="DISABLED">Disabled</option>
                                   </select>
                               </div>
@@ -136,27 +136,27 @@ const PlatformSettingsHub = () => {
 
                {activeTab === 'settings' && (
                   <div className="space-y-6">
-                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Core Operating Limits</h2>
+                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Core Platform Settings</h2>
                       <div className="grid md:grid-cols-2 gap-8">
                           <div className="space-y-4">
-                              <h3 className="text-xs uppercase tracking-widest text-emerald-500 font-black">Launch Defaults</h3>
+                              <h3 className="text-xs uppercase tracking-widest text-emerald-500 font-black">Site Availability</h3>
                               <label className="flex items-center gap-3 p-3 bg-surface-muted border border-border rounded-lg">
                                   <input type="checkbox" checked={configs.LAUNCH_SETTINGS?.launchMode} onChange={e => handleUpdate('LAUNCH_SETTINGS', { ...configs.LAUNCH_SETTINGS, launchMode: e.target.checked })} className="accent-emerald-500" />
-                                  <span className="text-sm font-bold">Trading Floor Online (Launch Mode)</span>
+                                  <span className="text-sm font-bold">Platform Live (Launch Mode)</span>
                               </label>
                               <label className="flex items-center gap-3 p-3 bg-surface-muted border border-border rounded-lg">
                                   <input type="checkbox" checked={configs.LAUNCH_SETTINGS?.maintenanceMode} onChange={e => handleUpdate('LAUNCH_SETTINGS', { ...configs.LAUNCH_SETTINGS, maintenanceMode: e.target.checked })} className="accent-emerald-500" />
-                                  <span className="text-sm font-bold">Lock Architecture (Maintenance Mode)</span>
+                                  <span className="text-sm font-bold">Enable Maintenance Mode</span>
                               </label>
                           </div>
                           <div className="space-y-4">
-                              <h3 className="text-xs uppercase tracking-widest text-purple-500 font-black">Authorization Boundaries</h3>
+                              <h3 className="text-xs uppercase tracking-widest text-purple-500 font-black">Security & Authentication</h3>
                               <label className="flex items-center gap-3 p-3 bg-surface-muted border border-border rounded-lg">
                                   <input type="checkbox" checked={configs.AUTH_SETTINGS?.emailVerificationRequired} onChange={e => handleUpdate('AUTH_SETTINGS', { ...configs.AUTH_SETTINGS, emailVerificationRequired: e.target.checked })} className="accent-purple-500" />
-                                  <span className="text-sm font-bold">Require Email Verification Check</span>
+                                  <span className="text-sm font-bold">Require Email Verification for New Signups</span>
                               </label>
                               <label className="flex flex-col gap-1 p-3 bg-surface-muted border border-border rounded-lg">
-                                  <span className="text-xs font-bold text-muted-foreground">Session Expiration String</span>
+                                  <span className="text-xs font-bold text-muted-foreground">Session Expiration (e.g. 24h, 7d)</span>
                                   <input type="text" value={configs.AUTH_SETTINGS?.sessionTimeout || '24h'} onChange={e => handleUpdate('AUTH_SETTINGS', { ...configs.AUTH_SETTINGS, sessionTimeout: e.target.value })} className="bg-surface px-2 py-1 border border-border rounded text-sm w-full outline-none" />
                               </label>
                           </div>
@@ -166,13 +166,13 @@ const PlatformSettingsHub = () => {
 
                {activeTab === 'integrations' && (
                   <div className="space-y-6">
-                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Native 3rd Party Bridges</h2>
+                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Connected Services & Integrations</h2>
                       <div className="grid md:grid-cols-3 gap-6">
                          {[
-                           { key: 'cloudinaryConnected', label: 'Cloudinary CDN', icon: Cloud },
-                           { key: 'openrouterConnected', label: 'OpenRouter AI Models', icon: Key },
-                           { key: 'paystackConnected', label: 'Paystack Gateway', icon: ShieldCheck },
-                           { key: 'redisActive', label: 'Redis BullMQ Cluster', icon: Database }
+                           { key: 'cloudinaryConnected', label: 'Cloudinary (Image Storage)', icon: Cloud },
+                           { key: 'openrouterConnected', label: 'OpenRouter (AI Models)', icon: Key },
+                           { key: 'paystackConnected', label: 'Paystack Payment Gateway', icon: ShieldCheck },
+                           { key: 'redisActive', label: 'Redis Background Queue', icon: Database }
                          ].map(int => {
                              const Ico = int.icon;
                              const active = configs.INTEGRATIONS_CONFIG?.[int.key];
@@ -183,7 +183,7 @@ const PlatformSettingsHub = () => {
                                     </div>
                                     <h3 className="font-bold">{int.label}</h3>
                                     <div className={`text-xs font-black uppercase tracking-widest mt-2 ${active ? 'text-emerald-500' : 'text-red-500'}`}>
-                                        {active ? 'Bridge Active' : 'Offline'}
+                                        {active ? 'Connected' : 'Disconnected'}
                                     </div>
                                 </div>
                              )
@@ -194,16 +194,16 @@ const PlatformSettingsHub = () => {
 
                {activeTab === 'history' && (
                   <div className="space-y-6">
-                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Immutable Configuration Diffs</h2>
+                      <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Settings Change History</h2>
                       <div className="space-y-3">
                          {history.map(h => (
                              <div key={h.id} className="p-4 rounded-xl border border-border bg-surface-muted flex flex-col md:flex-row justify-between md:items-center gap-4">
                                 <div>
-                                    <h3 className="font-bold text-xs uppercase tracking-widest text-blue-500">{h.resourceId} mutated by Node #{h.adminId?.substring(0,6)}</h3>
+                                    <h3 className="font-bold text-xs uppercase tracking-widest text-blue-500">{h.resourceId} changed by Admin ({h.adminId?.substring(0,6)})</h3>
                                     <div className="text-xs text-muted-foreground mt-2 font-mono truncate max-w-full md:max-w-xl">
-                                        [PREV]: {h.oldValue} 
+                                        Before: {h.oldValue} 
                                         <br/>
-                                        [NEW]: {h.newValue}
+                                        After: {h.newValue}
                                     </div>
                                 </div>
                                 <div className="text-xs font-bold text-muted-foreground whitespace-nowrap">

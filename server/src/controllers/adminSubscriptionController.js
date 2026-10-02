@@ -49,7 +49,7 @@ const getSubscriptionMetrics = async (req, res) => {
   try {
     const totalSubs = await prisma.subscription.count();
     
-    // Using group by for plan distribution
+    // Group by subscription record
     const planGroups = await prisma.subscription.groupBy({
       by: ['plan'],
       _count: { plan: true }
@@ -65,9 +65,34 @@ const getSubscriptionMetrics = async (req, res) => {
       _count: { source: true }
     });
 
+    // Group by user table
+    const userPlanGroups = await prisma.user.groupBy({
+      by: ['subscriptionPlan'],
+      _count: { subscriptionPlan: true }
+    });
+
+    const userPlans = {
+      FREE: 0,
+      STARTER: 0,
+      PRO: 0,
+      MENTOR: 0
+    };
+    userPlanGroups.forEach(g => {
+      userPlans[g.subscriptionPlan] = g._count.subscriptionPlan;
+    });
+
+    const plans = {
+      FREE: 0,
+      STARTER: 0,
+      PRO: 0,
+      MENTOR: 0,
+      ...planGroups.reduce((acc, curr) => ({ ...acc, [curr.plan]: curr._count.plan }), {})
+    };
+
     res.json({
       totalSubs,
-      plans: planGroups.reduce((acc, curr) => ({ ...acc, [curr.plan]: curr._count.plan }), {}),
+      plans,
+      userPlans,
       statuses: statusGroups.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count.status }), {}),
       sources: sourceGroups.reduce((acc, curr) => ({ ...acc, [curr.source]: curr._count.source }), {}),
     });

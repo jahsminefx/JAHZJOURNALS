@@ -21,6 +21,8 @@ import {
   SlidersHorizontal,
   UserRound,
   Users,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../context/useAuth';
@@ -34,16 +36,18 @@ import { getConsentTimestamp } from '../utils/consentService';
 const inputClass = 'mt-2 block w-full rounded-xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground placeholder:text-muted outline-none transition focus:border-emerald-500 focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60 shadow-sm';
 
 const sectionNav = [
-  { id: 'profile', label: 'Profile', icon: UserRound },
-  { id: 'trading', label: 'Trading Preferences', icon: SlidersHorizontal },
-  { id: 'risk', label: 'Risk Management', icon: ShieldCheck },
-  { id: 'strategies', label: 'Trading Strategies', icon: Layers },
-  { id: 'journal', label: 'Journal Preferences', icon: Camera },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'appearance', label: 'Appearance', icon: Palette },
-  { id: 'security', label: 'Security', icon: Lock },
-  { id: 'billing', label: 'Billing', icon: CreditCard },
-  { id: 'data', label: 'Data & Privacy', icon: Database },
+  { id: 'profile', label: 'Profile', icon: UserRound, description: 'Personal details, bio & trading style', group: 'Account & Security' },
+  { id: 'security', label: 'Security', icon: Lock, description: 'Password, active sessions & login alerts', group: 'Account & Security' },
+  { id: 'billing', label: 'Billing & Plan', icon: CreditCard, description: 'Subscription tier & payment preferences', group: 'Account & Security' },
+  
+  { id: 'trading', label: 'Trading Preferences', icon: SlidersHorizontal, description: 'Default accounts & execution rules', group: 'Trading Setup' },
+  { id: 'risk', label: 'Risk Management', icon: ShieldCheck, description: 'Daily limits, max drawdown & targets', group: 'Trading Setup' },
+  { id: 'strategies', label: 'Trading Strategies', icon: Layers, description: 'Custom playbooks & strategy setups', group: 'Trading Setup' },
+  { id: 'journal', label: 'Journal Preferences', icon: Camera, description: 'Checklists, trade tags & review prompts', group: 'Trading Setup' },
+  
+  { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme mode, density & date formats', group: 'App Settings' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Email alerts & reminder triggers', group: 'App Settings' },
+  { id: 'data', label: 'Data & Privacy', icon: Database, description: 'Data export, AI privacy & cookies', group: 'App Settings' },
 ];
 
 const profileFromUser = (user, settings) => ({
@@ -173,6 +177,10 @@ const Settings = () => {
   const { setTheme } = useTheme();
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState(() => getInitialSettingsSection(searchParams));
+  const [mobileActiveSection, setMobileActiveSection] = useState(() => {
+    const sec = searchParams.get('section');
+    return sec && sectionNav.some((s) => s.id === sec) ? sec : null;
+  });
   const [settings, setSettings] = useState(() => loadSettings());
   const [profile, setProfile] = useState(() => profileFromUser(user, loadSettings()));
   const [weeklyGoal, setWeeklyGoal] = useState(emptyWeeklyGoal);
@@ -186,6 +194,20 @@ const Settings = () => {
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '' });
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const avatarInputRef = useRef(null);
+
+  useEffect(() => {
+    const sec = searchParams.get('section');
+    if (sec && sectionNav.some((s) => s.id === sec)) {
+      setActiveSection(sec);
+      setMobileActiveSection(sec);
+    }
+  }, [searchParams]);
+
+  const handleSelectSection = (sectionId) => {
+    setActiveSection(sectionId);
+    setMobileActiveSection(sectionId);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     const fetchSettingsData = async () => {
@@ -1067,59 +1089,169 @@ const Settings = () => {
 
   const activeLabel = sectionNav.find((section) => section.id === activeSection)?.label || 'Settings';
 
+  const groups = ['Account & Security', 'Trading Setup', 'App Settings'];
+
   if (isLoading) {
-    return <div className="py-12 text-center text-muted">Loading settings...</div>;
+    return <div className="py-12 text-center text-muted font-bold">Loading settings...</div>;
   }
 
   return (
     <div className="space-y-6 text-foreground">
-      <div className="rounded-xl border border-border bg-surface-muted p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-green-400">Account controls</p>
-        <h1 className="mt-3 text-3xl font-black text-foreground">Settings</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-          Manage your profile, trading defaults, journal rules, notifications, subscription, security, and data controls in one place.
-        </p>
-      </div>
+      {/* ========================================================================= */}
+      {/* MOBILE / SMARTPHONE VIEW (lg:hidden)                                      */}
+      {/* ========================================================================= */}
+      <div className="block lg:hidden">
+        {!mobileActiveSection ? (
+          /* SMARTPHONE SETTINGS MENU */
+          <div className="space-y-5 animate-in fade-in duration-200">
+            {/* Page Header */}
+            <div>
+              <h1 className="text-2xl font-black text-foreground">Settings</h1>
+              <p className="text-xs text-muted mt-1">Manage your account, trading rules, and app preferences</p>
+            </div>
 
-      <div className="lg:hidden">
-        <SelectInput label="Settings section" value={activeSection} onChange={(event) => setActiveSection(event.target.value)}>
-          {sectionNav.map((section) => (
-            <option key={section.id} value={section.id}>{section.label}</option>
-          ))}
-        </SelectInput>
-      </div>
+            {/* Profile Summary Card */}
+            <button
+              type="button"
+              onClick={() => handleSelectSection('profile')}
+              className="flex w-full items-center gap-4 rounded-2xl border border-border bg-surface p-4 text-left shadow-sm transition active:scale-[0.99] hover:border-emerald-500/50"
+            >
+              <div className="relative shrink-0">
+                {profile.profilePhotoUrl ? (
+                  <img
+                    src={profile.profilePhotoUrl}
+                    alt={profile.name || 'User'}
+                    className="h-14 w-14 rounded-full object-cover border-2 border-emerald-500/30"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500 font-black text-lg border border-emerald-500/30">
+                    {profile.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
+                <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-surface border border-border text-emerald-500">
+                  <UserRound size={11} />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-base text-foreground truncate">{profile.name || 'Trader'}</h2>
+                  <span className="shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/20">
+                    {user?.subscriptionPlan || 'STARTER'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted truncate mt-0.5">{profile.email}</p>
+                <p className="text-[11px] text-emerald-500 font-bold mt-1 flex items-center gap-0.5">
+                  View Profile <ChevronRight size={13} />
+                </p>
+              </div>
+            </button>
 
-      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-        <aside className="hidden rounded-2xl border border-border bg-surface p-3 lg:block shadow-sm">
-          <nav className="space-y-1">
-            {sectionNav.map((section) => {
-              const Icon = section.icon;
-              const isActive = activeSection === section.id;
-
+            {/* Grouped Settings Categories */}
+            {groups.map((groupName) => {
+              const groupSections = sectionNav.filter((s) => s.group === groupName);
               return (
-                <button
-                  key={section.id}
-                  type="button"
-                  onClick={() => setActiveSection(section.id)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-xs font-bold transition ${
-                    isActive
-                      ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                      : 'text-muted hover:bg-surface-muted hover:text-foreground'
-                  }`}
-                >
-                  <Icon size={17} />
-                  {section.label}
-                </button>
+                <div key={groupName} className="space-y-1.5">
+                  <h3 className="text-[11px] font-black uppercase tracking-wider text-muted px-2">
+                    {groupName}
+                  </h3>
+                  <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden divide-y divide-border">
+                    {groupSections.map((section) => {
+                      const Icon = section.icon;
+                      return (
+                        <button
+                          key={section.id}
+                          type="button"
+                          onClick={() => handleSelectSection(section.id)}
+                          className="flex w-full items-center justify-between p-3.5 text-left transition hover:bg-surface-muted active:bg-surface-muted/80"
+                        >
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                              <Icon size={19} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-foreground truncate">{section.label}</p>
+                              <p className="text-xs text-muted truncate mt-0.5">{section.description}</p>
+                            </div>
+                          </div>
+                          <ChevronRight size={18} className="shrink-0 text-muted ml-2" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
-          </nav>
-        </aside>
-
-        <div className="min-w-0">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-foreground">{activeLabel}</h2>
           </div>
-          {contentBySection[activeSection]()}
+        ) : (
+          /* SMARTPHONE CATEGORY DETAIL VIEW */
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* Top Navigation Bar with Back Button */}
+            <div className="flex items-center gap-3 pb-3 border-b border-border">
+              <button
+                type="button"
+                onClick={() => setMobileActiveSection(null)}
+                className="flex items-center gap-1 text-xs font-bold text-emerald-500 hover:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-2 rounded-xl transition shrink-0 active:scale-95"
+              >
+                <ChevronLeft size={16} />
+                <span>Settings</span>
+              </button>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base font-black text-foreground truncate">{activeLabel}</h2>
+              </div>
+            </div>
+
+            {/* Active Section Content */}
+            <div className="pt-1">
+              {contentBySection[activeSection]()}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* DESKTOP / TABLET VIEW (hidden lg:block)                                   */}
+      {/* ========================================================================= */}
+      <div className="hidden lg:block space-y-6">
+        <div className="rounded-xl border border-border bg-surface-muted p-6">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-green-400">Account controls</p>
+          <h1 className="mt-3 text-3xl font-black text-foreground">Settings</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            Manage your profile, trading defaults, journal rules, notifications, subscription, security, and data controls in one place.
+          </p>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+          <aside className="rounded-2xl border border-border bg-surface p-3 shadow-sm self-start sticky top-6">
+            <nav className="space-y-1">
+              {sectionNav.map((section) => {
+                const Icon = section.icon;
+                const isActive = activeSection === section.id;
+
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => setActiveSection(section.id)}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-xs font-bold transition ${
+                      isActive
+                        ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                        : 'text-muted hover:bg-surface-muted hover:text-foreground'
+                    }`}
+                  >
+                    <Icon size={17} />
+                    {section.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          <div className="min-w-0">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">{activeLabel}</h2>
+            </div>
+            {contentBySection[activeSection]()}
+          </div>
         </div>
       </div>
     </div>

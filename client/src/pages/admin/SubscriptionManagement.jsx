@@ -10,6 +10,7 @@ const SubscriptionManagement = () => {
   const [subscriptions, setSubscriptions] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [sweeping, setSweeping] = useState(false);
   
   // Filters
   const [search, setSearch] = useState('');
@@ -26,6 +27,24 @@ const SubscriptionManagement = () => {
       setMetrics(data);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleSweepExpired = async () => {
+    setSweeping(true);
+    const toastId = toast.loading('Checking expired promotions & downgrading users to Free...');
+    try {
+      const { data } = await api.post('/admin/subscriptions/sweep-expired');
+      toast.success(
+        data.message || `Sweep completed: ${data.result?.downgradedUsersCount || 0} user(s) transitioned to Free.`,
+        { id: toastId }
+      );
+      await fetchMetrics();
+      await fetchSubscriptions();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to sweep expired subscriptions.', { id: toastId });
+    } finally {
+      setSweeping(false);
     }
   };
 
@@ -62,6 +81,19 @@ const SubscriptionManagement = () => {
     return () => clearTimeout(timer);
   }, [search, planFilter, statusFilter, sourceFilter, page]);
 
+  const getPlanBadge = (plan) => {
+    switch (plan) {
+      case 'MENTOR':
+        return 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30';
+      case 'PRO':
+        return 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+      case 'STARTER':
+        return 'bg-blue-500/15 text-blue-400 border border-blue-500/30';
+      default:
+        return 'bg-surface-muted text-muted-foreground border border-border';
+    }
+  };
+
   const getStatusColor = (status) => {
     const map = {
       ACTIVE: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
@@ -75,32 +107,43 @@ const SubscriptionManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Subscription Management</h1>
-        <p className="text-muted-foreground text-sm mt-1">Monitor billing states, promotions, and active memberships centrally.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Subscription Management</h1>
+          <p className="text-muted-foreground text-sm mt-1">View and manage trader memberships, active plans, and billing statuses.</p>
+        </div>
+        <button
+          onClick={handleSweepExpired}
+          disabled={sweeping}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 transition disabled:opacity-50 active:scale-95"
+          title="Force-downgrade any users whose promotions have ended back to Free"
+        >
+          <CreditCard size={16} className={sweeping ? 'animate-spin' : ''} />
+          <span>{sweeping ? 'Sweeping Expired...' : 'Sweep Expired Promos'}</span>
+        </button>
       </div>
 
       {metrics && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase text-muted-foreground">Total Subscribers</p>
+            <p className="text-xs font-bold uppercase text-muted-foreground">Total Records</p>
             <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.totalSubs}</h3>
           </div>
-          <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+          <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase text-indigo-400">Mentor Plan</p>
+            <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.MENTOR || metrics.userPlans?.MENTOR || 0}</h3>
+          </div>
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 shadow-sm">
             <p className="text-xs font-bold uppercase text-emerald-500">Active Pro</p>
-            <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.PRO || 0}</h3>
+            <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.PRO || metrics.userPlans?.PRO || 0}</h3>
           </div>
-          <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase text-blue-500">Starter Core</p>
-            <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.STARTER || 0}</h3>
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase text-blue-500">Active Starter</p>
+            <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.STARTER || metrics.userPlans?.STARTER || 0}</h3>
           </div>
-          <div className="rounded-xl border border-border bg-amber-500/10 p-4 shadow-sm">
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 shadow-sm col-span-2 sm:col-span-1">
             <p className="text-xs font-bold uppercase text-amber-500">Promotions</p>
             <h3 className="mt-2 text-2xl font-black text-amber-400">{metrics.sources?.PROMOTION || 0}</h3>
-          </div>
-          <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase text-purple-500">Standard MRR (Est)</p>
-            <h3 className="mt-2 text-2xl font-black text-foreground">₦---</h3>
           </div>
         </div>
       )}
@@ -126,6 +169,7 @@ const SubscriptionManagement = () => {
                <option value="FREE">Free</option>
                <option value="STARTER">Starter</option>
                <option value="PRO">Pro</option>
+               <option value="MENTOR">Mentor</option>
              </select>
              
              <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="text-sm bg-surface border border-border rounded-lg px-2 py-1.5 outline-none focus:border-emerald-500">
@@ -137,9 +181,9 @@ const SubscriptionManagement = () => {
 
              <select value={sourceFilter} onChange={e => { setSourceFilter(e.target.value); setPage(1); }} className="text-sm bg-surface border border-border rounded-lg px-2 py-1.5 outline-none focus:border-emerald-500">
                <option value="">All Sources</option>
-               <option value="PAYMENT">Payment</option>
+               <option value="PAYMENT">Paid (Paystack)</option>
                <option value="PROMOTION">Promotion</option>
-               <option value="ADMIN">Admin</option>
+               <option value="ADMIN">Admin Manual Grant</option>
              </select>
            </div>
         </div>
@@ -148,11 +192,11 @@ const SubscriptionManagement = () => {
           <table className="w-full text-left text-sm">
             <thead className="bg-surface-muted text-muted-foreground">
               <tr>
-                <th className="px-6 py-3 font-semibold">User details</th>
-                <th className="px-6 py-3 font-semibold">Current Plan</th>
-                <th className="px-6 py-3 font-semibold">Status / Source</th>
-                <th className="px-6 py-3 font-semibold">Timeframe</th>
-                <th className="px-6 py-3 font-semibold text-right">Review</th>
+                <th className="px-6 py-3 font-semibold">User</th>
+                <th className="px-6 py-3 font-semibold">Plan</th>
+                <th className="px-6 py-3 font-semibold">Status & Source</th>
+                <th className="px-6 py-3 font-semibold">Dates</th>
+                <th className="px-6 py-3 font-semibold text-right">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -162,7 +206,7 @@ const SubscriptionManagement = () => {
                  </tr>
               ) : subscriptions.length === 0 ? (
                  <tr>
-                   <td colSpan="5" className="px-6 py-8 text-center text-muted-foreground">No records matched your filters.</td>
+                   <td colSpan="5" className="px-6 py-8 text-center text-muted-foreground">No subscriptions matched your search.</td>
                  </tr>
               ) : subscriptions.map(sub => (
                 <tr key={sub.id} className="hover:bg-surface-muted/50 transition cursor-pointer" onClick={() => setSelectedSubId(sub.id)}>
@@ -171,8 +215,10 @@ const SubscriptionManagement = () => {
                     <div className="text-xs text-muted-foreground mt-0.5 max-w-[200px] truncate">{sub.user.email}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="font-bold text-foreground">{sub.plan}</div>
-                    {sub.promotion && <div className="text-xs text-amber-500 font-medium mt-0.5">🏅 {sub.promotion.name}</div>}
+                    <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${getPlanBadge(sub.plan)}`}>
+                      {sub.plan}
+                    </span>
+                    {sub.promotion && <div className="text-xs text-amber-500 font-medium mt-1">🏅 {sub.promotion.name}</div>}
                   </td>
                   <td className="px-6 py-4">
                     <div className={`inline-flex px-2 py-0.5 rounded-full border text-xs font-bold leading-5 ${getStatusColor(sub.status)}`}>

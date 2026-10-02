@@ -13,20 +13,75 @@ try {
 
 const getDashboardMetrics = async (req, res) => {
   try {
-    const totalUsers = await prisma.user.count();
-    const activeUsers = await prisma.user.count({ where: { isDisabled: false } });
-    
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const newUsersToday = await prisma.user.count({
-      where: { createdAt: { gte: startOfDay } }
-    });
-    
-    const freeUsers = await prisma.user.count({ where: { subscriptionPlan: 'FREE' } });
-    const starterUsers = await prisma.user.count({ where: { subscriptionPlan: 'STARTER' } });
-    const proUsers = await prisma.user.count({ where: { subscriptionPlan: 'PRO' } });
-    
+    const [
+      totalUsers,
+      activeUsers,
+      newUsersToday,
+      freeUsers,
+      starterUsers,
+      proUsers,
+      mentorUsers,
+      totalTrades,
+      tradesToday,
+      totalPromotions,
+      activePromotions,
+      expiredPromotions,
+      totalMentorCohorts,
+      paidMentorCohorts,
+      totalCohortStudents,
+      recentMentorCohorts,
+      allMentorStudentPayments
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { isDisabled: false } }),
+      prisma.user.count({ where: { createdAt: { gte: startOfDay } } }),
+      prisma.user.count({ where: { subscriptionPlan: 'FREE' } }),
+      prisma.user.count({ where: { subscriptionPlan: 'STARTER' } }),
+      prisma.user.count({ where: { subscriptionPlan: 'PRO' } }),
+      prisma.user.count({ where: { subscriptionPlan: 'MENTOR' } }),
+      prisma.trade.count(),
+      prisma.trade.count({ where: { createdAt: { gte: startOfDay } } }),
+      prisma.promotion.count(),
+      prisma.promotion.count({
+        where: {
+          isActive: true,
+          OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+          AND: [{ OR: [{ endsAt: null }, { endsAt: { gte: now } }] }]
+        }
+      }),
+      prisma.promotion.count({
+        where: {
+          OR: [
+            { isActive: false },
+            { endsAt: { lt: now, not: null } }
+          ]
+        }
+      }),
+      prisma.mentorGroup.count(),
+      prisma.mentorGroup.count({ where: { isPaid: true } }),
+      prisma.mentorStudent.count(),
+      prisma.mentorGroup.findMany({
+        take: 6,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          mentor: { select: { id: true, name: true, email: true } },
+          _count: { select: { students: true } }
+        }
+      }),
+      prisma.mentorStudent.findMany({
+        where: { paidAmount: { gt: 0 } },
+        select: {
+          paidAmount: true,
+          platformFeeAmount: true,
+          mentorPayoutAmount: true,
+          currency: true
+        }
+      })
+    ]);
+
     const foundingTraders = await prisma.subscription.count({
       where: {
         source: 'PROMOTION',
@@ -34,10 +89,29 @@ const getDashboardMetrics = async (req, res) => {
       }
     });
 
-    const totalTrades = await prisma.trade.count();
-    const tradesToday = await prisma.trade.count({
-      where: { createdAt: { gte: startOfDay } }
-    });
+    // Calculate Mentorship Revenue & 5% Platform Fees
+    let grossVolumeUsd = 0;
+    let grossVolumeNgn = 0;
+    let platformFeeUsd = 0;
+    let platformFeeNgn = 0;
+    let mentorPayoutsUsd = 0;
+    let mentorPayoutsNgn = 0;
+
+    for (const p of allMentorStudentPayments) {
+      const gross = p.paidAmount || 0;
+      const fee = p.platformFeeAmount || (gross * 0.05);
+      const payout = p.mentorPayoutAmount || (gross * 0.95);
+
+      if (p.currency === 'NGN') {
+        grossVolumeNgn += gross;
+        platformFeeNgn += fee;
+        mentorPayoutsNgn += payout;
+      } else {
+        grossVolumeUsd += gross;
+        platformFeeUsd += fee;
+        mentorPayoutsUsd += payout;
+      }
+    }
 
     let queueMetrics = { waiting: 0, active: 0, failed: 0 };
     if (emailQueue) {
@@ -45,13 +119,49 @@ const getDashboardMetrics = async (req, res) => {
         const waiting = await emailQueue.getWaitingCount();
         const active = await emailQueue.getActiveCount();
         const failed = await emailQueue.getFailedCount();
-         queueMetrics = { waiting, active, failed };
-      } catch(e) {}
+        queueMetrics = { waiting, active, failed };
+      } catch (e) {}
     }
 
     res.json({
       users: { totalUsers, activeUsers, newUsersToday },
-      subscriptions: { freeUsers, starterUsers, proUsers, foundingTraders },
+      subscriptions: {
+        freeUsers,
+        starterUsers,
+        proUsers,
+        mentorUsers,
+        foundingTraders,
+        totalPaidSubscribers: starterUsers + proUsers + mentorUsers
+      },
+      mentorship: {
+        totalMentors: mentorUsers,
+        totalCohorts: totalMentorCohorts,
+        paidCohorts: paidMentorCohorts,
+        totalStudentsEnrolled: totalCohortStudents,
+        grossVolumeUsd,
+        grossVolumeNgn,
+        platformFeeUsd,
+        platformFeeNgn,
+        mentorPayoutsUsd,
+        mentorPayoutsNgn,
+        recentCohorts: recentMentorCohorts.map((c) => ({
+          id: c.id,
+          name: c.name,
+          academyName: c.academyName,
+          mentorName: c.mentor?.name || 'Mentor',
+          mentorEmail: c.mentor?.email || '',
+          studentCount: c._count?.students || 0,
+          isPaid: c.isPaid,
+          price: c.price,
+          currency: c.currency,
+          createdAt: c.createdAt
+        }))
+      },
+      promotions: {
+        total: totalPromotions,
+        active: activePromotions,
+        expired: expiredPromotions
+      },
       trading: { totalTrades, tradesToday },
       queues: queueMetrics,
       infrastructure: {

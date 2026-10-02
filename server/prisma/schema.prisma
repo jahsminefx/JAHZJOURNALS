@@ -250,6 +250,12 @@ model User {
   avatarUrl      String?
   avatarPublicId String?
 
+  mentorBankName       String?
+  mentorAccountNumber  String?
+  mentorAccountName    String?
+  mentorBankCode       String?
+  mentorSubaccountCode String?
+
   tradingAccounts    TradingAccount[]
   tradeRules         TradeRule[]
   importedTradeFiles ImportedTradeFile[]
@@ -945,11 +951,25 @@ model AiRequest {
 }
 
 model MentorGroup {
-  id          String  @id @default(uuid())
-  mentor      User    @relation("MentorGroups", fields: [mentorId], references: [id], onDelete: Cascade)
-  mentorId    String
-  name        String
-  description String?
+  id                 String   @id @default(uuid())
+  mentor             User     @relation("MentorGroups", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentorId           String
+  name               String
+  description        String?
+  logoUrl            String?
+  academyName        String?
+  benefits           String[] @default([])
+  targetMarkets      String?
+  skillLevel         String?
+  duration           String?
+  telegramLink       String?
+  discordLink        String?
+  customBadge        String?
+  isPaid             Boolean  @default(false)
+  price              Float    @default(0)
+  currency           String   @default("USD")
+  billingCycle       String   @default("ONE_TIME")
+  platformFeePercent Float    @default(5.0)
 
   students MentorStudent[]
 
@@ -958,12 +978,18 @@ model MentorGroup {
 }
 
 model MentorStudent {
-  id            String      @id @default(uuid())
-  mentorGroup   MentorGroup @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
-  mentorGroupId String
-  student       User        @relation("StudentGroups", fields: [studentId], references: [id], onDelete: Cascade)
-  studentId     String
-  status        String      @default("ACTIVE")
+  id                 String      @id @default(uuid())
+  mentorGroup        MentorGroup @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
+  mentorGroupId      String
+  student            User        @relation("StudentGroups", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId          String
+  status             String      @default("ACTIVE")
+  paidAmount         Float?
+  currency           String?
+  platformFeeAmount  Float?
+  mentorPayoutAmount Float?
+  paymentReference   String?
+  paidAt             DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

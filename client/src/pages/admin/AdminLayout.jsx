@@ -27,44 +27,44 @@ const AdminLayout = () => {
       ]
     },
     {
-      title: 'Growth & Launch',
+      title: 'Growth & Promotions',
       items: [
-        { label: 'Founding Trader', path: '/admin/founding-trader', icon: Medal },
-        { label: 'Promotions', path: '/admin/promotions', icon: Gift },
+        { label: 'Founding Traders', path: '/admin/founding-trader', icon: Medal },
+        { label: 'Promotions & Discounts', path: '/admin/promotions', icon: Gift },
       ]
     },
     {
-      title: 'Platform Administration',
+      title: 'Platform Settings',
       items: [
-        { label: 'Control Hub', path: '/admin/platform/overview', icon: Activity },
-        { label: 'Feature Flags', path: '/admin/platform/features', icon: Flag },
+        { label: 'Overview', path: '/admin/platform/overview', icon: Activity },
+        { label: 'Feature Access', path: '/admin/platform/features', icon: Flag },
         { label: 'System Settings', path: '/admin/platform/settings', icon: Settings },
-        { label: 'Integrations & API', path: '/admin/platform/integrations', icon: ShieldCheck },
+        { label: 'Connected Services', path: '/admin/platform/integrations', icon: ShieldCheck },
       ]
     },
     {
       title: 'Business Intelligence',
       items: [
-        { label: 'CEO Dashboard', path: '/admin/business/executive', icon: LineChart },
-        { label: 'Trading Insights', path: '/admin/business/trading', icon: BarChart2 },
-        { label: 'AI Operations', path: '/admin/business/ai', icon: BrainCircuit },
+        { label: 'Executive Overview', path: '/admin/business/executive', icon: LineChart },
+        { label: 'Trading Analytics', path: '/admin/business/trading', icon: BarChart2 },
+        { label: 'AI Usage', path: '/admin/business/ai', icon: BrainCircuit },
         { label: 'Revenue Trends', path: '/admin/business/revenue', icon: DollarSign },
       ]
     },
     {
-      title: 'System & Analytics',
+      title: 'System Health',
       items: [
-        { label: 'Mission Control', path: '/admin/infrastructure', icon: Activity },
-        { label: 'AI Center', path: '/admin/ai', icon: BrainCircuit },
+        { label: 'Server Health', path: '/admin/infrastructure', icon: Activity },
+        { label: 'AI Console', path: '/admin/ai', icon: BrainCircuit },
         { label: 'Trades & Analytics', path: '/admin/analytics', icon: LineChart },
         { label: 'Audit Logs', path: '/admin/audit', icon: ShieldCheck },
       ]
     },
     {
-      title: 'Customer Success',
+      title: 'Customer Support',
       items: [
-        { label: 'Overview', path: '/admin/customer-success', icon: LifeBuoy },
-        { label: 'Communications Hub', path: '/admin/communications/contact', icon: Megaphone },
+        { label: 'Support Overview', path: '/admin/customer-success', icon: LifeBuoy },
+        { label: 'Contact Messages', path: '/admin/communications/contact', icon: Megaphone },
         { label: 'Support Tickets', path: '/admin/support', icon: ShieldCheck },
         { label: 'Bug Reports', path: '/admin/bugs', icon: Bug },
         { label: 'Feature Requests', path: '/admin/features', icon: Lightbulb },

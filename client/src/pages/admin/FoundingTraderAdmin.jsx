@@ -63,22 +63,22 @@ const FoundingTraderAdmin = () => {
           </div>
           <div className="relative z-10">
             <h1 className="text-2xl font-black text-amber-500 tracking-wide flex items-center gap-3">
-              <Medal size={28} /> FOUNDING TRADER COMMAND
+              <Medal size={28} /> Founding Trader Program
             </h1>
             <p className="text-amber-500/80 text-sm mt-2 font-medium max-w-2xl">
-              Specialized launch dashboard isolating early adopters flagged with Launch Grants. This relies seamlessly on the generic Promotions architecture internally.
+              Track early adopters who received complimentary access or launch badges during the platform launch.
             </p>
           </div>
           <div className="relative z-10 flex gap-4 text-right">
              <div>
-               <div className="text-[10px] uppercase font-bold text-amber-500/70 tracking-widest">Total Indexed</div>
+               <div className="text-[10px] uppercase font-bold text-amber-500/70 tracking-widest">Total Founding Traders</div>
                <div className="text-3xl font-black text-amber-500">{total}</div>
              </div>
              {promoDoc && (
                <div>
-                 <div className="text-[10px] uppercase font-bold text-amber-500/70 tracking-widest">Master Logic</div>
+                 <div className="text-[10px] uppercase font-bold text-amber-500/70 tracking-widest">Launch Promo Code</div>
                  <div className="text-xs font-mono font-bold text-amber-500 mt-1">{promoDoc.slug}</div>
-                 <div className="text-xs font-bold text-amber-500 mt-0.5">{promoDoc.isActive ? 'ACTIVE GATE' : 'DRIFTING / CLOSED'}</div>
+                 <div className="text-xs font-bold text-amber-500 mt-0.5">{promoDoc.isActive ? 'Active' : 'Ended'}</div>
                </div>
              )}
           </div>
@@ -91,8 +91,8 @@ const FoundingTraderAdmin = () => {
        ) : !promoDoc ? (
           <div className="p-8 border border-dashed border-border rounded-xl text-center flex flex-col items-center">
             <ShieldAlert size={40} className="text-muted-foreground mb-4" />
-            <h3 className="text-lg font-bold">No LAUNCH logic mapped</h3>
-            <p className="text-muted-foreground text-sm mt-1">Navigate to the Extensions console to spin up your Founding Trader ruleset flagged as LAUNCH.</p>
+            <h3 className="text-lg font-bold">No Launch Promotion Found</h3>
+            <p className="text-muted-foreground text-sm mt-1">Create a promotion with category 'LAUNCH' under Promotions to track founding traders here.</p>
           </div>
        ) : (
           <div className="rounded-xl border border-border bg-surface flex flex-col overflow-hidden">
@@ -101,7 +101,7 @@ const FoundingTraderAdmin = () => {
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input 
                   value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Filter grants..."
+                  placeholder="Search by name or email..."
                   className="pl-9 pr-3 py-1.5 bg-surface border border-border rounded-lg text-sm w-full outline-none focus:border-amber-500 transition"
                 />
               </div>
@@ -111,20 +111,18 @@ const FoundingTraderAdmin = () => {
               <table className="w-full text-left text-sm">
                  <thead className="bg-surface-muted text-muted-foreground">
                    <tr>
-                     <th className="px-6 py-3 font-semibold">User Identifiers</th>
-                     <th className="px-6 py-3 font-semibold">Native Tier</th>
-                     <th className="px-6 py-3 font-semibold">Audit Granter</th>
-                     <th className="px-6 py-3 font-semibold">Deployment Timeframe</th>
-                     <th className="px-6 py-3 font-semibold">Status Estimate</th>
+                     <th className="px-6 py-3 font-semibold">Trader</th>
+                     <th className="px-6 py-3 font-semibold">Plan Granted</th>
+                     <th className="px-6 py-3 font-semibold">Granted By</th>
+                     <th className="px-6 py-3 font-semibold">Date Granted</th>
+                     <th className="px-6 py-3 font-semibold">Status</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-border">
                    {filteredGrantees.length === 0 ? (
-                      <tr><td colSpan="5" className="p-8 text-center text-muted-foreground">No matching Launch Grants discovered in snapshot.</td></tr>
+                      <tr><td colSpan="5" className="p-8 text-center text-muted-foreground">No founding traders found matching your search.</td></tr>
                    ) : filteredGrantees.map(grant => {
                         const grantedDate = new Date(grant.createdAt);
-                        // Using overarching promo end logic as estimate if autoExpire is on. 
-                        // Realistically users have individual Subscription expiresAt but history shows grant time.
                         const isExpiredLocally = promoDoc.autoExpire && promoDoc.endsAt && new Date() > new Date(promoDoc.endsAt);
                         const daysRemaining = promoDoc.autoExpire && promoDoc.endsAt ? differenceInDays(new Date(promoDoc.endsAt), new Date()) : '∞';
 
@@ -142,18 +140,18 @@ const FoundingTraderAdmin = () => {
                                <div className="text-[10px] text-muted-foreground mt-1 tracking-wider uppercase">{grant.reason}</div>
                             </td>
                             <td className="px-6 py-4 text-xs whitespace-nowrap">
-                               <div className="text-foreground font-medium">Granted: {format(grantedDate, 'MMM dd, yyyy')}</div>
+                               <div className="text-foreground font-medium">{format(grantedDate, 'MMM dd, yyyy')}</div>
                                {promoDoc.autoExpire && promoDoc.endsAt ? (
-                                  <div className="text-muted-foreground mt-1">Exp: {format(new Date(promoDoc.endsAt), 'MMM dd, yyyy')}</div>
-                               ) : <div className="text-muted-foreground mt-1">Permanent Binding</div>}
+                                  <div className="text-muted-foreground mt-1">Expires: {format(new Date(promoDoc.endsAt), 'MMM dd, yyyy')}</div>
+                               ) : <div className="text-muted-foreground mt-1">Permanent Access</div>}
                             </td>
                             <td className="px-6 py-4 text-xs font-bold">
                                {isExpiredLocally ? (
-                                 <span className="text-red-500 flex items-center gap-1.5"><ShieldAlert size={14}/> EXPIRED</span>
+                                 <span className="text-red-500 flex items-center gap-1.5"><ShieldAlert size={14}/> Expired</span>
                                ) : daysRemaining !== '∞' && daysRemaining <= 7 ? (
                                  <span className="text-amber-500 flex items-center gap-1.5">{daysRemaining} days left</span>
                                ) : (
-                                 <span className="text-emerald-500 flex items-center gap-1.5"><BadgeCheck size={14}/> LIVE YIELD ({daysRemaining} days)</span>
+                                 <span className="text-emerald-500 flex items-center gap-1.5"><BadgeCheck size={14}/> Active {daysRemaining !== '∞' ? `(${daysRemaining} days remaining)` : ''}</span>
                                )}
                             </td>
                           </tr>

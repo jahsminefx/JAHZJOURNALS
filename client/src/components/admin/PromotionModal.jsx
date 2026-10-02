@@ -37,7 +37,7 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
           autoActivate: data.autoActivate, autoExpire: data.autoExpire, revokeBadgeOnExpiry: data.revokeBadgeOnExpiry
         });
       }).catch(() => {
-        toast.error('Failed mapping existing schema hook'); onClose();
+        toast.error('Failed to load promotion details'); onClose();
       }).finally(() => setLoading(false));
     }
   }, [promotionId]);
@@ -55,29 +55,29 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
 
       if (isEditing) {
         await api.put(`/admin/promotions/${promotionId}`, payload);
-        toast.success('Configuration overwritten successfully!');
+        toast.success('Promotion updated successfully!');
       } else {
         await api.post('/admin/promotions', payload);
-        toast.success('New promotion node active!');
+        toast.success('Promotion created successfully!');
       }
       onMutate();
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Structural integrity violation executing payload.');
+      toast.error(err.response?.data?.message || 'Failed to save promotion. Please check your inputs.');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Executing hard deletion on this index point will throw foreign-key anomalies if redemptions exist. If it was redeemed, it will merely archive it instead. Assert intent?')) return;
+    if (!window.confirm('Are you sure you want to delete this promotion? If traders have already used it, it will be safely archived instead of deleted.')) return;
     try {
        await api.delete(`/admin/promotions/${promotionId}`);
-       toast.success('Promotion wiped or archived cleanly.');
+       toast.success('Promotion deleted or archived successfully.');
        onMutate();
        onClose();
     } catch(err) {
-       toast.error('Could not run cleanup process.');
+       toast.error('Could not delete promotion.');
     }
   };
 
@@ -100,8 +100,12 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
                <Anchor className="text-indigo-400" size={20} />
              </div>
              <div>
-               <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-emerald-300">Promotion Assembly Unit</h2>
-               <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Map variables globally over subscription endpoints.</p>
+               <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-emerald-300">
+                 {isEditing ? 'Edit Promotion' : 'Create New Promotion'}
+               </h2>
+               <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">
+                 Set up discounts or free plan access for your traders.
+               </p>
              </div>
           </div>
           <button onClick={onClose} className="p-2 text-muted bg-surface-muted rounded-full hover:bg-surface-muted/80 hover:text-foreground transition-colors border border-border">
@@ -114,25 +118,25 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
           {/* Main Identifier Box */}
           <div className="grid sm:grid-cols-2 gap-6 p-6 border border-border rounded-2xl bg-surface-muted/30">
             <div className="space-y-2 sm:col-span-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">Universal Promotion Title</label>
-              <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-surface-muted border border-border px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 outline-none transition-all placeholder:text-muted text-foreground" placeholder="e.g. Founding Trader Beta Phase 1" />
+              <label className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">Promotion Name</label>
+              <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-surface-muted border border-border px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 outline-none transition-all placeholder:text-muted text-foreground" placeholder="e.g. 50% Off Starter & Pro - Launch Special" />
             </div>
             
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted">Structural Slug Index</label>
-              <input required disabled={isEditing} value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g,'-')})} className="w-full bg-surface-muted border border-border px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 outline-none font-mono disabled:opacity-50 text-foreground transition-all placeholder:text-muted" placeholder="e.g. founding-trader-2026" />
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted">Promo Code (Slug)</label>
+              <input required disabled={isEditing} value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g,'-')})} className="w-full bg-surface-muted border border-border px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 outline-none font-mono disabled:opacity-50 text-foreground transition-all placeholder:text-muted" placeholder="e.g. 50off or launch-special" />
             </div>
             
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Classification Matrix</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Category</label>
               <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="appearance-none w-full bg-gray-950 border border-gray-800 px-5 py-3 rounded-xl text-sm font-bold text-gray-300 focus:border-indigo-500/50 outline-none hover:bg-gray-900 transition-all">
-                 <option value="LAUNCH">🚀 LAUNCH (Deployment)</option>
-                 <option value="REFERRAL">🔗 REFERRAL SYSTEM</option>
-                 <option value="BETA">🧪 BETA TESTING</option>
-                 <option value="MARKETING">📢 MARKETING</option>
-                 <option value="GIFT">🎁 GIFT (Custom)</option>
-                 <option value="PARTNERSHIP">🤝 PARTNERSHIP</option>
-                 <option value="INTERNAL">👩‍💻 INTERNAL EMPLOYEES</option>
+                 <option value="LAUNCH">🚀 Launch Special</option>
+                 <option value="MARKETING">📢 Marketing Campaign</option>
+                 <option value="REFERRAL">🔗 Referral Program</option>
+                 <option value="BETA">🧪 Beta Testing</option>
+                 <option value="GIFT">🎁 Gift / Custom Offer</option>
+                 <option value="PARTNERSHIP">🤝 Partnership</option>
+                 <option value="INTERNAL">👩‍💻 Internal Team</option>
               </select>
             </div>
           </div>
@@ -145,8 +149,8 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
               <div className="space-y-2 z-10">
                 <label className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2"><Crown size={14} /> Promotion Type</label>
                 <select value={formData.discountType} onChange={e => setFormData({...formData, discountType: e.target.value})} className="w-full bg-gray-950 border border-emerald-500/30 px-5 py-3 rounded-xl text-sm font-bold text-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 outline-none transition-all hover:bg-gray-900/80">
-                   <option value="FULL_GRANT">🎁 Full Grant (100% Free)</option>
                    <option value="PERCENTAGE_DISCOUNT">🏷️ Percentage Discount (%)</option>
+                   <option value="FULL_GRANT">🎁 Full Grant (100% Free Access)</option>
                 </select>
               </div>
 
@@ -158,22 +162,22 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
               )}
 
                <div className="space-y-2 z-10">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex justify-between">Bounded Redemptions <span className="font-normal italic">(Blank = Infinity)</span></label>
-                <input type="number" min="1" value={formData.maxRedemptions} onChange={e => setFormData({...formData, maxRedemptions: e.target.value})} className="w-full bg-gray-950 border border-gray-800 px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 outline-none transition-all placeholder-gray-600" placeholder="e.g. 500 max limit" />
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex justify-between">Max Redemptions <span className="font-normal italic">(Leave blank for unlimited)</span></label>
+                <input type="number" min="1" value={formData.maxRedemptions} onChange={e => setFormData({...formData, maxRedemptions: e.target.value})} className="w-full bg-gray-950 border border-gray-800 px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 outline-none transition-all placeholder-gray-600" placeholder="e.g. 500" />
               </div>
             </div>
 
             {/* Affected Target Plans Multi-Select Checkboxes */}
             <div className="space-y-2 z-10">
               <label className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2">
-                <Crown size={14} /> Affected Target Plans <span className="text-gray-400 font-normal italic">(Select all plans this promo code applies to)</span>
+                <Crown size={14} /> Applicable Plans <span className="text-gray-400 font-normal italic">(Select all plans this promotion applies to)</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 border border-emerald-500/30 p-4 rounded-xl">
                 {[
-                  { id: 'FREE', label: 'Free Base Access' },
-                  { id: 'STARTER', label: 'STARTER Access' },
-                  { id: 'PRO', label: 'PRO Premium Access' },
-                  { id: 'MENTOR', label: 'MENTOR Access' },
+                  { id: 'FREE', label: 'Free Plan' },
+                  { id: 'STARTER', label: 'Starter Plan' },
+                  { id: 'PRO', label: 'Pro Plan' },
+                  { id: 'MENTOR', label: 'Mentor Plan' },
                 ].map(plan => {
                   const isChecked = (formData.applicablePlans || []).includes(plan.id);
                   return (
@@ -208,25 +212,25 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
 
           <div className="grid sm:grid-cols-2 gap-6 p-6 border border-white/5 rounded-2xl bg-white/[0.02]">
              <div className="space-y-2">
-               <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex gap-2 items-center"><Calendar size={14} className="text-indigo-400"/> Window Trigger [Start]</label>
+               <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex gap-2 items-center"><Calendar size={14} className="text-indigo-400"/> Start Date & Time</label>
                <input type="datetime-local" value={formData.startsAt} onChange={e => setFormData({...formData, startsAt: e.target.value})} className="w-full bg-gray-950 border border-gray-800 px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 outline-none text-gray-300" />
              </div>
              <div className="space-y-2">
-               <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex gap-2 items-center"><Calendar size={14} className="text-amber-400"/> Window Trigger [End]</label>
+               <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex gap-2 items-center"><Calendar size={14} className="text-amber-400"/> End Date & Time (Expiration)</label>
                <input type="datetime-local" value={formData.endsAt} onChange={e => setFormData({...formData, endsAt: e.target.value})} className="w-full bg-gray-950 border border-gray-800 px-5 py-3 rounded-xl text-sm focus:border-indigo-500/50 outline-none text-gray-300" />
              </div>
           </div>
 
-          {/* iOS Toggles Style Feature Flags */}
+          {/* Feature Flags */}
           <div className="space-y-4 pt-4">
-            <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 bg-gray-900 border border-gray-800 px-4 py-2 rounded-full inline-block">Automated Behaviour Flags</h4>
+            <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 bg-gray-900 border border-gray-800 px-4 py-2 rounded-full inline-block">Settings & Automation</h4>
             
             <div className="grid sm:grid-cols-2 gap-4">
                {/* Toggle 1 */}
                <div className="flex items-center justify-between p-5 rounded-2xl border border-white/5 bg-gray-900/50 hover:bg-gray-800/80 transition-colors">
                   <div className="pr-4">
-                    <div className="text-sm font-bold text-gray-200">Route Activation Gate</div>
-                    <div className="text-xs text-gray-500 mt-1">Allows UI ingestion. Required for runtime.</div>
+                    <div className="text-sm font-bold text-gray-200">Active Status</div>
+                    <div className="text-xs text-gray-500 mt-1">Enable this promotion so traders can use it.</div>
                   </div>
                   <button 
                     type="button" 
@@ -240,8 +244,8 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
                {/* Toggle 2 */}
                <div className="flex items-center justify-between p-5 rounded-2xl border border-white/5 bg-gray-900/50 hover:bg-gray-800/80 transition-colors">
                   <div className="pr-4">
-                    <div className="text-sm font-bold text-gray-200">Strict Invite Gate</div>
-                    <div className="text-xs text-gray-500 mt-1">Prevents generic public ingestion completely.</div>
+                    <div className="text-sm font-bold text-gray-200">Invite Only</div>
+                    <div className="text-xs text-gray-500 mt-1">Hide from public pages; only users with the code can redeem.</div>
                   </div>
                   <button 
                     type="button" 
@@ -255,8 +259,8 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
                {/* Toggle 3 */}
                <div className="flex items-center justify-between p-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
                   <div className="pr-4">
-                    <div className="text-sm font-bold text-amber-500">Volatile Auto-Expiration Logic</div>
-                    <div className="text-xs text-amber-500/70 mt-1">Subscriptions granted via this automatically revoke natively upon ending.</div>
+                    <div className="text-sm font-bold text-amber-500">Auto-Expire Subscriptions</div>
+                    <div className="text-xs text-amber-500/70 mt-1">Automatically revert accounts to Free plan when the promo expires.</div>
                   </div>
                   <button 
                     type="button" 
@@ -270,8 +274,8 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
                {/* Toggle 4 */}
                <div className="flex items-center justify-between p-5 rounded-2xl border border-white/5 bg-gray-900/50 hover:bg-gray-800/80 transition-colors">
                   <div className="pr-4">
-                    <div className="text-sm font-bold text-gray-200">Silent Registration Grants</div>
-                    <div className="text-xs text-gray-500 mt-1">Users actively mapping automatically consume this upon signup.</div>
+                    <div className="text-sm font-bold text-gray-200">Auto-Apply on Sign Up</div>
+                    <div className="text-xs text-gray-500 mt-1">Automatically give this promotion to every new trader upon registration.</div>
                   </div>
                   <button 
                     type="button" 
@@ -290,20 +294,20 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
               {isEditing && (
                  <div className="text-xs text-gray-400 font-mono flex items-center gap-2">
                     <Activity size={14} className="text-indigo-400" />
-                    <strong className="text-white text-sm">{redemptionsCount}</strong> Universal Redemptions Indexed.
+                    <strong className="text-white text-sm">{redemptionsCount}</strong> Total Times Redeemed
                  </div>
               )}
             </div>
             <div className="flex w-full sm:w-auto gap-3">
               {isEditing && (
                 <button type="button" onClick={handleDelete} className="px-5 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl flex items-center justify-center gap-2 font-bold transition md:w-auto flex-1">
-                   <Trash2 size={18} /> Wipe Out
+                   <Trash2 size={18} /> Delete Promotion
                 </button>
               )}
               <button disabled={saving} type="submit" className="relative flex-1 md:w-auto group overflow-hidden bg-emerald-500 text-gray-950 px-8 py-3 rounded-xl font-black tracking-wide hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] disabled:opacity-50 transition-all flex items-center justify-center gap-2">
                  <div className="absolute inset-0 w-1/4 h-full bg-white/30 -skew-x-[30deg] -translate-x-[150%] group-hover:translate-x-[400%] transition-transform duration-700 ease-in-out" />
                  <Save size={18} className="relative z-10" /> 
-                 <span className="relative z-10">{saving ? 'Injecting Constraints...' : isEditing ? 'Push Configuration Mutation' : 'Establish Generic Endpoint'}</span>
+                 <span className="relative z-10">{saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Promotion'}</span>
               </button>
             </div>
           </div>

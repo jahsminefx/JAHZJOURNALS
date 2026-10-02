@@ -39,7 +39,7 @@ const FeatureRequests = () => {
     return (
         <div className="space-y-6 animate-in fade-in">
            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <h1 className="text-2xl font-black text-foreground flex items-center gap-3"><Lightbulb className="text-purple-500" /> Feature Requests Hub</h1>
+              <h1 className="text-2xl font-black text-foreground flex items-center gap-3"><Lightbulb className="text-purple-500" /> Feature Requests</h1>
            </div>
 
            <div className="rounded-xl border border-border bg-surface overflow-hidden">
@@ -47,22 +47,22 @@ const FeatureRequests = () => {
                  <table className="w-full text-left text-sm whitespace-nowrap">
                     <thead className="bg-surface-muted text-muted-foreground text-xs uppercase tracking-wider">
                        <tr>
-                          <th className="px-6 py-3 font-semibold">Volume</th>
-                          <th className="px-6 py-3 font-semibold">Description</th>
-                          <th className="px-6 py-3 font-semibold">Initiator</th>
+                          <th className="px-6 py-3 font-semibold">Votes</th>
+                          <th className="px-6 py-3 font-semibold">Feature Idea & Category</th>
+                          <th className="px-6 py-3 font-semibold">Submitted By</th>
                           <th className="px-6 py-3 font-semibold text-right">Roadmap Status</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                         {loading ? (
-                           <tr><td colSpan="4" className="p-8 text-center text-muted-foreground">Isolating features...</td></tr>
+                           <tr><td colSpan="4" className="p-8 text-center text-muted-foreground">Loading feature requests...</td></tr>
                         ) : features.length === 0 ? (
-                           <tr><td colSpan="4" className="p-8 text-center text-muted-foreground">Zero feature structures detected.</td></tr>
+                           <tr><td colSpan="4" className="p-8 text-center text-muted-foreground">No feature requests submitted yet.</td></tr>
                         ) : features.map(f => (
                            <tr key={f.id} className="hover:bg-surface-muted/50 transition">
                                <td className="px-6 py-4">
                                   <div className="flex items-center gap-2 p-2 bg-purple-500/10 text-purple-500 rounded-lg max-w-min font-black font-mono">
-                                    <ArrowUp size={16} /> {f.votes}
+                                     <ArrowUp size={16} /> {f.votes}
                                   </div>
                                </td>
                                <td className="px-6 py-4">
@@ -75,7 +75,7 @@ const FeatureRequests = () => {
                                        <div className="font-bold">{f.user.name}</div>
                                        <div className="text-xs text-muted-foreground mt-0.5">{f.user.email}</div>
                                     </>
-                                  ) : <span className="text-muted-foreground italic">System Internal</span>}
+                                  ) : <span className="text-muted-foreground italic">System Idea</span>}
                                </td>
                                <td className="px-6 py-4 text-right">
                                   <select 
@@ -87,11 +87,11 @@ const FeatureRequests = () => {
                                         : 'bg-surface bg-purple-500/10 text-purple-500 border-purple-500/20'
                                      }`}
                                   >
-                                     <option value="UNDER_REVIEW">UNDER REVIEW</option>
-                                     <option value="PLANNED">ROADMAP PLANNED</option>
-                                     <option value="DEVELOPMENT">IN DEVELOPMENT</option>
-                                     <option value="RELEASED">RELEASED</option>
-                                     <option value="DECLINED">DECLINED</option>
+                                     <option value="UNDER_REVIEW">Under Review</option>
+                                     <option value="PLANNED">Planned</option>
+                                     <option value="DEVELOPMENT">In Development</option>
+                                     <option value="RELEASED">Released / Live</option>
+                                     <option value="DECLINED">Declined</option>
                                   </select>
                                </td>
                            </tr>
@@ -102,9 +102,9 @@ const FeatureRequests = () => {
                
                {!loading && total > 15 && (
                   <div className="px-6 py-4 border-t border-border flex items-center justify-between">
-                     <span className="text-xs text-muted-foreground">Showing {(page - 1) * 15 + 1} to {Math.min(page * 15, total)}</span>
+                     <span className="text-xs text-muted-foreground">Showing {(page - 1) * 15 + 1} to {Math.min(page * 15, total)} of {total} features</span>
                      <div className="flex gap-2">
-                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded border border-border text-xs hover:bg-surface-muted">Prev</button>
+                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded border border-border text-xs hover:bg-surface-muted">Previous</button>
                         <button disabled={page * 15 >= total} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded border border-border text-xs hover:bg-surface-muted">Next</button>
                      </div>
                   </div>

@@ -30,7 +30,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
       setEditAutoRenew(sub.autoRenew.toString());
       setEditExpiresAt(sub.expiresAt ? new Date(sub.expiresAt).toISOString().split('T')[0] : '');
     } catch (e) {
-      toast.error('Failed to resolve subscription manifest.');
+      toast.error('Failed to load subscription details.');
       onClose();
     } finally {
       setLoading(false);
@@ -44,7 +44,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!editReason || editReason.length < 5) {
-      return toast.error('You must provide a concrete reason for modifying business agreements natively.');
+      return toast.error('Please enter a brief reason for changing this subscription (at least 5 characters).');
     }
 
     try {
@@ -59,12 +59,12 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
       };
 
       await api.put(`/admin/subscriptions/${subscriptionId}`, payload);
-      toast.success('Subscription constraints successfully updated and logged!');
+      toast.success('Subscription updated successfully!');
       onMutate();
       fetchDetail(); // refresh historical state inside modal directly
-      setEditReason(''); // reset intent barrier
+      setEditReason(''); // reset reason input
     } catch(err) {
-      toast.error('Modification failed. Reference backend connectivity.');
+      toast.error('Failed to update subscription. Please try again.');
     } finally {
       setMutating(false);
     }
@@ -91,8 +91,8 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                 <Activity size={20} />
              </div>
              <div>
-                <h2 className="text-xl leading-none tracking-tight">Subscription Command</h2>
-                <p className="text-xs text-muted-foreground mt-1 tracking-wide font-medium">{subscription.user.email} (UUID: {subscription.id})</p>
+                <h2 className="text-xl leading-none tracking-tight">Manage User Subscription</h2>
+                <p className="text-xs text-muted-foreground mt-1 tracking-wide font-medium">{subscription.user.name} • {subscription.user.email}</p>
              </div>
           </div>
           <button onClick={onClose} className="p-2 text-muted-foreground hover:bg-surface-muted rounded-full">
@@ -102,53 +102,53 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
 
         <div className="flex-1 overflow-y-auto grid lg:grid-cols-2">
           
-          {/* MUTATION ZONE */}
+          {/* EDIT FORM */}
           <div className="p-6 border-b lg:border-b-0 lg:border-r border-border">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Modify Authorization Constraint</h3>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Edit Subscription Details</h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-1.5">
-                   <label className="text-xs font-semibold text-muted-foreground">Entitlement Structure (Plan)</label>
+                   <label className="text-xs font-semibold text-muted-foreground">Subscription Plan</label>
                    <select value={editPlan} onChange={e => setEditPlan(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
-                     <option value="FREE">FREE</option>
-                     <option value="STARTER">STARTER</option>
-                     <option value="PRO">PRO</option>
-                     <option value="MENTOR">MENTOR</option>
+                     <option value="FREE">Free</option>
+                     <option value="STARTER">Starter</option>
+                     <option value="PRO">Pro</option>
+                     <option value="MENTOR">Mentor</option>
                    </select>
                  </div>
                  <div className="space-y-1.5">
-                   <label className="text-xs font-semibold text-muted-foreground">Global Activity Status</label>
+                   <label className="text-xs font-semibold text-muted-foreground">Subscription Status</label>
                    <select value={editStatus} onChange={e => setEditStatus(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
-                     <option value="ACTIVE">ACTIVE</option>
-                     <option value="EXPIRED">EXPIRED</option>
-                     <option value="SUSPENDED">SUSPENDED</option>
-                     <option value="CANCELLED">CANCELLED</option>
+                     <option value="ACTIVE">Active</option>
+                     <option value="EXPIRED">Expired</option>
+                     <option value="SUSPENDED">Suspended</option>
+                     <option value="CANCELLED">Cancelled</option>
                    </select>
                  </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-1.5">
-                   <label className="text-xs font-semibold text-muted-foreground">Original Designation (Source)</label>
+                   <label className="text-xs font-semibold text-muted-foreground">Source</label>
                    <select value={editSource} onChange={e => setEditSource(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
-                     <option value="PAYMENT">PAYMENT</option>
-                     <option value="PROMOTION">PROMOTION</option>
-                     <option value="ADMIN">ADMIN</option>
-                     <option value="REFERRAL">REFERRAL</option>
+                     <option value="PAYMENT">Paid Payment (Paystack)</option>
+                     <option value="PROMOTION">Promotional Grant / Discount</option>
+                     <option value="ADMIN">Admin Manual Grant</option>
+                     <option value="REFERRAL">Referral Bonus</option>
                    </select>
                  </div>
                  <div className="space-y-1.5">
-                   <label className="text-xs font-semibold text-muted-foreground">Bypass Expiry Boundary</label>
+                   <label className="text-xs font-semibold text-muted-foreground">Expiration Date</label>
                    <input type="date" value={editExpiresAt} onChange={e => setEditExpiresAt(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none" />
                  </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1.5 flex flex-col justify-center">
-                   <label className="text-xs font-semibold text-muted-foreground">Stripe/Paystack AutoRenew Bypass</label>
+                 <div className="space-y-1.5 flex flex-col justify-center col-span-2">
+                   <label className="text-xs font-semibold text-muted-foreground">Auto-Renewal</label>
                    <select value={editAutoRenew} onChange={e => setEditAutoRenew(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
-                     <option value="true">Force Auto Renew [Internal Override]</option>
-                     <option value="false">Standard Constraint [Disabled / Gateway]</option>
+                     <option value="true">Enabled (Auto-renews at end of billing period)</option>
+                     <option value="false">Disabled (Expires at end date)</option>
                    </select>
                  </div>
               </div>
@@ -156,18 +156,18 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
               {/* Justification barrier to prevent accidental admin damage */}
               <div className="space-y-1.5 pt-4 border-t border-border mt-6">
                 <label className="text-xs font-semibold text-amber-500 flex items-center gap-1.5">
-                   <AlertTriangle size={14} /> IMMUTABLE AUDIT JUSTIFICATION
+                   <AlertTriangle size={14} /> Reason for Change (Audit Note)
                 </label>
                 <textarea 
                   value={editReason} 
                   onChange={e => setEditReason(e.target.value)} 
-                  placeholder="Required: State why this business logic change is occurring..." 
-                  className="w-full bg-black/20 border border-amber-500/30 px-3 py-2 rounded-lg text-sm focus:border-amber-500 outline-none min-h-[60px]"
+                  placeholder="e.g. Upgraded user to Pro per customer support ticket #123..." 
+                  className="w-full bg-surface-muted border border-amber-500/30 px-3 py-2 rounded-lg text-sm focus:border-amber-500 outline-none min-h-[60px]"
                 ></textarea>
               </div>
 
               <button type="submit" disabled={mutating} className="w-full bg-emerald-500 text-gray-950 font-bold py-3 mt-4 rounded-lg tracking-wide hover:bg-emerald-400 transition disabled:opacity-50">
-                {mutating ? 'EXECUTING AUDIT DRILL...' : 'FORCE SUBSCRIPTION UPDATE'}
+                {mutating ? 'Saving Changes...' : 'Save Subscription Changes'}
               </button>
             </form>
           </div>
@@ -175,11 +175,11 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
           {/* HISTORY ZONE */}
           <div className="p-6 bg-surface-muted/30">
             <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-              <Clock size={16} /> Subscription Lifecycle History
+              <Clock size={16} /> Subscription History & Activity Log
             </h3>
             
             {history.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-xl">No historical changes exist for this allocation.</div>
+              <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-xl">No past subscription changes found for this user.</div>
             ) : (
               <div className="space-y-4">
                 {history.map(hs => (
@@ -190,21 +190,21 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                     </div>
                     <div className="bg-surface border border-border p-3 rounded-lg text-sm">
                       <div className="font-semibold text-foreground mb-1.5 flex items-center justify-between">
-                         <span>Mutation Logic</span>
+                         <span>Plan Change</span>
                          <span className="text-[10px] uppercase font-bold tracking-widest text-amber-500">{hs.source}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
                          <div className="flex border border-border rounded overflow-hidden">
-                           <span className="bg-surface-muted px-2 py-1 text-muted-foreground w-12 text-center">Old</span>
+                           <span className="bg-surface-muted px-2 py-1 text-muted-foreground w-12 text-center">From</span>
                            <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1">{hs.previousPlan || 'NONE'}</span>
                          </div>
                          <div className="flex border border-border rounded overflow-hidden">
-                           <span className="bg-emerald-500/10 px-2 py-1 text-emerald-500 w-12 text-center font-bold border-r border-border">New</span>
+                           <span className="bg-emerald-500/10 px-2 py-1 text-emerald-500 w-12 text-center font-bold border-r border-border">To</span>
                            <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1 font-bold">{hs.newPlan}</span>
                          </div>
                       </div>
                       <div className="mt-2 text-xs leading-5">
-                         <strong className="text-muted-foreground mr-1">Audit Argument:</strong> {hs.notes || hs.reason || 'No justification provided (Legacy)'}
+                         <strong className="text-muted-foreground mr-1">Note:</strong> {hs.notes || hs.reason || 'No note recorded'}
                       </div>
                     </div>
                   </div>

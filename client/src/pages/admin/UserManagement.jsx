@@ -53,14 +53,14 @@ const UserManagement = () => {
   };
 
   const executeImpersonation = async (targetUser) => {
-      const reason = window.prompt(`[SECURITY LOCK] Provide a strict Audit Reason to formally impersonate ${targetUser.email}`);
+      const reason = window.prompt(`Please provide a reason for temporarily signing in as ${targetUser.email}:`);
       if (!reason) return;
       
       try {
           await api.post(`/admin/impersonate/${targetUser.id}`, { reason });
           window.location.href = '/dashboard';
       } catch (e) {
-          toast.error(e.response?.data?.message || 'Impersonation boundary rejected natively.');
+          toast.error(e.response?.data?.message || 'Could not sign in as this user.');
       }
   };
 
@@ -69,7 +69,7 @@ const UserManagement = () => {
       <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">User Management</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage platform users, roles, and access.</p>
+          <p className="text-muted-foreground text-sm mt-1">Manage platform users, roles, and subscriptions.</p>
         </div>
         <div className="relative">
            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -121,12 +121,12 @@ const UserManagement = () => {
                        : 'bg-surface text-foreground border-border'
                       }`}
                     >
-                      <option value="TRADER">TRADER</option>
-                      <option value="MENTOR">MENTOR</option>
-                      <option value="MODERATOR">MODERATOR</option>
-                      <option value="SUPPORT">SUPPORT</option>
-                      <option value="ADMIN">ADMIN</option>
-                      <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                      <option value="TRADER">Trader</option>
+                      <option value="MENTOR">Mentor</option>
+                      <option value="MODERATOR">Moderator</option>
+                      <option value="SUPPORT">Support</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="SUPER_ADMIN">Super Admin</option>
                     </select>
                   </td>
                   <td className="px-6 py-4 text-xs font-semibold">
@@ -150,13 +150,13 @@ const UserManagement = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                       <button onClick={() => executeImpersonation(user)} className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-md transition" title="Assume User Identity (SUPER_ADMIN)">
+                       <button onClick={() => executeImpersonation(user)} className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-md transition" title="Log in as User (Super Admin)">
                          <UserSquare2 size={16} />
                        </button>
-                       <button onClick={() => setSelectedUserTimeline(user)} className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-md transition" title="Internal Support Timeline">
+                       <button onClick={() => setSelectedUserTimeline(user)} className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-md transition" title="View User History & Notes">
                          <ScanLine size={16} />
                        </button>
-                       <button onClick={() => setSelectedUserAi(user)} className="p-1.5 text-purple-500 hover:bg-purple-500/10 rounded-md transition" title="AI Intelligence Tracer">
+                       <button onClick={() => setSelectedUserAi(user)} className="p-1.5 text-purple-500 hover:bg-purple-500/10 rounded-md transition" title="View AI Usage">
                          <BrainCircuit size={16} />
                        </button>
                        <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-surface-muted rounded-md" title="Email User" onClick={() => window.location.href = `mailto:${user.email}`}>

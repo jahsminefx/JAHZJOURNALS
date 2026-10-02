@@ -28,7 +28,8 @@ const {
   grantPromotion,
   getGranteesByPromotion,
   awardBadge,
-  revokeBadge
+  revokeBadge,
+  sweepExpiredPromotions
 } = require('../controllers/adminPromotionController');
 
 
@@ -118,12 +119,14 @@ router.get('/audit', authorize('SUPER_ADMIN', 'ADMIN'), getAuditLogs);
 // Subscription Management
 router.get('/subscriptions', authorize('SUPER_ADMIN', 'ADMIN'), getSubscriptions);
 router.get('/subscriptions/metrics', authorize('SUPER_ADMIN', 'ADMIN'), getSubscriptionMetrics);
+router.post('/subscriptions/sweep-expired', authorize('SUPER_ADMIN'), sweepExpiredPromotions);
 router.get('/subscriptions/:id', authorize('SUPER_ADMIN', 'ADMIN'), getSubscriptionDetails);
 router.put('/subscriptions/:id', authorize('SUPER_ADMIN', 'ADMIN'), updateSubscription);
 
 // Promotion Management
 router.get('/promotions', authorize('SUPER_ADMIN', 'ADMIN'), getPromotions);
 router.get('/promotions/metrics', authorize('SUPER_ADMIN', 'ADMIN'), getPromotionMetrics);
+router.post('/promotions/sweep-expired', authorize('SUPER_ADMIN'), sweepExpiredPromotions);
 router.post('/promotions', authorize('SUPER_ADMIN'), createPromotion);
 router.get('/promotions/:id', authorize('SUPER_ADMIN', 'ADMIN'), getPromotion);
 router.put('/promotions/:id', authorize('SUPER_ADMIN'), updatePromotion);

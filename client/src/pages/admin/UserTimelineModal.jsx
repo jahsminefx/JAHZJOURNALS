@@ -49,7 +49,7 @@ const UserTimelineModal = ({ user, onClose }) => {
                             <Activity size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black tracking-wide text-foreground">{user.name} / Operations Timeline</h2>
+                            <h2 className="text-xl font-black tracking-wide text-foreground">{user.name} • User Profile & History</h2>
                             <p className="text-sm font-mono text-muted-foreground mt-1">{user.email}</p>
                         </div>
                     </div>
@@ -62,17 +62,17 @@ const UserTimelineModal = ({ user, onClose }) => {
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     {loading ? (
                         <div className="flex items-center justify-center py-20 text-emerald-500 animate-pulse font-bold tracking-widest uppercase text-sm">
-                            Triaging Native Trace...
+                            Loading User History...
                         </div>
                     ) : !timeline ? (
-                         <div className="text-center py-20 text-muted-foreground font-bold">Failed to resolve Entity.</div>
+                         <div className="text-center py-20 text-muted-foreground font-bold">Could not load user profile.</div>
                     ) : (
                         <div className="grid md:grid-cols-2 gap-8">
                             {/* Column 1: Tickets & Subscriptions */}
                             <div className="space-y-6">
-                                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Ticket size={16}/> Support Trace</h3>
+                                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Ticket size={16}/> Support Tickets</h3>
                                 {timeline.supportTickets?.length === 0 ? (
-                                    <div className="text-xs text-muted-foreground italic border border-dashed border-border p-4 rounded-xl">Zero explicit tickets on file.</div>
+                                    <div className="text-xs text-muted-foreground italic border border-dashed border-border p-4 rounded-xl">No support tickets submitted by this user.</div>
                                 ) : (
                                     <div className="space-y-3">
                                         {timeline.supportTickets?.map(t => (
@@ -82,45 +82,47 @@ const UserTimelineModal = ({ user, onClose }) => {
                                                     <span className="text-[10px] text-muted-foreground font-mono">{format(new Date(t.createdAt), 'dd MMM yyyy')}</span>
                                                 </div>
                                                 <p className="text-sm font-bold text-foreground mt-2">{t.subject}</p>
-                                                {t.rating && <p className="text-xs text-yellow-500 mt-1">CSAT: {t.rating} ★</p>}
+                                                {t.rating && <p className="text-xs text-yellow-500 mt-1">Satisfaction: {t.rating} ★</p>}
                                             </div>
                                         ))}
                                     </div>
                                 )}
 
-                                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex justify-between items-center mt-8 border-t border-border pt-6"><ShieldCheck size={16} className="text-emerald-500"/> Native Subscriptions</h3>
+                                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex justify-between items-center mt-8 border-t border-border pt-6"><ShieldCheck size={16} className="text-emerald-500"/> Subscription History</h3>
                                 <div className="space-y-2">
-                                    {timeline.subscriptionHistories?.map(h => (
+                                    {timeline.subscriptionHistories?.length === 0 ? (
+                                        <div className="text-xs text-muted-foreground italic">No past plan changes.</div>
+                                    ) : timeline.subscriptionHistories?.map(h => (
                                         <div key={h.id} className="flex justify-between items-center text-xs p-2 bg-surface rounded-lg border border-border">
                                             <span className="font-bold text-emerald-500">{h.newPlan}</span>
-                                            <span className="text-muted-foreground font-mono">{format(new Date(h.createdAt), 'dd MMM')}</span>
+                                            <span className="text-muted-foreground font-mono">{format(new Date(h.createdAt), 'dd MMM yyyy')}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                             
-                            {/* Column 2: Internal Trace */}
+                            {/* Column 2: Internal Notes */}
                             <div className="space-y-6">
                                 <h3 className="text-xs font-black uppercase tracking-widest text-emerald-500 flex items-center gap-2">
-                                    <StickyNote size={16}/> Internal Agent Notes (SuperAdmin Only)
+                                    <StickyNote size={16}/> Internal Admin Notes (Private)
                                 </h3>
 
                                 <div className="flex gap-2">
                                     <input 
                                        value={newNote} onChange={e => setNewNote(e.target.value)}
                                        className="flex-1 bg-surface-muted border border-border px-3 py-2 text-sm rounded-lg outline-none focus:border-emerald-500" 
-                                       placeholder="Inject internal privacy note..." 
+                                       placeholder="Add an internal note about this user..." 
                                     />
-                                    <button onClick={handleInjectNote} className="px-4 py-2 bg-emerald-500/10 text-emerald-500 font-bold text-xs uppercase tracking-wide rounded-lg hover:bg-emerald-500/20">Append</button>
+                                    <button onClick={handleInjectNote} className="px-4 py-2 bg-emerald-500/10 text-emerald-500 font-bold text-xs uppercase tracking-wide rounded-lg hover:bg-emerald-500/20">Add Note</button>
                                 </div>
 
                                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                                     {timeline.internalNotes?.length === 0 ? (
-                                        <div className="text-xs text-muted-foreground italic text-center p-8">No persistent notes captured statically.</div>
+                                        <div className="text-xs text-muted-foreground italic text-center p-8">No internal notes added yet.</div>
                                     ) : timeline.internalNotes?.map(note => (
                                         <div key={note.id} className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 relative">
                                             <div className="flex justify-between items-center mb-2">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Agent Note</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Admin Note</span>
                                                 <span className="text-[10px] text-muted-foreground font-mono">{format(new Date(note.createdAt), 'dd MMM HH:mm')}</span>
                                             </div>
                                             <p className="text-sm font-semibold text-foreground/90 whitespace-pre-wrap leading-relaxed">{note.content}</p>

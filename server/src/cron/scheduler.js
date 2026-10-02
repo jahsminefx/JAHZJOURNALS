@@ -4,9 +4,13 @@ const prisma = new PrismaClient();
 const { sendWeeklyReviewReminderEmail } = require('../services/emailService');
 const { cleanupStalledAiRequests } = require('../controllers/aiController');
 const { syncAllCloudAccounts } = require('../controllers/mtCloudSyncController');
+const { startSubscriptionCron } = require('../services/subscriptionCron');
 
 // Schedulers & Background Sweepers
 const startSchedulers = () => {
+  // Start automated promotion & subscription expiration sweeper
+  startSubscriptionCron();
+
   // Initial sweep on server startup for orphan requests left in QUEUED/PROCESSING
   cleanupStalledAiRequests(null, 60000).catch(err => {
     console.warn('[CRON] Initial AI cleanup warning:', err?.message || err);

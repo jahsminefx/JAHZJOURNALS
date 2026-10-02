@@ -84,6 +84,12 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     }
   };
 
+  const canAccessMentor =
+    user?.subscriptionPlan === 'MENTOR' ||
+    user?.role === 'MENTOR' ||
+    user?.role === 'ADMIN' ||
+    user?.role === 'SUPER_ADMIN';
+
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Home, exact: true },
     { name: 'Accounts', path: '/accounts', icon: Wallet, prefix: '/accounts' },
@@ -96,7 +102,9 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     { name: 'Daily Review', path: '/daily-review', icon: CalendarCheck },
     { name: 'Weekly Review', path: '/weekly-review', icon: Compass },
     { name: 'JAHZ AI', path: '/ai', icon: Sparkles, prefix: '/ai' },
-    { name: 'Mentor Workspace', path: '/mentor-workspace', icon: Users, prefix: '/mentor-workspace' },
+    ...(canAccessMentor
+      ? [{ name: 'Mentor Workspace', path: '/mentor-workspace', icon: Users, prefix: '/mentor-workspace' }]
+      : []),
     { name: 'Offers & Promos', path: '/promotions', icon: Tag, prefix: '/promotions' },
     { name: 'Notifications', path: '/notifications', icon: Bell },
     { name: 'Upgrade Plan', path: '/pricing', icon: Sparkles },
