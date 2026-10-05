@@ -214,6 +214,7 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
     await tx.tradingAccount.update({
       where: { id: account.id },
       data: {
+        cloudSyncStatus: 'CONNECTED',
         cloudLastSyncedAt: now,
         lastSyncedAt: now,
       },
