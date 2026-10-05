@@ -66,7 +66,10 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
     return { success: false, importedCount: 0, skippedCount: 0, message: 'Cloud sync is disabled for this account.' };
   }
 
-  const cloudId = account.cloudAccountId || `dev_cloud_${account.cloudLogin}`;
+  const cloudId = account.cloudAccountId;
+  if (!cloudId || cloudId.startsWith('dev_cloud_')) {
+    return { success: false, importedCount: 0, skippedCount: 0, message: 'Account is not connected to a live MetaTrader terminal. Please reconnect.' };
+  }
 
   // Fetch BOTH closed history deals AND currently open positions
   const [historyDeals, openPositions] = await Promise.all([
@@ -326,7 +329,7 @@ const syncCloudTradesNow = async (req, res) => {
     return res.status(200).json(syncResult);
   } catch (error) {
     console.error('Error triggering manual Cloud MT Sync:', error);
-    return res.status(500).json({ message: 'Failed to sync trades from MetaTrader.' });
+    return res.status(500).json({ message: error.message || 'Failed to sync trades from MetaTrader.' });
   }
 };
 

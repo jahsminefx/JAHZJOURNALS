@@ -8,6 +8,7 @@ export const popularBrokers = [
   { name: 'The Funded Trader', serverPrefixes: ['TheFundedTrader-Live', 'TheFundedTrader-Demo'], category: 'Prop Firm' },
   { name: 'The 5%ers', serverPrefixes: ['The5ers-Server', 'The5ers-Demo'], category: 'Prop Firm' },
   { name: 'E8 Markets', serverPrefixes: ['E8Markets-Server', 'E8Markets-Demo'], category: 'Prop Firm' },
+  { name: 'Equity Edge', serverPrefixes: ['EquityEdge-Trade', 'EquityEdge-Demo', 'EquityEdge-Live'], category: 'Prop Firm' },
   { name: 'True Forex Funds', serverPrefixes: ['TrueForexFunds-Live', 'TrueForexFunds-Demo'], category: 'Prop Firm' },
 
   // Retail Brokers
