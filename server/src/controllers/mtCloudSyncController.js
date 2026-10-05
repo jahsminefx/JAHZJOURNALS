@@ -498,4 +498,5 @@ module.exports = {
   getCloudSyncStatus,
   syncAllCloudAccounts,
   findMatchingTrade,
+  syncAccountTrades,
 };

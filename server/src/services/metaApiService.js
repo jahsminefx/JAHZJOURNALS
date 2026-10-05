@@ -4,6 +4,9 @@ const dns = require('dns');
 // Ensure reliable DNS resolution across different OS network configurations
 try {
   dns.setServers(['8.8.8.8', '1.1.1.1']);
+  if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+  }
 } catch (e) {
   // Ignore if not permitted
 }
