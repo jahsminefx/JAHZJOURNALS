@@ -13,6 +13,7 @@ const {
 } = require('../controllers/mtSyncController');
 const {
   connectCloudSync,
+  autoConnectCloudSync,
   syncCloudTradesNow,
   disconnectCloudSync,
   getCloudSyncStatus,
@@ -22,6 +23,9 @@ const { checkAccountLimit } = require('../middleware/subscriptionGate');
 const propFirmAccountRoutes = require('./propFirmAccountRoutes');
 
 router.use('/prop-firm', propFirmAccountRoutes);
+
+// 1-Click Auto-Connect & Auto-Create Trading Account directly from MetaTrader
+router.post('/cloud-sync/auto-connect', protect, checkAccountLimit, autoConnectCloudSync);
 
 router.post('/:id/sync-token', protect, generateSyncToken);
 router.delete('/:id/sync-token', protect, revokeSyncToken);

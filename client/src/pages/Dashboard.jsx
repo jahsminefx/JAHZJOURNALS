@@ -149,7 +149,7 @@ const Dashboard = () => {
       : startingBalance + netProfitLoss;
     const noClosedTradeText = 'Log your first closed trade to unlock analytics.';
     const netTone = netProfitLoss > 0 ? 'positive' : netProfitLoss < 0 ? 'negative' : 'neutral';
-    const netStatus = netProfitLoss > 0 ? 'In profit' : netProfitLoss < 0 ? 'Drawdown' : 'Breakeven';
+    const netStatus = netProfitLoss > 0 ? 'In profit' : netProfitLoss < 0 ? 'In loss' : 'Breakeven';
     const winRateText = closedTrades
       ? `${plural(wins, 'win')} | ${plural(losses, 'loss', 'losses')} | ${formatNumber(breakevens, 0)} BE`
       : noClosedTradeText;
@@ -196,7 +196,7 @@ const Dashboard = () => {
         icon: Activity,
       },
       {
-        label: netProfitLoss < 0 ? 'Current Drawdown' : 'Current Profit',
+        label: netProfitLoss < 0 ? 'Net Loss' : 'Net Profit',
         value: closedTrades
           ? formatCurrency(netProfitLoss, currency, { signDisplay: netProfitLoss === 0 ? 'auto' : 'always' })
           : '--',
@@ -309,7 +309,14 @@ const Dashboard = () => {
             <TradingCalendar className="xl:col-span-3" data={dashboard.calendar || []} currency={currency} />
             <PerformanceBreakdown className="xl:col-span-9" data={dashboard.performanceBreakdown || {}} currency={currency} />
             <RecentTrades className="xl:col-span-3 xl:row-span-2" trades={dashboard.recentTrades || []} currency={currency} />
-            <TopWinningPairs className="xl:col-span-3" pairs={dashboard.topPairs || []} currency={currency} />
+            <TopWinningPairs
+              className="xl:col-span-3"
+              pairs={dashboard.pairPerformance || dashboard.topPairs || []}
+              topPairs={dashboard.topPairs || []}
+              worstPairs={dashboard.worstPairs || []}
+              currency={currency}
+              accountId={accountId}
+            />
             <TradeOutcomeChart className="xl:col-span-3" outcomes={dashboard.tradeOutcomes || {}} />
             <WeeklyGoalProgress className="xl:col-span-3" goals={dashboard.weeklyGoals || []} currency={currency} />
             <div className="md:hidden xl:col-span-3">

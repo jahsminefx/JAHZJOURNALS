@@ -1,7 +1,9 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { encryptCredential, decryptCredential } = require('../utils/cryptoUtils');
-const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions, getAccountConnectionStatus } = require('../services/metaApiService');
+const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions, getAccountConnectionStatus, fetchAccountInformation } = require('../services/metaApiService');
+const { detectTradingSession, resolveTradeRiskReward } = require('../utils/tradeCalculations');
+const { calculatePips } = require('../utils/pipCalculator');
 
 const getNum = (val) => {
   if (val === null || val === undefined || val === '' || val === 'null') return null;
@@ -14,11 +16,15 @@ const getNum = (val) => {
  * Cross-checks incoming MT trades against user's existing trades
  * Uses Ticket ID match OR Symbol + Direction + Open/Close Time Tolerance Window
  */
-const findMatchingTrade = (incoming, existingTrades, timeToleranceMs = 10 * 60 * 1000) => {
+const findMatchingTrade = (incoming, existingTrades, timeToleranceMs = 15 * 60 * 1000) => {
   for (const existing of existingTrades) {
     // 1. Direct Ticket ID match
-    if (incoming.externalId && existing.externalId && String(incoming.externalId).trim() === String(existing.externalId).trim()) {
-      return existing;
+    if (incoming.externalId && existing.externalId) {
+      if (String(incoming.externalId).trim() === String(existing.externalId).trim()) {
+        return existing;
+      }
+      // If BOTH trades have explicit MT ticket IDs and they differ, they are distinct trades
+      continue;
     }
 
     // 2. Pair / Symbol match (e.g. EURUSD, XAUUSD)
@@ -31,7 +37,24 @@ const findMatchingTrade = (incoming, existingTrades, timeToleranceMs = 10 * 60 *
       continue;
     }
 
-    // 4. Open Time tolerance check (within 10 minutes)
+    // 4. Open Trade Reconciliation:
+    // If existing trade is currently ACTIVE in DB and incoming trade is CLOSED:
+    // Match if entry prices are within 0.5% OR entry times are within 1 hour
+    const isExistingOpen = existing.status === 'ACTIVE' || existing.result === 'OPEN' || existing.exitPrice === null;
+    if (isExistingOpen && incoming.status === 'CLOSED') {
+      const entryPriceMatch = existing.entryPrice && incoming.entryPrice
+        ? Math.abs(existing.entryPrice - incoming.entryPrice) / existing.entryPrice < 0.005
+        : false;
+      const entryTimeDiff = (existing.entryTime && incoming.entryTime)
+        ? Math.abs(new Date(existing.entryTime).getTime() - new Date(incoming.entryTime).getTime())
+        : Infinity;
+
+      if (entryPriceMatch || entryTimeDiff <= 60 * 60 * 1000) {
+        return existing;
+      }
+    }
+
+    // 5. Open Time tolerance check (within 15 minutes)
     if (incoming.entryTime && existing.entryTime) {
       const entryDiff = Math.abs(new Date(incoming.entryTime).getTime() - new Date(existing.entryTime).getTime());
       if (entryDiff > timeToleranceMs) {
@@ -39,7 +62,7 @@ const findMatchingTrade = (incoming, existingTrades, timeToleranceMs = 10 * 60 *
       }
     }
 
-    // 5. Close Time tolerance check if both trades are closed (within 10 minutes)
+    // 6. Close Time tolerance check if both trades are closed (within 15 minutes)
     if (incoming.exitTime && existing.exitTime) {
       const exitDiff = Math.abs(new Date(incoming.exitTime).getTime() - new Date(existing.exitTime).getTime());
       if (exitDiff > timeToleranceMs) {
@@ -93,17 +116,41 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
     // Continue if status check times out
   }
 
-  // Fetch BOTH closed history deals AND currently open positions
-  const [historyDeals, openPositions] = await Promise.all([
-    fetchAccountHistory(cloudId),
-    fetchOpenPositions(cloudId),
+  // Fetch Live Account Information (balance, equity, broker) + History Deals + Open Positions
+  const [accountInfo, historyDeals, openPositions] = await Promise.all([
+    fetchAccountInformation(cloudId).catch(() => null),
+    fetchAccountHistory(cloudId, 180).catch(() => []),
+    fetchOpenPositions(cloudId).catch(() => []),
   ]);
 
-  // Merge: closed deals + open positions (open positions won't have closeTime/exitPrice)
-  const rawTrades = [...(historyDeals || []), ...(openPositions || [])];
+  // Merge & Deduplicate by ticket (History deals take precedence over open positions)
+  const tradeMap = new Map();
+  for (const t of historyDeals || []) {
+    const ticket = String(t.ticket || '').trim();
+    if (ticket) tradeMap.set(ticket, t);
+  }
+  for (const t of openPositions || []) {
+    const ticket = String(t.ticket || '').trim();
+    if (ticket && !tradeMap.has(ticket)) {
+      tradeMap.set(ticket, t);
+    }
+  }
+  const rawTrades = tradeMap.size > 0 ? Array.from(tradeMap.values()) : [...(historyDeals || []), ...(openPositions || [])];
 
   if (!rawTrades || rawTrades.length === 0) {
-    return { success: true, importedCount: 0, skippedCount: 0, message: 'No trades found in MT account.' };
+    if (accountInfo && typeof accountInfo.balance === 'number') {
+      await prisma.tradingAccount.update({
+        where: { id: account.id },
+        data: {
+          currentBalance: Math.round(accountInfo.balance * 100) / 100,
+          cloudSyncStatus: 'CONNECTED',
+          cloudLastSyncedAt: new Date(),
+          lastSyncedAt: new Date(),
+          ...(accountInfo.broker && (!account.brokerName || account.brokerName === 'MetaTrader') && { brokerName: accountInfo.broker }),
+        },
+      });
+    }
+    return { success: true, importedCount: 0, skippedCount: 0, message: 'No trades found in MT account. Balance synced.' };
   }
 
   // Fetch existing trades to cross-check
@@ -150,6 +197,11 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
     const status = isClosed ? 'CLOSED' : 'ACTIVE';
     const result = isClosed ? (netProfit > 0 ? 'WIN' : netProfit < 0 ? 'LOSS' : 'BREAKEVEN') : 'OPEN';
 
+    const validEntryTime = !isNaN(entryTime.getTime()) ? entryTime : new Date();
+    const validExitTime = exitTime && !isNaN(exitTime.getTime()) ? exitTime : null;
+    const session = detectTradingSession(validEntryTime);
+    const pips = calculatePips({ pair, direction, entryPrice, exitPrice });
+
     const incomingTrade = {
       tradingAccountId: account.id,
       externalId: ticket || null,
@@ -165,20 +217,28 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
       profitLossAmount: isClosed ? netProfit : null,
       status,
       result,
-      entryTime: !isNaN(entryTime.getTime()) ? entryTime : new Date(),
-      exitTime: exitTime && !isNaN(exitTime.getTime()) ? exitTime : null,
+      session,
+      pips,
+      entryTime: validEntryTime,
+      exitTime: validExitTime,
       notesBefore: item.comment || 'Auto-Synced from MetaTrader Cloud Account',
     };
+    incomingTrade.riskRewardRatio = resolveTradeRiskReward(incomingTrade);
 
-    // Cross-check with existing trades in JahzJournals
+    // Cross-check with existing trades in JahzJournals DB
     const match = findMatchingTrade(incomingTrade, existingTrades);
 
     if (match) {
       skippedCount++;
-      // Check if existing trade needs enrichment (e.g. adding ticket ID or exit details)
-      const needsUpdate = (!match.externalId && incomingTrade.externalId) ||
+      // Check if existing trade needs enrichment (closing open trade, adding ticket ID or exit details)
+      const isClosingOpenTrade = (match.status === 'ACTIVE' || match.status === 'PLANNED') && incomingTrade.status === 'CLOSED';
+      const needsUpdate = isClosingOpenTrade ||
+        (!match.externalId && incomingTrade.externalId) ||
         (incomingTrade.exitPrice !== null && match.exitPrice === null) ||
-        (incomingTrade.profitLossAmount !== null && match.profitLossAmount === null);
+        (incomingTrade.profitLossAmount !== null && match.profitLossAmount === null) ||
+        (!match.session && session) ||
+        (match.pips === null && pips !== null) ||
+        (match.riskRewardRatio === null && incomingTrade.riskRewardRatio !== null);
 
       if (needsUpdate) {
         tradesToEnrich.push({
@@ -188,27 +248,62 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
             ...(incomingTrade.exitPrice !== null && { exitPrice: incomingTrade.exitPrice }),
             ...(incomingTrade.profitLossAmount !== null && { profitLossAmount: incomingTrade.profitLossAmount, result: incomingTrade.result, status: incomingTrade.status }),
             ...(incomingTrade.exitTime && { exitTime: incomingTrade.exitTime }),
+            ...((!match.session && session) && { session }),
+            ...((match.pips === null && pips !== null) && { pips }),
+            ...((match.riskRewardRatio === null && incomingTrade.riskRewardRatio !== null) && { riskRewardRatio: incomingTrade.riskRewardRatio }),
           },
           pnlDelta: (incomingTrade.profitLossAmount || 0) - (match.profitLossAmount || 0),
         });
       }
     } else {
-      // New unique trade -> Add to import list!
-      pendingNewTrades.push(incomingTrade);
+      // Check if already queued in pendingNewTrades in this batch
+      const pendingMatch = findMatchingTrade(incomingTrade, pendingNewTrades);
+      if (pendingMatch) {
+        if ((pendingMatch.status === 'ACTIVE' || pendingMatch.result === 'OPEN') && incomingTrade.status === 'CLOSED') {
+          Object.assign(pendingMatch, incomingTrade);
+        }
+        skippedCount++;
+      } else {
+        // New unique trade -> Add to import list!
+        pendingNewTrades.push(incomingTrade);
+      }
     }
   }
 
+  const now = new Date();
+  const liveBalance = (accountInfo && typeof accountInfo.balance === 'number')
+    ? Math.round(accountInfo.balance * 100) / 100
+    : null;
+
   if (pendingNewTrades.length === 0 && tradesToEnrich.length === 0) {
+    const updateData = {
+      cloudSyncStatus: 'CONNECTED',
+      cloudLastSyncedAt: now,
+      lastSyncedAt: now,
+    };
+    if (liveBalance !== null) {
+      updateData.currentBalance = liveBalance;
+    }
+    if (accountInfo?.broker && (!account.brokerName || account.brokerName === 'MetaTrader')) {
+      updateData.brokerName = accountInfo.broker;
+    }
+
+    await prisma.tradingAccount.update({
+      where: { id: account.id },
+      data: updateData,
+    });
+
     return {
       success: true,
       importedCount: 0,
+      enrichedCount: 0,
       skippedCount,
-      message: 'All trades from your MetaTrader account are already up to date in JahzJournals.',
+      currentBalance: liveBalance ?? account.currentBalance,
+      message: 'All trades are up to date and account balance is synchronized with MetaTrader.',
     };
   }
 
   // Transaction: Insert new trades & enrich matched trades & update balance
-  const now = new Date();
   await prisma.$transaction(async (tx) => {
     if (pendingNewTrades.length > 0) {
       await tx.trade.createMany({
@@ -233,25 +328,59 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
       }
     }
 
+    const accountUpdateData = {
+      cloudSyncStatus: 'CONNECTED',
+      cloudLastSyncedAt: now,
+      lastSyncedAt: now,
+    };
+    if (liveBalance !== null) {
+      accountUpdateData.currentBalance = liveBalance;
+    } else if (netProfitDelta !== 0) {
+      accountUpdateData.currentBalance = { increment: netProfitDelta };
+    }
+    if (accountInfo?.broker && (!account.brokerName || account.brokerName === 'MetaTrader')) {
+      accountUpdateData.brokerName = accountInfo.broker;
+    }
+
     await tx.tradingAccount.update({
       where: { id: account.id },
-      data: {
-        cloudSyncStatus: 'CONNECTED',
-        cloudLastSyncedAt: now,
-        lastSyncedAt: now,
-      },
+      data: accountUpdateData,
     });
   });
 
   const { reconcileAccountBalance } = require('../services/accountBalanceService');
   await reconcileAccountBalance(account.id);
 
+  if (pendingNewTrades.length > 0 || tradesToEnrich.length > 0) {
+    try {
+      const { sendPushToUser } = require('../services/pushNotificationService');
+      const newCount = pendingNewTrades.length;
+      const enrichedCount = tradesToEnrich.length;
+      let pushMsg = `${newCount} new trade(s) automatically logged from MetaTrader.`;
+      if (newCount > 0 && enrichedCount > 0) {
+        pushMsg = `${newCount} new trade(s) logged & ${enrichedCount} trade(s) updated from MetaTrader.`;
+      } else if (newCount === 0 && enrichedCount > 0) {
+        pushMsg = `${enrichedCount} trade(s) updated from MetaTrader.`;
+      }
+
+      sendPushToUser(account.userId, {
+        title: `⚡ MetaTrader Cloud Sync`,
+        message: pushMsg,
+        url: `/trades`,
+        category: 'TRADE_SYNC',
+      }).catch((err) => console.error('Cloud MT sync push error:', err));
+    } catch (pushErr) {
+      console.error('Failed sending cloud sync push notification:', pushErr);
+    }
+  }
+
   return {
     success: true,
     importedCount: pendingNewTrades.length,
     enrichedCount: tradesToEnrich.length,
     skippedCount,
-    message: `Cross-check complete! ${pendingNewTrades.length} new trades added${tradesToEnrich.length > 0 ? `, ${tradesToEnrich.length} existing trades updated` : ''} (${skippedCount} duplicates matched).`,
+    currentBalance: liveBalance ?? undefined,
+    message: `Cross-check complete! ${pendingNewTrades.length} new trades added${tradesToEnrich.length > 0 ? `, ${tradesToEnrich.length} existing trades updated` : ''} (${skippedCount} duplicates matched). Balance synchronized with MetaTrader.`,
   };
 };
 
@@ -327,6 +456,130 @@ const connectCloudSync = async (req, res) => {
     console.error('Error connecting Cloud MT Sync:', error);
     return res.status(500).json({
       message: error.message || 'Failed to connect Cloud MT Sync. Please check your broker server and investor password.',
+    });
+  }
+};
+
+/**
+ * Auto-Connect & Auto-Create Trading Account from MetaTrader
+ * Automatically provisions MT terminal, fetches live account info (broker, currency, balance),
+ * creates the TradingAccount in DB, and runs initial trade backfill.
+ * POST /api/accounts/cloud-sync/auto-connect
+ */
+const autoConnectCloudSync = async (req, res) => {
+  try {
+    const { platform, server, login, investorPassword, accountCategory, accountName: customName } = req.body;
+
+    if (!platform || !server || !login || !investorPassword) {
+      return res.status(400).json({ message: 'Platform (MT4/MT5), broker server, account login, and investor password are required.' });
+    }
+
+    const cleanServer = String(server).trim();
+    const cleanLogin = String(login).trim();
+    const cleanPassword = String(investorPassword).trim();
+    const cleanPlatform = String(platform).toUpperCase().trim();
+
+    // 1. Provision cloud account instance via MetaApi
+    const provisionResult = await provisionCloudAccount({
+      platform: cleanPlatform,
+      server: cleanServer,
+      login: cleanLogin,
+      password: cleanPassword,
+      accountName: customName?.trim() || `${cleanServer} #${cleanLogin}`,
+    });
+
+    const cloudAccountId = provisionResult.cloudAccountId;
+
+    // 2. Fetch live account info from MetaTrader
+    let accountInfo = null;
+    try {
+      accountInfo = await fetchAccountInformation(cloudAccountId);
+    } catch (_) {}
+
+    // Derive broker, currency, balance, leverage from MetaTrader data
+    const broker = accountInfo?.broker || cleanServer.split('-')[0] || cleanServer.split('.')[0] || 'MetaTrader';
+    const currency = (accountInfo?.currency || 'USD').toUpperCase();
+    const liveBalance = (accountInfo?.balance !== undefined && accountInfo?.balance !== null)
+      ? Number(accountInfo.balance)
+      : 10000;
+    const accountName = customName?.trim()
+      ? customName.trim()
+      : accountInfo?.name
+      ? `${accountInfo.name} (${cleanServer})`
+      : `${broker} #${cleanLogin}`;
+
+    // 3. Encrypt password for secure storage
+    const encryptedPassword = encryptCredential(cleanPassword);
+
+    const isProp = accountCategory === 'PROP_FIRM';
+
+    // 4. Create the Trading Account in database
+    const newAccount = await prisma.tradingAccount.create({
+      data: {
+        userId: req.user.id,
+        name: accountName,
+        brokerName: broker,
+        accountType: 'LIVE',
+        platform: cleanPlatform,
+        startingBalance: liveBalance,
+        currentBalance: liveBalance,
+        currency: currency,
+        accountCategory: isProp ? 'PROP_FIRM' : 'REGULAR',
+        isPropFirmAccount: isProp,
+        propFirmName: isProp ? broker : undefined,
+        cloudSyncEnabled: true,
+        cloudSyncStatus: provisionResult.status || 'CONNECTED',
+        cloudServer: cleanServer,
+        cloudLogin: cleanLogin,
+        cloudInvestorPassword: encryptedPassword,
+        cloudAccountId: cloudAccountId,
+        cloudLastSyncedAt: new Date(),
+        lastSyncedAt: new Date(),
+        ...(isProp && {
+          propFirmAccount: {
+            create: {
+              firmName: broker,
+              programmeName: 'Standard Challenge',
+              marketType: 'FOREX',
+              evaluationType: 'TWO_STEP',
+              accountStatus: 'ACTIVE',
+              platform: cleanPlatform,
+              brokerServer: cleanServer,
+            },
+          },
+        }),
+      },
+      include: {
+        propFirmAccount: true,
+      },
+    });
+
+    // 5. Backfill historical trades immediately
+    let syncResult = { importedCount: 0, enrichedCount: 0, skippedCount: 0 };
+    try {
+      syncResult = await syncAccountTrades(newAccount.id);
+    } catch (syncErr) {
+      console.warn('[Auto-Connect] Initial sync warning:', syncErr.message);
+    }
+
+    // 6. Fetch updated account with any reconciled balance
+    const updatedAccount = await prisma.tradingAccount.findUnique({
+      where: { id: newAccount.id },
+      include: { propFirmAccount: true },
+    });
+
+    return res.status(201).json({
+      success: true,
+      account: updatedAccount || newAccount,
+      importedCount: syncResult.importedCount || 0,
+      enrichedCount: syncResult.enrichedCount || 0,
+      skippedCount: syncResult.skippedCount || 0,
+      message: `Account connected successfully! "${newAccount.name}" created with ${currency} ${(updatedAccount?.currentBalance ?? liveBalance).toLocaleString()} balance and ${syncResult.importedCount || 0} trades imported.`,
+    });
+  } catch (error) {
+    console.error('Error auto-connecting Cloud MT Sync:', error);
+    return res.status(500).json({
+      message: error.message || 'Failed to connect MetaTrader account. Please check your broker server, login, and investor password.',
     });
   }
 };
@@ -515,6 +768,7 @@ const syncAllCloudAccounts = async () => {
 
 module.exports = {
   connectCloudSync,
+  autoConnectCloudSync,
   syncCloudTradesNow,
   disconnectCloudSync,
   getCloudSyncStatus,

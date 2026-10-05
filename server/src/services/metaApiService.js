@@ -1,18 +1,7 @@
 const axios = require('axios');
-const dns = require('dns');
-
-// Ensure reliable DNS resolution across different OS network configurations
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-  if (dns.setDefaultResultOrder) {
-    dns.setDefaultResultOrder('ipv4first');
-  }
-} catch (e) {
-  // Ignore if not permitted
-}
 
 const PROVISIONING_API_HOST = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
-const DEFAULT_CLIENT_API_HOST = 'https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai';
+const DEFAULT_CLIENT_API_HOST = 'https://mt-client-api-v1.london.agiliumtrade.ai';
 
 const accountRegionCache = new Map();
 
@@ -65,6 +54,42 @@ const getAccountConnectionStatus = async (cloudAccountId) => {
     connectionStatus: res.data?.connectionStatus,
     region: res.data?.region,
   };
+};
+
+/**
+ * Fetch Live Account Information (Balance, Equity, Margin, Leverage, Broker)
+ * Queries GET /users/current/accounts/:id/account-information
+ */
+const fetchAccountInformation = async (cloudAccountId) => {
+  if (!cloudAccountId || cloudAccountId.startsWith('dev_cloud_')) {
+    return null;
+  }
+
+  let token;
+  try {
+    token = getMetaApiToken();
+  } catch (err) {
+    console.error('[MetaApi] Cannot fetch account information:', err.message);
+    return null;
+  }
+
+  try {
+    const clientBaseUrl = await getClientApiBaseUrl(cloudAccountId, token);
+    const response = await axios.get(
+      `${clientBaseUrl}/users/current/accounts/${cloudAccountId}/account-information`,
+      {
+        headers: {
+          'auth-token': token,
+        },
+        timeout: 20000,
+      }
+    );
+
+    return response.data || null;
+  } catch (error) {
+    console.error('MetaApi Fetch Account Information Error:', error.response?.data || error.message);
+    return null;
+  }
 };
 
 /**
@@ -124,7 +149,7 @@ const provisionCloudAccount = async ({ platform, server, login, password, accoun
  * Groups MT5 entry and exit deals by positionId into complete, normalized trades.
  * NEVER returns synthetic or fake trades.
  */
-const fetchAccountHistory = async (cloudAccountId, daysBack = 90) => {
+const fetchAccountHistory = async (cloudAccountId, daysBack = 180) => {
   if (!cloudAccountId || cloudAccountId.startsWith('dev_cloud_')) {
     console.warn(`[MetaApi] Skipping fetchAccountHistory: Invalid or legacy cloudAccountId (${cloudAccountId})`);
     return [];
@@ -161,8 +186,8 @@ const fetchAccountHistory = async (cloudAccountId, daysBack = 90) => {
       rawDeals = await queryRange(daysBack);
     } catch (firstErr) {
       if (firstErr.code === 'ECONNABORTED' || firstErr.message?.includes('timeout') || firstErr.response?.data?.error === 'TimeoutError') {
-        console.warn(`[MetaApi] ${daysBack}-day history query timed out. Retrying with 30-day window...`);
-        rawDeals = await queryRange(30);
+        console.warn(`[MetaApi] ${daysBack}-day history query timed out. Retrying with 90-day window...`);
+        rawDeals = await queryRange(90);
       } else {
         throw firstErr;
       }
@@ -207,7 +232,8 @@ const fetchAccountHistory = async (cloudAccountId, daysBack = 90) => {
 
     const completedTrades = [];
     for (const [positionId, { inDeals, outDeals }] of positionsMap.entries()) {
-      if (inDeals.length === 0 && outDeals.length === 0) continue;
+      // ONLY return closed trades from history deals. Open trades are handled by fetchOpenPositions.
+      if (outDeals.length === 0) continue;
 
       // Primary entry details
       const entryDeal = inDeals[0] || outDeals[0];
@@ -362,4 +388,5 @@ module.exports = {
   fetchOpenPositions,
   removeCloudAccount,
   getAccountConnectionStatus,
+  fetchAccountInformation,
 };

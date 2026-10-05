@@ -97,6 +97,77 @@ const calculateProfitLossPercentage = (profitLossAmount, initialBalance) => {
   return Number.parseFloat(plPercent.toFixed(2));
 };
 
+const detectTradingSession = (entryTime) => {
+  if (!entryTime) return null;
+  const d = new Date(entryTime);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const hour = d.getUTCHours();
+  const minute = d.getUTCMinutes();
+  const decimalHour = hour + minute / 60;
+
+  // London / NY Overlap: 12:00 - 16:00 UTC
+  if (decimalHour >= 12 && decimalHour < 16) {
+    return 'LONDON_NEW_YORK_OVERLAP';
+  }
+  // London Session: 07:00 - 12:00 UTC
+  if (decimalHour >= 7 && decimalHour < 12) {
+    return 'LONDON';
+  }
+  // New York Session: 16:00 - 21:00 UTC
+  if (decimalHour >= 16 && decimalHour < 21) {
+    return 'NEW_YORK';
+  }
+  // Asian Session: 21:00 - 07:00 UTC
+  return 'ASIAN';
+};
+
+const getTradingSessionLabel = (session) => {
+  switch (session) {
+    case 'LONDON': return 'London';
+    case 'NEW_YORK': return 'New York';
+    case 'ASIAN': return 'Asian';
+    case 'LONDON_NEW_YORK_OVERLAP': return 'London/NY Overlap';
+    case 'OTHER': return 'Other';
+    default: return session || '—';
+  }
+};
+
+const resolveTradeRiskReward = (trade) => {
+  if (!trade) return null;
+  if (trade.riskRewardRatio !== null && trade.riskRewardRatio !== undefined && !Number.isNaN(Number(trade.riskRewardRatio)) && Number(trade.riskRewardRatio) !== 0) {
+    return Number(Number(trade.riskRewardRatio).toFixed(2));
+  }
+
+  const entry = hasValue(trade.entryPrice) ? Number.parseFloat(trade.entryPrice) : null;
+  const sl = hasValue(trade.stopLoss) ? Number.parseFloat(trade.stopLoss) : null;
+  const tp = hasValue(trade.takeProfit) ? Number.parseFloat(trade.takeProfit) : null;
+  const exit = hasValue(trade.exitPrice) ? Number.parseFloat(trade.exitPrice) : null;
+  const dir = String(trade.direction || '').toUpperCase().trim();
+
+  // 1. Realized RR from exitPrice and stopLoss
+  if (entry !== null && sl !== null && exit !== null && entry !== sl) {
+    const riskDistance = dir === 'BUY' ? (entry - sl) : (sl - entry);
+    if (riskDistance > 0) {
+      const rewardDistance = dir === 'BUY' ? (exit - entry) : (entry - exit);
+      return Number.parseFloat((rewardDistance / riskDistance).toFixed(2));
+    }
+  }
+
+  // 2. Planned RR from takeProfit and stopLoss
+  if (entry !== null && sl !== null && tp !== null && entry !== sl) {
+    const { riskRewardRatio } = calculateRiskReward(dir, entry, sl, tp);
+    if (riskRewardRatio !== null) return riskRewardRatio;
+  }
+
+  // 3. PnL to Dollar Risk
+  if (hasValue(trade.riskAmount) && Number.parseFloat(trade.riskAmount) > 0 && hasValue(trade.profitLossAmount)) {
+    return Number.parseFloat((Number.parseFloat(trade.profitLossAmount) / Number.parseFloat(trade.riskAmount)).toFixed(2));
+  }
+
+  return null;
+};
+
 module.exports = {
   calculateRiskReward,
   calculateTradeResult,
@@ -104,4 +175,7 @@ module.exports = {
   calculateTradeDurationMinutes,
   calculateProfitLossPercentage,
   normalizeTradeState,
+  detectTradingSession,
+  getTradingSessionLabel,
+  resolveTradeRiskReward,
 };

@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, LineChart, Briefcase, PlusCircle, Calculator, Compass, Settings, 
   LogOut, Wallet, ShieldCheck, Layers, Sparkles, User as UserIcon, X, 
-  ChevronLeft, ChevronRight, HelpCircle, Bell, Tag, CalendarCheck, Users
+  ChevronLeft, ChevronRight, HelpCircle, Bell, Tag, CalendarCheck, Users, Cloud
 } from 'lucide-react';
 
 import toast from 'react-hot-toast';
@@ -92,7 +92,8 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Home, exact: true },
-    { name: 'Accounts', path: '/accounts', icon: Wallet, prefix: '/accounts' },
+    { name: 'Accounts', path: '/accounts', icon: Wallet, exact: true },
+    { name: 'MT5 / Cloud Sync', path: '/accounts?sync=true', icon: Cloud },
     { name: 'Trades', path: '/trades', icon: Briefcase, exact: true },
     { name: 'New Trade', path: '/trades/new', icon: PlusCircle },
     { name: 'Rules', path: '/rules', icon: ShieldCheck },

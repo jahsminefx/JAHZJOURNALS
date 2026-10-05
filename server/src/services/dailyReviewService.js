@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { normalizeTradeResult } = require('../utils/tradeCalculations');
+const { normalizeTradeResult, detectTradingSession, resolveTradeRiskReward, getTradingSessionLabel } = require('../utils/tradeCalculations');
 const { calculatePips } = require('../utils/pipCalculator');
 const currencyService = require('./fx/currencyService');
 
@@ -10,7 +10,7 @@ const safeDivide = (num, den) => (den ? num / den : 0);
 
 const getScopeKey = (accountId) => (accountId ? `account_${accountId}` : 'all');
 
-const normalizeDateRange = (dateInput, timezone = 'UTC') => {
+const normalizeDateRange = (dateInput, timezone = 'UTC', accountId = null) => {
   let year, month, day;
 
   if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) {
@@ -63,7 +63,8 @@ const normalizeDateRange = (dateInput, timezone = 'UTC') => {
     endOfDay = new Date(`${dateStr}T23:59:59.999Z`);
   }
 
-  return { dateStr, reviewDate, startOfDay, endOfDay };
+  const scopeKey = getScopeKey(accountId);
+  return { dateStr, reviewDate, startOfDay, endOfDay, scopeKey };
 };
 
 const calculateMostCommon = (items) => {
@@ -227,33 +228,44 @@ const getDailyReviewSummary = async ({ userId, date, accountId, timezone = 'UTC'
     }
   }
 
+  const enrichedTrades = trades.map((t) => {
+    const session = t.session || detectTradingSession(t.entryTime) || 'OTHER';
+    const tradePips = (t.pips !== null && t.pips !== undefined)
+      ? Number(t.pips)
+      : calculatePips({ pair: t.pair, direction: t.direction, entryPrice: t.entryPrice, exitPrice: t.exitPrice });
+    const rr = resolveTradeRiskReward(t);
+
+    return {
+      ...t,
+      session,
+      sessionLabel: getTradingSessionLabel(session),
+      pips: tradePips !== null ? round(tradePips, 1) : null,
+      riskRewardRatio: rr !== null ? round(rr, 2) : (t.riskRewardRatio ? round(t.riskRewardRatio, 2) : null),
+    };
+  });
+
   const profitFactor = grossLoss > 0 ? round(grossProfit / grossLoss, 2) : null;
   const averageWin = winningTrades.length > 0 ? round(grossProfit / winningTrades.length) : null;
   const averageLoser = losingTrades.length > 0 ? round(grossLoss / losingTrades.length) : null;
 
-  const validRrValues = trades.map((t) => Number(t.riskRewardRatio)).filter((v) => Number.isFinite(v));
+  const validRrValues = enrichedTrades.map((t) => Number(t.riskRewardRatio)).filter((v) => Number.isFinite(v) && v !== 0);
   const averageRiskReward = validRrValues.length > 0
     ? round(validRrValues.reduce((sum, val) => sum + val, 0) / validRrValues.length, 2)
     : null;
 
-  const totalPips = round(trades.reduce((sum, t) => {
-    const tradePips = t.pips !== null && t.pips !== undefined
-      ? Number(t.pips)
-      : calculatePips({ pair: t.pair, direction: t.direction, entryPrice: t.entryPrice, exitPrice: t.exitPrice });
-    return sum + Number(tradePips || 0);
-  }, 0), 1);
+  const totalPips = round(enrichedTrades.reduce((sum, t) => sum + Number(t.pips || 0), 0), 1);
 
-  const bestStrategy = calculateMostCommon(trades.map((t) => t.strategy?.name));
-  const bestSession = calculateMostCommon(trades.map((t) => t.session));
-  const totalRuleViolations = trades.reduce((sum, t) => sum + (t.ruleViolations || []).length, 0);
+  const bestStrategy = calculateMostCommon(enrichedTrades.map((t) => t.strategy?.name));
+  const bestSession = calculateMostCommon(enrichedTrades.map((t) => t.sessionLabel || t.session));
+  const totalRuleViolations = enrichedTrades.reduce((sum, t) => sum + (t.ruleViolations || []).length, 0);
 
-  const planKnownTrades = trades.filter((t) => t.followedPlan !== null);
+  const planKnownTrades = enrichedTrades.filter((t) => t.followedPlan !== null);
   const planFollowingRate = planKnownTrades.length > 0
     ? round((planKnownTrades.filter((t) => t.followedPlan).length / planKnownTrades.length) * 100, 1)
     : null;
 
   const deterministicMetrics = {
-    totalTrades: trades.length,
+    totalTrades: enrichedTrades.length,
     closedTrades: closedTrades.length,
     winningTrades: winningTrades.length,
     losingTrades: losingTrades.length,
@@ -303,7 +315,7 @@ const getDailyReviewSummary = async ({ userId, date, accountId, timezone = 'UTC'
     reviewDate,
     scopeKey,
     selectedAccount,
-    trades,
+    trades: enrichedTrades,
     metrics: deterministicMetrics,
     review,
   };

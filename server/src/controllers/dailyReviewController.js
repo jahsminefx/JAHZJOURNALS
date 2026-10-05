@@ -22,10 +22,11 @@ const writtenFields = [
 const getDailyReviewForDay = async (req, res) => {
   try {
     const { date, accountId } = req.query;
+    const targetAccountId = (accountId && typeof accountId === 'string' && accountId.trim() !== '' && accountId.trim() !== 'all') ? accountId.trim() : null;
     const summary = await dailyReviewService.getDailyReviewSummary({
       userId: req.user.id,
       date,
-      accountId,
+      accountId: targetAccountId,
       timezone: req.user.timezone || 'UTC',
     });
 
@@ -77,11 +78,13 @@ const getDailyReviewById = async (req, res) => {
 const saveDailyReview = async (req, res) => {
   try {
     const { date, accountId } = req.body;
-    const { reviewDate, scopeKey } = await dailyReviewService.normalizeDateRange(date);
+    const targetAccountId = (accountId && typeof accountId === 'string' && accountId.trim() !== '' && accountId.trim() !== 'all') ? accountId.trim() : null;
+    const scopeKey = dailyReviewService.getScopeKey(targetAccountId);
+    const { reviewDate } = dailyReviewService.normalizeDateRange(date, req.user?.timezone || 'UTC', targetAccountId);
 
-    if (accountId) {
+    if (targetAccountId) {
       const account = await prisma.tradingAccount.findFirst({
-        where: { id: accountId, userId: req.user.id },
+        where: { id: targetAccountId, userId: req.user.id },
       });
       if (!account) {
         return res.status(404).json({ message: 'Trading account not found.' });
@@ -92,7 +95,7 @@ const saveDailyReview = async (req, res) => {
     const summary = await dailyReviewService.getDailyReviewSummary({
       userId: req.user.id,
       date,
-      accountId,
+      accountId: targetAccountId,
       timezone: req.user.timezone || 'UTC',
     });
 
@@ -126,7 +129,7 @@ const saveDailyReview = async (req, res) => {
       update: updatePayload,
       create: {
         userId: req.user.id,
-        tradingAccountId: accountId || null,
+        tradingAccountId: targetAccountId,
         scopeKey,
         reviewDate,
         ...updatePayload,
@@ -140,7 +143,7 @@ const saveDailyReview = async (req, res) => {
     });
   } catch (error) {
     console.error('[saveDailyReview Error]', error);
-    return res.status(500).json({ message: 'Failed to save daily review.' });
+    return res.status(error.statusCode || 500).json({ message: error.message || 'Failed to save daily review.' });
   }
 };
 

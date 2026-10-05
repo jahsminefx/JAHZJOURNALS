@@ -34,7 +34,7 @@ test('2. Standard USDJPY calculation', () => {
 });
 
 test('3. Standard GBPJPY cross pair calculation', () => {
-  const res = calculatePositionSize({ balance: 10000, riskPercent: 1.0, entryPrice: 195.00, stopLoss: 194.00, direction: 'BUY', pair: 'GBPJPY', manualConversionRate: 150.00 });
+  const res = calculatePositionSize({ balance: 10000, riskPercent: 1.0, entryPrice: 195.00, stopLoss: 194.00, direction: 'BUY', pair: 'GBPJPY', manualConversionRate: 1 / 150.00 });
   assert.equal(res.stopLossPips, 100);
   assert.equal(res.safeLotSize, 0.15);
 });
@@ -170,7 +170,7 @@ test('23. JPY account rate calculation', () => {
 });
 
 test('24. Missing conversion rate handling', () => {
-  const details = getExchangeRateDetails({ accountCurrency: 'NGN', quoteCurrency: 'USD' });
+  const details = getExchangeRateDetails({ accountCurrency: 'XYZ', quoteCurrency: 'USD' });
   assert.equal(details.isAvailable, false);
   assert.equal(details.source, 'UNAVAILABLE');
 });

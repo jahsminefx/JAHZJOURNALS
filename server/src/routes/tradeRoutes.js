@@ -8,6 +8,7 @@ const {
   deleteTrade,
   updateTradeReview,
   exportTradesCsv,
+  getTradedPairs,
 } = require('../controllers/tradeController');
 const { importTrades } = require('../controllers/importController');
 const { protect } = require('../middleware/authMiddleware');
@@ -29,6 +30,7 @@ router.route('/')
   .post(protect, checkTradeLimit, createTrade);
 
 router.get('/export-csv', protect, exportTradesCsv);
+router.get('/traded-pairs', protect, getTradedPairs);
 router.post('/import', protect, csvUpload.single('file'), importTrades);
 
 router.route('/:id')

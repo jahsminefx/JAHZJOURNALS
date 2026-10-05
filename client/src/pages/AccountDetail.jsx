@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, SlidersHorizontal, Trophy } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, SlidersHorizontal, Trophy, Cloud } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import MTSyncSettings from '../components/accounts/MTSyncSettings';
@@ -265,6 +265,13 @@ const AccountDetail = () => {
         </div>
         {isPropFirm ? (
           <div className="flex flex-col gap-2 sm:flex-row">
+            <a
+              href="#mt-sync-section"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+            >
+              <Cloud size={16} />
+              {account.cloudSyncEnabled ? 'MT5 Synced' : 'Sync MT5'}
+            </a>
             <Link to={`/accounts/${account.id}/prop-firm/edit-account`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-muted">
               <Settings size={16} />
               Edit Account
@@ -279,17 +286,26 @@ const AccountDetail = () => {
             </Link>
           </div>
         ) : (
-          <Link to={`/accounts/${account.id}/edit`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400">
-            <Settings size={16} />
-            Edit account
-          </Link>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <a
+              href="#mt-sync-section"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+            >
+              <Cloud size={16} />
+              {account.cloudSyncEnabled ? 'MT5 Synced' : 'Sync MT5'}
+            </a>
+            <Link to={`/accounts/${account.id}/edit`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400">
+              <Settings size={16} />
+              Edit account
+            </Link>
+          </div>
         )}
       </div>
 
       {isPropFirm && account.propFirmAccount ? <PropFirmAccountDetail account={account} /> : <RegularAccountDetail account={account} />}
 
       {/* MetaTrader Live Sync Settings */}
-      <div className="pt-2">
+      <div id="mt-sync-section" className="pt-2">
         <MTSyncSettings account={account} onAccountUpdated={() => {
           api.get(`/accounts/${id}`).then(({ data }) => setAccount(data)).catch(console.error);
         }} />

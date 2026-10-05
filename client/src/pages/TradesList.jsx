@@ -10,10 +10,20 @@ import { loadSettings, fetchAndSyncSettings } from '../utils/settings';
 import { formatCurrency } from '../utils/dashboard';
 import { getCurrencySymbol } from '../services/currencyConversionService';
 
+const SESSIONS = [
+  { value: '', label: 'All Sessions' },
+  { value: 'LONDON', label: 'London' },
+  { value: 'NEW_YORK', label: 'New York' },
+  { value: 'LONDON_NEW_YORK_OVERLAP', label: 'London/NY Overlap' },
+  { value: 'ASIAN', label: 'Asian' },
+  { value: 'OTHER', label: 'Other' },
+];
+
 const TradesList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [trades, setTrades] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [tradedPairs, setTradedPairs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingTradeId, setDeletingTradeId] = useState(null);
   const [tradePendingDelete, setTradePendingDelete] = useState(null);
@@ -22,8 +32,9 @@ const TradesList = () => {
   const [viewMode, setViewMode] = useState(() => (loadSettings().journal?.defaultTradeListView || 'table').toLowerCase());
 
   const queryString = searchParams.toString();
-  const pairFilter = searchParams.get('pair');
-  const dateFilter = searchParams.get('date');
+  const pairFilter = searchParams.get('pair') || '';
+  const sessionFilter = searchParams.get('session') || '';
+  const dateFilter = searchParams.get('date') || '';
   const accountIdFilter = searchParams.get('accountId') || '';
 
   useEffect(() => {
@@ -38,12 +49,47 @@ const TradesList = () => {
       .catch((err) => console.error('Failed to load accounts for filter:', err));
   }, []);
 
+  useEffect(() => {
+    const params = accountIdFilter ? { accountId: accountIdFilter } : {};
+    api.get('/trades/traded-pairs', { params })
+      .then(({ data }) => {
+        const list = Array.isArray(data) ? data : [];
+        setTradedPairs(list);
+        if (pairFilter && list.length > 0 && !list.includes(pairFilter)) {
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.delete('pair');
+          setSearchParams(nextParams);
+        }
+      })
+      .catch((err) => console.error('Failed to load traded pairs:', err));
+  }, [accountIdFilter]);
+
   const handleAccountFilterChange = (newAccountId) => {
     const nextParams = new URLSearchParams(searchParams);
     if (newAccountId) {
       nextParams.set('accountId', newAccountId);
     } else {
       nextParams.delete('accountId');
+    }
+    setSearchParams(nextParams);
+  };
+
+  const handlePairFilterChange = (newPair) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (newPair) {
+      nextParams.set('pair', newPair);
+    } else {
+      nextParams.delete('pair');
+    }
+    setSearchParams(nextParams);
+  };
+
+  const handleSessionFilterChange = (newSession) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (newSession) {
+      nextParams.set('session', newSession);
+    } else {
+      nextParams.delete('session');
     }
     setSearchParams(nextParams);
   };
@@ -94,8 +140,122 @@ const TradesList = () => {
     );
   });
 
+const getWinRateBadge = (winRate) => {
+  const rate = Number(winRate || 0);
+  if (rate >= 50) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25';
+  if (rate >= 40) return 'bg-amber-500/10 text-amber-400 border-amber-500/25';
+  return 'bg-rose-500/10 text-rose-400 border-rose-500/25';
+};
+
+const getPnlColor = (pnl) => {
+  const num = Number(pnl || 0);
+  if (num > 0) return 'text-emerald-400';
+  if (num < 0) return 'text-rose-400';
+  return 'text-muted';
+};
+
   const selectedAccountObj = accounts.find((a) => a.id === accountIdFilter);
   const selectedAccountName = selectedAccountObj?.name || selectedAccountObj?.accountName || selectedAccountObj?.propFirmName;
+  const activeCurrency = selectedAccountObj?.currency || accounts[0]?.currency || 'USD';
+
+  // Compute pair performance statistics
+  const { pairSummaries, activePairStats } = React.useMemo(() => {
+    const closed = trades.filter((t) => t.status === 'CLOSED' || t.exitPrice || t.profitLossAmount !== null);
+    
+    if (pairFilter) {
+      let wins = 0;
+      let losses = 0;
+      let breakevens = 0;
+      let netPnl = 0;
+      let grossProfit = 0;
+      let grossLoss = 0;
+      let netPips = 0;
+
+      closed.forEach((t) => {
+        const pnl = Number(t.profitLossAmount || 0);
+        netPnl += pnl;
+        if (pnl > 0 || t.result === 'WIN') {
+          wins += 1;
+          grossProfit += pnl;
+        } else if (pnl < 0 || t.result === 'LOSS') {
+          losses += 1;
+          grossLoss += Math.abs(pnl);
+        } else {
+          breakevens += 1;
+        }
+        if (t.pips) netPips += Number(t.pips || 0);
+      });
+
+      const total = closed.length;
+      const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+      const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss).toFixed(2) : grossProfit > 0 ? 'MAX' : '0.00';
+
+      return {
+        pairSummaries: [],
+        activePairStats: {
+          pair: pairFilter,
+          total,
+          wins,
+          losses,
+          breakevens,
+          netPnl: Math.round(netPnl * 100) / 100,
+          winRate,
+          profitFactor,
+          netPips: Math.round(netPips * 10) / 10,
+        },
+      };
+    }
+
+    const map = new Map();
+    closed.forEach((t) => {
+      const p = t.pair || 'OTHER';
+      if (!map.has(p)) {
+        map.set(p, {
+          pair: p,
+          total: 0,
+          wins: 0,
+          losses: 0,
+          breakevens: 0,
+          netPnl: 0,
+          grossProfit: 0,
+          grossLoss: 0,
+        });
+      }
+      const item = map.get(p);
+      item.total += 1;
+      const pnl = Number(t.profitLossAmount || 0);
+      item.netPnl += pnl;
+      if (pnl > 0 || t.result === 'WIN') {
+        item.wins += 1;
+        item.grossProfit += pnl;
+      } else if (pnl < 0 || t.result === 'LOSS') {
+        item.losses += 1;
+        item.grossLoss += Math.abs(pnl);
+      } else {
+        item.breakevens += 1;
+      }
+    });
+
+    const list = Array.from(map.values()).map((item) => ({
+      ...item,
+      netPnl: Math.round(item.netPnl * 100) / 100,
+      winRate: item.total > 0 ? Math.round((item.wins / item.total) * 100) : 0,
+    })).sort((a, b) => b.total - a.total || b.netPnl - a.netPnl);
+
+    return {
+      pairSummaries: list,
+      activePairStats: null,
+    };
+  }, [trades, pairFilter]);
+
+  const activeFilters = [];
+  if (selectedAccountName) activeFilters.push(`account "${selectedAccountName}"`);
+  if (pairFilter) activeFilters.push(`pair "${pairFilter}"`);
+  if (sessionFilter) {
+    const sessionObj = SESSIONS.find((s) => s.value === sessionFilter);
+    activeFilters.push(`session "${sessionObj?.label || sessionFilter}"`);
+  }
+  if (dateFilter) activeFilters.push(`date "${dateFilter}"`);
 
   return (
     <div className="space-y-6 text-foreground font-sans">
@@ -104,14 +264,14 @@ const TradesList = () => {
         <div>
           <h2 className="text-xl sm:text-2xl font-black">Your Trade Journal</h2>
           <p className="text-xs sm:text-sm text-muted mt-1">
-            {pairFilter || dateFilter || accountIdFilter
-              ? `Filtered by ${selectedAccountName ? `account "${selectedAccountName}"` : ''}${selectedAccountName && (pairFilter || dateFilter) ? ' & ' : ''}${pairFilter ? `pair ${pairFilter}` : ''}${pairFilter && dateFilter ? ' & ' : ''}${dateFilter ? `date ${dateFilter}` : ''}`
+            {activeFilters.length > 0
+              ? `Filtered by ${activeFilters.join(' · ')}`
               : 'Your executions, your lessons, your growth'}
           </p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {(pairFilter || dateFilter || accountIdFilter) && (
+          {(pairFilter || dateFilter || accountIdFilter || sessionFilter) && (
             <Link to="/trades" className="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted hover:border-emerald-500/60 hover:text-foreground">
               Clear Filters
             </Link>
@@ -133,6 +293,31 @@ const TradesList = () => {
                 </option>
               );
             })}
+          </select>
+
+          {/* Pair Selector Filter (Only pairs already traded on selected account) */}
+          <select
+            value={pairFilter}
+            onChange={(e) => handlePairFilterChange(e.target.value)}
+            className="bg-surface-muted/60 border border-border rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-foreground focus:border-emerald-500 focus:outline-none transition-colors max-w-[140px] sm:max-w-[160px] truncate"
+            title="Filter by Traded Pair"
+          >
+            <option value="">All Pairs</option>
+            {tradedPairs.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+
+          {/* Session Selector Filter */}
+          <select
+            value={sessionFilter}
+            onChange={(e) => handleSessionFilterChange(e.target.value)}
+            className="bg-surface-muted/60 border border-border rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-foreground focus:border-emerald-500 focus:outline-none transition-colors max-w-[140px] sm:max-w-[170px] truncate"
+            title="Filter by Trading Session"
+          >
+            {SESSIONS.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
           </select>
 
           {/* View Mode Toggle Controls */}
@@ -206,6 +391,115 @@ const TradesList = () => {
           </Link>
         </div>
       </div>
+
+      {/* Active Pair Performance Banner (when pair filter is selected) */}
+      {!loading && pairFilter && activePairStats && (
+        <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center font-black text-sm text-indigo-300 shrink-0">
+                {pairFilter.slice(0, 3)}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-black text-foreground">{pairFilter} Performance</h3>
+                  <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${getWinRateBadge(activePairStats.winRate)}`}>
+                    {activePairStats.winRate}% WR
+                  </span>
+                </div>
+                <p className="text-xs text-muted mt-0.5">
+                  <strong className="text-foreground font-semibold">{activePairStats.wins} positive</strong> ·{' '}
+                  <strong className="text-foreground font-semibold">{activePairStats.losses} negative</strong> out of {activePairStats.total} {activePairStats.total === 1 ? 'trade' : 'trades'}
+                  {activePairStats.breakevens > 0 && ` · ${activePairStats.breakevens} BE`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+              <div>
+                <span className="text-[10px] text-muted block uppercase tracking-wider font-bold">Net PnL</span>
+                <span className={`text-base sm:text-lg font-mono font-extrabold ${getPnlColor(activePairStats.netPnl)}`}>
+                  {activePairStats.netPnl > 0 ? '+' : ''}
+                  {formatCurrency(activePairStats.netPnl, activeCurrency)}
+                </span>
+              </div>
+
+              {activePairStats.netPips !== 0 && (
+                <div>
+                  <span className="text-[10px] text-muted block uppercase tracking-wider font-bold">Net Pips</span>
+                  <span className={`text-base sm:text-lg font-mono font-extrabold ${activePairStats.netPips > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {activePairStats.netPips > 0 ? '+' : ''}{activePairStats.netPips}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <span className="text-[10px] text-muted block uppercase tracking-wider font-bold">Profit Factor</span>
+                <span className="text-base sm:text-lg font-mono font-bold text-foreground">
+                  {activePairStats.profitFactor}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handlePairFilterChange('')}
+                className="px-3 py-1.5 rounded-xl border border-border bg-surface-muted hover:bg-surface-muted/80 text-xs font-semibold text-muted hover:text-foreground transition ml-auto md:ml-0"
+              >
+                Clear Pair Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* All Traded Pairs Performance Strip (when no pair filter is selected) */}
+      {!loading && !pairFilter && pairSummaries.length > 0 && (
+        <div className="bg-surface p-4 rounded-2xl border border-border shadow-xs">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                Performance by Pair
+              </span>
+              <span className="text-[11px] text-muted font-semibold bg-surface-muted px-2 py-0.5 rounded-full border border-border">
+                {pairSummaries.length} {pairSummaries.length === 1 ? 'pair' : 'pairs'} traded
+              </span>
+            </div>
+            <span className="text-[11px] text-muted hidden sm:inline">
+              Click any pair to filter journal
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-thin">
+            {pairSummaries.map((p) => (
+              <button
+                key={p.pair}
+                type="button"
+                onClick={() => handlePairFilterChange(p.pair)}
+                className="shrink-0 flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-surface-muted/50 border border-border hover:border-emerald-500/40 hover:bg-surface-muted transition text-left group shadow-xs"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs text-foreground group-hover:text-emerald-400 transition-colors">
+                      {p.pair}
+                    </span>
+                    <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border ${getWinRateBadge(p.winRate)}`}>
+                      {p.winRate}% WR
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-muted mt-0.5">
+                    {p.wins} positive · {p.losses} negative out of {p.total}
+                  </div>
+                </div>
+                <div className="text-right pl-1">
+                  <span className={`font-mono text-xs font-extrabold block ${getPnlColor(p.netPnl)}`}>
+                    {p.netPnl > 0 ? '+' : ''}
+                    {formatCurrency(p.netPnl, activeCurrency)}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Main Trade Content Container */}
       {loading ? (

@@ -213,6 +213,9 @@ const buildSessionPerformance = (trades) => {
       totalTrades: summary.totalTrades,
       percentage: total ? round((summary.totalTrades / total) * 100, 1) : 0,
       winRate: summary.winRate,
+      wins: summary.wins,
+      losses: summary.losses,
+      breakevens: summary.breakevens,
       netProfitLoss: summary.netProfitLoss,
       profitFactor: summary.profitFactor,
       grossProfit: summary.grossProfit,
@@ -274,6 +277,12 @@ const buildTopPairs = (trades) => {
     pair: pair.pair,
     netProfitLoss: pair.netProfitLoss,
     contributionPercentage: positiveTotal ? round((pair.netProfitLoss / positiveTotal) * 100, 1) : 0,
+    winRate: pair.winRate,
+    totalTrades: pair.totalTrades,
+    wins: pair.wins,
+    losses: pair.losses,
+    breakevens: pair.breakevens,
+    profitFactor: pair.profitFactor,
   }));
 };
 
@@ -299,7 +308,42 @@ const buildWorstPairs = (trades) => {
     pair: pair.pair,
     netProfitLoss: pair.netProfitLoss,
     contributionPercentage: negativeTotal ? round((pair.netProfitLoss / negativeTotal) * 100, 1) : 0,
+    winRate: pair.winRate,
+    totalTrades: pair.totalTrades,
+    wins: pair.wins,
+    losses: pair.losses,
+    breakevens: pair.breakevens,
+    profitFactor: pair.profitFactor,
   }));
+};
+
+const buildPairPerformance = (trades) => {
+  const closedTrades = trades.filter(isClosedTrade);
+  const total = closedTrades.length;
+  const groups = new Map();
+
+  closedTrades.forEach((trade) => {
+    const key = trade.pair || 'UNKNOWN';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(trade);
+  });
+
+  return [...groups.entries()].map(([pair, group]) => {
+    const summary = calculateSummary(group);
+    return {
+      pair,
+      totalTrades: summary.totalTrades,
+      percentage: total ? round((summary.totalTrades / total) * 100, 1) : 0,
+      winRate: summary.winRate,
+      wins: summary.wins,
+      losses: summary.losses,
+      breakevens: summary.breakevens,
+      netProfitLoss: summary.netProfitLoss,
+      profitFactor: summary.profitFactor,
+      grossProfit: summary.grossProfit,
+      grossLoss: summary.grossLoss,
+    };
+  }).sort((a, b) => b.totalTrades - a.totalTrades || b.netProfitLoss - a.netProfitLoss);
 };
 
 const buildRecentTrades = (trades) => [...trades]
@@ -501,6 +545,7 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
     },
     topPairs: buildTopPairs(currentTrades),
     worstPairs: buildWorstPairs(currentTrades),
+    pairPerformance: buildPairPerformance(currentTrades),
     tradeOutcomes: {
       wins: currentSummary.wins,
       losses: currentSummary.losses,
@@ -515,6 +560,7 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
 module.exports = {
   buildDashboardAnalytics,
   buildSessionPerformance,
+  buildPairPerformance,
   buildCalendar,
   buildTopPairs,
   buildWorstPairs,

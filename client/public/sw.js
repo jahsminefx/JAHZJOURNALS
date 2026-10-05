@@ -7,9 +7,12 @@ self.addEventListener('push', (event) => {
         const title = data.title || 'JAHZJOURNALS';
         const options = {
             body: data.message || data.body || 'You have a new trading update.',
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
-            vibrate: [100, 50, 100],
+            icon: data.icon || '/logo-mark.png',
+            badge: data.badge || '/logo-mark.png',
+            vibrate: [200, 100, 200],
+            tag: data.category || data.tag || 'jahzjournals-notification',
+            renotify: true,
+            requireInteraction: false,
             data: {
                 url: data.url || '/dashboard',
                 timestamp: data.timestamp || new Date().toISOString()

@@ -120,7 +120,7 @@ export const getExchangeRateDetails = ({
     rate: computedRate,
     source: hasKnownRate ? RATE_SOURCES.LIVE : RATE_SOURCES.UNAVAILABLE,
     isDirectMatch: false,
-    isAvailable: true,
+    isAvailable: hasKnownRate,
     label: `1 ${quoteUpper} = ${computedRate < 0.01 ? computedRate.toFixed(6) : computedRate.toFixed(4)} ${accUpper}`,
     note: `Exchange rate calculated for ${quoteUpper} to ${accUpper}.`,
   };

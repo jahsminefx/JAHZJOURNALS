@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { sendPushToUser } = require('../services/pushNotificationService');
 
 /**
  * Helper to parse numbers safely
@@ -108,7 +109,7 @@ const handleMtSyncWebhook = async (req, res) => {
           });
         }
 
-        await prisma.trade.create({
+        const newTrade = await prisma.trade.create({
           data: {
             tradingAccountId: account.id,
             externalId: ticket,
@@ -146,6 +147,16 @@ const handleMtSyncWebhook = async (req, res) => {
             data: { lastSyncedAt: now },
           });
         }
+
+        // Send instant Push Notification for synced trade
+        sendPushToUser(account.userId, {
+          title: isClosed ? `🏁 MT Trade Logged: ${pair} (${result})` : `📈 MT Trade Synced: ${pair} ${direction}`,
+          message: isClosed
+            ? `${pair} ${direction} ${lotSize ? lotSize + ' lots' : ''} closed on ${account.name}. P&L: ${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}`
+            : `${pair} ${direction} ${lotSize ? lotSize + ' lots' : ''} logged on ${account.name} @ ${entryPrice || 'market'}.`,
+          url: `/trades/${newTrade.id}`,
+          category: 'TRADE_SYNC'
+        }).catch(err => console.error('MT sync push error:', err));
 
         processedCount++;
       } else {

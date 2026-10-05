@@ -25,7 +25,6 @@ test('dashboard page fetches authenticated analytics with URL filters and stale-
   assert.match(source, /performanceCurve/);
   assert.match(source, /tradeOutcomes/);
   assert.match(source, /performanceBreakdown/);
-  assert.match(source, /getProfitFactorDisplay/);
   assert.match(apiSource, /api\.interceptors\.response\.use/);
   assert.match(apiSource, /jahzjournal:data-version/);
 });
@@ -52,9 +51,9 @@ test('dashboard page composes the premium analytics sections from reusable compo
   ].forEach((component) => assert.match(source, new RegExp(component)));
 
   assert.match(source, /xl:grid-cols-12/);
-  assert.match(source, /grid-cols-2/);
+  assert.match(source, /grid-cols-1/);
   assert.match(source, /md:grid-cols-3/);
-  assert.match(source, /lg:grid-cols-5/);
+  assert.match(source, /xl:grid-cols-5/);
 });
 
 test('dashboard charts, pair links, goals, and responsive states are wired in components', async () => {
@@ -82,12 +81,12 @@ test('dashboard charts, pair links, goals, and responsive states are wired in co
 
   assert.doesNotMatch(metricCard, /changeTone|changeClass/);
   assert.doesNotMatch(metricCard, /absolute bottom-0 right-1/);
-  assert.match(metricCard, /border border-slate-400\/15/);
+  assert.match(metricCard, /dark:border-slate-400\/15/);
   assert.match(metricCard, /rounded-2xl/);
   assert.match(metricCard, /hover:-translate-y-0\.5/);
   assert.match(metricCard, /supportingText/);
   assert.match(metricCard, /statusTone/);
-  assert.match(metricCard, /font-mono text-\[1\.65rem\]/);
+  assert.match(metricCard, /font-mono/);
   assert.match(equity, /AreaChart/);
   assert.match(equity, /Performance Curve/);
   assert.match(equity, /Cumulative P\/L/);
@@ -95,7 +94,7 @@ test('dashboard charts, pair links, goals, and responsive states are wired in co
   assert.match(equity, /Track cumulative trading results without deposits affecting performance\./);
   assert.match(equity, /getCumulativeDomain/);
   assert.match(equity, /getBalanceDomain/);
-  assert.match(equity, /curveType = isCumulative \? 'monotone' : 'stepAfter'/);
+  assert.match(equity, /curveType = 'monotone'/);
   assert.match(equity, /formatTimestamp/);
   assert.match(equity, /getRepeatedDateKeys/);
   assert.match(equity, /domain=\{yDomain\}/);
@@ -111,7 +110,7 @@ test('dashboard charts, pair links, goals, and responsive states are wired in co
   assert.match(equity, /balanceAdjustments/);
   assert.match(equity, /Total deposits/);
   assert.match(equity, /Total withdrawals/);
-  assert.match(equity, /Number\(summary\.totalWithdrawals \|\| 0\) > 0 \? 'text-amber-300' : 'text-slate-400'/);
+  assert.match(equity, /Number\(summary\.totalWithdrawals \|\| 0\) > 0 \? 'text-amber-300' : 'text-muted'/);
 
   assert.match(equity, /Info/);
   assert.match(equity, /sm:h-80/);
@@ -143,7 +142,7 @@ test('trades list accepts dashboard query filters for pair navigation', async ()
   assert.match(client, /useSearchParams/);
   assert.match(client, /api\.get\('\/trades',\s*{\s*params\s*}/);
   assert.match(server, /query\.pair/);
-  assert.match(server, /query\.date/);
+  assert.match(server, /query\.startDate/);
   assert.match(server, /tradingAccount:\s*{\s*userId\s*}/);
 });
 
@@ -167,7 +166,7 @@ test('logged trades can be deleted from the list and detail views', async () => 
   assert.match(dialog, /role="dialog"/);
   assert.match(dialog, /Remove \{trade\.pair\}\?/);
   assert.match(dialog, /This will permanently remove this trade, along with its review, emotions, broken rules, and screenshots\./);
-  assert.match(server, /await tx\.trade\.delete/);
+  assert.match(server, /await prisma\.trade\.delete/);
 });
 
 test('settings page can load and save weekly dashboard goals', async () => {

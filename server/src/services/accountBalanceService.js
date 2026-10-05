@@ -21,6 +21,12 @@ const reconcileAccountBalance = async (accountId) => {
 
     if (!account) return null;
 
+    // For live MetaTrader cloud-connected accounts, the live broker balance is authoritative.
+    // Do not overwrite it with a calculated trade sum.
+    if (account.cloudAccountId && account.cloudSyncStatus === 'CONNECTED') {
+      return Number(account.currentBalance || 0);
+    }
+
     const totalClosedPnl = account.trades.reduce(
       (sum, t) => sum + (Number(t.profitLossAmount) || 0),
       0

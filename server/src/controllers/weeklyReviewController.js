@@ -195,13 +195,11 @@ const generateWeeklyReview = async (req, res) => {
       disciplineScoreComponents: discipline.components,
     };
 
-    const existingReview = await prisma.weeklyReview.findUnique({
+    const existingReview = await prisma.weeklyReview.findFirst({
       where: {
-        userId_scopeKey_weekStartDate: {
-          userId: req.user.id,
-          scopeKey,
-          weekStartDate: range.start,
-        },
+        userId: req.user.id,
+        scopeKey,
+        weekStartDate: range.start,
       },
     });
 

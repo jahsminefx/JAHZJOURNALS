@@ -86,3 +86,63 @@ test('normalizeTradeState enforces Closed rules', () => {
   assert.equal(normalizeTradeState(inputLoss).result, 'LOSS');
   assert.equal(normalizeTradeState(inputBe).result, 'BREAKEVEN');
 });
+
+test('detectTradingSession maps time cleanly into trading sessions', () => {
+  const { detectTradingSession, getTradingSessionLabel } = require('../src/utils/tradeCalculations');
+  // 03:30 UTC -> Asian
+  assert.equal(detectTradingSession(new Date('2026-10-05T03:30:00Z')), 'ASIAN');
+  assert.equal(getTradingSessionLabel('ASIAN'), 'Asian');
+
+  // 09:15 UTC -> London
+  assert.equal(detectTradingSession(new Date('2026-10-05T09:15:00Z')), 'LONDON');
+  assert.equal(getTradingSessionLabel('LONDON'), 'London');
+
+  // 14:00 UTC -> London/NY Overlap
+  assert.equal(detectTradingSession(new Date('2026-10-05T14:00:00Z')), 'LONDON_NEW_YORK_OVERLAP');
+  assert.equal(getTradingSessionLabel('LONDON_NEW_YORK_OVERLAP'), 'London/NY Overlap');
+
+  // 18:45 UTC -> New York
+  assert.equal(detectTradingSession(new Date('2026-10-05T18:45:00Z')), 'NEW_YORK');
+  assert.equal(getTradingSessionLabel('NEW_YORK'), 'New York');
+
+  // Null/undefined checks
+  assert.equal(detectTradingSession(null), null);
+  assert.equal(detectTradingSession('invalid-date'), null);
+});
+
+test('resolveTradeRiskReward calculates realized and planned RR accurately', () => {
+  const { resolveTradeRiskReward } = require('../src/utils/tradeCalculations');
+
+  // Existing RR
+  assert.equal(resolveTradeRiskReward({ riskRewardRatio: 3.5 }), 3.5);
+
+  // Realized RR for BUY (Risk 100 pips, Gain 200 pips => 2R)
+  assert.equal(resolveTradeRiskReward({
+    direction: 'BUY',
+    entryPrice: 1.1000,
+    stopLoss: 1.0900,
+    exitPrice: 1.1200,
+  }), 2);
+
+  // Realized RR for SELL (Risk 50 pips, Gain 150 pips => 3R)
+  assert.equal(resolveTradeRiskReward({
+    direction: 'SELL',
+    entryPrice: 1.2000,
+    stopLoss: 1.2050,
+    exitPrice: 1.1850,
+  }), 3);
+
+  // Planned RR from TP and SL
+  assert.equal(resolveTradeRiskReward({
+    direction: 'BUY',
+    entryPrice: 100,
+    stopLoss: 90,
+    takeProfit: 125,
+  }), 2.5);
+
+  // Dollar Risk
+  assert.equal(resolveTradeRiskReward({
+    riskAmount: 200,
+    profitLossAmount: 500,
+  }), 2.5);
+});

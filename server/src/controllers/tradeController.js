@@ -13,7 +13,10 @@ const buildTradeListWhere = (query, userId) => {
     where.tradingAccountId = query.accountId;
   }
   if (query.pair) {
-    where.pair = { contains: query.pair, mode: 'insensitive' };
+    where.pair = { equals: query.pair, mode: 'insensitive' };
+  }
+  if (query.session) {
+    where.session = query.session;
   }
   if (query.status) {
     where.status = query.status;
@@ -473,6 +476,33 @@ const exportTradesCsv = async (req, res) => {
   }
 };
 
+/**
+ * Get Unique Traded Pairs (scoped to user or specific account)
+ * GET /api/trades/traded-pairs?accountId=...
+ */
+const getTradedPairs = async (req, res) => {
+  try {
+    const { accountId } = req.query;
+    const where = {
+      tradingAccount: { userId: req.user.id },
+    };
+    if (accountId) {
+      where.tradingAccountId = accountId;
+    }
+    const pairs = await prisma.trade.findMany({
+      where,
+      select: { pair: true },
+      distinct: ['pair'],
+      orderBy: { pair: 'asc' },
+    });
+    const pairList = pairs.map((p) => p.pair).filter(Boolean);
+    res.json(pairList);
+  } catch (error) {
+    console.error('Error fetching traded pairs:', error);
+    res.status(500).json({ message: 'Failed to fetch traded pairs' });
+  }
+};
+
 module.exports = {
   getTrades,
   createTrade,
@@ -480,5 +510,6 @@ module.exports = {
   updateTrade,
   deleteTrade,
   updateTradeReview,
-  exportTradesCsv
+  exportTradesCsv,
+  getTradedPairs,
 };

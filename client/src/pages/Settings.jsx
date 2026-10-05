@@ -175,6 +175,7 @@ const CheckboxGroup = ({ options, value, onChange }) => (
 const Settings = () => {
   const { user, refreshUser } = useAuth();
   const { setTheme } = useTheme();
+  const { consent, acceptAll: consentAcceptAll, rejectNonEssential: consentRejectNonEssential, savePreferences: consentSavePreferences, resetConsent: consentReset, openPreferences: consentOpenPrefs } = useConsent();
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState(() => getInitialSettingsSection(searchParams));
   const [mobileActiveSection, setMobileActiveSection] = useState(() => {
@@ -976,7 +977,6 @@ const Settings = () => {
 };
 
   const renderDataPrivacy = () => {
-    const { consent, acceptAll: consentAcceptAll, rejectNonEssential: consentRejectNonEssential, savePreferences: consentSavePreferences, resetConsent: consentReset, openPreferences: consentOpenPrefs } = useConsent();
     const consentTimestamp = getConsentTimestamp();
     const consentCategories = consent?.categories || { necessary: true, preferences: false, analytics: false, advertising: false };
 

@@ -152,10 +152,16 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(clientBuildPath, 'robots.txt'));
   });
 
-  app.get('/sitemap.xml', (req, res) => {
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  app.get('/sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(clientBuildPath, 'sw.js'));
+  });
+
+  app.get('/manifest.webmanifest', (req, res) => {
+    res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.sendFile(path.join(clientBuildPath, 'sitemap.xml'));
+    res.sendFile(path.join(clientBuildPath, 'manifest.webmanifest'));
   });
 
   // Serve hashed static assets with long cache lifetimes (1 year)
