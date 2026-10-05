@@ -49,6 +49,25 @@ const getClientApiBaseUrl = async (cloudAccountId, token) => {
 };
 
 /**
+ * Check connection status of a MetaApi account
+ */
+const getAccountConnectionStatus = async (cloudAccountId) => {
+  if (!cloudAccountId || cloudAccountId.startsWith('dev_cloud_')) {
+    return { state: 'UNKNOWN', connectionStatus: 'DISCONNECTED' };
+  }
+  const token = getMetaApiToken();
+  const res = await axios.get(`${PROVISIONING_API_HOST}/users/current/accounts/${cloudAccountId}`, {
+    headers: { 'auth-token': token },
+    timeout: 10000,
+  });
+  return {
+    state: res.data?.state,
+    connectionStatus: res.data?.connectionStatus,
+    region: res.data?.region,
+  };
+};
+
+/**
  * Provision & Connect Cloud MetaTrader Account (MT4 / MT5) via MetaApi
  */
 const provisionCloudAccount = async ({ platform, server, login, password, accountName }) => {
@@ -342,4 +361,5 @@ module.exports = {
   fetchAccountHistory,
   fetchOpenPositions,
   removeCloudAccount,
+  getAccountConnectionStatus,
 };

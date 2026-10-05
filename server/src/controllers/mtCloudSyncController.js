@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { encryptCredential, decryptCredential } = require('../utils/cryptoUtils');
-const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions } = require('../services/metaApiService');
+const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions, getAccountConnectionStatus } = require('../services/metaApiService');
 
 const getNum = (val) => {
   if (val === null || val === undefined || val === '' || val === 'null') return null;
@@ -69,6 +69,28 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
   const cloudId = account.cloudAccountId;
   if (!cloudId || cloudId.startsWith('dev_cloud_')) {
     return { success: false, importedCount: 0, skippedCount: 0, message: 'Account is not connected to a live MetaTrader terminal. Please reconnect.' };
+  }
+
+  // Check terminal status first to provide accurate feedback
+  try {
+    const statusInfo = await getAccountConnectionStatus(cloudId);
+    if (statusInfo && statusInfo.connectionStatus === 'DISCONNECTED') {
+      await prisma.tradingAccount.update({
+        where: { id: account.id },
+        data: {
+          cloudSyncStatus: 'ERROR',
+          cloudError: 'Broker rejected login or terminal is disconnected. Please verify your investor password and reconnect.',
+        },
+      });
+      return {
+        success: false,
+        importedCount: 0,
+        skippedCount: 0,
+        message: 'Broker connection failed: MetaTrader terminal is disconnected. Please check your broker server, login, and investor password, then reconnect.',
+      };
+    }
+  } catch (statusErr) {
+    // Continue if status check times out
   }
 
   // Fetch BOTH closed history deals AND currently open positions
