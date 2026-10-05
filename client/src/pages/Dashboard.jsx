@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Activity, ShieldAlert, Target, TrendingDown, TrendingUp, Trophy } from 'lucide-react';
+import { Activity, ShieldAlert, Target, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import api from '../utils/api';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import MetricCard from '../components/dashboard/MetricCard';
@@ -43,22 +43,8 @@ const getInitialDates = (range, searchParams) => {
   };
 };
 
-const formatRatio = (value) => Number(value || 0).toLocaleString(undefined, {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 const plural = (count, singular, pluralLabel = `${singular}s`) => `${formatNumber(count, 0)} ${count === 1 ? singular : pluralLabel}`;
 
-
-
-const getProfitFactorDisplay = ({ closedTrades, grossProfit, grossLoss, profitFactor }) => {
-  if (!closedTrades || (!grossProfit && !grossLoss)) return '--';
-  if (grossProfit === 0 && grossLoss > 0) return '0.00';
-  if (grossLoss === 0 && grossProfit > 0) return '∞';
-  if (profitFactor === null || profitFactor === undefined) return '--';
-  return formatRatio(profitFactor);
-};
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -145,49 +131,49 @@ const Dashboard = () => {
   const currency = dashboard?.currency || 'USD';
   const summary = useMemo(() => dashboard?.summary || {}, [dashboard]);
   const outcomes = useMemo(() => dashboard?.tradeOutcomes || {}, [dashboard]);
-  const performanceBreakdown = useMemo(() => dashboard?.performanceBreakdown || {}, [dashboard]);
 
   const metricCards = useMemo(() => {
     const totalTrades = Number(summary.totalTrades || 0);
     const closedTrades = Number(summary.closedTrades || 0);
     const openTrades = Math.max(totalTrades - closedTrades, 0);
     const netProfitLoss = Number(summary.netProfitLoss || 0);
+    const returnPercentage = Number(summary.returnPercentage || 0);
     const wins = Number(outcomes.wins || 0);
     const losses = Number(outcomes.losses || 0);
     const breakevens = Number(outcomes.breakevens || 0);
-    const grossProfit = Number(performanceBreakdown.grossProfit || 0);
-    const grossLoss = Number(performanceBreakdown.grossLoss || 0);
     const drawdownPercentage = Number(summary.maximumDrawdownPercentage || 0);
+    const startingBalance = Number(dashboard?.startingBalance || 0);
+    const curveBalance = dashboard?.performanceCurve?.summary?.currentBalance;
+    const currentBalance = Number.isFinite(Number(curveBalance)) && Number(curveBalance) !== 0
+      ? Number(curveBalance)
+      : startingBalance + netProfitLoss;
     const noClosedTradeText = 'Log your first closed trade to unlock analytics.';
     const netTone = netProfitLoss > 0 ? 'positive' : netProfitLoss < 0 ? 'negative' : 'neutral';
-    const netStatus = netProfitLoss > 0 ? 'Positive' : netProfitLoss < 0 ? 'Negative' : 'Breakeven';
+    const netStatus = netProfitLoss > 0 ? 'In profit' : netProfitLoss < 0 ? 'Drawdown' : 'Breakeven';
     const winRateText = closedTrades
       ? `${plural(wins, 'win')} | ${plural(losses, 'loss', 'losses')} | ${formatNumber(breakevens, 0)} BE`
       : noClosedTradeText;
-    const profitFactorValue = getProfitFactorDisplay({
-      closedTrades,
-      grossProfit,
-      grossLoss,
-      profitFactor: summary?.profitFactor,
-    });
-    const profitFactorContext = !closedTrades
-      ? noClosedTradeText
-      : grossProfit === 0 && grossLoss > 0
-        ? 'No gross profit yet'
-        : grossLoss === 0 && grossProfit > 0
-          ? 'No gross loss yet'
-          : 'Gross profit / gross loss';
+    const balanceDiff = currentBalance - startingBalance;
+    const balanceTone = !startingBalance || Math.abs(balanceDiff) < 0.005
+      ? 'blue'
+      : balanceDiff > 0 ? 'positive' : 'negative';
+    const balanceChangeText = startingBalance && Math.abs(balanceDiff) >= 0.005
+      ? ` (${formatCurrency(balanceDiff, currency, { signDisplay: 'always' })})`
+      : '';
 
     return [
       {
-        label: 'Total Net P/L',
-        value: formatCurrency(netProfitLoss, currency, { signDisplay: netProfitLoss === 0 ? 'auto' : 'always' }),
-        accent: netTone,
-        valueTone: netTone,
-        status: netStatus,
-        statusTone: netTone,
-        supportingText: closedTrades ? `${plural(closedTrades, 'closed trade')} contributing` : noClosedTradeText,
-        icon: netProfitLoss < 0 ? TrendingDown : TrendingUp,
+        label: 'Current Balance',
+        value: formatCurrency(currentBalance, currency),
+        accent: balanceTone,
+        valueTone: balanceTone,
+        status: accounts.length > 1 && !accountId ? 'All accounts' : null,
+        statusTone: 'blue',
+        supportingText: startingBalance
+          ? `Started at ${formatCurrency(startingBalance, currency)}${balanceChangeText}`
+          : 'Add a starting balance to track growth.',
+        supportingTone: balanceTone === 'blue' ? null : balanceTone,
+        icon: Wallet,
       },
       {
         label: 'Win Rate',
@@ -210,23 +196,32 @@ const Dashboard = () => {
         icon: Activity,
       },
       {
-        label: 'Profit Factor',
-        value: profitFactorValue,
-        accent: 'amber',
-        valueTone: profitFactorValue === '--' ? 'muted' : 'amber',
-        supportingText: profitFactorContext,
-        icon: Trophy,
+        label: netProfitLoss < 0 ? 'Current Drawdown' : 'Current Profit',
+        value: closedTrades
+          ? formatCurrency(netProfitLoss, currency, { signDisplay: netProfitLoss === 0 ? 'auto' : 'always' })
+          : '--',
+        accent: netTone,
+        valueTone: closedTrades ? netTone : 'muted',
+        status: closedTrades ? netStatus : null,
+        statusTone: netTone,
+        supportingText: closedTrades
+          ? `${returnPercentage > 0 ? '+' : ''}${formatPercent(returnPercentage)} return · ${plural(closedTrades, 'closed trade')}`
+          : noClosedTradeText,
+        supportingTone: closedTrades && netTone !== 'neutral' ? netTone : null,
+        icon: netProfitLoss < 0 ? TrendingDown : TrendingUp,
       },
       {
         label: 'Maximum Drawdown',
         value: formatPercent(drawdownPercentage || 0),
-        accent: 'negative',
-        valueTone: drawdownPercentage > 0 ? 'negative' : 'neutral',
+        accent: netTone,
+        valueTone: netTone,
+        status: closedTrades && netTone !== 'neutral' ? (netTone === 'positive' ? 'In profit' : 'In loss') : null,
+        statusTone: netTone,
         supportingText: 'Largest peak-to-trough decline',
         icon: ShieldAlert,
       },
     ];
-  }, [currency, outcomes, performanceBreakdown, summary]);
+  }, [accountId, accounts.length, currency, dashboard, outcomes, summary]);
 
   const handleDateRangeChange = (nextRange) => {
     setDateRange(nextRange);

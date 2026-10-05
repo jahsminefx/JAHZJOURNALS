@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 const accentClasses = {
   positive: {
@@ -55,14 +55,11 @@ const valueTones = {
   amber: 'text-amber-700 dark:text-amber-300',
 };
 
-const getValueFontSizeClass = (valueString) => {
-  const str = String(valueString || '');
-  const len = str.length;
-  if (len > 18) return 'text-xs sm:text-sm font-bold';
-  if (len > 14) return 'text-sm sm:text-base font-extrabold';
-  if (len > 11) return 'text-base sm:text-lg lg:text-xl font-black';
-  if (len > 8) return 'text-lg sm:text-xl lg:text-2xl font-black';
-  return 'text-xl sm:text-2xl lg:text-[1.75rem] font-black';
+// Scales the value font to the card's real width (container query units) so the full
+// figure is always visible, no matter how narrow the card gets. Monospace digits are ~0.62em wide.
+const getValueFontSize = (valueString) => {
+  const len = Math.max(String(valueString || '').length, 4);
+  return `clamp(0.85rem, calc(100cqw / ${(len * 0.62).toFixed(2)}), 1.75rem)`;
 };
 
 const MetricCard = ({
@@ -78,33 +75,36 @@ const MetricCard = ({
   const theme = accentClasses[accent] || accentClasses.neutral;
   const valueClass = valueTones[valueTone] || theme.value;
   const badgeClass = accentClasses[statusTone]?.badge || accentClasses.neutral.badge;
-  const fontSizeClass = getValueFontSizeClass(value);
 
   return (
-    <article className="group relative flex min-h-[9.5rem] min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-surface p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-300 dark:border-slate-400/15 dark:shadow-[0_18px_40px_rgba(2,6,23,0.26)] dark:hover:border-slate-300/25 dark:hover:shadow-[0_22px_48px_rgba(2,6,23,0.34)]">
+    <article className="group relative flex min-h-[9.5rem] min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-surface p-3 sm:p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-300 dark:border-slate-400/15 dark:shadow-[0_18px_40px_rgba(2,6,23,0.26)] dark:hover:border-slate-300/25 dark:hover:shadow-[0_22px_48px_rgba(2,6,23,0.34)]">
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${theme.glow} via-transparent to-transparent opacity-80`} />
-      <div className="relative flex min-w-0 items-start gap-3">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${theme.icon}`} aria-hidden="true">
-          <Icon size={21} />
+      <div className="relative flex min-w-0 items-center gap-2.5">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${theme.icon}`} aria-hidden="true">
+          <Icon size={19} />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted truncate">{label}</p>
-          <p
-            title={String(value)}
-            className={`mt-1.5 min-w-0 font-mono leading-tight tracking-tight whitespace-nowrap truncate ${fontSizeClass} ${valueClass}`}
-          >
-            {value}
-          </p>
-        </div>
+        <p className="min-w-0 flex-1 text-[10px] font-black uppercase leading-snug tracking-[0.12em] text-muted break-words">
+          {label}
+        </p>
+      </div>
+
+      <div className="relative mt-3 min-w-0 w-full [container-type:inline-size]">
+        <p
+          title={String(value)}
+          style={{ fontSize: getValueFontSize(value) }}
+          className={`font-mono font-black leading-tight tracking-tight whitespace-nowrap ${valueClass}`}
+        >
+          {value}
+        </p>
+      </div>
+
+      <div className="relative mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
         {status && (
-          <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] ${badgeClass}`}>
+          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] ${badgeClass}`}>
             {status}
           </span>
         )}
-      </div>
-
-      <div className="relative mt-3 flex items-end justify-between gap-3">
-        <p className="min-w-0 flex-1 text-xs font-semibold leading-relaxed text-muted line-clamp-2">{supportingText}</p>
+        <p className="min-w-0 flex-1 basis-full text-xs font-semibold leading-relaxed text-muted line-clamp-2">{supportingText}</p>
       </div>
     </article>
   );
