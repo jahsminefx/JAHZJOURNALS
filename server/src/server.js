@@ -8,6 +8,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const { startSchedulers } = require('./cron/scheduler');
 
+dotenv.config({ path: path.join(__dirname, '../.env') });
 dotenv.config();
 
 const { validateProductionEnv } = require('./config/envValidator');
