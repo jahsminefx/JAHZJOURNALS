@@ -43,7 +43,14 @@ const getDashboardMetrics = async (req, res) => {
       prisma.user.count({ where: { subscriptionPlan: 'PRO' } }),
       prisma.user.count({ where: { subscriptionPlan: 'MENTOR' } }),
       prisma.trade.count(),
-      prisma.trade.count({ where: { createdAt: { gte: startOfDay } } }),
+      prisma.trade.count({
+        where: {
+          OR: [
+            { createdAt: { gte: startOfDay } },
+            { entryTime: { gte: startOfDay } }
+          ]
+        }
+      }),
       prisma.promotion.count(),
       prisma.promotion.count({
         where: {

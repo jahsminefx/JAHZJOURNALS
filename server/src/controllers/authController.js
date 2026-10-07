@@ -57,6 +57,13 @@ const registerUser = async (req, res) => {
         email: normalizedEmail,
         passwordHash,
         mainTradingPairs: [],
+        subscriptions: {
+          create: {
+            plan: 'FREE',
+            status: 'ACTIVE',
+            source: 'ADMIN',
+          }
+        }
       },
       select: userProfileSelect,
     });

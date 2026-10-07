@@ -237,8 +237,8 @@ const BusinessIntelligenceHub = () => {
                                                           {t.result || 'OPEN'}
                                                       </span>
                                                   </td>
-                                                  <td className={`p-3 text-right font-mono font-bold ${Number(t.pnl) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                      {t.pnl !== null ? `${Number(t.pnl) >= 0 ? '+' : ''}$${Number(t.pnl).toFixed(2)}` : '-'}
+                                                  <td className={`p-3 text-right font-mono font-bold ${(t.profitLossAmount ?? t.pnl ?? 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                      {t.pnlFormatted ? t.pnlFormatted : (t.profitLossAmount !== null && t.profitLossAmount !== undefined) ? `${t.profitLossAmount >= 0 ? '+' : ''}${Number(t.profitLossAmount).toFixed(2)}` : (t.pnl !== null && t.pnl !== undefined) ? `${Number(t.pnl) >= 0 ? '+' : ''}${Number(t.pnl).toFixed(2)}` : '-'}
                                                   </td>
                                                   <td className="p-3 text-right text-muted-foreground text-[10px]">{new Date(t.createdAt).toLocaleDateString()}</td>
                                               </tr>

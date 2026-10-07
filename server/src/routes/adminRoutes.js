@@ -15,7 +15,8 @@ const {
   getSubscriptions,
   getSubscriptionMetrics,
   getSubscriptionDetails,
-  updateSubscription
+  updateSubscription,
+  updateUserSubscriptionDirect
 } = require('../controllers/adminSubscriptionController');
 
 const {
@@ -108,6 +109,7 @@ router.get('/dashboard', authorize('SUPER_ADMIN', 'ADMIN'), getDashboardMetrics)
 // User Management
 router.get('/users', authorize('SUPER_ADMIN', 'ADMIN'), getUsers);
 router.patch('/users/:id/role', authorize('SUPER_ADMIN'), updateUserRole);
+router.patch('/users/:id/subscription', authorize('SUPER_ADMIN', 'ADMIN'), updateUserSubscriptionDirect);
 
 // System Health & Email Testing
 router.get('/health', authorize('SUPER_ADMIN', 'ADMIN'), getSystemHealth);

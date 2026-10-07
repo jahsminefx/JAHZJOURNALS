@@ -72,6 +72,20 @@ const SubscriptionManagement = () => {
 
   useEffect(() => {
     fetchMetrics();
+    
+    const handleDataChange = () => {
+      fetchMetrics();
+      fetchSubscriptions();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('jahzjournal:data-changed', handleDataChange);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('jahzjournal:data-changed', handleDataChange);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -271,7 +285,10 @@ const SubscriptionManagement = () => {
         <SubscriptionDetailModal 
           subscriptionId={selectedSubId} 
           onClose={() => setSelectedSubId(null)} 
-          onMutate={() => fetchSubscriptions()}
+          onMutate={() => {
+            fetchSubscriptions();
+            fetchMetrics();
+          }}
         />
       )}
     </div>

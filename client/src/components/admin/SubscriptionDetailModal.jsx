@@ -27,7 +27,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
       setEditPlan(sub.plan);
       setEditStatus(sub.status);
       setEditSource(sub.source);
-      setEditAutoRenew(sub.autoRenew.toString());
+      setEditAutoRenew((sub.autoRenew || false).toString());
       setEditExpiresAt(sub.expiresAt ? new Date(sub.expiresAt).toISOString().split('T')[0] : '');
     } catch (e) {
       toast.error('Failed to load subscription details.');
@@ -41,10 +41,18 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
     if (subscriptionId) fetchDetail();
   }, [subscriptionId]);
 
+  const handlePlanSelect = (newPlan) => {
+    setEditPlan(newPlan);
+    // If switching plans and source was PROMOTION, default source to ADMIN to prevent accidental promo auto-expiry
+    if (editSource === 'PROMOTION') {
+      setEditSource('ADMIN');
+    }
+  };
+
   const handleUpdate = async (e) => {
     e.preventDefault();
-    if (!editReason || editReason.length < 5) {
-      return toast.error('Please enter a brief reason for changing this subscription (at least 5 characters).');
+    if (!editReason || editReason.trim().length < 3) {
+      return toast.error('Please enter a brief note explaining this change (at least 3 characters).');
     }
 
     try {
@@ -52,19 +60,29 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
       const payload = {
         plan: editPlan,
         status: editStatus,
-        source: editSource,
+        source: editSource || 'ADMIN',
         autoRenew: editAutoRenew === 'true',
         expiresAt: editExpiresAt ? new Date(editExpiresAt).toISOString() : null,
-        reason: editReason
+        reason: editReason.trim()
       };
 
       await api.put(`/admin/subscriptions/${subscriptionId}`, payload);
       toast.success('Subscription updated successfully!');
-      onMutate();
+      
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('jahzjournal:data-changed', {
+          detail: { timestamp: Date.now() }
+        }));
+      }
+
+      if (typeof onMutate === 'function') {
+        onMutate();
+      }
+      
       fetchDetail(); // refresh historical state inside modal directly
       setEditReason(''); // reset reason input
     } catch(err) {
-      toast.error('Failed to update subscription. Please try again.');
+      toast.error(err.response?.data?.message || 'Failed to update subscription. Please try again.');
     } finally {
       setMutating(false);
     }
@@ -92,7 +110,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
              </div>
              <div>
                 <h2 className="text-xl leading-none tracking-tight">Manage User Subscription</h2>
-                <p className="text-xs text-muted-foreground mt-1 tracking-wide font-medium">{subscription.user.name} • {subscription.user.email}</p>
+                <p className="text-xs text-muted-foreground mt-1 tracking-wide font-medium">{subscription.user?.name} • {subscription.user?.email}</p>
              </div>
           </div>
           <button onClick={onClose} className="p-2 text-muted-foreground hover:bg-surface-muted rounded-full">
@@ -109,7 +127,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
               <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-1.5">
                    <label className="text-xs font-semibold text-muted-foreground">Subscription Plan</label>
-                   <select value={editPlan} onChange={e => setEditPlan(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
+                   <select value={editPlan} onChange={e => handlePlanSelect(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
                      <option value="FREE">Free</option>
                      <option value="STARTER">Starter</option>
                      <option value="PRO">Pro</option>
@@ -131,14 +149,14 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                  <div className="space-y-1.5">
                    <label className="text-xs font-semibold text-muted-foreground">Source</label>
                    <select value={editSource} onChange={e => setEditSource(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
+                     <option value="ADMIN">Admin Manual Grant</option>
                      <option value="PAYMENT">Paid Payment (Paystack)</option>
                      <option value="PROMOTION">Promotional Grant / Discount</option>
-                     <option value="ADMIN">Admin Manual Grant</option>
                      <option value="REFERRAL">Referral Bonus</option>
                    </select>
                  </div>
                  <div className="space-y-1.5">
-                   <label className="text-xs font-semibold text-muted-foreground">Expiration Date</label>
+                   <label className="text-xs font-semibold text-muted-foreground">Expiration Date (Optional)</label>
                    <input type="date" value={editExpiresAt} onChange={e => setEditExpiresAt(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none" />
                  </div>
               </div>
@@ -161,7 +179,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                 <textarea 
                   value={editReason} 
                   onChange={e => setEditReason(e.target.value)} 
-                  placeholder="e.g. Upgraded user to Pro per customer support ticket #123..." 
+                  placeholder="e.g. Upgraded user to Pro per customer support ticket or plan change..." 
                   className="w-full bg-surface-muted border border-amber-500/30 px-3 py-2 rounded-lg text-sm focus:border-amber-500 outline-none min-h-[60px]"
                 ></textarea>
               </div>

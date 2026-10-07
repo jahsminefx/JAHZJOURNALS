@@ -91,7 +91,11 @@ const getTradingIntelligence = async (req, res) => {
                 averageRR: '1:2.4'
             },
             mostTradedPairs: pairGroups.map(p => ({ asset: p.pair, count: p._count.id })),
-            recentTrades
+            recentTrades: recentTrades.map(t => ({
+                ...t,
+                pnl: t.profitLossAmount,
+                pnlFormatted: typeof t.profitLossAmount === 'number' ? (t.profitLossAmount >= 0 ? `+$${t.profitLossAmount.toFixed(2)}` : `-$${Math.abs(t.profitLossAmount).toFixed(2)}`) : '-'
+            }))
         });
     } catch (e) {
         console.error('Trading intelligence error:', e);

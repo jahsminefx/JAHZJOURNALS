@@ -17,15 +17,12 @@ const sweepAndDowngradeExpiredPromotions = async () => {
   const summaryDetails = [];
 
   try {
-    // 1. Find all ACTIVE subscriptions with source 'PROMOTION' or attached promotionId
+    // 1. Find all ACTIVE subscriptions with source 'PROMOTION'
     // that have expired either by explicit expiresAt OR because the linked promotion has ended/deactivated
     const candidateSubs = await prisma.subscription.findMany({
       where: {
         status: 'ACTIVE',
-        OR: [
-          { source: 'PROMOTION' },
-          { promotionId: { not: null } }
-        ]
+        source: 'PROMOTION'
       },
       include: {
         user: true,
@@ -35,7 +32,6 @@ const sweepAndDowngradeExpiredPromotions = async () => {
 
     for (const sub of candidateSubs) {
       let isExpired = false;
-      let expiryReason = 'PROMOTION_EXPIRED';
 
       // Check explicit expiresAt
       if (sub.expiresAt && new Date(sub.expiresAt) <= now) {
@@ -51,13 +47,13 @@ const sweepAndDowngradeExpiredPromotions = async () => {
       }
 
       if (isExpired) {
-        // Check if the user has any other active PAID subscription that hasn't expired
-        const activePaidSub = await prisma.subscription.findFirst({
+        // Check if the user has any other active non-promotional (PAYMENT or ADMIN) subscription that hasn't expired
+        const activeNonPromotionalSub = await prisma.subscription.findFirst({
           where: {
             userId: sub.userId,
             id: { not: sub.id },
-            source: 'PAYMENT',
             status: 'ACTIVE',
+            source: { in: ['PAYMENT', 'ADMIN'] },
             OR: [
               { expiresAt: null },
               { expiresAt: { gt: now } }
@@ -72,8 +68,8 @@ const sweepAndDowngradeExpiredPromotions = async () => {
             data: { status: 'EXPIRED' }
           });
 
-          // If user does not have an active paid subscription, downgrade them to FREE
-          if (!activePaidSub) {
+          // If user does not have an active non-promotional subscription, downgrade them to FREE
+          if (!activeNonPromotionalSub) {
             await tx.subscriptionHistory.create({
               data: {
                 userId: sub.userId,
@@ -118,7 +114,7 @@ const sweepAndDowngradeExpiredPromotions = async () => {
         expiredSubsCount++;
 
         // Send friendly notification email if user exists and was downgraded
-        if (sub.user && !activePaidSub) {
+        if (sub.user && !activeNonPromotionalSub) {
           sendSubscriptionExpiryEmail(sub.user, sub.plan).catch((err) => {
             console.warn(`[SUBSCRIPTION-SWEEPER] Failed to send expiry email to ${sub.user.email}:`, err?.message || err);
           });
@@ -126,7 +122,7 @@ const sweepAndDowngradeExpiredPromotions = async () => {
       }
     }
 
-    // 2. Also check for orphaned user plans (users who have PRO/STARTER/MENTOR but NO active subscription or only expired promo history)
+    // 2. Also check for upgraded users (PRO/STARTER/MENTOR) ensuring valid active subscription records exist
     const upgradedUsers = await prisma.user.findMany({
       where: {
         subscriptionPlan: { in: ['STARTER', 'PRO', 'MENTOR'] },
@@ -144,51 +140,29 @@ const sweepAndDowngradeExpiredPromotions = async () => {
       if (processedUsers.has(u.id)) continue;
 
       const hasValidActiveSub = u.subscriptions.some((s) => {
-        if (s.source === 'PAYMENT') {
+        if (s.source === 'PAYMENT' || s.source === 'ADMIN') {
           return !s.expiresAt || new Date(s.expiresAt) > now;
         }
-        if (s.source === 'PROMOTION' || s.promotionId) {
+        if (s.source === 'PROMOTION') {
           const promoExpired = s.promotion && ((s.promotion.endsAt && new Date(s.promotion.endsAt) <= now) || s.promotion.isActive === false);
           const subExpired = s.expiresAt && new Date(s.expiresAt) <= now;
           return !promoExpired && !subExpired;
         }
-        if (s.source === 'ADMIN') {
-          return !s.expiresAt || new Date(s.expiresAt) > now;
-        }
         return false;
       });
 
-      if (!hasValidActiveSub && u.subscriptions.length === 0) {
-        // User has upgraded plan but 0 active subscriptions, downgrade to FREE
-        await prisma.$transaction(async (tx) => {
-          await tx.subscriptionHistory.create({
+      if (!hasValidActiveSub) {
+        if (u.subscriptions.length === 0) {
+          // Provision default admin subscription rather than wiping their configured plan
+          await prisma.subscription.create({
             data: {
               userId: u.id,
-              previousPlan: u.subscriptionPlan,
-              newPlan: 'FREE',
-              source: 'PROMOTION',
-              reason: 'PROMOTION_EXPIRED',
-              changedBy: 'SYSTEM'
+              plan: u.subscriptionPlan,
+              status: 'ACTIVE',
+              source: 'ADMIN'
             }
           });
-
-          await tx.user.update({
-            where: { id: u.id },
-            data: {
-              subscriptionPlan: 'FREE',
-              subscriptionStatus: 'ACTIVE'
-            }
-          });
-        });
-
-        downgradedUsersCount++;
-        processedUsers.add(u.id);
-        summaryDetails.push({
-          userId: u.id,
-          userEmail: u.email,
-          previousPlan: u.subscriptionPlan,
-          promotionName: 'Orphaned/Expired Plan'
-        });
+        }
       }
     }
 

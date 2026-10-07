@@ -33,6 +33,9 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchMetrics();
+    const handleDataChanged = () => fetchMetrics(false);
+    window.addEventListener('jahzjournal:data-changed', handleDataChanged);
+    return () => window.removeEventListener('jahzjournal:data-changed', handleDataChanged);
   }, []);
 
   const handleSweepExpired = async () => {
