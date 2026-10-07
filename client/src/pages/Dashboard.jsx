@@ -296,31 +296,44 @@ const Dashboard = () => {
             <DashboardEmptyState type="trades" />
           ) : null}
 
-          <section className="grid gap-4 xl:grid-cols-12">
-            <PerformanceCurveChart
-              className="xl:col-span-6"
-              data={dashboard.performanceCurve || {}}
-              currency={currency}
-              activeRange={dateRange}
-              onRangeChange={handleDateRangeChange}
-              hasAccountSelection={accounts.length > 0 && (dashboard.selectedAccountIds || []).length > 0}
-            />
-            <SessionEdgeChart className="xl:col-span-3" data={dashboard.sessionPerformance || []} currency={currency} />
-            <TradingCalendar className="xl:col-span-3" data={dashboard.calendar || []} currency={currency} />
-            <PerformanceBreakdown className="xl:col-span-9" data={dashboard.performanceBreakdown || {}} currency={currency} />
-            <RecentTrades className="xl:col-span-3 xl:row-span-2" trades={dashboard.recentTrades || []} currency={currency} />
-            <TopWinningPairs
-              className="xl:col-span-3"
-              pairs={dashboard.pairPerformance || dashboard.topPairs || []}
-              topPairs={dashboard.topPairs || []}
-              worstPairs={dashboard.worstPairs || []}
-              currency={currency}
-              accountId={accountId}
-            />
-            <TradeOutcomeChart className="xl:col-span-3" outcomes={dashboard.tradeOutcomes || {}} />
-            <WeeklyGoalProgress className="xl:col-span-3" goals={dashboard.weeklyGoals || []} currency={currency} />
-            <div className="md:hidden xl:col-span-3">
-              <UpgradeCard />
+          <section className="grid min-w-0 gap-4 xl:grid-cols-12 items-start">
+            {/* Main Analytics Pillar (8 Cols on XL) */}
+            <div className="space-y-4 xl:col-span-8 min-w-0">
+              <PerformanceCurveChart
+                data={dashboard.performanceCurve || {}}
+                currency={currency}
+                activeRange={dateRange}
+                onRangeChange={handleDateRangeChange}
+                hasAccountSelection={accounts.length > 0 && (dashboard.selectedAccountIds || []).length > 0}
+              />
+              
+              <PerformanceBreakdown data={dashboard.performanceBreakdown || {}} currency={currency} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SessionEdgeChart data={dashboard.sessionPerformance || []} currency={currency} />
+                <TradeOutcomeChart outcomes={dashboard.tradeOutcomes || {}} />
+              </div>
+
+              <TopWinningPairs
+                pairs={dashboard.pairPerformance || dashboard.topPairs || []}
+                topPairs={dashboard.topPairs || []}
+                worstPairs={dashboard.worstPairs || []}
+                currency={currency}
+                accountId={accountId}
+              />
+            </div>
+
+            {/* Sidebar & Action Tracking Pillar (4 Cols on XL) */}
+            <div className="space-y-4 xl:col-span-4 min-w-0">
+              <TradingCalendar data={dashboard.calendar || []} currency={currency} />
+              
+              <WeeklyGoalProgress goals={dashboard.weeklyGoals || []} currency={currency} />
+              
+              <RecentTrades trades={dashboard.recentTrades || []} currency={currency} />
+
+              <div className="md:hidden">
+                <UpgradeCard />
+              </div>
             </div>
           </section>
           
