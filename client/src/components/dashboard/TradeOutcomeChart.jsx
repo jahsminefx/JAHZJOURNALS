@@ -1,6 +1,7 @@
 import React from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { DashboardCard, CardHeader } from './DashboardShell';
+import { formatPercent } from '../../utils/dashboard';
 
 const COLORS = {
   winners: '#10b981',
@@ -19,50 +20,71 @@ const TradeOutcomeChart = ({ outcomes = {}, className = '' }) => {
     { key: 'breakevens', name: 'Breakeven', value: breakevens },
   ].filter((item) => item.value > 0);
 
+  const winPct = total > 0 ? (wins / total) * 100 : 0;
+  const lossPct = total > 0 ? (losses / total) * 100 : 0;
+  const bePct = total > 0 ? (breakevens / total) * 100 : 0;
+
   return (
-    <DashboardCard className={`p-5 ${className}`}>
-      <CardHeader title="Trade Outcome" />
+    <DashboardCard className={`p-5 flex flex-col justify-between ${className}`}>
+      <CardHeader 
+        title="Trade Outcome" 
+        eyebrow="Distribution of closed trades"
+        action={(
+          <span className="text-xs font-mono font-bold text-foreground bg-surface-muted px-2 py-0.5 rounded-lg border border-border">
+            {total} Trades
+          </span>
+        )}
+      />
+
       {total === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-5 text-sm text-muted">
-          Your win/loss ratio will take shape here.
+        <div className="rounded-lg border border-dashed border-border p-4 text-xs text-muted text-center">
+          Win/loss ratio will take shape here.
         </div>
       ) : (
-        <div className="grid min-w-0 items-center gap-4">
-          <div className="relative mx-auto h-40 w-full max-w-52 sm:h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={data} innerRadius={40} outerRadius={62} dataKey="value" paddingAngle={2}>
-                  {data.map((entry) => (
-                    <Cell key={entry.key} fill={COLORS[entry.key]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ background: 'rgb(var(--surface))', border: '1px solid rgb(var(--border))', borderRadius: 10 }}
-                  itemStyle={{ color: 'rgb(var(--foreground))' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-black text-foreground">{total}</span>
-              <span className="text-xs text-muted">Total Trades</span>
-            </div>
-          </div>
-          <div className="min-w-0 space-y-3 text-sm">
-            {[
-              ['winners', 'Winners', wins],
-              ['losers', 'Losers', losses],
-              ['breakevens', 'Breakeven', breakevens],
-            ].map(([key, label, value]) => (
-              <div key={key} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                <span className="flex min-w-0 items-center gap-2 text-foreground">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[key] }} />
-                  {value}
-                </span>
-                <span className="text-right text-muted">
-                  {label} ({((value / total) * 100).toFixed(1)}%)
-                </span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="relative h-28 w-28 shrink-0 max-w-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={data} innerRadius={28} outerRadius={46} dataKey="value" paddingAngle={2}>
+                    {data.map((entry) => (
+                      <Cell key={entry.key} fill={COLORS[entry.key]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: 'rgb(var(--surface))', border: '1px solid rgb(var(--border))', borderRadius: 8, fontSize: '11px' }}
+                    itemStyle={{ color: 'rgb(var(--foreground))' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-base font-black text-foreground">{total}</span>
               </div>
-            ))}
+            </div>
+
+            <div className="flex-1 min-w-0 space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-foreground font-medium">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Wins ({wins})
+                </span>
+                <span className="font-bold text-emerald-400 font-mono">{formatPercent(winPct)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-foreground font-medium">
+                  <span className="h-2 w-2 rounded-full bg-rose-500" />
+                  Losses ({losses})
+                </span>
+                <span className="font-bold text-rose-400 font-mono">{formatPercent(lossPct)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted font-medium">
+                  <span className="h-2 w-2 rounded-full bg-slate-400" />
+                  BE ({breakevens})
+                </span>
+                <span className="font-bold text-muted font-mono">{formatPercent(bePct)}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
