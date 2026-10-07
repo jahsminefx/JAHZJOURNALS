@@ -299,10 +299,10 @@ const Dashboard = () => {
             <DashboardEmptyState type="trades" />
           ) : null}
 
-          <section className="grid min-w-0 gap-4 xl:grid-cols-12">
+          <section className="grid min-w-0 gap-3.5 xl:grid-cols-12 items-start">
             {/* ROW 1: Hero Performance Curve (8 Cols) & Trading Calendar (4 Cols) */}
             <PerformanceCurveChart
-              className="xl:col-span-8 flex flex-col justify-between"
+              className="xl:col-span-8"
               data={dashboard.performanceCurve || {}}
               currency={currency}
               activeRange={dateRange}
@@ -310,29 +310,29 @@ const Dashboard = () => {
               hasAccountSelection={accounts.length > 0 && (dashboard.selectedAccountIds || []).length > 0}
             />
             <TradingCalendar 
-              className="xl:col-span-4 flex flex-col justify-between" 
+              className="xl:col-span-4" 
               data={dashboard.calendar || []} 
               currency={currency} 
             />
 
             {/* ROW 2: Performance Breakdown (8 Cols) & Quick Actions Hub (4 Cols) */}
             <PerformanceBreakdown 
-              className="xl:col-span-8 flex flex-col justify-between" 
+              className="xl:col-span-8" 
               data={dashboard.performanceBreakdown || {}} 
               currency={currency} 
             />
             <QuickActionsCard 
-              className="xl:col-span-4 flex flex-col justify-between" 
+              className="xl:col-span-4" 
             />
 
             {/* ROW 3: Symmetrical Triad (4 Cols + 4 Cols + 4 Cols = 12 Cols) */}
             <SessionEdgeChart 
-              className="xl:col-span-4 flex flex-col justify-between" 
+              className="xl:col-span-4" 
               data={dashboard.sessionPerformance || []} 
               currency={currency} 
             />
             <TopWinningPairs
-              className="xl:col-span-4 flex flex-col justify-between"
+              className="xl:col-span-4"
               pairs={dashboard.pairPerformance || dashboard.topPairs || []}
               topPairs={dashboard.topPairs || []}
               worstPairs={dashboard.worstPairs || []}
@@ -340,35 +340,35 @@ const Dashboard = () => {
               accountId={accountId}
             />
             <TradingInsightsCard 
-              className="xl:col-span-4 flex flex-col justify-between" 
+              className="xl:col-span-4" 
               dashboard={dashboard} 
               currency={currency} 
             />
 
             {/* ROW 4: Symmetrical Triad (4 Cols + 4 Cols + 4 Cols = 12 Cols) */}
             <TradeOutcomeChart 
-              className="xl:col-span-4 flex flex-col justify-between" 
+              className="xl:col-span-4" 
               outcomes={dashboard.tradeOutcomes || {}} 
             />
             <WeeklyGoalProgress 
-              className="xl:col-span-4 flex flex-col justify-between" 
+              className="xl:col-span-4" 
               goals={dashboard.weeklyGoals || []} 
               currency={currency} 
             />
             <AccountAllocationWidget 
-              className="xl:col-span-4 flex flex-col justify-between" 
+              className="xl:col-span-4" 
               accounts={accounts} 
               currency={currency} 
             />
 
             {/* ROW 5: Recent Executions (6 Cols) & AI Edge Finder (6 Cols) */}
             <RecentTrades 
-              className="xl:col-span-6 flex flex-col justify-between" 
+              className="xl:col-span-6" 
               trades={dashboard.recentTrades || []} 
               currency={currency} 
             />
             <EdgeFinderWidget 
-              className="xl:col-span-6 flex flex-col justify-between" 
+              className="xl:col-span-6" 
             />
 
             {/* ROW 6: Full-Width Psychology & Discipline Banner (12 Cols) */}

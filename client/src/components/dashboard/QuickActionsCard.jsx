@@ -32,35 +32,35 @@ const QuickActionsCard = ({ className = '' }) => {
   }, []);
 
   return (
-    <DashboardCard className={`p-5 ${className}`}>
+    <DashboardCard className={`p-4 ${className}`}>
       <CardHeader 
         title="Quick Actions & Hub" 
         eyebrow="Fast execution tools & live market sessions"
       />
 
       {/* Live Market Sessions */}
-      <div className="mb-4 rounded-xl border border-border/80 bg-background/60 p-3.5">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <Clock size={14} className="text-indigo-400" /> Live Market Sessions
+      <div className="mb-3 rounded-xl border border-border/80 bg-background/60 p-2.5">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+            <Clock size={13} className="text-indigo-400" /> Live Market Sessions
           </span>
-          <span className="text-[11px] font-mono text-muted">UTC Time</span>
+          <span className="text-[10px] font-mono text-muted">UTC Time</span>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           {sessions.map((s) => (
             <div 
               key={s.name} 
-              className={`flex flex-col items-center justify-center p-2 rounded-lg border text-center transition ${
+              className={`flex flex-col items-center justify-center p-1.5 rounded-lg border text-center transition ${
                 s.active 
                   ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' 
                   : 'border-border/50 bg-surface-muted/30 text-muted'
               }`}
             >
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <span className={`h-1.5 w-1.5 rounded-full ${s.active ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-                <span className="text-xs font-bold leading-none">{s.name}</span>
+                <span className="text-[11px] font-bold leading-none">{s.name}</span>
               </div>
-              <span className="text-[10px] mt-1 text-muted leading-none">
+              <span className="text-[9px] mt-1 text-muted leading-none">
                 {s.active ? 'OPEN NOW' : 'Closed'}
               </span>
             </div>
@@ -69,10 +69,10 @@ const QuickActionsCard = ({ className = '' }) => {
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-2">
         <Link
           to="/trades/quick"
-          className="group flex flex-col justify-between p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/15 hover:border-indigo-500/40 transition"
+          className="group flex flex-col justify-between p-2.5 rounded-xl border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/15 hover:border-indigo-500/40 transition"
         >
           <div className="flex items-center justify-between text-indigo-400">
             <PlusCircle size={18} />

@@ -48,27 +48,27 @@ const TradingCalendar = ({ data = [], currency, className = '' }) => {
   };
 
   return (
-    <DashboardCard className={`p-5 ${className}`}>
+    <DashboardCard className={`p-4 ${className}`}>
       <CardHeader
         title="Trading Calendar"
         action={(
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => moveMonth(-1)} className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground">
-              <ChevronLeft size={16} />
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => moveMonth(-1)} className="rounded-lg p-1.5 text-muted hover:bg-surface-muted hover:text-foreground">
+              <ChevronLeft size={15} />
             </button>
-            <p className="min-w-28 text-center text-sm font-bold text-foreground">{monthLabel}</p>
-            <button type="button" onClick={() => moveMonth(1)} className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground">
-              <ChevronRight size={16} />
+            <p className="min-w-24 text-center text-xs font-bold text-foreground">{monthLabel}</p>
+            <button type="button" onClick={() => moveMonth(1)} className="rounded-lg p-1.5 text-muted hover:bg-surface-muted hover:text-foreground">
+              <ChevronRight size={15} />
             </button>
           </div>
         )}
       />
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold uppercase tracking-wide text-muted">
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-wide text-muted">
         {dayLabels.map((day) => <span key={day}>{day}</span>)}
       </div>
 
-      <div className="mt-3 grid grid-cols-7 gap-1">
+      <div className="mt-2 grid grid-cols-7 gap-1">
         {days.map((day) => {
           const key = toKey(day);
           const summary = dataByDate.get(key);
@@ -79,21 +79,21 @@ const TradingCalendar = ({ data = [], currency, className = '' }) => {
               key={key}
               type="button"
               onClick={() => summary && setSelectedDay(summary)}
-              className={`relative flex aspect-square min-h-9 items-center justify-center rounded-lg text-sm transition ${inMonth ? 'text-foreground hover:bg-surface-muted' : 'text-muted'} ${summary ? 'font-bold' : ''}`}
+              className={`relative flex aspect-square min-h-8 items-center justify-center rounded-lg text-xs transition ${inMonth ? 'text-foreground hover:bg-surface-muted' : 'text-muted'} ${summary ? 'font-bold' : ''}`}
             >
               {day.getDate()}
               {summary && (
-                <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${indicatorClass[summary.outcome] || 'bg-slate-500'}`} />
+                <span className={`absolute bottom-1 h-1 w-1 rounded-full ${indicatorClass[summary.outcome] || 'bg-slate-500'}`} />
               )}
             </button>
           );
         })}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-4 border-t border-border pt-4 text-xs text-muted">
-        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Profitable Day</span>
-        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-400" /> Losing Day</span>
-        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-500" /> Breakeven</span>
+      <div className="mt-3 flex flex-wrap gap-3 border-t border-border/60 pt-2.5 text-[11px] text-muted">
+        <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Profitable</span>
+        <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Losing</span>
+        <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" /> BE</span>
       </div>
 
       {selectedDay && (

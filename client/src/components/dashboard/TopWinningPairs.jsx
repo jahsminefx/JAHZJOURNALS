@@ -57,9 +57,9 @@ const TopWinningPairs = ({
   }, [activeTab, allList, winnersList, drawdownsList]);
 
   return (
-    <DashboardCard className={`p-5 flex flex-col justify-between ${className}`}>
+    <DashboardCard className={`p-4 ${className}`}>
       <div>
-        <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center justify-between gap-2 mb-2.5">
           <CardHeader title="Performance by Pair" />
           <div className="flex items-center rounded-xl bg-surface-muted/80 p-0.5 border border-border text-[11px] font-semibold">
             <button
