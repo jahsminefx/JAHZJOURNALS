@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { X, Cloud, ShieldCheck, Lock, Eye, EyeOff, Server, User, Cpu, Sparkles, Building2, ShieldCheck as ShieldIcon } from 'lucide-react';
 import api from '../../utils/api';
 import Button from '../Button';
 import { popularBrokers } from '../../data/popularBrokers';
+import { useAuth } from '../../context/useAuth';
 
 const MTCloudSyncModal = ({
   isOpen,
@@ -13,6 +15,18 @@ const MTCloudSyncModal = ({
   defaultPlatform = 'MT5',
   onConnected,
 }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const planKey = (user?.subscriptionPlan || 'FREE').toUpperCase();
+  const isAllowedSync =
+    planKey === 'STARTER' ||
+    planKey === 'PRO' ||
+    planKey === 'MENTOR' ||
+    user?.role === 'ADMIN' ||
+    user?.role === 'SUPER_ADMIN' ||
+    user?.role === 'MENTOR';
+
   const targetAccountId = account?.id || accountId;
   const isCreateMode = !targetAccountId;
 
@@ -30,6 +44,13 @@ const MTCloudSyncModal = ({
 
   const handleConnect = async (e) => {
     e.preventDefault();
+    if (!isAllowedSync) {
+      toast.error('MetaTrader Cloud Sync requires a Starter, Pro, or Mentor subscription.');
+      navigate('/pricing');
+      onClose();
+      return;
+    }
+
     if (!server.trim() || !login.trim() || !investorPassword.trim()) {
       toast.error('Please fill in all fields (Broker Server, Account Number, and Investor Password).');
       return;
@@ -112,18 +133,74 @@ const MTCloudSyncModal = ({
           </button>
         </div>
 
-        {/* Modal Form */}
-        <form onSubmit={handleConnect} className="p-6 space-y-4 overflow-y-auto">
-          {/* Security Banner */}
-          <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300">
-            <ShieldCheck size={18} className="shrink-0 text-emerald-400 mt-0.5" />
+        {/* If Free Tier: Upgrade Prompt */}
+        {!isAllowedSync ? (
+          <div className="p-6 space-y-5 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-inner">
+              <Sparkles size={32} />
+            </div>
             <div>
-              <strong className="font-bold text-foreground">Read-Only Investor Password Safety:</strong>
-              <p className="mt-0.5 text-emerald-300/90 leading-relaxed">
-                Your broker's Investor Password provides <strong>read-only access</strong>. JAHZJOURNALS cannot place, modify, or close trades, nor touch any account funds.
+              <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full mb-2">
+                Starter, Pro & Mentor Feature
+              </span>
+              <h3 className="text-xl font-black text-foreground">
+                Automated MetaTrader (MT4/MT5) Cloud Sync
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted max-w-md mx-auto">
+                Automatic 1-click cloud sync is available on <strong>Starter (₦4,000/mo)</strong>, <strong>Pro (₦8,000/mo)</strong>, and <strong>Mentor</strong> plans. Connect once with your read-only investor password and your live trades, balance, and executions sync automatically without typing.
               </p>
             </div>
+
+            <div className="rounded-2xl border border-border bg-surface-muted/60 p-4 text-left space-y-2.5 text-xs text-muted">
+              <div className="flex items-center gap-2 text-foreground font-medium">
+                <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
+                <span>Zero manual typing — instant balance, currency & trade history</span>
+              </div>
+              <div className="flex items-center gap-2 text-foreground font-medium">
+                <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
+                <span>100% read-only investor password security</span>
+              </div>
+              <div className="flex items-center gap-2 text-foreground font-medium">
+                <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
+                <span>24/7 background sync every 5 minutes</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="w-full sm:w-1/2"
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate('/pricing');
+                }}
+                className="w-full sm:w-1/2 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black hover:brightness-110"
+              >
+                <Sparkles size={16} />
+                View Plans & Upgrade
+              </Button>
+            </div>
           </div>
+        ) : (
+          /* Modal Form */
+          <form onSubmit={handleConnect} className="p-6 space-y-4 overflow-y-auto">
+            {/* Security Banner */}
+            <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300">
+              <ShieldCheck size={18} className="shrink-0 text-emerald-400 mt-0.5" />
+              <div>
+                <strong className="font-bold text-foreground">Read-Only Investor Password Safety:</strong>
+                <p className="mt-0.5 text-emerald-300/90 leading-relaxed">
+                  Your broker's Investor Password provides <strong>read-only access</strong>. JAHZJOURNALS cannot place, modify, or close trades, nor touch any account funds.
+                </p>
+              </div>
+            </div>
 
           {/* Account Category Selector (Only in Create Mode) */}
           {isCreateMode && (
@@ -318,6 +395,7 @@ const MTCloudSyncModal = ({
             </Button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

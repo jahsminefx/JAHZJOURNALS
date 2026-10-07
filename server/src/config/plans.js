@@ -21,12 +21,13 @@ const PLANS = {
     aiAccess: false,
     reportsAccess: false,
     mentorAccess: false,
+    mt5Sync: false,
   },
   STARTER: {
     key: 'STARTER',
     name: 'Starter',
-    priceNgn: 3000,
-    priceFormatted: '₦3,000 / month',
+    priceNgn: 4000,
+    priceFormatted: '₦4,000 / month',
     tagline: 'Build discipline.',
     description: 'Designed for active traders who want to understand their emotions, mistakes, and execution patterns.',
     tradeLimit: 100,
@@ -39,6 +40,7 @@ const PLANS = {
     aiAccess: false,
     reportsAccess: false,
     mentorAccess: false,
+    mt5Sync: true,
   },
   PRO: {
     key: 'PRO',
@@ -57,6 +59,7 @@ const PLANS = {
     aiAccess: true,
     reportsAccess: true,
     mentorAccess: false,
+    mt5Sync: true,
   },
   MENTOR: {
     key: 'MENTOR',
@@ -75,6 +78,7 @@ const PLANS = {
     aiAccess: true,
     reportsAccess: true,
     mentorAccess: true,
+    mt5Sync: true,
   },
 };
 
@@ -133,6 +137,8 @@ const buildLimitReachedPayload = ({ feature, current, limit, userPlan, requiredP
       message = `Exporting PDF performance reports requires a Pro subscription. Upgrade to Pro to generate reports.`;
     } else if (feature === 'mentor') {
       message = `Mentor and student management features require a Mentor/Academy plan.`;
+    } else if (feature === 'mt5_sync') {
+      message = `MetaTrader 5 (MT5) Cloud Sync is available on Starter, Pro, and Mentor plans. Upgrade to Starter or Pro to automatically sync your MT5 broker accounts.`;
     } else {
       message = `Feature unavailable on your current plan. Upgrade to ${reqPlanName} to unlock.`;
     }

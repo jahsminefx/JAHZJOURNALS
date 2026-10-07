@@ -164,10 +164,45 @@ const requireMentorPlan = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware to enforce MT4/MT5 Cloud Sync access (Starter, Pro, Mentor, Admin)
+ */
+const checkMt5SyncAllowed = async (req, res, next) => {
+  try {
+    const userPlanKey = getEffectivePlanKey(req.user);
+    const planConfig = getPlanConfig(userPlanKey);
+
+    if (
+      planConfig.mt5Sync ||
+      userPlanKey === 'STARTER' ||
+      userPlanKey === 'PRO' ||
+      userPlanKey === 'MENTOR' ||
+      req.user.role === 'ADMIN' ||
+      req.user.role === 'SUPER_ADMIN' ||
+      req.user.role === 'MENTOR'
+    ) {
+      return next();
+    }
+
+    return res.status(403).json(buildLimitReachedPayload({
+      feature: 'mt5_sync',
+      current: 0,
+      limit: 0,
+      userPlan: userPlanKey,
+      requiredPlan: 'STARTER',
+      customMessage: 'MetaTrader (MT4/MT5) Cloud Sync is available on Starter, Pro, and Mentor plans. Upgrade your plan to unlock automated broker syncing.',
+    }));
+  } catch (error) {
+    console.error('Subscription Check MT5 Sync Error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   checkTradeLimit,
   checkAccountLimit,
   checkScreenshotLimit,
   requireProFeature,
   requireMentorPlan,
+  checkMt5SyncAllowed,
 };

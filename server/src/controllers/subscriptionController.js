@@ -6,7 +6,7 @@ const { sendSubscriptionConfirmationEmail } = require('../services/emailService'
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || '';
 const PLAN_MAPPINGS = {
-  STARTER: { amountInKobo: 300000, planCode: process.env.PAYSTACK_STARTER_PLAN },
+  STARTER: { amountInKobo: 400000, planCode: process.env.PAYSTACK_STARTER_PLAN },
   PRO: { amountInKobo: 800000, planCode: process.env.PAYSTACK_PRO_PLAN },
   MENTOR: { amountInKobo: 2500000, planCode: process.env.PAYSTACK_MENTOR_PLAN },
 };

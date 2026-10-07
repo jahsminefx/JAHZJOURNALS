@@ -3,7 +3,7 @@ import { Target, Zap, Rocket, ChevronRight, CheckCircle2, AlertTriangle, AlertCi
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
 
-const EdgeFinderWidget = ({ className = '' }) => {
+const EdgeFinderWidget = () => {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
@@ -56,7 +56,7 @@ const EdgeFinderWidget = ({ className = '' }) => {
   };
 
   return (
-    <div className={`rounded-xl border border-border/80 bg-surface p-5 shadow-[0_0_28px_rgba(15,23,42,0.35)] ${className}`}>
+    <div className="bg-surface-muted p-6 rounded-xl border border-border mt-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">

@@ -1,4 +1,10 @@
 const axios = require('axios');
+const https = require('https');
+
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  rejectUnauthorized: false,
+});
 
 const PROVISIONING_API_HOST = 'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai';
 const DEFAULT_CLIENT_API_HOST = 'https://mt-client-api-v1.london.agiliumtrade.ai';
@@ -24,6 +30,7 @@ const getClientApiBaseUrl = async (cloudAccountId, token) => {
   try {
     const res = await axios.get(`${PROVISIONING_API_HOST}/users/current/accounts/${cloudAccountId}`, {
       headers: { 'auth-token': token },
+      httpsAgent,
       timeout: 10000,
     });
     const region = res.data?.region;
@@ -47,6 +54,7 @@ const getAccountConnectionStatus = async (cloudAccountId) => {
   const token = getMetaApiToken();
   const res = await axios.get(`${PROVISIONING_API_HOST}/users/current/accounts/${cloudAccountId}`, {
     headers: { 'auth-token': token },
+    httpsAgent,
     timeout: 10000,
   });
   return {
@@ -81,6 +89,7 @@ const fetchAccountInformation = async (cloudAccountId) => {
         headers: {
           'auth-token': token,
         },
+        httpsAgent,
         timeout: 20000,
       }
     );
@@ -115,6 +124,7 @@ const provisionCloudAccount = async ({ platform, server, login, password, accoun
           'auth-token': token,
           'Content-Type': 'application/json',
         },
+        httpsAgent,
         timeout: 25000,
       }
     );
@@ -127,6 +137,7 @@ const provisionCloudAccount = async ({ platform, server, login, password, accoun
       {},
       {
         headers: { 'auth-token': token },
+        httpsAgent,
         timeout: 20000,
       }
     );
@@ -165,7 +176,8 @@ const fetchAccountHistory = async (cloudAccountId, daysBack = 180) => {
 
   const queryRange = async (days) => {
     const clientBaseUrl = await getClientApiBaseUrl(cloudAccountId, token);
-    const endTime = new Date().toISOString();
+    // Include a 30-day future buffer on endTime to prevent broker timezone skew / clock offset from truncating deals
+    const endTime = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const startTime = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
     const response = await axios.get(
@@ -174,6 +186,7 @@ const fetchAccountHistory = async (cloudAccountId, daysBack = 180) => {
         headers: {
           'auth-token': token,
         },
+        httpsAgent,
         timeout: 45000,
       }
     );
@@ -314,6 +327,7 @@ const fetchOpenPositions = async (cloudAccountId) => {
         headers: {
           'auth-token': token,
         },
+        httpsAgent,
         timeout: 20000,
       }
     );
@@ -371,6 +385,7 @@ const removeCloudAccount = async (cloudAccountId) => {
       `${PROVISIONING_API_HOST}/users/current/accounts/${cloudAccountId}`,
       {
         headers: { 'auth-token': token },
+        httpsAgent,
         timeout: 15000,
       }
     );

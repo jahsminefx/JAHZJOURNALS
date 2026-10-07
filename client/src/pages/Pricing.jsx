@@ -33,11 +33,12 @@ const plans = [
   {
     name: 'Starter',
     tagline: 'Build discipline.',
-    price: '₦3,000',
+    price: '₦4,000',
     description: 'Designed for active traders who want to understand their emotions, mistakes, and execution patterns.',
     limits: ['100 trades / month', '3 trading accounts', '3 screenshots per trade'],
     features: [
       'All Free plan capabilities',
+      'Automated MetaTrader (MT4/MT5) Cloud Sync',
       'Trading psychology & emotion tracking',
       'Rule violation & mistake tracking',
       'Strategy & setup performance tracking',
@@ -54,6 +55,7 @@ const plans = [
     limits: ['Unlimited trades / month', 'Unlimited trading accounts', '10 screenshots per trade'],
     features: [
       'All Starter plan capabilities',
+      'Automated MT4/MT5 Multi-Account Cloud Sync',
       'AI Trade Review & AI Coach',
       'JAHZ Edge Finder analytics',
       'Prop-firm challenge tracker & drawdown guards',
@@ -70,6 +72,7 @@ const plans = [
     description: 'Designed for mentors, trading coaches, and academies managing student performance.',
     limits: ['Custom student capacity', 'Dedicated mentor workspace', 'Custom screenshot limits'],
     features: [
+      'MetaTrader (MT4/MT5) Cloud Sync Integration',
       'Student portfolio management',
       'Student group invitations & access',
       'Direct mentor feedback & trade comments',
@@ -85,6 +88,7 @@ const featureMatrix = [
   { feature: 'Monthly Trade Log Limit', free: '20', starter: '100', pro: 'Unlimited', mentor: 'Custom' },
   { feature: 'Trading Accounts', free: '1', starter: '3', pro: 'Unlimited', mentor: 'Custom' },
   { feature: 'Screenshots per Trade', free: '1', starter: '3', pro: '10', mentor: 'Custom' },
+  { feature: 'MetaTrader 4 / 5 Cloud Sync', free: false, starter: true, pro: true, mentor: true },
   { feature: 'Basic Analytics & Equity Curve', free: true, starter: true, pro: true, mentor: true },
   { feature: 'Detailed Analytics & Sessions', free: false, starter: true, pro: true, mentor: true },
   { feature: 'Emotion & Psychology Tracking', free: false, starter: true, pro: true, mentor: true },
@@ -480,8 +484,8 @@ const Pricing = () => {
               
               if (appliedPromo && appliedPromo.discountPercent && applicable) {
                 if (plan.name === 'Starter') {
-                  originalPrice = '₦3,000';
-                  const orig = 3000;
+                  originalPrice = '₦4,000';
+                  const orig = 4000;
                   const disc = Math.round(orig * (1 - appliedPromo.discountPercent / 100));
                   displayPrice = `₦${disc.toLocaleString()}`;
                 } else if (plan.name === 'Pro') {

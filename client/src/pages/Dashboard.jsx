@@ -14,9 +14,6 @@ import WeeklyGoalProgress from '../components/dashboard/WeeklyGoalProgress';
 import RecentTrades from '../components/dashboard/RecentTrades';
 import UpgradeCard from '../components/dashboard/UpgradeCard';
 import DisciplineBanner from '../components/dashboard/DisciplineBanner';
-import QuickActionsCard from '../components/dashboard/QuickActionsCard';
-import TradingInsightsCard from '../components/dashboard/TradingInsightsCard';
-import AccountAllocationWidget from '../components/dashboard/AccountAllocationWidget';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import DashboardPromotionBanner from '../components/DashboardPromotionBanner';
 import EdgeFinderWidget from '../components/dashboard/EdgeFinderWidget';
@@ -299,87 +296,37 @@ const Dashboard = () => {
             <DashboardEmptyState type="trades" />
           ) : null}
 
-          <section className="grid min-w-0 gap-3.5 xl:grid-cols-12 items-start">
-            {/* ROW 1: Hero Performance Curve (8 Cols) & Trading Calendar (4 Cols) */}
+          <section className="grid gap-4 xl:grid-cols-12">
             <PerformanceCurveChart
-              className="xl:col-span-8"
+              className="xl:col-span-6"
               data={dashboard.performanceCurve || {}}
               currency={currency}
               activeRange={dateRange}
               onRangeChange={handleDateRangeChange}
               hasAccountSelection={accounts.length > 0 && (dashboard.selectedAccountIds || []).length > 0}
             />
-            <TradingCalendar 
-              className="xl:col-span-4" 
-              data={dashboard.calendar || []} 
-              currency={currency} 
-            />
-
-            {/* ROW 2: Performance Breakdown (8 Cols) & Quick Actions Hub (4 Cols) */}
-            <PerformanceBreakdown 
-              className="xl:col-span-8" 
-              data={dashboard.performanceBreakdown || {}} 
-              currency={currency} 
-            />
-            <QuickActionsCard 
-              className="xl:col-span-4" 
-            />
-
-            {/* ROW 3: Symmetrical Triad (4 Cols + 4 Cols + 4 Cols = 12 Cols) */}
-            <SessionEdgeChart 
-              className="xl:col-span-4" 
-              data={dashboard.sessionPerformance || []} 
-              currency={currency} 
-            />
+            <RecentTrades className="xl:col-span-3" trades={dashboard.recentTrades || []} currency={currency} />
+            <TradingCalendar className="xl:col-span-3" data={dashboard.calendar || []} currency={currency} />
+            <PerformanceBreakdown className="xl:col-span-9" data={dashboard.performanceBreakdown || {}} currency={currency} />
+            <SessionEdgeChart className="xl:col-span-3 xl:row-span-2" data={dashboard.sessionPerformance || []} currency={currency} />
             <TopWinningPairs
-              className="xl:col-span-4"
+              className="xl:col-span-3"
               pairs={dashboard.pairPerformance || dashboard.topPairs || []}
               topPairs={dashboard.topPairs || []}
               worstPairs={dashboard.worstPairs || []}
               currency={currency}
               accountId={accountId}
             />
-            <TradingInsightsCard 
-              className="xl:col-span-4" 
-              dashboard={dashboard} 
-              currency={currency} 
-            />
-
-            {/* ROW 4: Symmetrical Triad (4 Cols + 4 Cols + 4 Cols = 12 Cols) */}
-            <TradeOutcomeChart 
-              className="xl:col-span-4" 
-              outcomes={dashboard.tradeOutcomes || {}} 
-            />
-            <WeeklyGoalProgress 
-              className="xl:col-span-4" 
-              goals={dashboard.weeklyGoals || []} 
-              currency={currency} 
-            />
-            <AccountAllocationWidget 
-              className="xl:col-span-4" 
-              accounts={accounts} 
-              currency={currency} 
-            />
-
-            {/* ROW 5: Recent Executions (6 Cols) & AI Edge Finder (6 Cols) */}
-            <RecentTrades 
-              className="xl:col-span-6" 
-              trades={dashboard.recentTrades || []} 
-              currency={currency} 
-            />
-            <EdgeFinderWidget 
-              className="xl:col-span-6" 
-            />
-
-            {/* ROW 6: Full-Width Psychology & Discipline Banner (12 Cols) */}
-            <div className="xl:col-span-12">
-              <DisciplineBanner />
-            </div>
-
-            <div className="md:hidden xl:col-span-12">
+            <TradeOutcomeChart className="xl:col-span-3" outcomes={dashboard.tradeOutcomes || {}} />
+            <WeeklyGoalProgress className="xl:col-span-3" goals={dashboard.weeklyGoals || []} currency={currency} />
+            <div className="md:hidden">
               <UpgradeCard />
             </div>
           </section>
+          
+          <EdgeFinderWidget />
+
+          <DisciplineBanner />
         </>
       )}
     </div>

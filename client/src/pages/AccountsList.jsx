@@ -5,15 +5,26 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import AccountTypeCard from '../components/accounts/AccountTypeCard';
 import MTCloudSyncModal from '../components/accounts/MTCloudSyncModal';
+import { useAuth } from '../context/useAuth';
 
 const isPropFirmAccount = (account) => account.accountCategory === 'PROP_FIRM' || account.isPropFirmAccount;
 
 const AccountsList = () => {
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [selectedSyncAccount, setSelectedSyncAccount] = useState(null);
+
+  const planKey = (user?.subscriptionPlan || 'FREE').toUpperCase();
+  const isAllowedSync =
+    planKey === 'STARTER' ||
+    planKey === 'PRO' ||
+    planKey === 'MENTOR' ||
+    user?.role === 'ADMIN' ||
+    user?.role === 'SUPER_ADMIN' ||
+    user?.role === 'MENTOR';
 
   const fetchAccounts = async () => {
     try {
@@ -67,8 +78,12 @@ const AccountsList = () => {
         {/* Featured Card: 1-Click MetaTrader Auto-Sync (Zero Manual Setup) */}
         <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-b from-emerald-500/10 via-surface-muted to-surface p-6 shadow-md flex flex-col justify-between group hover:border-emerald-400 transition-all">
           <div className="absolute top-3 right-3">
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 text-slate-950 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-sm">
-              <Sparkles size={11} /> 100% Automated
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-sm ${
+              isAllowedSync
+                ? 'bg-emerald-500 text-slate-950'
+                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+            }`}>
+              <Sparkles size={11} /> {isAllowedSync ? '100% Automated' : 'Starter & Pro'}
             </span>
           </div>
           <div>
@@ -89,7 +104,7 @@ const AccountsList = () => {
             className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-black text-slate-950 hover:bg-emerald-400 transition shadow-sm"
           >
             <Cloud size={16} />
-            Connect MetaTrader Now
+            {isAllowedSync ? 'Connect MetaTrader Now' : 'Connect MetaTrader (Starter & Pro)'}
           </button>
         </div>
 

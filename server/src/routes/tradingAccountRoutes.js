@@ -19,19 +19,19 @@ const {
   getCloudSyncStatus,
 } = require('../controllers/mtCloudSyncController');
 const { protect } = require('../middleware/authMiddleware');
-const { checkAccountLimit } = require('../middleware/subscriptionGate');
+const { checkAccountLimit, checkMt5SyncAllowed } = require('../middleware/subscriptionGate');
 const propFirmAccountRoutes = require('./propFirmAccountRoutes');
 
 router.use('/prop-firm', propFirmAccountRoutes);
 
 // 1-Click Auto-Connect & Auto-Create Trading Account directly from MetaTrader
-router.post('/cloud-sync/auto-connect', protect, checkAccountLimit, autoConnectCloudSync);
+router.post('/cloud-sync/auto-connect', protect, checkAccountLimit, checkMt5SyncAllowed, autoConnectCloudSync);
 
-router.post('/:id/sync-token', protect, generateSyncToken);
+router.post('/:id/sync-token', protect, checkMt5SyncAllowed, generateSyncToken);
 router.delete('/:id/sync-token', protect, revokeSyncToken);
 
-router.post('/:id/cloud-sync/connect', protect, connectCloudSync);
-router.post('/:id/cloud-sync/sync-now', protect, syncCloudTradesNow);
+router.post('/:id/cloud-sync/connect', protect, checkMt5SyncAllowed, connectCloudSync);
+router.post('/:id/cloud-sync/sync-now', protect, checkMt5SyncAllowed, syncCloudTradesNow);
 router.delete('/:id/cloud-sync/disconnect', protect, disconnectCloudSync);
 router.get('/:id/cloud-sync/status', protect, getCloudSyncStatus);
 

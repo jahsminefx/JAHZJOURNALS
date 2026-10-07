@@ -35,17 +35,17 @@ const formatGoalValue = (goal, value, currency) => {
 };
 
 const WeeklyGoalProgress = ({ goals = [], currency, className = '' }) => (
-  <DashboardCard className={`p-4 ${className}`}>
-    <CardHeader title="Weekly Goal Progress" eyebrow="Discipline & profit targets" />
+  <DashboardCard className={`p-5 ${className}`}>
+    <CardHeader title="Weekly Goal Progress" />
     {goals.length === 0 ? (
-      <div className="rounded-xl border border-dashed border-border p-4 text-xs">
-        <p className="font-semibold text-foreground">Set weekly goals to track your progress.</p>
-        <Link to="/settings?section=trading" className="mt-2.5 inline-flex rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-emerald-400">
+      <div className="rounded-lg border border-dashed border-border p-5">
+        <p className="text-sm font-semibold text-foreground">Set weekly goals to track your progress.</p>
+        <Link to="/settings?section=trading" className="mt-4 inline-flex rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-emerald-400">
           Goal Settings
         </Link>
       </div>
     ) : (
-      <div className="space-y-2.5">
+      <div className="space-y-4">
         {goals.map((goal) => (
           <GoalRow
             key={goal.key}
