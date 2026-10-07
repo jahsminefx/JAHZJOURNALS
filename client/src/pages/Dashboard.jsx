@@ -21,6 +21,7 @@ import DashboardSkeleton from '../components/dashboard/DashboardSkeleton';
 import DashboardEmptyState from '../components/dashboard/DashboardEmptyState';
 import DashboardErrorState from '../components/dashboard/DashboardErrorState';
 import { formatCurrency, formatNumber, formatPercent, getDateRange } from '../utils/dashboard';
+import { createCacheKey, getCachedData, setCachedData, fetchWithCache } from '../utils/apiCache';
 
 const getInitialRange = (searchParams) => {
   if (searchParams.get('range')) return searchParams.get('range');
@@ -45,7 +46,6 @@ const getInitialDates = (range, searchParams) => {
 
 const plural = (count, singular, pluralLabel = `${singular}s`) => `${formatNumber(count, 0)} ${count === 1 ? singular : pluralLabel}`;
 
-
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialRange = getInitialRange(searchParams);
@@ -54,9 +54,21 @@ const Dashboard = () => {
   const [dateRange, setDateRange] = useState(initialRange);
   const [startDate, setStartDate] = useState(initialDates.startDate);
   const [endDate, setEndDate] = useState(initialDates.endDate);
-  const [dashboard, setDashboard] = useState(null);
-  const [accounts, setAccounts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Initialize with cached data if available for 0ms instantaneous render
+  const initialCacheKey = useMemo(() => {
+    const p = {};
+    if (accountId) p.accountId = accountId;
+    if (startDate) p.startDate = startDate;
+    if (endDate) p.endDate = endDate;
+    return createCacheKey('/analytics/dashboard', p);
+  }, [accountId, startDate, endDate]);
+
+  const initialCached = getCachedData(initialCacheKey);
+
+  const [dashboard, setDashboard] = useState(initialCached ? initialCached.data : null);
+  const [accounts, setAccounts] = useState(initialCached?.data?.accounts || []);
+  const [loading, setLoading] = useState(!initialCached);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -72,31 +84,42 @@ const Dashboard = () => {
   useEffect(() => {
     const controller = new AbortController();
     const fetchDashboard = async () => {
-      setLoading(true);
+      const params = {};
+      if (accountId) params.accountId = accountId;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const cacheKey = createCacheKey('/analytics/dashboard', params);
+      const cached = getCachedData(cacheKey);
+
+      // If we have cached data, immediately display it without showing a skeleton
+      if (cached) {
+        setDashboard(cached.data);
+        setAccounts(cached.data.accounts || []);
+        setLoading(false);
+      } else {
+        // Only show skeleton on first cold load when no cache exists
+        setLoading(true);
+      }
       setError(null);
-      setDashboard(null);
 
       try {
-        const params = {};
-        if (accountId) params.accountId = accountId;
-        if (startDate) params.startDate = startDate;
-        if (endDate) params.endDate = endDate;
-        params._refresh = retryCount;
-
         const { data } = await api.get('/analytics/dashboard', {
-          params,
+          params: { ...params, _refresh: retryCount },
           signal: controller.signal,
           headers: {
             'Cache-Control': 'no-cache',
-            Pragma: 'no-cache',
           },
         });
 
+        setCachedData(cacheKey, data, { staleTime: 60000 });
         setDashboard(data);
         setAccounts(data.accounts || []);
       } catch (requestError) {
         if (requestError.code === 'ERR_CANCELED' || requestError.name === 'CanceledError') return;
-        setError(requestError.response?.data?.message || 'We couldn\'t load your dashboard right now.');
+        if (!cached) {
+          setError(requestError.response?.data?.message || 'We couldn\'t load your dashboard right now.');
+        }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -107,26 +130,42 @@ const Dashboard = () => {
   }, [accountId, endDate, retryCount, startDate]);
 
   useEffect(() => {
-    const refreshDashboard = () => setRetryCount((count) => count + 1);
-    const handleStorageChange = (event) => {
-      if (event.key === 'jahzjournal:data-version') refreshDashboard();
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') refreshDashboard();
+    // Force refresh when trades, accounts, or journal data actually change
+    const handleDataMutation = () => setRetryCount((count) => count + 1);
+
+    // Subtle, non-destructive background revalidation when window regains focus (only if stale)
+    const handleWindowFocus = () => {
+      const params = {};
+      if (accountId) params.accountId = accountId;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const cacheKey = createCacheKey('/analytics/dashboard', params);
+      const cached = getCachedData(cacheKey);
+
+      // Only revalidate if cached data is stale (>60s old) and do it silently in the background
+      if (!cached || cached.isStale) {
+        fetchWithCache('/analytics/dashboard', { params }, {
+          staleTime: 60000,
+          onBackgroundUpdate: (fresh) => {
+            setDashboard(fresh);
+            setAccounts(fresh.accounts || []);
+          },
+        }).catch(() => {});
+      }
     };
 
-    window.addEventListener('jahzjournal:data-changed', refreshDashboard);
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('focus', refreshDashboard);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('jahzjournal:data-changed', handleDataMutation);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'jahzjournal:data-version') handleDataMutation();
+    });
+    window.addEventListener('focus', handleWindowFocus);
 
     return () => {
-      window.removeEventListener('jahzjournal:data-changed', refreshDashboard);
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', refreshDashboard);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('jahzjournal:data-changed', handleDataMutation);
+      window.removeEventListener('focus', handleWindowFocus);
     };
-  }, []);
+  }, [accountId, endDate, startDate]);
 
   const currency = dashboard?.currency || 'USD';
   const summary = useMemo(() => dashboard?.summary || {}, [dashboard]);

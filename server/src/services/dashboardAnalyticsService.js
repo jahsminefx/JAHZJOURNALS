@@ -57,12 +57,7 @@ const filterTradesByPeriod = (trades, startDate, endDate) => trades.filter((trad
   return true;
 });
 
-const { reconcileUserAccounts } = require('./accountBalanceService');
-
 const validateAccountFilter = async (userId, accountId) => {
-  // Automatically reconcile ground-truth currentBalance for user's accounts
-  await reconcileUserAccounts(userId);
-
   const accounts = await prisma.tradingAccount.findMany({
     where: { userId },
     select: {
@@ -109,14 +104,22 @@ const fetchTrades = (userId, accountIds) => prisma.trade.findMany({
  */
 const getNormalizedStartingBalance = async (accounts, targetCurrency) => {
   let totalUSD = 0;
+  const rateCache = new Map();
+
   for (const account of accounts) {
     const rawBalance = Number(account.startingBalance || 0);
     const accCurrency = account.currency || 'USD';
     if (accCurrency === targetCurrency) {
       totalUSD += rawBalance;
     } else {
-      const converted = await currencyService.convertAmount(rawBalance, accCurrency, targetCurrency);
-      totalUSD += (converted.convertedAmount || rawBalance);
+      const cacheKey = `${accCurrency}_${targetCurrency}`;
+      let rate = rateCache.get(cacheKey);
+      if (rate === undefined) {
+        const converted = await currencyService.convertAmount(1, accCurrency, targetCurrency);
+        rate = converted.convertedAmount ?? 1;
+        rateCache.set(cacheKey, rate);
+      }
+      totalUSD += rawBalance * rate;
     }
   }
   return round(totalUSD, 2);
@@ -128,6 +131,8 @@ const getNormalizedStartingBalance = async (accounts, targetCurrency) => {
  */
 const normalizeTradesForAnalytics = async (trades, targetCurrency) => {
   const normalized = [];
+  const rateCache = new Map();
+
   for (const trade of trades) {
     const rawPnl = Number(trade.profitLossAmount || 0);
     const rawRisk = Number(trade.riskAmount || 0);
@@ -141,10 +146,15 @@ const normalizeTradesForAnalytics = async (trades, targetCurrency) => {
         convertedPnl = rawPnl * Number(trade.fxRateToReporting);
         convertedRisk = rawRisk * Number(trade.fxRateToReporting);
       } else {
-        const pnlRes = await currencyService.convertAmount(rawPnl, accCurrency, targetCurrency);
-        const riskRes = await currencyService.convertAmount(rawRisk, accCurrency, targetCurrency);
-        convertedPnl = pnlRes.convertedAmount ?? rawPnl;
-        convertedRisk = riskRes.convertedAmount ?? rawRisk;
+        const cacheKey = `${accCurrency}_${targetCurrency}`;
+        let rate = rateCache.get(cacheKey);
+        if (rate === undefined) {
+          const converted = await currencyService.convertAmount(1, accCurrency, targetCurrency);
+          rate = converted.convertedAmount ?? 1;
+          rateCache.set(cacheKey, rate);
+        }
+        convertedPnl = rawPnl * rate;
+        convertedRisk = rawRisk * rate;
       }
     }
 

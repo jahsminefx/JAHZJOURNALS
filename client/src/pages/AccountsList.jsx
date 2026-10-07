@@ -6,14 +6,18 @@ import api from '../utils/api';
 import AccountTypeCard from '../components/accounts/AccountTypeCard';
 import MTCloudSyncModal from '../components/accounts/MTCloudSyncModal';
 import { useAuth } from '../context/useAuth';
+import { createCacheKey, getCachedData, setCachedData } from '../utils/apiCache';
 
 const isPropFirmAccount = (account) => account.accountCategory === 'PROP_FIRM' || account.isPropFirmAccount;
 
 const AccountsList = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const [accounts, setAccounts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const accountsKey = createCacheKey('/accounts');
+  const cachedAccounts = getCachedData(accountsKey);
+
+  const [accounts, setAccounts] = useState(cachedAccounts ? (Array.isArray(cachedAccounts.data) ? cachedAccounts.data : cachedAccounts.data.accounts || []) : []);
+  const [loading, setLoading] = useState(!cachedAccounts);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [selectedSyncAccount, setSelectedSyncAccount] = useState(null);
 
@@ -29,9 +33,13 @@ const AccountsList = () => {
   const fetchAccounts = async () => {
     try {
       const { data } = await api.get('/accounts');
-      setAccounts(data);
+      const list = Array.isArray(data) ? data : data.accounts || [];
+      setCachedData(accountsKey, list, { staleTime: 120000 });
+      setAccounts(list);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'We couldn\'t load your accounts right now.');
+      if (!cachedAccounts) {
+        toast.error(error.response?.data?.message || 'We couldn\'t load your accounts right now.');
+      }
     } finally {
       setLoading(false);
     }

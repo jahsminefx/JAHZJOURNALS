@@ -10,6 +10,8 @@ import { loadSettings, fetchAndSyncSettings } from '../utils/settings';
 import { formatCurrency } from '../utils/dashboard';
 import { getCurrencySymbol } from '../services/currencyConversionService';
 
+import { createCacheKey, getCachedData, setCachedData } from '../utils/apiCache';
+
 const SESSIONS = [
   { value: '', label: 'All Sessions' },
   { value: 'LONDON', label: 'London' },
@@ -21,17 +23,21 @@ const SESSIONS = [
 
 const TradesList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [trades, setTrades] = useState([]);
+  const queryString = searchParams.toString();
+  const initialParams = Object.fromEntries(new URLSearchParams(queryString).entries());
+  const initialCacheKey = createCacheKey('/trades', initialParams);
+  const initialCached = getCachedData(initialCacheKey);
+
+  const [trades, setTrades] = useState(initialCached ? initialCached.data : []);
   const [accounts, setAccounts] = useState([]);
   const [tradedPairs, setTradedPairs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialCached);
   const [deletingTradeId, setDeletingTradeId] = useState(null);
   const [tradePendingDelete, setTradePendingDelete] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState(() => (loadSettings().journal?.defaultTradeListView || 'table').toLowerCase());
 
-  const queryString = searchParams.toString();
   const pairFilter = searchParams.get('pair') || '';
   const sessionFilter = searchParams.get('session') || '';
   const dateFilter = searchParams.get('date') || '';
@@ -44,8 +50,18 @@ const TradesList = () => {
       }
     });
 
+    const accountsKey = createCacheKey('/accounts');
+    const cachedAccounts = getCachedData(accountsKey);
+    if (cachedAccounts) {
+      setAccounts(Array.isArray(cachedAccounts.data) ? cachedAccounts.data : cachedAccounts.data.accounts || []);
+    }
+
     api.get('/accounts')
-      .then(({ data }) => setAccounts(Array.isArray(data) ? data : data.accounts || []))
+      .then(({ data }) => {
+        const list = Array.isArray(data) ? data : data.accounts || [];
+        setCachedData(accountsKey, list, { staleTime: 120000 });
+        setAccounts(list);
+      })
       .catch((err) => console.error('Failed to load accounts for filter:', err));
   }, []);
 
@@ -95,14 +111,26 @@ const TradesList = () => {
   };
 
   const fetchTrades = useCallback(async () => {
-    try {
+    const params = Object.fromEntries(new URLSearchParams(queryString).entries());
+    const cacheKey = createCacheKey('/trades', params);
+    const cached = getCachedData(cacheKey);
+
+    if (cached) {
+      setTrades(cached.data);
+      setLoading(false);
+    } else {
       setLoading(true);
-      const params = Object.fromEntries(new URLSearchParams(queryString).entries());
+    }
+
+    try {
       const { data } = await api.get('/trades', { params });
+      setCachedData(cacheKey, data, { staleTime: 60000 });
       setTrades(data);
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || 'Couldn\'t load your trades right now.');
+      if (!cached) {
+        toast.error(error.response?.data?.message || 'Couldn\'t load your trades right now.');
+      }
     } finally {
       setLoading(false);
     }

@@ -15,6 +15,7 @@ import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useAuth } from '../context/useAuth';
 import { generatePerformancePdfReport } from '../utils/pdfReportService';
+import { createCacheKey, getCachedData, setCachedData } from '../utils/apiCache';
 
 const groupOptions = [
   { id: 'pair', label: 'Pair / Symbol' },
@@ -107,7 +108,27 @@ const Analytics = () => {
   ), [filters]);
 
   const fetchAnalytics = useCallback(async () => {
-    setLoading(true);
+    const perfKey = createCacheKey(`/analytics/performance?${queryParams.toString()}`);
+    const eqKey = createCacheKey(`/analytics/equity-curve?${filterQuery.toString()}`);
+    const ddKey = createCacheKey(`/analytics/drawdown?${filterQuery.toString()}`);
+    const dirKey = createCacheKey(`/analytics/performance?groupBy=direction&${filterQuery.toString()}`);
+
+    const cachedPerf = getCachedData(perfKey);
+    const cachedEq = getCachedData(eqKey);
+    const cachedDd = getCachedData(ddKey);
+    const cachedDir = getCachedData(dirKey);
+
+    if (cachedPerf && cachedEq && cachedDd && cachedDir) {
+      setPerformance(cachedPerf.data);
+      setEquityCurve(cachedEq.data.data || []);
+      setEquityMetrics(cachedEq.data.metrics || null);
+      setDrawdown(cachedDd.data);
+      setDirectionPerformance(cachedDir.data.data || []);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const [performanceResponse, equityResponse, drawdownResponse, directionResponse] = await Promise.all([
         api.get(`/analytics/performance?${queryParams.toString()}`),
@@ -115,25 +136,42 @@ const Analytics = () => {
         api.get(`/analytics/drawdown?${filterQuery.toString()}`),
         api.get(`/analytics/performance?groupBy=direction&${filterQuery.toString()}`),
       ]);
+
+      setCachedData(perfKey, performanceResponse.data, { staleTime: 60000 });
+      setCachedData(eqKey, equityResponse.data, { staleTime: 60000 });
+      setCachedData(ddKey, drawdownResponse.data, { staleTime: 60000 });
+      setCachedData(dirKey, directionResponse.data, { staleTime: 60000 });
+
       setPerformance(performanceResponse.data);
       setEquityCurve(equityResponse.data.data || []);
       setEquityMetrics(equityResponse.data.metrics || null);
       setDrawdown(drawdownResponse.data);
       setDirectionPerformance(directionResponse.data.data || []);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'We had trouble pulling your analytics.');
+      if (!cachedPerf) {
+        toast.error(error.response?.data?.message || 'We had trouble pulling your analytics.');
+      }
     } finally {
       setLoading(false);
     }
   }, [filterQuery, queryParams]);
 
   useEffect(() => {
+    const accountsKey = createCacheKey('/accounts');
+    const cachedAccounts = getCachedData(accountsKey);
+    if (cachedAccounts) {
+      setAccounts(Array.isArray(cachedAccounts.data) ? cachedAccounts.data : cachedAccounts.data.accounts || []);
+    }
+
     const loadAccounts = async () => {
       try {
         const { data } = await api.get('/accounts');
+        setCachedData(accountsKey, data, { staleTime: 120000 });
         setAccounts(data);
       } catch (error) {
-        toast.error(error.response?.data?.message || 'We couldn\'t load your accounts.');
+        if (!cachedAccounts) {
+          toast.error(error.response?.data?.message || 'We couldn\'t load your accounts.');
+        }
       }
     };
     loadAccounts();
