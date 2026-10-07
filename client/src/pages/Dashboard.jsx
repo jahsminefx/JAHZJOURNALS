@@ -14,6 +14,9 @@ import WeeklyGoalProgress from '../components/dashboard/WeeklyGoalProgress';
 import RecentTrades from '../components/dashboard/RecentTrades';
 import UpgradeCard from '../components/dashboard/UpgradeCard';
 import DisciplineBanner from '../components/dashboard/DisciplineBanner';
+import QuickActionsCard from '../components/dashboard/QuickActionsCard';
+import TradingInsightsCard from '../components/dashboard/TradingInsightsCard';
+import AccountAllocationWidget from '../components/dashboard/AccountAllocationWidget';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import DashboardPromotionBanner from '../components/DashboardPromotionBanner';
 import EdgeFinderWidget from '../components/dashboard/EdgeFinderWidget';
@@ -325,10 +328,16 @@ const Dashboard = () => {
 
             {/* Sidebar & Action Tracking Pillar (4 Cols on XL) */}
             <div className="space-y-4 xl:col-span-4 min-w-0">
+              <QuickActionsCard />
+
+              <TradingInsightsCard dashboard={dashboard} currency={currency} />
+
               <TradingCalendar data={dashboard.calendar || []} currency={currency} />
               
               <WeeklyGoalProgress goals={dashboard.weeklyGoals || []} currency={currency} />
               
+              <AccountAllocationWidget accounts={accounts} currency={currency} />
+
               <RecentTrades trades={dashboard.recentTrades || []} currency={currency} />
 
               <div className="md:hidden">
