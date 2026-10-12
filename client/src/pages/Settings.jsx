@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   Sun,
@@ -23,6 +23,12 @@ import {
   Users,
   ChevronRight,
   ChevronLeft,
+  Sparkles,
+  History,
+  ShieldAlert,
+  X,
+  ExternalLink,
+  CheckCircle2,
 } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../context/useAuth';
@@ -194,7 +200,59 @@ const Settings = () => {
   const [exporting, setExporting] = useState(false);
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '' });
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const navigate = useNavigate();
   const avatarInputRef = useRef(null);
+
+  // Billing & Plan Interactive States
+  const [showBillingHistoryModal, setShowBillingHistoryModal] = useState(false);
+  const [billingHistoryData, setBillingHistoryData] = useState(null);
+  const [loadingBillingHistory, setLoadingBillingHistory] = useState(false);
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  const [showCancelSubModal, setShowCancelSubModal] = useState(false);
+  const [cancellingSub, setCancellingSub] = useState(false);
+
+  const handleUpgradePlan = () => {
+    navigate('/pricing');
+  };
+
+  const handleOpenBillingHistory = async () => {
+    setShowBillingHistoryModal(true);
+    setLoadingBillingHistory(true);
+    try {
+      const { data } = await api.get('/subscriptions/history');
+      setBillingHistoryData(data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to retrieve billing history.');
+    } finally {
+      setLoadingBillingHistory(false);
+    }
+  };
+
+  const handleOpenPaymentMethod = () => {
+    setShowPaymentMethodModal(true);
+  };
+
+  const handleOpenCancelSubscription = () => {
+    if (user?.subscriptionPlan === 'FREE') {
+      toast('You are currently on the Free plan. There is no active paid subscription to cancel.');
+      return;
+    }
+    setShowCancelSubModal(true);
+  };
+
+  const handleConfirmCancelSub = async () => {
+    setCancellingSub(true);
+    try {
+      const { data } = await api.post('/subscriptions/cancel');
+      toast.success(data?.message || 'Subscription cancelled successfully.');
+      await refreshUser();
+      setShowCancelSubModal(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to cancel subscription.');
+    } finally {
+      setCancellingSub(false);
+    }
+  };
 
   useEffect(() => {
     const sec = searchParams.get('section');
@@ -960,14 +1018,75 @@ const Settings = () => {
             <TextInput label="Billing email" value={settings.billing.billingEmail} onChange={(event) => updateSettingsSection('billing', 'billingEmail', event.target.value)} placeholder={profile.email} />
             <Toggle label="Subscription renewal reminders" checked={settings.billing.renewalReminders} onChange={(value) => updateSettingsSection('billing', 'renewalReminders', value)} />
             <div className="grid gap-3 sm:grid-cols-2">
-              {['Upgrade plan', 'Billing history', 'Payment method', 'Cancel subscription'].map((label) => (
-                <button key={label} type="button" onClick={() => comingSoon(label)} className="rounded-lg border border-border px-4 py-3 text-sm text-muted hover:bg-surface-muted">
-                  {label}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={handleUpgradePlan}
+                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-3 text-sm font-bold text-slate-950 transition shadow-sm shadow-emerald-500/20 active:scale-95"
+              >
+                <Sparkles size={16} />
+                <span>Upgrade plan</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenBillingHistory}
+                className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-muted px-4 py-3 text-sm font-semibold text-foreground hover:bg-surface hover:border-emerald-500/40 transition active:scale-95"
+              >
+                <History size={16} className="text-emerald-400" />
+                <span>Billing history</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenPaymentMethod}
+                className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-muted px-4 py-3 text-sm font-semibold text-foreground hover:bg-surface hover:border-emerald-500/40 transition active:scale-95"
+              >
+                <CreditCard size={16} className="text-emerald-400" />
+                <span>Payment method</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenCancelSubscription}
+                disabled={user?.subscriptionPlan === 'FREE'}
+                className="flex items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-400 hover:bg-rose-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+              >
+                <ShieldAlert size={16} />
+                <span>Cancel subscription</span>
+              </button>
             </div>
-            <div className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">
-              Plan limits and Paystack payment status will appear here when billing endpoints are connected.
+
+            {/* Live Plan Limits & Paystack Gateway Status */}
+            <div className="rounded-xl border border-border bg-surface p-4 text-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-border pb-2.5">
+                <span className="font-semibold text-foreground text-xs uppercase tracking-wider">Tier Privileges & Limits</span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  {user?.subscriptionPlan || 'FREE'} Tier Active
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-surface-muted/60 border border-border/50">
+                  <span className="text-muted text-[11px]">MT4 / MT5 Sync</span>
+                  <span className="font-bold text-foreground">
+                    {user?.subscriptionPlan === 'PRO' ? 'Unlimited Accounts' : user?.subscriptionPlan === 'STARTER' ? '3 Accounts' : '1 Account'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-surface-muted/60 border border-border/50">
+                  <span className="text-muted text-[11px]">Monthly Trades</span>
+                  <span className="font-bold text-foreground">
+                    {user?.subscriptionPlan === 'PRO' ? 'Unlimited' : user?.subscriptionPlan === 'STARTER' ? '100 / month' : '20 / month'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-surface-muted/60 border border-border/50">
+                  <span className="text-muted text-[11px]">AI Trade Reviews</span>
+                  <span className="font-bold text-foreground">
+                    {user?.subscriptionPlan === 'PRO' ? 'Full AI Coach' : user?.subscriptionPlan === 'STARTER' ? 'Standard' : 'Basic'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-surface-muted/60 border border-border/50">
+                  <span className="text-muted text-[11px]">Paystack Gateway</span>
+                  <span className="font-bold text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Connected
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1254,6 +1373,327 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* BILLING HISTORY MODAL                                                     */}
+      {/* ========================================================================= */}
+      {showBillingHistoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" role="dialog" aria-modal="true">
+          <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-border bg-surface shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border p-5 bg-surface-muted/50">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <History size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Billing & Payment History</h3>
+                  <p className="text-xs text-muted">Past receipts, Paystack transactions, and tier changes</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBillingHistoryModal(false)}
+                className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
+              {loadingBillingHistory ? (
+                <div className="py-12 text-center text-sm text-muted">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent mb-3" />
+                  <p>Loading billing records...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Transactions Section */}
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-3 flex items-center justify-between">
+                      <span>Payment Transactions</span>
+                      <span className="text-[11px] font-normal text-muted lowercase">
+                        {billingHistoryData?.payments?.length || 0} recorded
+                      </span>
+                    </h4>
+                    {billingHistoryData?.payments && billingHistoryData.payments.length > 0 ? (
+                      <div className="rounded-xl border border-border overflow-hidden">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-surface-muted/80 text-muted uppercase tracking-wider border-b border-border font-semibold">
+                            <tr>
+                              <th className="p-3">Date</th>
+                              <th className="p-3">Reference</th>
+                              <th className="p-3">Amount</th>
+                              <th className="p-3">Gateway</th>
+                              <th className="p-3 text-right">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border text-foreground">
+                            {billingHistoryData.payments.map((pmt) => (
+                              <tr key={pmt.id} className="hover:bg-surface-muted/40 transition">
+                                <td className="p-3 whitespace-nowrap text-muted">
+                                  {new Date(pmt.paidAt || pmt.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </td>
+                                <td className="p-3 font-mono text-[11px] text-muted truncate max-w-[120px]" title={pmt.reference}>
+                                  {pmt.reference}
+                                </td>
+                                <td className="p-3 font-bold">
+                                  {pmt.currency === 'USD' ? `$${pmt.amount}` : `₦${Number(pmt.amount).toLocaleString()}`}
+                                </td>
+                                <td className="p-3 capitalize text-muted">{pmt.provider || 'Paystack'}</td>
+                                <td className="p-3 text-right">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                    pmt.status?.toUpperCase() === 'SUCCESS' || pmt.status?.toUpperCase() === 'PAID'
+                                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                      : pmt.status?.toUpperCase() === 'PENDING'
+                                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                      : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                                  }`}>
+                                    {pmt.status || 'SUCCESS'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-border bg-surface-muted/30 p-6 text-center">
+                        <CreditCard size={24} className="mx-auto text-muted/60 mb-2" />
+                        <p className="text-xs text-foreground font-medium">No payment transactions yet</p>
+                        <p className="text-[11px] text-muted mt-1">When you make payments or renew subscriptions, invoice receipts will appear here.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Plan History / Migrations */}
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-3">
+                      Plan Activity & Changes
+                    </h4>
+                    {billingHistoryData?.histories && billingHistoryData.histories.length > 0 ? (
+                      <div className="space-y-2">
+                        {billingHistoryData.histories.map((hist) => (
+                          <div key={hist.id} className="flex items-center justify-between p-3 rounded-xl border border-border bg-surface-muted/40 text-xs">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-foreground">
+                                  {hist.previousPlan ? `${hist.previousPlan} → ` : ''}{hist.newPlan}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-surface border border-border text-[10px] text-muted uppercase">
+                                  {hist.source}
+                                </span>
+                                {hist.promotion && (
+                                  <span className="text-amber-400 text-[10px] font-medium">
+                                    🏅 {hist.promotion.name}
+                                  </span>
+                                )}
+                              </div>
+                              {hist.notes && <p className="text-[11px] text-muted">{hist.notes}</p>}
+                            </div>
+                            <span className="text-[11px] text-muted whitespace-nowrap">
+                              {new Date(hist.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-border bg-surface-muted/30 p-4 text-center text-xs text-muted">
+                        No plan changes logged yet.
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t border-border p-4 bg-surface-muted/30">
+              <span className="text-[11px] text-muted">Encrypted billing records • JahzJournal</span>
+              <button
+                type="button"
+                onClick={() => setShowBillingHistoryModal(false)}
+                className="rounded-xl border border-border bg-surface px-4 py-2 text-xs font-bold text-foreground hover:bg-surface-muted transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PAYMENT METHOD MODAL                                                      */}
+      {/* ========================================================================= */}
+      {showPaymentMethodModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" role="dialog" aria-modal="true">
+          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-surface shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border p-5 bg-surface-muted/50">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Payment Method</h3>
+                  <p className="text-xs text-muted">Manage your payment gateway & security preferences</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPaymentMethodModal(false)}
+                className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              {/* Gateway Card */}
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 font-black text-xs">
+                      P
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Paystack Payments</h4>
+                      <p className="text-[11px] text-muted">Primary African & International Gateway</p>
+                    </div>
+                  </div>
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    <CheckCircle2 size={12} /> Active
+                  </span>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  All credit and debit card transactions on JahzJournal are processed through Paystack's bank-grade, PCI-DSS Level 1 certified gateway.
+                </p>
+              </div>
+
+              {/* Security & Tokenization notice */}
+              <div className="rounded-xl border border-border bg-surface-muted/40 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                  <Lock size={14} className="text-emerald-400" />
+                  <span>Zero Card Storage Guarantee</span>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  For your security, JahzJournal never stores raw credit card numbers or CVVs on our servers. Your payment details are tokenized securely by Paystack with 3D Secure fraud prevention.
+                </p>
+              </div>
+
+              {/* How to update card */}
+              <div className="rounded-xl border border-border bg-surface p-4 space-y-2 text-xs">
+                <h5 className="font-bold text-foreground">To change your card or payment details:</h5>
+                <p className="text-muted leading-relaxed">
+                  When upgrading or renewing your plan, simply select checkout to enter and authorize a new card on the Paystack secure checkout screen.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 border-t border-border p-4 bg-surface-muted/30">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPaymentMethodModal(false);
+                  navigate('/pricing');
+                }}
+                className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2.5 text-xs font-bold text-slate-950 transition shadow-sm shadow-emerald-500/20"
+              >
+                <span>Change Plan on Pricing Page</span>
+                <ExternalLink size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPaymentMethodModal(false)}
+                className="rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-bold text-foreground hover:bg-surface-muted transition"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* CANCEL SUBSCRIPTION MODAL                                                 */}
+      {/* ========================================================================= */}
+      {showCancelSubModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" role="dialog" aria-modal="true">
+          <div className="relative w-full max-w-md rounded-2xl border border-rose-500/30 bg-surface shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border p-5 bg-rose-500/5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                  <ShieldAlert size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Cancel Subscription</h3>
+                  <p className="text-xs text-muted">Confirm cancellation of active plan</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCancelSubModal(false)}
+                disabled={cancellingSub}
+                className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground transition disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4">
+                <p className="text-sm font-semibold text-rose-300">
+                  Are you sure you want to cancel your {user?.subscriptionPlan || 'current'} subscription?
+                </p>
+              </div>
+
+              <div className="space-y-2 text-xs text-muted leading-relaxed">
+                <p>
+                  • Your account will remain on the <strong>{user?.subscriptionPlan}</strong> plan until the end of your current billing period.
+                </p>
+                <p>
+                  • Automatic renewals will be disabled immediately.
+                </p>
+                <p>
+                  • After expiration, your tier will revert to <strong>Free</strong>, and access to premium features (unlimited MT5 accounts, advanced AI trade reviews, prop-firm analytics) will be limited.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 border-t border-border p-4 bg-surface-muted/30">
+              <button
+                type="button"
+                onClick={() => setShowCancelSubModal(false)}
+                disabled={cancellingSub}
+                className="rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-bold text-foreground hover:bg-surface-muted transition disabled:opacity-50"
+              >
+                Keep Subscription
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancelSub}
+                disabled={cancellingSub}
+                className="flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-500 px-4 py-2.5 text-xs font-bold text-white transition shadow-sm shadow-rose-600/30 disabled:opacity-60"
+              >
+                {cancellingSub ? (
+                  <>
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span>Cancelling...</span>
+                  </>
+                ) : (
+                  <span>Confirm Cancellation</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -206,17 +206,59 @@ const cancelSubscription = async (req, res) => {
       return res.status(400).json({ message: 'You are currently on the Free plan.' });
     }
 
-    await prisma.user.update({
-      where: { id: req.user.id },
-      data: {
-        subscriptionStatus: 'CANCELLED',
-      }
-    });
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: req.user.id },
+        data: {
+          subscriptionStatus: 'CANCELLED',
+        }
+      }),
+      prisma.subscription.updateMany({
+        where: { userId: req.user.id, status: 'ACTIVE' },
+        data: {
+          status: 'CANCELLED',
+          autoRenew: false,
+        }
+      })
+    ]);
 
     res.json({ message: 'Your subscription has been cancelled. It will remain active until the end of your billing cycle.' });
   } catch (error) {
     console.error('Cancel Subscription Error:', error);
     res.status(500).json({ message: 'Failed to cancel subscription.' });
+  }
+};
+
+const getBillingHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const [payments, histories, activeSubscription] = await Promise.all([
+      prisma.payment.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.subscriptionHistory.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        include: { promotion: { select: { name: true, slug: true } } },
+        take: 50,
+      }),
+      prisma.subscription.findFirst({
+        where: { userId, status: 'ACTIVE' },
+        orderBy: { createdAt: 'desc' },
+        include: { promotion: { select: { name: true, slug: true } } },
+      }),
+    ]);
+
+    res.json({
+      payments,
+      histories,
+      activeSubscription,
+    });
+  } catch (error) {
+    console.error('Get Billing History Error:', error);
+    res.status(500).json({ message: 'Failed to retrieve billing history.' });
   }
 };
 
@@ -301,5 +343,6 @@ module.exports = {
   initializeSubscription,
   verifySubscription,
   cancelSubscription,
+  getBillingHistory,
   handlePaystackWebhook,
 };
