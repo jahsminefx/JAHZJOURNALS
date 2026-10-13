@@ -161,7 +161,13 @@ const AccountsList = () => {
             const propFirm = isPropFirmAccount(account);
             const propFirmDetails = account.propFirmAccount;
             const editPath = propFirm ? `/accounts/${account.id}/prop-firm/edit` : `/accounts/${account.id}/edit`;
-            const isSynced = account.cloudSyncEnabled && account.cloudSyncStatus === 'CONNECTED';
+            const isSynced = Boolean(
+              (account.cloudSyncEnabled && account.cloudSyncStatus !== 'ERROR' && account.cloudSyncStatus !== 'DISCONNECTED' && account.cloudSyncStatus !== 'FAILED') ||
+              (account.cloudSyncEnabled && account.cloudAccountId) ||
+              (account.cloudServer && account.cloudLogin) ||
+              account.syncEnabled ||
+              (account.mtAccountNumber && account.mtServerName)
+            );
 
             return (
               <div key={account.id} className="overflow-hidden rounded-xl border border-border bg-surface-muted transition hover:border-green-500">
@@ -182,7 +188,7 @@ const AccountsList = () => {
                       </span>
                       {isSynced && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                          <CheckCircle2 size={11} /> MT5 Synced
+                          <CheckCircle2 size={11} /> Synced
                         </span>
                       )}
                     </div>
@@ -219,9 +225,10 @@ const AccountsList = () => {
                       className={`inline-flex items-center gap-1 text-xs font-bold transition ${
                         isSynced ? 'text-emerald-400 hover:text-emerald-300' : 'text-indigo-400 hover:text-indigo-300'
                       }`}
+                      title={isSynced ? 'Synced with MetaTrader' : 'Sync MT5'}
                     >
-                      <Cloud size={14} />
-                      {isSynced ? 'MT Settings' : 'Sync MT5'}
+                      {isSynced ? <CheckCircle2 size={14} /> : <Cloud size={14} />}
+                      {isSynced ? 'Synced' : 'Sync MT5'}
                     </button>
                   </div>
                   <button type="button" onClick={() => deleteAccount(account)} className="inline-flex items-center gap-1 text-xs text-muted hover:text-red-400">

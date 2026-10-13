@@ -442,9 +442,22 @@ const connectCloudSync = async (req, res) => {
     // Perform initial historical backfill & smart cross-check sync immediately!
     const syncResult = await syncAccountTrades(accountId);
 
+    const updatedAccount = await prisma.tradingAccount.findUnique({
+      where: { id: accountId },
+      include: {
+        propFirmAccount: {
+          include: {
+            phases: { orderBy: { phaseNumber: 'asc' } },
+            progressSnapshots: { orderBy: { recordedAt: 'desc' }, take: 10 },
+          },
+        },
+      },
+    });
+
     return res.status(200).json({
       success: true,
       message: `Cloud MT sync connected successfully! ${syncResult.message}`,
+      account: updatedAccount,
       cloudSyncStatus: 'CONNECTED',
       cloudServer: cleanServer,
       cloudLogin: cleanLogin,
@@ -640,11 +653,20 @@ const disconnectCloudSync = async (req, res) => {
         cloudInvestorPassword: null,
         cloudError: null,
       },
+      include: {
+        propFirmAccount: {
+          include: {
+            phases: { orderBy: { phaseNumber: 'asc' } },
+            progressSnapshots: { orderBy: { recordedAt: 'desc' }, take: 10 },
+          },
+        },
+      },
     });
 
     return res.status(200).json({
       success: true,
       message: 'Cloud MetaTrader Sync disconnected successfully.',
+      account: updatedAccount,
       cloudSyncStatus: updatedAccount.cloudSyncStatus,
     });
   } catch (error) {

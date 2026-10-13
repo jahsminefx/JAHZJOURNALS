@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, SlidersHorizontal, Trophy, Cloud } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, SlidersHorizontal, Trophy, Cloud, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import MTSyncSettings from '../components/accounts/MTSyncSettings';
@@ -251,6 +251,13 @@ const AccountDetail = () => {
   if (!account) return null;
 
   const isPropFirm = account.accountCategory === 'PROP_FIRM' || account.isPropFirmAccount;
+  const isAccountSynced = Boolean(
+    (account.cloudSyncEnabled && account.cloudSyncStatus !== 'ERROR' && account.cloudSyncStatus !== 'DISCONNECTED' && account.cloudSyncStatus !== 'FAILED') ||
+    (account.cloudSyncEnabled && account.cloudAccountId) ||
+    (account.cloudServer && account.cloudLogin) ||
+    account.syncEnabled ||
+    (account.mtAccountNumber && account.mtServerName)
+  );
 
   return (
     <div className="space-y-6 text-foreground">
@@ -267,10 +274,14 @@ const AccountDetail = () => {
           <div className="flex flex-col gap-2 sm:flex-row">
             <a
               href="#mt-sync-section"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+              className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
+                isAccountSynced
+                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                  : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/15'
+              }`}
             >
-              <Cloud size={16} />
-              {account.cloudSyncEnabled ? 'MT5 Synced' : 'Sync MT5'}
+              {isAccountSynced ? <CheckCircle2 size={16} /> : <Cloud size={16} />}
+              {isAccountSynced ? 'Synced' : 'Sync MT5'}
             </a>
             <Link to={`/accounts/${account.id}/prop-firm/edit-account`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-muted">
               <Settings size={16} />
@@ -289,10 +300,14 @@ const AccountDetail = () => {
           <div className="flex flex-col gap-2 sm:flex-row">
             <a
               href="#mt-sync-section"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+              className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
+                isAccountSynced
+                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                  : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/15'
+              }`}
             >
-              <Cloud size={16} />
-              {account.cloudSyncEnabled ? 'MT5 Synced' : 'Sync MT5'}
+              {isAccountSynced ? <CheckCircle2 size={16} /> : <Cloud size={16} />}
+              {isAccountSynced ? 'Synced' : 'Sync MT5'}
             </a>
             <Link to={`/accounts/${account.id}/edit`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400">
               <Settings size={16} />
@@ -306,7 +321,10 @@ const AccountDetail = () => {
 
       {/* MetaTrader Live Sync Settings */}
       <div id="mt-sync-section" className="pt-2">
-        <MTSyncSettings account={account} onAccountUpdated={() => {
+        <MTSyncSettings account={account} onAccountUpdated={(updatedAcc) => {
+          if (updatedAcc && updatedAcc.id) {
+            setAccount((prev) => ({ ...prev, ...updatedAcc }));
+          }
           api.get(`/accounts/${id}`).then(({ data }) => setAccount(data)).catch(console.error);
         }} />
       </div>

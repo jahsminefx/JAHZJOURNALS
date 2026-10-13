@@ -17,7 +17,13 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
 
   if (!account) return null;
 
-  const isCloudConnected = account.cloudSyncEnabled && (account.cloudSyncStatus === 'CONNECTED' || account.cloudSyncStatus === 'CONNECTING');
+  const isCloudConnected = Boolean(
+    (account.cloudSyncEnabled && account.cloudSyncStatus !== 'DISCONNECTED' && account.cloudSyncStatus !== 'ERROR' && account.cloudSyncStatus !== 'FAILED') ||
+    (account.cloudSyncEnabled && account.cloudAccountId) ||
+    (account.cloudServer && account.cloudLogin) ||
+    account.syncEnabled ||
+    (account.mtAccountNumber && account.mtServerName)
+  );
 
   const handleSyncNow = async () => {
     setIsSyncingNow(true);
@@ -161,16 +167,16 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <span className="text-muted block">Broker Server:</span>
-                <span className="font-bold text-foreground font-mono">{account.cloudServer || 'N/A'}</span>
+                <span className="font-bold text-foreground font-mono">{account.cloudServer || account.mtServerName || account.brokerName || 'N/A'}</span>
               </div>
               <div>
                 <span className="text-muted block">MT Account Login:</span>
-                <span className="font-bold text-foreground font-mono">{account.cloudLogin || 'N/A'}</span>
+                <span className="font-bold text-foreground font-mono">{account.cloudLogin || account.mtAccountNumber || 'N/A'}</span>
               </div>
               <div>
                 <span className="text-muted block">Sync Status:</span>
                 <span className="font-bold text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 size={13} /> {account.cloudSyncStatus}
+                  <CheckCircle2 size={13} /> {account.cloudSyncStatus && account.cloudSyncStatus !== 'DISCONNECTED' ? account.cloudSyncStatus : 'CONNECTED'}
                 </span>
               </div>
             </div>
@@ -179,8 +185,8 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
               <p className="text-[11px] text-muted flex items-center gap-1.5">
                 <ShieldCheck size={14} className="text-emerald-400" />
                 Read-Only Investor Password connected.
-                {account.cloudLastSyncedAt && (
-                  <span>Last synced: <strong className="text-foreground">{new Date(account.cloudLastSyncedAt).toLocaleTimeString()}</strong></span>
+                {(account.cloudLastSyncedAt || account.lastSyncedAt) && (
+                  <span>Last synced: <strong className="text-foreground">{new Date(account.cloudLastSyncedAt || account.lastSyncedAt).toLocaleTimeString()}</strong></span>
                 )}
               </p>
 
@@ -342,10 +348,11 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
       <MTCloudSyncModal
         isOpen={isCloudModalOpen}
         onClose={() => setIsCloudModalOpen(false)}
+        account={account}
         accountId={account.id}
         defaultPlatform={account.platform || 'MT5'}
-        onConnected={() => {
-          if (onAccountUpdated) onAccountUpdated();
+        onConnected={(updatedAcc) => {
+          if (onAccountUpdated) onAccountUpdated(updatedAcc);
         }}
       />
 
