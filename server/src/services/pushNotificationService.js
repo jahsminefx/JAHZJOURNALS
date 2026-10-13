@@ -4,37 +4,53 @@ const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Permanent fallback VAPID keys to ensure key stability across all deploys and workers
-const DEFAULT_VAPID_KEYS = {
-    publicKey: "BGiwXGGwzgC48KJWFo-krKlaTF4NbYxSIavtnnM03sd3SP6vZFTFNStOqGGDzEVV6U8CIkZWZow7AfEbABRmoRA",
-    privateKey: "AfWLfjlAezEW3K0aswATOcPzD9aT3vKvBFOekABgmnk"
-};
-
-let vapidKeys = {
-    publicKey: process.env.VAPID_PUBLIC_KEY || DEFAULT_VAPID_KEYS.publicKey,
-    privateKey: process.env.VAPID_PRIVATE_KEY || DEFAULT_VAPID_KEYS.privateKey
-};
-
+// Load VAPID keys securely from environment variables or local gitignored config file
 const keyFilePath = path.join(__dirname, '../../config/vapid_keys.json');
 
-if (fs.existsSync(keyFilePath)) {
-    try {
-        const saved = JSON.parse(fs.readFileSync(keyFilePath, 'utf8'));
-        if (saved.publicKey && saved.privateKey) {
-            vapidKeys.publicKey = saved.publicKey;
-            vapidKeys.privateKey = saved.privateKey;
+let vapidKeys = {
+    publicKey: process.env.VAPID_PUBLIC_KEY || '',
+    privateKey: process.env.VAPID_PRIVATE_KEY || ''
+};
+
+if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
+    if (fs.existsSync(keyFilePath)) {
+        try {
+            const saved = JSON.parse(fs.readFileSync(keyFilePath, 'utf8'));
+            if (saved.publicKey && saved.privateKey) {
+                vapidKeys.publicKey = saved.publicKey;
+                vapidKeys.privateKey = saved.privateKey;
+            }
+        } catch (e) {
+            console.error('Failed to read saved VAPID keys:', e);
         }
+    }
+}
+
+// Fallback: If neither env nor saved file exists (e.g. initial dev setup), generate dynamically
+if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
+    try {
+        const generated = webpush.generateVAPIDKeys();
+        vapidKeys.publicKey = generated.publicKey;
+        vapidKeys.privateKey = generated.privateKey;
+        const configDir = path.dirname(keyFilePath);
+        if (!fs.existsSync(configDir)) {
+            fs.mkdirSync(configDir, { recursive: true });
+        }
+        fs.writeFileSync(keyFilePath, JSON.stringify(vapidKeys, null, 2), 'utf8');
+        console.log('Generated and saved new VAPID keys to local config');
     } catch (e) {
-        console.error('Failed to read saved VAPID keys:', e);
+        console.error('Failed to generate fallback VAPID keys:', e);
     }
 }
 
 const contactEmail = process.env.CONTACT_EMAIL || 'support@jahzjournal.com';
-webpush.setVapidDetails(
-    `mailto:${contactEmail}`,
-    vapidKeys.publicKey,
-    vapidKeys.privateKey
-);
+if (vapidKeys.publicKey && vapidKeys.privateKey) {
+    webpush.setVapidDetails(
+        `mailto:${contactEmail}`,
+        vapidKeys.publicKey,
+        vapidKeys.privateKey
+    );
+}
 
 function getVapidPublicKey() {
     return vapidKeys.publicKey;
