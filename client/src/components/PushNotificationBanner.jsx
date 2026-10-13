@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, BellRing, X, Check, RefreshCw } from 'lucide-react';
+import { Bell, BellRing, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { isPushNotificationSupported, getPushPermissionState, enablePushNotifications } from '../utils/pushNotificationHelper';
-import api from '../utils/api';
+import { 
+  isPushNotificationSupported, 
+  getPushPermissionState, 
+  enablePushNotifications, 
+  syncPushSubscription 
+} from '../utils/pushNotificationHelper';
 
 export default function PushNotificationBanner() {
-  const [permissionState, setPermissionState] = useState('granted'); // default to granted so it hides while checking
+  const [permissionState, setPermissionState] = useState('checking');
   const [loading, setLoading] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -15,11 +18,19 @@ export default function PushNotificationBanner() {
       if (isPushNotificationSupported()) {
         const state = await getPushPermissionState();
         setPermissionState(state);
-        // If user already dismissed this session, don't auto show banner
+
+        // If permission is already granted, silently ensure backend has this device subscribed
+        if (state === 'granted') {
+          syncPushSubscription().catch((err) => console.warn('Banner silent sync error:', err));
+        }
+
+        // If user already dismissed banner this session, don't show
         const sessionDismissed = sessionStorage.getItem('jahzjournal_push_banner_dismissed');
         if (sessionDismissed === 'true') {
           setDismissed(true);
         }
+      } else {
+        setPermissionState('unsupported');
       }
     }
     checkState();
@@ -30,23 +41,11 @@ export default function PushNotificationBanner() {
     try {
       await enablePushNotifications();
       setPermissionState('granted');
-      toast.success('🎉 Push notifications enabled! You will receive instant trade alerts and daily reminders.');
+      toast.success('🎉 Push notifications enabled! You will now receive instant trade alerts and daily check-ins on your device.');
     } catch (err) {
       toast.error(err.message || 'Failed to enable push notifications.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSendTest = async () => {
-    setTesting(true);
-    try {
-      const res = await api.post('/push-notifications/send-test');
-      toast.success(res.data.message || 'Test push notification sent!');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send test push notification.');
-    } finally {
-      setTesting(false);
     }
   };
 
@@ -55,7 +54,8 @@ export default function PushNotificationBanner() {
     sessionStorage.setItem('jahzjournal_push_banner_dismissed', 'true');
   };
 
-  if (!isPushNotificationSupported() || dismissed || permissionState === 'denied' || permissionState === 'granted') {
+  // Only display if push is supported, not dismissed, and permission is 'default' (not yet asked)
+  if (!isPushNotificationSupported() || dismissed || permissionState !== 'default') {
     return null;
   }
 
@@ -68,11 +68,11 @@ export default function PushNotificationBanner() {
           </div>
           <div>
             <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-              Enable Web Push Notifications
+              Enable Desktop & Mobile Notifications
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/30">Recommended</span>
             </h4>
             <p className="mt-1 text-xs text-muted leading-relaxed">
-              Get instant alerts for support ticket replies, SuperAdmin broadcasts, and automated <strong>Daily Trading Discipline Reminders</strong> right on your browser.
+              Receive instant alerts for <strong>MT4/MT5 trade syncs</strong>, <strong>support replies</strong>, and automated <strong>Daily Trading Discipline Reminders</strong> directly on your laptop and phone screen.
             </p>
           </div>
         </div>

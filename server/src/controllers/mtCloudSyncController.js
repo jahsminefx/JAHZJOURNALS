@@ -368,7 +368,20 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
         message: pushMsg,
         url: `/trades`,
         category: 'TRADE_SYNC',
+        timestamp: new Date().toISOString(),
       }).catch((err) => console.error('Cloud MT sync push error:', err));
+
+      prisma.notification.create({
+        data: {
+          userId: account.userId,
+          type: 'TRADE_SYNC',
+          category: 'TRADE',
+          title: `⚡ MetaTrader Cloud Sync`,
+          message: pushMsg,
+          actionUrl: `/trades`,
+          isGlobal: false,
+        },
+      }).catch((err) => console.error('Failed to create in-app notification for cloud sync:', err));
     } catch (pushErr) {
       console.error('Failed sending cloud sync push notification:', pushErr);
     }

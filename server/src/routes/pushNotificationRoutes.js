@@ -8,6 +8,7 @@ const { authorize } = require('../middleware/roleMiddleware');
 router.get('/public-key', pushNotificationController.getPublicKey);
 
 // Protected routes for logged-in traders
+router.get('/status', protect, pushNotificationController.getStatus);
 router.post('/subscribe', protect, pushNotificationController.subscribe);
 router.post('/unsubscribe', protect, pushNotificationController.unsubscribe);
 router.post('/send-test', protect, pushNotificationController.sendTest);

@@ -29,6 +29,9 @@ import {
   X,
   ExternalLink,
   CheckCircle2,
+  BellRing,
+  Send,
+  RefreshCw,
 } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../context/useAuth';
@@ -38,6 +41,15 @@ import AiUsageDashboard from '../components/settings/AiUsageDashboard';
 import StrategySettings from '../components/settings/StrategySettings';
 import { useConsent } from '../context/ConsentProvider';
 import { getConsentTimestamp } from '../utils/consentService';
+import {
+  isPushNotificationSupported,
+  getPushPermissionState,
+  getPushBackendStatus,
+  enablePushNotifications,
+  disablePushNotifications,
+  sendTestPushNotification,
+  syncPushSubscription,
+} from '../utils/pushNotificationHelper';
 
 const inputClass = 'mt-2 block w-full rounded-xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground placeholder:text-muted outline-none transition focus:border-emerald-500 focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60 shadow-sm';
 
@@ -210,6 +222,77 @@ const Settings = () => {
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
   const [showCancelSubModal, setShowCancelSubModal] = useState(false);
   const [cancellingSub, setCancellingSub] = useState(false);
+
+  // Web Push Notification Device States
+  const [pushSupported, setPushSupported] = useState(true);
+  const [pushPermission, setPushPermission] = useState('default');
+  const [pushBackendStatus, setPushBackendStatus] = useState({ subscribed: false, deviceCount: 0, devices: [] });
+  const [pushLoading, setPushLoading] = useState(false);
+  const [testingPush, setTestingPush] = useState(false);
+
+  useEffect(() => {
+    async function initPushStatus() {
+      const supported = isPushNotificationSupported();
+      setPushSupported(supported);
+      if (supported) {
+        const perm = await getPushPermissionState();
+        setPushPermission(perm);
+        if (perm === 'granted') {
+          await syncPushSubscription().catch(() => {});
+        }
+        const status = await getPushBackendStatus();
+        setPushBackendStatus(status);
+      }
+    }
+    initPushStatus();
+  }, []);
+
+  const handleEnablePush = async () => {
+    setPushLoading(true);
+    try {
+      await enablePushNotifications();
+      setPushPermission('granted');
+      const status = await getPushBackendStatus();
+      setPushBackendStatus(status);
+      toast.success('🎉 Push notifications enabled! You will now receive instant trade alerts and daily reminders.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to enable push notifications.');
+      const perm = await getPushPermissionState();
+      setPushPermission(perm);
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleDisablePush = async () => {
+    setPushLoading(true);
+    try {
+      await disablePushNotifications();
+      const status = await getPushBackendStatus();
+      setPushBackendStatus(status);
+      setPushPermission('default');
+      toast.success('Push notifications removed for this device.');
+    } catch (err) {
+      toast.error('Failed to disable push notifications.');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleSendTestPush = async () => {
+    setTestingPush(true);
+    try {
+      await syncPushSubscription().catch(() => {});
+      const res = await sendTestPushNotification();
+      toast.success(res.message || 'Test push notification sent! Check your desktop/phone screen.');
+      const status = await getPushBackendStatus();
+      setPushBackendStatus(status);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to send test push notification.');
+    } finally {
+      setTestingPush(false);
+    }
+  };
 
   const handleUpgradePlan = () => {
     navigate('/pricing');
@@ -835,25 +918,117 @@ const Settings = () => {
 };
 
   const renderNotifications = () => (
-    <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('notifications', 'notifications', 'Notification settings saved'); }}>
+    <div className="space-y-6">
+      {/* Desktop & Mobile Push Notifications Card */}
       <SettingsCard
-        title="Notification Settings"
-        description="Choose which reminders and warnings should reach you."
-        actions={<SaveButton section="notifications" savingSection={savingSection} />}
+        title="Desktop & Mobile Push Notifications"
+        description="Receive instant alerts for MT4/MT5 trade syncs, support replies, and daily trading discipline check-ins even when JahzJournal is minimized or closed."
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <Toggle label="Weekly review reminders" checked={settings.notifications.weeklyReviewReminders} onChange={(value) => updateSettingsSection('notifications', 'weeklyReviewReminders', value)} />
-          <Toggle label="Daily journaling reminders" checked={settings.notifications.dailyJournalingReminders} onChange={(value) => updateSettingsSection('notifications', 'dailyJournalingReminders', value)} />
-          <Toggle label="Trade follow-up reminders" checked={settings.notifications.tradeFollowUpReminders} onChange={(value) => updateSettingsSection('notifications', 'tradeFollowUpReminders', value)} />
-          <Toggle label="Risk-limit warnings" checked={settings.notifications.riskLimitWarnings} onChange={(value) => updateSettingsSection('notifications', 'riskLimitWarnings', value)} />
-          <Toggle label="Prop firm drawdown warnings" checked={settings.notifications.propFirmDrawdownWarnings} onChange={(value) => updateSettingsSection('notifications', 'propFirmDrawdownWarnings', value)} />
-          <Toggle label="Mentor feedback notifications" checked={settings.notifications.mentorFeedbackNotifications} onChange={(value) => updateSettingsSection('notifications', 'mentorFeedbackNotifications', value)} />
-          <Toggle label="Product updates" checked={settings.notifications.productUpdates} onChange={(value) => updateSettingsSection('notifications', 'productUpdates', value)} />
-          <Toggle label="Email notifications" checked={settings.notifications.emailNotifications} onChange={(value) => updateSettingsSection('notifications', 'emailNotifications', value)} />
-          <Toggle label="In-app notifications" checked={settings.notifications.inAppNotifications} onChange={(value) => updateSettingsSection('notifications', 'inAppNotifications', value)} />
+        <div className="rounded-xl border border-border bg-surface-muted/50 p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className={`mt-0.5 rounded-xl p-3 shrink-0 ${
+                pushPermission === 'granted'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : pushPermission === 'denied'
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              }`}>
+                <BellRing className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-sm font-bold text-foreground">
+                    Device Push Notifications
+                  </h4>
+                  {pushPermission === 'granted' ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/30">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Active on this device
+                    </span>
+                  ) : pushPermission === 'denied' ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-400 border border-red-500/30">
+                      Blocked in browser
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-400 border border-amber-500/30">
+                      Not Enabled
+                    </span>
+                  )}
+                  {pushBackendStatus?.deviceCount > 0 && (
+                    <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted border border-border">
+                      {pushBackendStatus.deviceCount} {pushBackendStatus.deviceCount === 1 ? 'device' : 'devices'} linked
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  {pushPermission === 'granted'
+                    ? 'Your browser is linked to receive native system notifications outside the app. Clicking any notification automatically opens the relevant trade or daily review page.'
+                    : pushPermission === 'denied'
+                    ? 'Notifications are blocked in your browser settings. To enable them, click the padlock/tune icon beside the URL in your browser address bar and set Notifications to "Allow".'
+                    : 'Enable browser notifications to receive real-time MT5 sync alerts and daily morning discipline check-ins on your phone and laptop screen.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0 self-end sm:self-center">
+              {pushPermission === 'granted' ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={testingPush || pushLoading}
+                    onClick={handleSendTestPush}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3.5 py-2 text-xs font-bold text-gray-950 hover:bg-emerald-400 transition-colors shadow-sm disabled:opacity-60"
+                  >
+                    {testingPush ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    {testingPush ? 'Sending Test...' : 'Send Test Notification'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pushLoading}
+                    onClick={handleDisablePush}
+                    className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted hover:text-foreground hover:bg-surface transition-colors"
+                  >
+                    Unlink Device
+                  </button>
+                </>
+              ) : pushPermission === 'default' ? (
+                <button
+                  type="button"
+                  disabled={pushLoading}
+                  onClick={handleEnablePush}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold text-gray-950 hover:bg-emerald-400 transition-colors shadow-md shadow-emerald-500/10 disabled:opacity-60"
+                >
+                  {pushLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
+                  {pushLoading ? 'Enabling...' : 'Enable Push Notifications'}
+                </button>
+              ) : null}
+            </div>
+          </div>
         </div>
       </SettingsCard>
-    </form>
+
+      {/* Notification Preferences Form */}
+      <form onSubmit={(event) => { event.preventDefault(); saveSectionToBackend('notifications', 'notifications', 'Notification settings saved'); }}>
+        <SettingsCard
+          title="Notification Preferences"
+          description="Choose which trading reminders, warnings, and channels should reach you."
+          actions={<SaveButton section="notifications" savingSection={savingSection} />}
+        >
+          <div className="grid gap-3 md:grid-cols-2">
+            <Toggle label="Weekly review reminders" checked={settings.notifications.weeklyReviewReminders} onChange={(value) => updateSettingsSection('notifications', 'weeklyReviewReminders', value)} />
+            <Toggle label="Daily journaling reminders" checked={settings.notifications.dailyJournalingReminders} onChange={(value) => updateSettingsSection('notifications', 'dailyJournalingReminders', value)} />
+            <Toggle label="Trade follow-up reminders" checked={settings.notifications.tradeFollowUpReminders} onChange={(value) => updateSettingsSection('notifications', 'tradeFollowUpReminders', value)} />
+            <Toggle label="Risk-limit warnings" checked={settings.notifications.riskLimitWarnings} onChange={(value) => updateSettingsSection('notifications', 'riskLimitWarnings', value)} />
+            <Toggle label="Prop firm drawdown warnings" checked={settings.notifications.propFirmDrawdownWarnings} onChange={(value) => updateSettingsSection('notifications', 'propFirmDrawdownWarnings', value)} />
+            <Toggle label="Mentor feedback notifications" checked={settings.notifications.mentorFeedbackNotifications} onChange={(value) => updateSettingsSection('notifications', 'mentorFeedbackNotifications', value)} />
+            <Toggle label="Product updates" checked={settings.notifications.productUpdates} onChange={(value) => updateSettingsSection('notifications', 'productUpdates', value)} />
+            <Toggle label="Email notifications" checked={settings.notifications.emailNotifications} onChange={(value) => updateSettingsSection('notifications', 'emailNotifications', value)} />
+            <Toggle label="In-app notifications" checked={settings.notifications.inAppNotifications} onChange={(value) => updateSettingsSection('notifications', 'inAppNotifications', value)} />
+          </div>
+        </SettingsCard>
+      </form>
+    </div>
   );
 
   const renderAppearance = () => (

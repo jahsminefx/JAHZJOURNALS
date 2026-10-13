@@ -5,10 +5,16 @@ import DashboardTopBar from './DashboardTopBar';
 import FoundingTraderWelcomeModal from './FoundingTraderWelcomeModal';
 import UnifiedAssistantWidget from './UnifiedAssistantWidget';
 import PushNotificationBanner from './PushNotificationBanner';
+import { syncPushSubscription } from '../utils/pushNotificationHelper';
 
 const Layout = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
+
+  // Silently sync device push subscription if permission already granted
+  useEffect(() => {
+    syncPushSubscription().catch(() => {});
+  }, []);
 
   // Scroll restoration on route navigation
   useEffect(() => {

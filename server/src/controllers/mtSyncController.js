@@ -148,15 +148,33 @@ const handleMtSyncWebhook = async (req, res) => {
           });
         }
 
+        const notifTitle = isClosed ? `🏁 MT Trade Logged: ${pair} (${result})` : `📈 MT Trade Synced: ${pair} ${direction}`;
+        const notifMsg = isClosed
+          ? `${pair} ${direction} ${lotSize ? lotSize + ' lots' : ''} closed on ${account.name}. P&L: ${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}`
+          : `${pair} ${direction} ${lotSize ? lotSize + ' lots' : ''} logged on ${account.name} @ ${entryPrice || 'market'}.`;
+        const notifUrl = `/trades/${newTrade.id}`;
+
         // Send instant Push Notification for synced trade
         sendPushToUser(account.userId, {
-          title: isClosed ? `🏁 MT Trade Logged: ${pair} (${result})` : `📈 MT Trade Synced: ${pair} ${direction}`,
-          message: isClosed
-            ? `${pair} ${direction} ${lotSize ? lotSize + ' lots' : ''} closed on ${account.name}. P&L: ${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}`
-            : `${pair} ${direction} ${lotSize ? lotSize + ' lots' : ''} logged on ${account.name} @ ${entryPrice || 'market'}.`,
-          url: `/trades/${newTrade.id}`,
-          category: 'TRADE_SYNC'
+          title: notifTitle,
+          message: notifMsg,
+          url: notifUrl,
+          category: 'TRADE_SYNC',
+          timestamp: now.toISOString()
         }).catch(err => console.error('MT sync push error:', err));
+
+        // Create in-app notification
+        prisma.notification.create({
+          data: {
+            userId: account.userId,
+            type: 'TRADE_SYNC',
+            category: 'TRADE',
+            title: notifTitle,
+            message: notifMsg,
+            actionUrl: notifUrl,
+            isGlobal: false
+          }
+        }).catch(err => console.error('Failed to create in-app notification for MT trade:', err));
 
         processedCount++;
       } else {
@@ -226,6 +244,33 @@ const handleMtSyncWebhook = async (req, res) => {
             where: { id: account.id },
             data: { lastSyncedAt: now },
           });
+        }
+
+        // Notify user if trade closed in this sync update
+        if (nowClosing) {
+          const closeTitle = `🏁 MT Trade Closed: ${existingTrade.pair} (${result})`;
+          const closeMsg = `${existingTrade.pair} ${existingTrade.direction} closed on ${account.name}. P&L: ${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}`;
+          const closeUrl = `/trades/${existingTrade.id}`;
+
+          sendPushToUser(account.userId, {
+            title: closeTitle,
+            message: closeMsg,
+            url: closeUrl,
+            category: 'TRADE_SYNC',
+            timestamp: now.toISOString(),
+          }).catch(err => console.error('MT close push error:', err));
+
+          prisma.notification.create({
+            data: {
+              userId: account.userId,
+              type: 'TRADE_SYNC',
+              category: 'TRADE',
+              title: closeTitle,
+              message: closeMsg,
+              actionUrl: closeUrl,
+              isGlobal: false,
+            },
+          }).catch(err => console.error('Failed to log closed trade notification to DB:', err));
         }
 
         updatedCount++;

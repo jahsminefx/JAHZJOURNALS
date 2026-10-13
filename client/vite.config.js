@@ -12,6 +12,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
+        importScripts: ['/sw-push.js'],
         maximumFileSizeToCacheInBytes: 5000000,
         globPatterns: ['**/*.{js,css,html,ico,svg,webp,json}'], // Cache all structural assets
         runtimeCaching: [
