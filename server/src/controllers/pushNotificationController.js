@@ -98,10 +98,17 @@ exports.sendTest = async (req, res) => {
             console.error('Failed to log test notification to DB:', dbErr);
         }
 
-        if (result.sent === 0) {
+        if (result.count === 0) {
             return res.status(400).json({
                 error: 'No Active Subscription',
                 message: 'No active push subscriptions found for your account in the database. Please click "Enable Push Notifications" on this device first.'
+            });
+        }
+
+        if (result.sent === 0) {
+            return res.status(502).json({
+                error: 'Delivery Failed',
+                message: `Failed to deliver push to your device (${result.error || 'Push gateway rejected subscription'}). Stale keys were cleared; please click "Send Test Notification" again to verify.`
             });
         }
 

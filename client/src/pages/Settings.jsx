@@ -282,13 +282,16 @@ const Settings = () => {
   const handleSendTestPush = async () => {
     setTestingPush(true);
     try {
-      await syncPushSubscription().catch(() => {});
+      // Guarantee browser is synchronized with active permanent VAPID key
+      await syncPushSubscription(true).catch(() => {});
       const res = await sendTestPushNotification();
       toast.success(res.message || 'Test push notification sent! Check your desktop/phone screen.');
       const status = await getPushBackendStatus();
       setPushBackendStatus(status);
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Failed to send test push notification.');
+      const status = await getPushBackendStatus().catch(() => null);
+      if (status) setPushBackendStatus(status);
     } finally {
       setTestingPush(false);
     }

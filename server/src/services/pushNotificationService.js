@@ -4,46 +4,37 @@ const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// Permanent fallback VAPID keys to ensure key stability across all deploys and workers
+const DEFAULT_VAPID_KEYS = {
+    publicKey: "BGiwXGGwzgC48KJWFo-krKlaTF4NbYxSIavtnnM03sd3SP6vZFTFNStOqGGDzEVV6U8CIkZWZow7AfEbABRmoRA",
+    privateKey: "AfWLfjlAezEW3K0aswATOcPzD9aT3vKvBFOekABgmnk"
+};
+
 let vapidKeys = {
-    publicKey: process.env.VAPID_PUBLIC_KEY,
-    privateKey: process.env.VAPID_PRIVATE_KEY
+    publicKey: process.env.VAPID_PUBLIC_KEY || DEFAULT_VAPID_KEYS.publicKey,
+    privateKey: process.env.VAPID_PRIVATE_KEY || DEFAULT_VAPID_KEYS.privateKey
 };
 
 const keyFilePath = path.join(__dirname, '../../config/vapid_keys.json');
 
-if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
-    if (fs.existsSync(keyFilePath)) {
-        try {
-            const saved = JSON.parse(fs.readFileSync(keyFilePath, 'utf8'));
+if (fs.existsSync(keyFilePath)) {
+    try {
+        const saved = JSON.parse(fs.readFileSync(keyFilePath, 'utf8'));
+        if (saved.publicKey && saved.privateKey) {
             vapidKeys.publicKey = saved.publicKey;
             vapidKeys.privateKey = saved.privateKey;
-        } catch (e) {
-            console.error('Failed to read saved VAPID keys:', e);
         }
-    }
-
-    if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
-        const generated = webpush.generateVAPIDKeys();
-        vapidKeys.publicKey = generated.publicKey;
-        vapidKeys.privateKey = generated.privateKey;
-        try {
-            const dir = path.dirname(keyFilePath);
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-            fs.writeFileSync(keyFilePath, JSON.stringify(vapidKeys, null, 2), 'utf8');
-        } catch (e) {
-            console.error('Failed to save VAPID keys:', e);
-        }
+    } catch (e) {
+        console.error('Failed to read saved VAPID keys:', e);
     }
 }
 
-if (vapidKeys.publicKey && vapidKeys.privateKey) {
-    const contactEmail = process.env.CONTACT_EMAIL || 'support@jahzjournal.com';
-    webpush.setVapidDetails(
-        `mailto:${contactEmail}`,
-        vapidKeys.publicKey,
-        vapidKeys.privateKey
-    );
-}
+const contactEmail = process.env.CONTACT_EMAIL || 'support@jahzjournal.com';
+webpush.setVapidDetails(
+    `mailto:${contactEmail}`,
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+);
 
 function getVapidPublicKey() {
     return vapidKeys.publicKey;
@@ -105,6 +96,7 @@ async function sendPushToUser(userId, payload) {
 
         const pushData = typeof payload === 'string' ? payload : JSON.stringify(payload);
         let sentCount = 0;
+        let lastError = null;
 
         for (const sub of subscriptions) {
             const pushSubscription = {
@@ -119,16 +111,16 @@ async function sendPushToUser(userId, payload) {
                 await webpush.sendNotification(pushSubscription, pushData);
                 sentCount++;
             } catch (err) {
-                // If subscription expired or unregistered (404/410), delete it
-                if (err.statusCode === 404 || err.statusCode === 410) {
+                lastError = err.message || 'Push gateway rejected notification';
+                console.error(`Web Push error for user ${userId} (status ${err.statusCode}):`, err.message);
+                // If subscription expired, unregistered, or invalid key/signature (400, 401, 404, 410), delete stale record
+                if (err.statusCode === 404 || err.statusCode === 410 || err.statusCode === 400 || err.statusCode === 401) {
                     await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
-                } else {
-                    console.error(`Web Push error for user ${userId}:`, err.message);
                 }
             }
         }
 
-        return { count: subscriptions.length, sent: sentCount };
+        return { count: subscriptions.length, sent: sentCount, error: lastError };
     } catch (err) {
         console.error('Error sending push to user:', err);
         return { count: 0, sent: 0, error: err.message };
@@ -150,6 +142,7 @@ async function sendPushToAll(payload, targetUserIds = []) {
 
         const pushData = typeof payload === 'string' ? payload : JSON.stringify(payload);
         let sentCount = 0;
+        let lastError = null;
 
         for (const sub of subscriptions) {
             const pushSubscription = {
@@ -164,13 +157,14 @@ async function sendPushToAll(payload, targetUserIds = []) {
                 await webpush.sendNotification(pushSubscription, pushData);
                 sentCount++;
             } catch (err) {
-                if (err.statusCode === 404 || err.statusCode === 410) {
+                lastError = err.message || 'Push gateway rejected notification';
+                if (err.statusCode === 404 || err.statusCode === 410 || err.statusCode === 400 || err.statusCode === 401) {
                     await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
                 }
             }
         }
 
-        return { count: subscriptions.length, sent: sentCount };
+        return { count: subscriptions.length, sent: sentCount, error: lastError };
     } catch (err) {
         console.error('Error sending push broadcast:', err);
         return { count: 0, sent: 0, error: err.message };

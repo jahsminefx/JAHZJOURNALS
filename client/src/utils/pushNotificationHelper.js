@@ -11,6 +11,15 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
+function areUint8ArraysEqual(a, b) {
+  if (!a || !b) return false;
+  if (a.byteLength !== b.byteLength) return false;
+  for (let i = 0; i < a.byteLength; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 export function isPushNotificationSupported() {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }
@@ -43,9 +52,10 @@ export async function getPushBackendStatus() {
 
 /**
  * Silently syncs push subscription if the user already granted browser permission.
- * Ensures the device is linked to the logged-in user in PostgreSQL PushSubscription table.
+ * Validates that existing subscription matches the backend's current VAPID key.
+ * If key mismatch is detected or forceResubscribe is true, re-subscribes with current key.
  */
-export async function syncPushSubscription() {
+export async function syncPushSubscription(forceResubscribe = false) {
   if (!isPushNotificationSupported()) return null;
   if (Notification.permission !== 'granted') return null;
 
@@ -53,15 +63,33 @@ export async function syncPushSubscription() {
     const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     await navigator.serviceWorker.ready;
 
+    // Fetch the backend's current permanent VAPID public key
+    const res = await api.get('/push-notifications/public-key');
+    const { publicKey } = res.data;
+    if (!publicKey) return null;
+
+    const convertedKey = urlBase64ToUint8Array(publicKey);
     let subscription = await registration.pushManager.getSubscription();
 
-    if (!subscription) {
-      // Permission is granted, but browser PushManager has not subscribed yet
-      const res = await api.get('/push-notifications/public-key');
-      const { publicKey } = res.data;
-      if (!publicKey) return null;
+    // Verify key match
+    if (subscription) {
+      let isMismatch = forceResubscribe;
+      if (!isMismatch && subscription.options?.applicationServerKey) {
+        const currentKeyBuffer = new Uint8Array(subscription.options.applicationServerKey);
+        if (!areUint8ArraysEqual(currentKeyBuffer, convertedKey)) {
+          isMismatch = true;
+        }
+      }
 
-      const convertedKey = urlBase64ToUint8Array(publicKey);
+      if (isMismatch) {
+        console.warn('VAPID key mismatch detected. Re-subscribing browser with active key...');
+        await api.post('/push-notifications/unsubscribe', { endpoint: subscription.endpoint }).catch(() => {});
+        await subscription.unsubscribe().catch(() => {});
+        subscription = null;
+      }
+    }
+
+    if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: convertedKey
@@ -75,14 +103,14 @@ export async function syncPushSubscription() {
 
     return subscription;
   } catch (err) {
-    console.warn('Silent push subscription sync error:', err?.message || err);
+    console.warn('Push subscription sync notice:', err?.message || err);
     return null;
   }
 }
 
 /**
  * Prompts user for browser notification permission, registers service worker,
- * subscribes to PushManager, and records endpoint in the backend.
+ * and ensures device is subscribed with the active permanent VAPID key.
  */
 export async function enablePushNotifications() {
   if (!isPushNotificationSupported()) {
@@ -94,28 +122,11 @@ export async function enablePushNotifications() {
     throw new Error('Push notification permission was denied. Please allow notifications in your browser settings.');
   }
 
-  // Register service worker
-  const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-  await navigator.serviceWorker.ready;
-
-  // Fetch VAPID public key from backend
-  const res = await api.get('/push-notifications/public-key');
-  const { publicKey } = res.data;
-
-  if (!publicKey) {
-    throw new Error('VAPID public key unavailable.');
+  // Force clean subscription with the active permanent key
+  const subscription = await syncPushSubscription(true);
+  if (!subscription) {
+    throw new Error('Failed to subscribe device with browser push manager.');
   }
-
-  const convertedKey = urlBase64ToUint8Array(publicKey);
-
-  // Subscribe browser PushManager
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: convertedKey
-  });
-
-  // Post subscription to backend API
-  await api.post('/push-notifications/subscribe', subscription.toJSON());
 
   return subscription;
 }
@@ -129,7 +140,7 @@ export async function disablePushNotifications() {
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
         await api.post('/push-notifications/unsubscribe', { endpoint: subscription.endpoint }).catch(() => {});
-        await subscription.unsubscribe();
+        await subscription.unsubscribe().catch(() => {});
       }
     }
   } catch (err) {
@@ -138,6 +149,8 @@ export async function disablePushNotifications() {
 }
 
 export async function sendTestPushNotification() {
+  // Sync first to ensure device is registered with active key
+  await syncPushSubscription();
   const res = await api.post('/push-notifications/send-test');
   return res.data;
 }
