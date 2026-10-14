@@ -66,7 +66,7 @@ const Register = () => {
   };
 
   return (
-    <AuthLayout title="Begin your journey" subtitle="A space for clarity, growth, and honest reflection.">
+    <AuthLayout title="Begin your journey" subtitle="A space for clarity, growth, and honest reflection." backTo="/">
       {promoParam && (
         <div className="mb-4 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
           <span>🔥</span>

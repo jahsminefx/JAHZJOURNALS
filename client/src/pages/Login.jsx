@@ -52,7 +52,7 @@ const Login = () => {
   };
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Your journal is waiting. Pick up where you left off.">
+    <AuthLayout title="Welcome back" subtitle="Your journal is waiting. Pick up where you left off." backTo="/">
       <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
         <div>
           <label htmlFor="email" className="block text-xs font-bold text-foreground mb-1.5">Email</label>

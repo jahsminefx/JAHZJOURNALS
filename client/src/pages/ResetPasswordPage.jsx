@@ -59,7 +59,7 @@ const ResetPasswordPage = () => {
   };
 
   return (
-    <AuthLayout title="Set New Password" subtitle="Enter your 6-digit reset code and your new password.">
+    <AuthLayout title="Set New Password" subtitle="Enter your 6-digit reset code and your new password." backTo="/login">
       {isSuccess ? (
         <div className="space-y-6 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-lg">

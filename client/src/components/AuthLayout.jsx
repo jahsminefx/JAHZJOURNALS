@@ -4,15 +4,11 @@ import { ArrowLeft } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import authTradingBg from '../assets/auth-trading-bg.jpg';
 
-const AuthLayout = ({ title, subtitle, backTo, backLabel, showBack = true, children }) => {
+const AuthLayout = ({ title, subtitle, backTo = '/', backLabel, showBack = true, children }) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
+    navigate(backTo || '/');
   };
 
   return (
@@ -45,24 +41,13 @@ const AuthLayout = ({ title, subtitle, backTo, backLabel, showBack = true, child
           <div className="p-6 sm:p-8 lg:p-10">
             <div className="mb-6 flex items-center justify-between">
               {showBack && (
-                backTo ? (
-                  <Link
-                    to={backTo}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-muted/60 px-3 py-1.5 text-xs font-bold text-muted hover:border-emerald-500/40 hover:bg-surface-muted hover:text-foreground transition-all group shadow-sm"
-                  >
-                    <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
-                    <span>{backLabel || 'Back'}</span>
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-muted/60 px-3 py-1.5 text-xs font-bold text-muted hover:border-emerald-500/40 hover:bg-surface-muted hover:text-foreground transition-all group shadow-sm"
-                  >
-                    <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
-                    <span>{backLabel || 'Back'}</span>
-                  </button>
-                )
+                <Link
+                  to={backTo || '/'}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-muted/60 px-3 py-1.5 text-xs font-bold text-muted hover:border-emerald-500/40 hover:bg-surface-muted hover:text-foreground transition-all group shadow-sm"
+                >
+                  <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
+                  <span>{backLabel || 'Back'}</span>
+                </Link>
               )}
               <BrandLogo className="lg:hidden" size="sm" />
             </div>

@@ -19,6 +19,7 @@ const getCookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.COOKIE_SAME_SITE || 'lax',
+  path: '/',
 });
 
 const getAuthCookieOptions = () => ({
@@ -29,6 +30,7 @@ const getAuthCookieOptions = () => ({
 const getClearCookieOptions = () => ({
   ...getCookieOptions(),
   expires: new Date(0),
+  maxAge: 0,
 });
 
 module.exports = {

@@ -36,7 +36,7 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <AuthLayout title="Reset Your Password" subtitle="Enter your email to receive a 6-digit verification code.">
+    <AuthLayout title="Reset Your Password" subtitle="Enter your email to receive a 6-digit verification code." backTo="/login">
       {isSubmitted ? (
         <div className="space-y-6 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-lg">

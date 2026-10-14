@@ -100,4 +100,22 @@ test.describe('Global Theme System', () => {
     await page.goto('/login');
     await expect(page.locator('html')).toHaveClass(/dark/);
   });
+
+  test('back button on login and register pages navigates to home page', async ({ page }) => {
+    // 1. On /login, clicking Back should navigate to /
+    await page.goto('/login');
+    const loginBackLink = page.locator('a:has-text("Back")');
+    await expect(loginBackLink).toBeVisible();
+    await expect(loginBackLink).toHaveAttribute('href', '/');
+    await loginBackLink.click();
+    await expect(page).toHaveURL('http://localhost:5174/');
+
+    // 2. On /register, clicking Back should navigate to /
+    await page.goto('/register');
+    const registerBackLink = page.locator('a:has-text("Back")');
+    await expect(registerBackLink).toBeVisible();
+    await expect(registerBackLink).toHaveAttribute('href', '/');
+    await registerBackLink.click();
+    await expect(page).toHaveURL('http://localhost:5174/');
+  });
 });
