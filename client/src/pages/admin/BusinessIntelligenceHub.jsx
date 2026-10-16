@@ -24,7 +24,7 @@ const BusinessIntelligenceHub = () => {
         const pullAnalytics = async () => {
             setLoading(true);
             try {
-                if (activeTab === 'executive' && !execData) {
+                if ((activeTab === 'executive' || activeTab === 'revenue') && !execData) {
                     const res = await api.get('/admin/business/executive');
                     setExecData(res.data);
                 }
@@ -256,7 +256,101 @@ const BusinessIntelligenceHub = () => {
                {activeTab === 'revenue' && (
                   <div className="flex flex-col items-center justify-center py-20">
                      <DollarSign size={64} className="text-amber-500/20 mb-6" />
-                     <h2 className="text-xl font-black uppercase tracking-widest text-muted-foreground mb-2">Revenue Trends Coming Soon</h2>
+                     <div className="w-full space-y-6 text-left">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+                           <div>
+                              <h2 className="text-lg font-black tracking-wide text-foreground">Revenue & Paystack Gateway Telemetry</h2>
+                              <p className="text-xs text-muted-foreground">Live collection metrics, recurring subscription value, and Paystack receipts</p>
+                           </div>
+                           <div className="flex items-center gap-2">
+                              <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border ${
+                                 execData?.revenue?.paystackMode === 'LIVE'
+                                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                                    : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                              }`}>
+                                 {execData?.revenue?.status || 'PAYSTACK_CONNECTED'}
+                              </span>
+                              <button
+                                 onClick={() => navigate('/admin/subscriptions')}
+                                 className="px-3 py-1.5 rounded-lg bg-surface-muted border border-border text-xs font-bold hover:text-amber-500 transition"
+                              >
+                                 Manage All Payments →
+                              </button>
+                           </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                           <div className="p-4 rounded-xl border border-border bg-surface-muted/40">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Collected (NGN)</p>
+                              <p className="text-2xl font-black text-emerald-500 mt-1">{execData?.revenue?.totalCollectedText || '₦0'}</p>
+                              <p className="text-[11px] text-muted-foreground mt-1">{execData?.revenue?.successfulPaymentsCount || 0} successful transactions</p>
+                           </div>
+                           <div className="p-4 rounded-xl border border-border bg-surface-muted/40">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">30-Day Collected</p>
+                              <p className="text-2xl font-black text-foreground mt-1">₦{Number(execData?.revenue?.collectedLast30DaysNgn || 0).toLocaleString()}</p>
+                              <p className="text-[11px] text-muted-foreground mt-1">Rolling 30-day cashflow</p>
+                           </div>
+                           <div className="p-4 rounded-xl border border-border bg-surface-muted/40">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Paid Subscriptions</p>
+                              <p className="text-2xl font-black text-blue-500 mt-1">{execData?.revenue?.activePaidSubscriptions || 0}</p>
+                              <p className="text-[11px] text-muted-foreground mt-1">MRR: {execData?.revenue?.mrrText || '₦0'}</p>
+                           </div>
+                           <div className="p-4 rounded-xl border border-border bg-surface-muted/40">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Annualized Run Rate (ARR)</p>
+                              <p className="text-2xl font-black text-purple-500 mt-1">{execData?.revenue?.arrText || '₦0'}</p>
+                              <p className="text-[11px] text-muted-foreground mt-1">Projected 12-month recurring</p>
+                           </div>
+                        </div>
+
+                        <div className="space-y-3">
+                           <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Recent Paystack Transactions</h3>
+                           {execData?.revenue?.recentPayments?.length > 0 ? (
+                              <div className="overflow-x-auto border border-border rounded-xl">
+                                 <table className="w-full text-left text-xs">
+                                    <thead className="bg-surface-muted border-b border-border uppercase font-extrabold text-muted-foreground">
+                                       <tr>
+                                          <th className="p-3">Date</th>
+                                          <th className="p-3">Trader</th>
+                                          <th className="p-3">Reference</th>
+                                          <th className="p-3">Amount</th>
+                                          <th className="p-3">Status</th>
+                                       </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                       {execData.revenue.recentPayments.map((pmt) => (
+                                          <tr key={pmt.id} className="hover:bg-surface-muted/50 transition">
+                                             <td className="p-3 text-muted-foreground whitespace-nowrap">
+                                                {new Date(pmt.paidAt || pmt.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                             </td>
+                                             <td className="p-3">
+                                                <div className="font-bold text-foreground">{pmt.user?.name || 'Trader'}</div>
+                                                <div className="text-[10px] text-muted-foreground">{pmt.user?.email}</div>
+                                             </td>
+                                             <td className="p-3 font-mono text-[11px] text-muted-foreground">{pmt.reference}</td>
+                                             <td className="p-3 font-black text-foreground">
+                                                {pmt.currency === 'USD' ? `$${Number(pmt.amount).toLocaleString()}` : `₦${Number(pmt.amount).toLocaleString()}`}
+                                             </td>
+                                             <td className="p-3">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                                   pmt.status === 'SUCCESS'
+                                                      ? 'bg-emerald-500/15 text-emerald-500'
+                                                      : pmt.status === 'PENDING'
+                                                      ? 'bg-amber-500/15 text-amber-500'
+                                                      : 'bg-slate-500/15 text-muted-foreground'
+                                                }`}>
+                                                   {pmt.status}
+                                                </span>
+                                             </td>
+                                          </tr>
+                                       ))}
+                                    </tbody>
+                                 </table>
+                              </div>
+                           ) : (
+                              <p className="text-xs text-muted-foreground py-4">No payment records found.</p>
+                           )}
+                        </div>
+                     </div>
                      <p className="text-sm font-medium text-muted-foreground text-center max-w-md">Detailed monthly revenue charts and cohort analytics are being finalized and will be available here.</p>
                   </div>
                )}

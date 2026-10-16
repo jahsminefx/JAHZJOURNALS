@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Building2, Settings, ShieldCheck, Trash2, Wallet, Cloud, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Building2, Settings, ShieldCheck, Trash2, Wallet, Cloud, Sparkles, CheckCircle2, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import AccountTypeCard from '../components/accounts/AccountTypeCard';
@@ -83,15 +83,11 @@ const AccountsList = () => {
       </div>
 
       <div className="grid gap-5 md:grid-cols-3">
-        {/* Featured Card: 1-Click MetaTrader Auto-Sync (Zero Manual Setup) */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-b from-emerald-500/10 via-surface-muted to-surface p-6 shadow-md flex flex-col justify-between group hover:border-emerald-400 transition-all">
+        {/* Featured Card: 1-Click MetaTrader Auto-Sync (Coming Soon) */}
+        <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-b from-emerald-500/10 via-surface-muted to-surface p-6 shadow-md flex flex-col justify-between group hover:border-emerald-400 transition-all">
           <div className="absolute top-3 right-3">
-            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-sm ${
-              isAllowedSync
-                ? 'bg-emerald-500 text-slate-950'
-                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-            }`}>
-              <Sparkles size={11} /> {isAllowedSync ? '100% Automated' : 'Starter & Pro'}
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm">
+              <Clock size={11} /> Coming Soon (Starter & Pro)
             </span>
           </div>
           <div>
@@ -100,7 +96,7 @@ const AccountsList = () => {
             </div>
             <h3 className="text-lg font-black text-foreground">MetaTrader 4 / 5 Auto-Sync</h3>
             <p className="mt-2 text-xs leading-relaxed text-muted">
-              Connect in 1 click via investor password. We automatically import your broker, live balance, currency, and trade history—zero manual typing!
+              1-Click cloud sync via investor password is coming soon exclusively for Starter & Pro accounts. Zero manual typing 24/7.
             </p>
           </div>
           <button
@@ -109,10 +105,10 @@ const AccountsList = () => {
               setSelectedSyncAccount(null);
               setIsCloudModalOpen(true);
             }}
-            className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-black text-slate-950 hover:bg-emerald-400 transition shadow-sm"
+            className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl bg-amber-500/20 border border-amber-500/40 px-4 py-2.5 text-xs font-black text-amber-300 hover:bg-amber-500/30 transition shadow-sm"
           >
-            <Cloud size={16} />
-            {isAllowedSync ? 'Connect MetaTrader Now' : 'Connect MetaTrader (Starter & Pro)'}
+            <Clock size={16} />
+            Coming Soon (Starter & Pro)
           </button>
         </div>
 
@@ -223,12 +219,12 @@ const AccountsList = () => {
                         setIsCloudModalOpen(true);
                       }}
                       className={`inline-flex items-center gap-1 text-xs font-bold transition ${
-                        isSynced ? 'text-emerald-400 hover:text-emerald-300' : 'text-indigo-400 hover:text-indigo-300'
+                        isSynced ? 'text-emerald-400 hover:text-emerald-300' : 'text-amber-400 hover:text-amber-300'
                       }`}
-                      title={isSynced ? 'Synced with MetaTrader' : 'Sync MT5'}
+                      title={isSynced ? 'Synced with MetaTrader' : 'MetaTrader Sync (Coming Soon for Starter & Pro)'}
                     >
-                      {isSynced ? <CheckCircle2 size={14} /> : <Cloud size={14} />}
-                      {isSynced ? 'Synced' : 'Sync MT5'}
+                      {isSynced ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                      {isSynced ? 'Synced' : 'Coming Soon'}
                     </button>
                   </div>
                   <button type="button" onClick={() => deleteAccount(account)} className="inline-flex items-center gap-1 text-xs text-muted hover:text-red-400">

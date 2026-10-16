@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { X, Cloud, ShieldCheck, Lock, Eye, EyeOff, Server, User, Cpu, Sparkles, Building2, ShieldCheck as ShieldIcon } from 'lucide-react';
+import { X, Cloud, ShieldCheck, Lock, Eye, EyeOff, Server, User, Cpu, Sparkles, Building2, ShieldCheck as ShieldIcon, Clock, Download, Zap } from 'lucide-react';
 import api from '../../utils/api';
 import Button from '../Button';
 import { popularBrokers } from '../../data/popularBrokers';
 import { useAuth } from '../../context/useAuth';
+
+// Cloud Sync Availability Flag (Set to false once API credits / VPS bridge is deployed)
+export const CLOUD_SYNC_COMING_SOON = true;
 
 const MTCloudSyncModal = ({
   isOpen,
@@ -114,12 +117,12 @@ const MTCloudSyncModal = ({
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                 {isCreateMode ? '1-Click MT5 Auto-Import' : 'MetaTrader 4 / 5 Cloud Sync'}
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                  <Sparkles size={11} /> 100% Automated
+                  <Clock size={11} /> Coming Soon (Starter & Pro)
                 </span>
               </h2>
               <p className="text-xs text-muted">
                 {isCreateMode
-                  ? 'No manual setup needed! We automatically import your balance, broker & trades.'
+                  ? 'Automated 1-click cloud sync is coming soon for Starter & Pro members.'
                   : `Connecting to ${account?.name || 'your trading account'}`}
               </p>
             </div>
@@ -136,18 +139,18 @@ const MTCloudSyncModal = ({
         {/* If Free Tier: Upgrade Prompt */}
         {!isAllowedSync ? (
           <div className="p-6 space-y-5 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-inner">
-              <Sparkles size={32} />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-inner">
+              <Clock size={32} />
             </div>
             <div>
-              <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full mb-2">
-                Starter, Pro & Mentor Feature
+              <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full mb-2">
+                <Clock size={12} /> Coming Soon • Starter & Pro Only
               </span>
               <h3 className="text-xl font-black text-foreground">
                 Automated MetaTrader (MT4/MT5) Cloud Sync
               </h3>
               <p className="mt-2 text-xs leading-relaxed text-muted max-w-md mx-auto">
-                Automatic 1-click cloud sync is available on <strong>Starter (₦4,000/mo)</strong>, <strong>Pro (₦8,000/mo)</strong>, and <strong>Mentor</strong> plans. Connect once with your read-only investor password and your live trades, balance, and executions sync automatically without typing.
+                Automatic 1-click cloud sync is currently coming soon exclusively for <strong>Starter (₦4,000/mo)</strong> and <strong>Pro (₦8,000/mo)</strong> plans. Connect once with your read-only investor password and your live trades, balance, and executions sync automatically without manual typing.
               </p>
             </div>
 
@@ -161,8 +164,8 @@ const MTCloudSyncModal = ({
                 <span>100% read-only investor password security</span>
               </div>
               <div className="flex items-center gap-2 text-foreground font-medium">
-                <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
-                <span>24/7 background sync every 5 minutes</span>
+                <Clock size={16} className="text-amber-400 shrink-0" />
+                <span>Exclusive to Starter & Pro accounts upon launch</span>
               </div>
             </div>
 
@@ -188,8 +191,69 @@ const MTCloudSyncModal = ({
               </Button>
             </div>
           </div>
+        ) : CLOUD_SYNC_COMING_SOON ? (
+          /* Coming Soon View for Starter & Pro accounts */
+          <div className="p-6 space-y-5 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-inner">
+              <Clock size={32} />
+            </div>
+            <div>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full mb-2">
+                <Clock size={12} /> Coming Soon for Starter & Pro
+              </span>
+              <h3 className="text-xl font-black text-foreground">
+                1-Click MetaTrader Cloud Sync
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted max-w-md mx-auto">
+                We are currently upgrading our dedicated server infrastructure to deliver ultra-reliable, high-speed 24/7 background syncing without needing MetaTrader open on your machine.
+              </p>
+              <p className="mt-1.5 text-xs text-emerald-400 font-semibold">
+                As a valued {planKey === 'STARTER' ? 'Starter' : planKey === 'PRO' ? 'Pro' : 'member'}, your account will automatically unlock full access as soon as this launches!
+              </p>
+            </div>
+
+            {/* Instant Free Alternative: Desktop EA */}
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-left space-y-2.5 text-xs">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                <Zap size={16} className="shrink-0" />
+                <span>Want to sync trades right now?</span>
+              </div>
+              <p className="text-muted leading-relaxed">
+                Our <strong>Desktop EA Webhook Sync (Method 2)</strong> is 100% active and free! You can attach our lightweight script to your MT4 or MT5 terminal on your computer or VPS to log trades automatically today.
+              </p>
+              <div className="pt-1 flex flex-wrap gap-2">
+                <a
+                  href="/downloads/JahzJournals_Sync_MT5.mq5"
+                  download
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                >
+                  <Download size={13} />
+                  Download MT5 EA (.mq5)
+                </a>
+                <a
+                  href="/downloads/JahzJournals_Sync_MT4.mq4"
+                  download
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                >
+                  <Download size={13} />
+                  Download MT4 EA (.mq4)
+                </a>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="w-full"
+              >
+                Got It
+              </Button>
+            </div>
+          </div>
         ) : (
-          /* Modal Form */
+          /* Modal Form - 100% Preserved */
           <form onSubmit={handleConnect} className="p-6 space-y-4 overflow-y-auto">
             {/* Security Banner */}
             <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300">

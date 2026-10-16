@@ -16,7 +16,9 @@ const {
   getSubscriptionMetrics,
   getSubscriptionDetails,
   updateSubscription,
-  updateUserSubscriptionDirect
+  updateUserSubscriptionDirect,
+  getAdminPayments,
+  syncAdminPaystack,
 } = require('../controllers/adminSubscriptionController');
 
 const {
@@ -121,6 +123,8 @@ router.get('/audit', authorize('SUPER_ADMIN', 'ADMIN'), getAuditLogs);
 // Subscription Management
 router.get('/subscriptions', authorize('SUPER_ADMIN', 'ADMIN'), getSubscriptions);
 router.get('/subscriptions/metrics', authorize('SUPER_ADMIN', 'ADMIN'), getSubscriptionMetrics);
+router.get('/subscriptions/payments', authorize('SUPER_ADMIN', 'ADMIN'), getAdminPayments);
+router.post('/subscriptions/sync-paystack', authorize('SUPER_ADMIN', 'ADMIN'), syncAdminPaystack);
 router.post('/subscriptions/sweep-expired', authorize('SUPER_ADMIN'), sweepExpiredPromotions);
 router.get('/subscriptions/:id', authorize('SUPER_ADMIN', 'ADMIN'), getSubscriptionDetails);
 router.put('/subscriptions/:id', authorize('SUPER_ADMIN', 'ADMIN'), updateSubscription);

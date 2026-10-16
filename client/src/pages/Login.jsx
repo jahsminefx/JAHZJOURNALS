@@ -45,7 +45,11 @@ const Login = () => {
         navigate(user.onboardingCompleted ? '/dashboard' : '/onboarding', { replace: true });
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Couldn\'t sign you in. Check your details and try again.');
+      if (!error.response) {
+        toast.error('Cannot reach the backend server (port 5000). Make sure the server is running.');
+      } else {
+        toast.error(error.response?.data?.message || 'Couldn\'t sign you in. Check your details and try again.');
+      }
     } finally {
       setIsLoading(false);
     }

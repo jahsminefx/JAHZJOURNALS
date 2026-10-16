@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, SlidersHorizontal, Trophy, Cloud, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, SlidersHorizontal, Trophy, Cloud, CheckCircle2, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import MTSyncSettings from '../components/accounts/MTSyncSettings';
@@ -277,11 +277,11 @@ const AccountDetail = () => {
               className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
                 isAccountSynced
                   ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                  : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/15'
+                  : 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
               }`}
             >
-              {isAccountSynced ? <CheckCircle2 size={16} /> : <Cloud size={16} />}
-              {isAccountSynced ? 'Synced' : 'Sync MT5'}
+              {isAccountSynced ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+              {isAccountSynced ? 'Synced' : 'MT5 Sync (Coming Soon)'}
             </a>
             <Link to={`/accounts/${account.id}/prop-firm/edit-account`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-muted">
               <Settings size={16} />
@@ -303,11 +303,11 @@ const AccountDetail = () => {
               className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
                 isAccountSynced
                   ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                  : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/15'
+                  : 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
               }`}
             >
-              {isAccountSynced ? <CheckCircle2 size={16} /> : <Cloud size={16} />}
-              {isAccountSynced ? 'Synced' : 'Sync MT5'}
+              {isAccountSynced ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+              {isAccountSynced ? 'Synced' : 'MT5 Sync (Coming Soon)'}
             </a>
             <Link to={`/accounts/${account.id}/edit`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400">
               <Settings size={16} />

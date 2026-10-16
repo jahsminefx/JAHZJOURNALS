@@ -18,6 +18,7 @@ async function main() {
   const user = await prisma.user.upsert({
     where: { email },
     update: {
+      passwordHash,
       role: 'SUPER_ADMIN',
       onboardingCompleted: true,
     },

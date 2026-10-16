@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { logAudit } = require('../services/auditService');
+const { syncPaystackTransactions, getPaystackSecret } = require('./subscriptionController');
 
 const getSubscriptions = async (req, res) => {
   try {
@@ -119,13 +120,19 @@ const getSubscriptionDetails = async (req, res) => {
 
     if (!subscription) return res.status(404).json({ message: 'Subscription not found' });
 
-    const history = await prisma.subscriptionHistory.findMany({
-      where: { userId: subscription.userId },
-      include: { promotion: { select: { name: true } } },
-      orderBy: { createdAt: 'desc' }
-    });
+    const [history, payments] = await Promise.all([
+      prisma.subscriptionHistory.findMany({
+        where: { userId: subscription.userId },
+        include: { promotion: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.payment.findMany({
+        where: { userId: subscription.userId },
+        orderBy: { createdAt: 'desc' }
+      })
+    ]);
 
-    res.json({ subscription, history });
+    res.json({ subscription, history, payments });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch subscription details' });
   }
@@ -312,11 +319,110 @@ const updateUserSubscriptionDirect = async (req, res) => {
   }
 };
 
+const getAdminPayments = async (req, res) => {
+  try {
+    const { status, search, sync } = req.query;
+    if (sync === 'true') {
+      await syncPaystackTransactions();
+    }
+
+    const where = {};
+    if (status) {
+      where.status = status.toUpperCase();
+    }
+    if (search) {
+      where.OR = [
+        { reference: { contains: search, mode: 'insensitive' } },
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const payments = await prisma.payment.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            subscriptionPlan: true,
+            subscriptionStatus: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    const allPayments = await prisma.payment.findMany({
+      select: { amount: true, currency: true, status: true },
+    });
+
+    let totalRevenueNgn = 0;
+    let totalRevenueUsd = 0;
+    let successCount = 0;
+    let abandonedCount = 0;
+    let pendingCount = 0;
+
+    for (const p of allPayments) {
+      const st = (p.status || '').toUpperCase();
+      if (st === 'SUCCESS' || st === 'PAID') {
+        successCount++;
+        if (p.currency === 'USD') {
+          totalRevenueUsd += p.amount || 0;
+        } else {
+          totalRevenueNgn += p.amount || 0;
+        }
+      } else if (st === 'ABANDONED') {
+        abandonedCount++;
+      } else if (st === 'PENDING') {
+        pendingCount++;
+      }
+    }
+
+    const secret = getPaystackSecret();
+    const paystackMode = !secret ? 'UNCONFIGURED' : secret.startsWith('sk_live_') ? 'LIVE' : 'TEST';
+
+    res.json({
+      payments,
+      summary: {
+        totalCount: allPayments.length,
+        successCount,
+        abandonedCount,
+        pendingCount,
+        totalRevenueNgn,
+        totalRevenueUsd,
+        paystackMode,
+      },
+    });
+  } catch (error) {
+    console.error('getAdminPayments error:', error);
+    res.status(500).json({ message: 'Failed to fetch payment records.' });
+  }
+};
+
+const syncAdminPaystack = async (req, res) => {
+  try {
+    const syncInfo = await syncPaystackTransactions();
+    res.json({
+      message: `Synchronized ${syncInfo.synced || 0} transaction(s) from Paystack (${syncInfo.mode} mode).`,
+      ...syncInfo,
+    });
+  } catch (error) {
+    console.error('syncAdminPaystack error:', error);
+    res.status(500).json({ message: 'Failed to sync transactions with Paystack.' });
+  }
+};
+
 module.exports = {
   getSubscriptions,
   getSubscriptionMetrics,
   getSubscriptionDetails,
   updateSubscription,
-  updateUserSubscriptionDirect
+  updateUserSubscriptionDirect,
+  getAdminPayments,
+  syncAdminPaystack,
 };
+
 

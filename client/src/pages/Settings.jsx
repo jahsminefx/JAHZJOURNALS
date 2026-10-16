@@ -1566,9 +1566,31 @@ const Settings = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-foreground">Billing & Payment History</h3>
-                  <p className="text-xs text-muted">Past receipts, Paystack transactions, and tier changes</p>
+                  <p className="text-xs text-muted flex items-center gap-2">
+                    <span>Past receipts, Paystack transactions, and tier changes</span>
+                    {billingHistoryData?.paystackMode && billingHistoryData.paystackMode !== 'UNCONFIGURED' && (
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                        billingHistoryData.paystackMode === 'LIVE'
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                      }`}>
+                        {billingHistoryData.paystackMode}
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={loadingBillingHistory}
+                  onClick={handleOpenBillingHistory}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-bold text-foreground hover:bg-surface-muted transition disabled:opacity-50"
+                  title="Sync latest transactions from Paystack"
+                >
+                  <RefreshCw size={13} className={loadingBillingHistory ? 'animate-spin text-emerald-400' : 'text-emerald-400'} />
+                  <span className="hidden sm:inline">Sync</span>
+                </button>
               <button
                 type="button"
                 onClick={() => setShowBillingHistoryModal(false)}
@@ -1576,6 +1598,7 @@ const Settings = () => {
               >
                 <X size={18} />
               </button>
+              </div>
             </div>
 
             {/* Body */}
@@ -1626,9 +1649,29 @@ const Settings = () => {
                                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                                       : pmt.status?.toUpperCase() === 'PENDING'
                                       ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                                      : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                                      : pmt.status?.toUpperCase() === 'ABANDONED' ? 'bg-surface-muted text-muted border border-border' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                                   }`}>
-                                    {pmt.status || 'SUCCESS'}
+                                    {pmt.status || 'SUCCESS'}</span>
+                                  {pmt.status?.toUpperCase() !== 'SUCCESS' && pmt.status?.toUpperCase() !== 'PAID' && (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        const toastId = toast.loading(`Verifying ${pmt.reference}...`);
+                                        try {
+                                          const res = await api.get(`/subscriptions/verify/${encodeURIComponent(pmt.reference)}`);
+                                          toast.success(res.data?.message || 'Payment verified!', { id: toastId });
+                                          await refreshUser();
+                                          await handleOpenBillingHistory();
+                                        } catch (err) {
+                                          toast.error(err.response?.data?.message || 'Transaction not completed on Paystack.', { id: toastId });
+                                          await handleOpenBillingHistory();
+                                        }
+                                      }}
+                                      className="ml-2 px-2 py-0.5 rounded bg-surface-muted hover:bg-emerald-500/15 hover:text-emerald-400 border border-border text-[10px] font-bold text-foreground transition"
+                                    >
+                                      Verify
+                                    </button>
+                                  )}<span>
                                   </span>
                                 </td>
                               </tr>

@@ -96,7 +96,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
     );
   }
 
-  const { subscription, history } = data;
+  const { subscription, history, payments = [] } = data;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-sm">
@@ -171,6 +171,13 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                  </div>
               </div>
 
+              {subscription.paymentReference && (
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs flex items-center justify-between">
+                  <span className="text-muted-foreground font-semibold">Latest Payment Reference:</span>
+                  <span className="font-mono font-bold text-emerald-400">{subscription.paymentReference}</span>
+                </div>
+              )}
+
               {/* Justification barrier to prevent accidental admin damage */}
               <div className="space-y-1.5 pt-4 border-t border-border mt-6">
                 <label className="text-xs font-semibold text-amber-500 flex items-center gap-1.5">
@@ -190,45 +197,95 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
             </form>
           </div>
 
-          {/* HISTORY ZONE */}
-          <div className="p-6 bg-surface-muted/30">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-              <Clock size={16} /> Subscription History & Activity Log
-            </h3>
-            
-            {history.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-xl">No past subscription changes found for this user.</div>
-            ) : (
-              <div className="space-y-4">
-                {history.map(hs => (
-                  <div key={hs.id} className="relative pl-6 border-l-2 border-emerald-500/20 pb-4 last:pb-0">
-                    <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-emerald-500/20 border border-emerald-500"></div>
-                    <div className="text-xs text-muted-foreground mb-1">
-                      {format(new Date(hs.createdAt), 'MMM dd, yyyy - HH:mm')} by <strong>{hs.changedBy}</strong>
+          {/* HISTORY & PAYMENTS ZONE */}
+          <div className="p-6 bg-surface-muted/30 space-y-6">
+            {/* Paystack Receipts */}
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center justify-between">
+                <span className="flex items-center gap-2"><Info size={16} /> Paystack Receipts & Attempts</span>
+                <span className="text-[11px] font-normal lowercase">{payments.length} recorded</span>
+              </h3>
+              {payments.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground text-xs border border-dashed border-border rounded-xl">
+                  No Paystack transactions recorded for this user.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {payments.map((pmt) => {
+                    const st = (pmt.status || '').toUpperCase();
+                    return (
+                      <div key={pmt.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surface text-xs">
+                        <div>
+                          <div className="font-mono font-bold text-foreground">{pmt.reference}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {format(new Date(pmt.paidAt || pmt.createdAt), 'MMM dd, yyyy HH:mm')}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-foreground">
+                            {pmt.currency === 'USD' ? `$${Number(pmt.amount).toLocaleString()}` : `₦${Number(pmt.amount).toLocaleString()}`}
+                          </div>
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            st === 'SUCCESS'
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : st === 'PENDING'
+                              ? 'bg-amber-500/15 text-amber-400'
+                              : 'bg-slate-500/15 text-slate-400'
+                          }`}>
+                            {st}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+                <Clock size={16} /> Subscription History & Activity Log
+              </h3>
+              
+              {history.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-xl">No past subscription changes found for this user.</div>
+              ) : (
+                <div className="space-y-4">
+                  {history.map(hs => (
+                    <div key={hs.id} className="relative pl-6 border-l-2 border-emerald-500/20 pb-4 last:pb-0">
+                      <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-emerald-500/20 border border-emerald-500"></div>
+                      <div className="text-xs text-muted-foreground mb-1">
+                        {format(new Date(hs.createdAt), 'MMM dd, yyyy - HH:mm')} by <strong>{hs.changedBy}</strong>
+                      </div>
+                      <div className="bg-surface border border-border p-3 rounded-lg text-sm">
+                        <div className="font-semibold text-foreground mb-1.5 flex items-center justify-between">
+                           <span>Plan Change</span>
+                           <span className="text-[10px] uppercase font-bold tracking-widest text-amber-500">{hs.source}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                           <div className="flex border border-border rounded overflow-hidden">
+                             <span className="bg-surface-muted px-2 py-1 text-muted-foreground w-12 text-center">From</span>
+                             <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1">{hs.previousPlan || 'NONE'}</span>
+                           </div>
+                           <div className="flex border border-border rounded overflow-hidden">
+                             <span className="bg-emerald-500/10 px-2 py-1 text-emerald-500 w-12 text-center font-bold border-r border-border">To</span>
+                             <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1 font-bold">{hs.newPlan}</span>
+                           </div>
+                        </div>
+                        {hs.paymentReference && (
+                          <div className="mt-2 text-[11px] font-mono text-emerald-400">
+                            Ref: {hs.paymentReference}
+                          </div>
+                        )}
+                        <div className="mt-1.5 text-xs leading-5">
+                           <strong className="text-muted-foreground mr-1">Note:</strong> {hs.notes || hs.reason || 'No note recorded'}
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-surface border border-border p-3 rounded-lg text-sm">
-                      <div className="font-semibold text-foreground mb-1.5 flex items-center justify-between">
-                         <span>Plan Change</span>
-                         <span className="text-[10px] uppercase font-bold tracking-widest text-amber-500">{hs.source}</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                         <div className="flex border border-border rounded overflow-hidden">
-                           <span className="bg-surface-muted px-2 py-1 text-muted-foreground w-12 text-center">From</span>
-                           <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1">{hs.previousPlan || 'NONE'}</span>
-                         </div>
-                         <div className="flex border border-border rounded overflow-hidden">
-                           <span className="bg-emerald-500/10 px-2 py-1 text-emerald-500 w-12 text-center font-bold border-r border-border">To</span>
-                           <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1 font-bold">{hs.newPlan}</span>
-                         </div>
-                      </div>
-                      <div className="mt-2 text-xs leading-5">
-                         <strong className="text-muted-foreground mr-1">Note:</strong> {hs.notes || hs.reason || 'No note recorded'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
         </div>

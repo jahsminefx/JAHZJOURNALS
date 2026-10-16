@@ -93,7 +93,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Home, exact: true },
     { name: 'Accounts', path: '/accounts', icon: Wallet, exact: true },
-    { name: 'MT5 / Cloud Sync', path: '/accounts?sync=true', icon: Cloud },
+    { name: 'MT5 / Cloud Sync', path: '/accounts?sync=true', icon: Cloud, badge: 'Soon' },
     { name: 'Trades', path: '/trades', icon: Briefcase, exact: true },
     { name: 'New Trade', path: '/trades/new', icon: PlusCircle },
     { name: 'Rules', path: '/rules', icon: ShieldCheck },
@@ -129,20 +129,20 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     return location.pathname === item.path;
   };
 
-  const sidebarContent = (
+  const renderSidebarContent = (collapsed) => (
     <div className="flex flex-col h-full overflow-y-auto hide-scrollbar select-none">
       {/* Sidebar Header & Brand */}
       <div className="px-3.5 py-4 border-b border-border flex items-center justify-between h-16 shrink-0">
-        <BrandLogo to="/dashboard" size="sm" showText={!isCollapsed} />
+        <BrandLogo to="/dashboard" size="sm" showText={!collapsed} />
         
         {/* Toggle Button for Desktop/Tablet */}
         <button
           type="button"
           onClick={toggleCollapse}
           className="hidden lg:flex items-center justify-center h-8 w-8 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition-colors shrink-0"
-          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
-          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
 
         {/* Close Button for Mobile Drawer */}
@@ -158,7 +158,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
       </div>
 
       {/* User Profile Card Header */}
-      <div className={`p-3.5 border-b border-border/60 bg-surface-muted/40 ${isCollapsed ? 'flex justify-center p-2.5' : ''}`}>
+      <div className={`p-3.5 border-b border-border/60 bg-surface-muted/40 ${collapsed ? 'flex justify-center p-2.5' : ''}`}>
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center overflow-hidden shrink-0 ring-2 ring-emerald-500/30">
             {user?.avatarUrl ? (
@@ -167,7 +167,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
               <UserIcon size={20} />
             )}
           </div>
-          {!isCollapsed && (
+          {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-bold text-foreground leading-snug">{user?.name || 'Trader'}</p>
               <p className="truncate text-[11px] text-muted-foreground leading-tight">{user?.email || 'trader@jahzjournals.com'}</p>
@@ -194,17 +194,26 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
             <NavLink
               key={item.name}
               to={item.path}
-              title={isCollapsed ? item.name : undefined}
+              title={collapsed ? item.name : undefined}
               className={
                 `flex items-center px-3.5 py-2.5 rounded-xl transition-all duration-200 group ${
                   active 
                     ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shadow-xs' 
                     : 'text-muted hover:bg-surface-muted hover:text-foreground dark:text-muted dark:hover:bg-surface-muted dark:hover:text-foreground font-medium'
-                } ${isCollapsed ? 'justify-center px-2' : ''}`
+                } ${collapsed ? 'justify-center px-2' : ''}`
               }
             >
-              <Icon size={19} className={`shrink-0 ${isCollapsed ? '' : 'mr-3'}`} />
-              {!isCollapsed && <span className="text-sm truncate">{item.name}</span>}
+              <Icon size={19} className={`shrink-0 ${collapsed ? '' : 'mr-3'}`} />
+              {!collapsed && (
+                <span className="flex-1 flex items-center justify-between min-w-0">
+                  <span className="text-sm truncate">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      {item.badge}
+                    </span>
+                  )}
+                </span>
+              )}
             </NavLink>
           );
         })}
@@ -213,37 +222,37 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
         {user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') && (
           <NavLink
             to="/admin"
-            title={isCollapsed ? 'Admin Console' : undefined}
+            title={collapsed ? 'Admin Console' : undefined}
             className={({ isActive }) =>
               `flex items-center px-3.5 py-2.5 rounded-xl transition-all duration-200 mt-4 border border-rose-500/20 bg-rose-500/5 ${
                 isActive ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-rose-500/80 hover:bg-rose-500/10 hover:text-rose-500 font-medium'
-              } ${isCollapsed ? 'justify-center px-2' : ''}`
+              } ${collapsed ? 'justify-center px-2' : ''}`
             }
           >
-            <ShieldCheck size={19} className={`shrink-0 ${isCollapsed ? '' : 'mr-3'}`} />
-            {!isCollapsed && <span className="text-sm font-bold truncate">Admin Console</span>}
+            <ShieldCheck size={19} className={`shrink-0 ${collapsed ? '' : 'mr-3'}`} />
+            {!collapsed && <span className="text-sm font-bold truncate">Admin Console</span>}
           </NavLink>
         )}
       </nav>
 
       {/* Footer & User Actions */}
       <div className="p-3 border-t border-border space-y-3 shrink-0">
-        {!isCollapsed && <UpgradeCard compact />}
+        {!collapsed && <UpgradeCard compact />}
 
         <button
           type="button"
           onClick={handleLogout}
-          title={isCollapsed ? 'Logout' : undefined}
+          title={collapsed ? 'Logout' : undefined}
           className={`flex items-center w-full px-3 py-2 rounded-xl text-xs font-bold text-muted hover:text-red-500 dark:text-muted dark:hover:text-red-400 hover:bg-red-500/10 transition-colors ${
-            isCollapsed ? 'justify-center' : ''
+            collapsed ? 'justify-center' : ''
           }`}
         >
-          <LogOut size={18} className={`${isCollapsed ? '' : 'mr-2.5'}`} />
-          {!isCollapsed && <span>Logout</span>}
+          <LogOut size={18} className={`${collapsed ? '' : 'mr-2.5'}`} />
+          {!collapsed && <span>Logout</span>}
         </button>
 
         {/* Version & App Branding at Bottom */}
-        {!isCollapsed && (
+        {!collapsed && (
           <div className="pt-1 px-1 text-[10px] text-muted-foreground flex justify-between items-center opacity-75 font-semibold">
             <span className="font-ethnocentric tracking-wider"><span className="text-rose-500">JAHZ</span><span className="text-emerald-500">JOURNALS</span></span>
             <span>v1.3.0</span>
@@ -261,7 +270,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
           isCollapsed ? 'w-20' : 'w-68'
         }`}
       >
-        {sidebarContent}
+        {renderSidebarContent(isCollapsed)}
       </aside>
 
       {/* Mobile Slide-Out Drawer (Width 80%, max 320px, left-side, touch swipe to close) */}
@@ -280,7 +289,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
             onTouchEnd={handleTouchEnd}
             className="relative w-[80vw] max-w-[320px] h-full bg-background border-r border-border rounded-r-2xl shadow-2xl z-50 animate-slide-right flex flex-col pt-safe pb-safe"
           >
-            {sidebarContent}
+            {renderSidebarContent(false)}
           </div>
         </div>
       )}

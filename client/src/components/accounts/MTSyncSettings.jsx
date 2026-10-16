@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Cpu, Copy, RefreshCw, Trash2, Download, HelpCircle, Eye, EyeOff, CheckCircle2, AlertCircle, Cloud, Sparkles, ShieldCheck, Zap } from 'lucide-react';
+import { Cpu, Copy, RefreshCw, Trash2, Download, HelpCircle, Eye, EyeOff, CheckCircle2, AlertCircle, Cloud, Sparkles, ShieldCheck, Zap, Clock } from 'lucide-react';
 import api from '../../utils/api';
 import Button from '../Button';
 import MTSyncGuideModal from './MTSyncGuideModal';
@@ -141,11 +141,11 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
               <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                 Method 1: 1-Click Cloud Sync (Investor Password)
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
-                  <Sparkles size={11} /> Recommended
+                  <Clock size={11} /> Coming Soon (Starter & Pro)
                 </span>
               </h4>
               <p className="text-xs text-muted">
-                100% read-only broker connection. Syncs trades 24/7 without needing MetaTrader open or installing EAs.
+                100% read-only broker connection. Automated 24/7 cloud sync is coming soon exclusively for Starter & Pro accounts.
               </p>
             </div>
           </div>
@@ -154,10 +154,10 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
             <Button
               type="button"
               onClick={() => setIsCloudModalOpen(true)}
-              className="shrink-0 font-bold"
+              className="shrink-0 font-bold bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25"
             >
-              <Zap size={16} className="mr-1.5 fill-current" />
-              Connect MT Cloud Sync
+              <Clock size={16} className="mr-1.5" />
+              Coming Soon
             </Button>
           )}
         </div>
@@ -213,9 +213,20 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-xs text-muted pt-1">
-            <ShieldCheck size={15} className="text-emerald-400 shrink-0" />
-            <span>Uses official broker Investor Passwords (Read-Only). No trade execution or withdrawal permissions.</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-xs text-muted">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-amber-400 shrink-0" />
+              <span>
+                1-Click Cloud Sync is <strong className="text-foreground">Coming Soon</strong> exclusively for Starter & Pro accounts. In the meantime, use <strong className="text-emerald-400">Method 2 (Desktop EA)</strong> below to sync your trades right now for free!
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsGuideOpen(true)}
+              className="shrink-0 text-xs font-bold text-emerald-400 hover:text-emerald-300 underline"
+            >
+              View EA Setup Guide →
+            </button>
           </div>
         )}
       </div>

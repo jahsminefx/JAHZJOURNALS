@@ -38,7 +38,7 @@ const allowedClientOrigins = new Set([
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // Middleware
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: false,
@@ -82,6 +82,16 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use((req, res, next) => {
   if (!unsafeMethods.has(req.method)) {
+    next();
+    return;
+  }
+
+  // Server-to-server webhook endpoints use cryptographic signature verification
+  if (
+    req.path.startsWith('/api/subscriptions/webhook') ||
+    req.path.startsWith('/api/subscriptions/paystack-webhook') ||
+    req.path.startsWith('/api/webhooks')
+  ) {
     next();
     return;
   }

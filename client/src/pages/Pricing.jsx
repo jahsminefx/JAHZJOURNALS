@@ -38,7 +38,7 @@ const plans = [
     limits: ['100 trades / month', '3 trading accounts', '3 screenshots per trade'],
     features: [
       'All Free plan capabilities',
-      'Automated MetaTrader (MT4/MT5) Cloud Sync',
+      'Automated MetaTrader (MT4/MT5) Cloud Sync (Coming Soon)',
       'Trading psychology & emotion tracking',
       'Rule violation & mistake tracking',
       'Strategy & setup performance tracking',
@@ -55,7 +55,7 @@ const plans = [
     limits: ['Unlimited trades / month', 'Unlimited trading accounts', '10 screenshots per trade'],
     features: [
       'All Starter plan capabilities',
-      'Automated MT4/MT5 Multi-Account Cloud Sync',
+      'Automated MT4/MT5 Multi-Account Cloud Sync (Coming Soon)',
       'AI Trade Review & AI Coach',
       'JAHZ Edge Finder analytics',
       'Prop-firm challenge tracker & drawdown guards',
@@ -72,7 +72,7 @@ const plans = [
     description: 'Designed for mentors, trading coaches, and academies managing student performance.',
     limits: ['Custom student capacity', 'Dedicated mentor workspace', 'Custom screenshot limits'],
     features: [
-      'MetaTrader (MT4/MT5) Cloud Sync Integration',
+      'MetaTrader (MT4/MT5) Cloud Sync (Coming Soon)',
       'Student portfolio management',
       'Student group invitations & access',
       'Direct mentor feedback & trade comments',
@@ -88,7 +88,7 @@ const featureMatrix = [
   { feature: 'Monthly Trade Log Limit', free: '20', starter: '100', pro: 'Unlimited', mentor: 'Custom' },
   { feature: 'Trading Accounts', free: '1', starter: '3', pro: 'Unlimited', mentor: 'Custom' },
   { feature: 'Screenshots per Trade', free: '1', starter: '3', pro: '10', mentor: 'Custom' },
-  { feature: 'MetaTrader 4 / 5 Cloud Sync', free: false, starter: true, pro: true, mentor: true },
+  { feature: 'MetaTrader 4 / 5 Cloud Sync', free: false, starter: 'Coming Soon', pro: 'Coming Soon', mentor: 'Coming Soon' },
   { feature: 'Basic Analytics & Equity Curve', free: true, starter: true, pro: true, mentor: true },
   { feature: 'Detailed Analytics & Sessions', free: false, starter: true, pro: true, mentor: true },
   { feature: 'Emotion & Psychology Tracking', free: false, starter: true, pro: true, mentor: true },
@@ -574,6 +574,10 @@ const Pricing = () => {
                             ) : (
                               <Minus size={16} className="mx-auto text-muted/40" />
                             )
+                          ) : val === 'Coming Soon' ? (
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Coming Soon
+                            </span>
                           ) : (
                             <span className={`font-bold ${tierKey === 'pro' ? 'text-emerald-500 dark:text-emerald-400' : 'text-foreground'}`}>{val}</span>
                           )}

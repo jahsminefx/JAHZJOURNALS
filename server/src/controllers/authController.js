@@ -100,6 +100,35 @@ const registerUser = async (req, res) => {
   }
 };
 
+const findUserByEmail = async (rawEmail) => {
+  const normalizedEmail = String(rawEmail || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  const exactUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (exactUser) return exactUser;
+
+  const [localPart, domain] = normalizedEmail.split('@');
+  if (localPart && (domain === 'gmail.com' || domain === 'googlemail.com')) {
+    const dotlessLocal = localPart.replace(/\./g, '');
+    const gmailUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { email: { endsWith: '@gmail.com' } },
+          { email: { endsWith: '@googlemail.com' } },
+        ],
+      },
+    });
+    return (
+      gmailUsers.find((u) => {
+        const [uLocal] = u.email.toLowerCase().split('@');
+        return uLocal.replace(/\./g, '') === dotlessLocal;
+      }) || null
+    );
+  }
+
+  return null;
+};
+
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
 // @access  Public
@@ -111,7 +140,7 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Both email and password are required.' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    const user = await findUserByEmail(email);
 
     if (user?.isDisabled) {
       return res.status(401).json({ message: 'That email and password don\'t match our records.' });
@@ -148,7 +177,7 @@ const requestPasswordReset = async (req, res) => {
     const normalizedEmail = String(req.body.email || '').trim().toLowerCase();
 
     if (normalizedEmail) {
-      const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      const user = await findUserByEmail(normalizedEmail);
 
       if (user && !user.isDisabled) {
         // Generate clean 6-digit numeric OTP code
