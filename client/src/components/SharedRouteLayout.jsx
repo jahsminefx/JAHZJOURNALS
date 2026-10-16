@@ -12,19 +12,8 @@ import Layout from './Layout';
  * - Anonymous visitor: Rendered with the public site experience (Navbar, Page Content, Footer).
  */
 const SharedRouteLayout = () => {
-  const { user, isAuthLoading } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
-
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-muted font-sans">
-        <div className="flex items-center gap-3">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-          <span className="text-sm font-medium">Loading...</span>
-        </div>
-      </div>
-    );
-  }
 
   if (user) {
     if (location.pathname === '/') {

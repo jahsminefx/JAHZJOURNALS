@@ -22,6 +22,7 @@ export const isAdvertisingEligiblePage = (pathname = window.location.pathname) =
     '/mentors',
     '/trading-psychology',
     '/risk-management',
+    '/risk-calculator',
     '/terms',
     '/privacy',
     '/cookies',

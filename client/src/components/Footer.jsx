@@ -17,6 +17,7 @@ const groups = [
     title: 'Resources',
     links: [
       ['Trading Blog', '/blog'],
+      ['Position Size Calculator', '/risk-calculator'],
       ['Trading Psychology', '/trading-psychology'],
       ['Risk Management', '/risk-management'],
     ],

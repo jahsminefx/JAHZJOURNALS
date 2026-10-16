@@ -1,6 +1,16 @@
 # JAHZJOURNALS Robots Directive
 # https://jahzjournal.com/robots.txt
 
+# Explicitly allow Google AdSense & Ad Manager Crawlers
+User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
 User-agent: *
 Allow: /
 Allow: /features
@@ -8,6 +18,7 @@ Allow: /pricing
 Allow: /prop-firm-traders
 Allow: /trading-psychology
 Allow: /risk-management
+Allow: /risk-calculator
 Allow: /mentors
 Allow: /about
 Allow: /contact
@@ -30,8 +41,8 @@ Disallow: /rules
 Disallow: /strategies
 Disallow: /trading-plan
 Disallow: /analytics
-Disallow: /risk-calculator
 Disallow: /weekly-review
+Disallow: /daily-review
 Disallow: /notifications
 Disallow: /ai/
 Disallow: /auth/

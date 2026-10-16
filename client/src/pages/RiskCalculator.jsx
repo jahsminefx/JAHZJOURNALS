@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import { useAuth } from '../context/useAuth';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { INSTRUMENT_SPECS, SPECIFICATION_SOURCES, getInstrumentSpec } from '../config/instrumentSpecs.js';
@@ -27,6 +30,7 @@ const CURRENCIES = SUPPORTED_CURRENCIES.map(c => c.code);
 const RiskCalculator = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
   // Accounts & User Settings
   const [accounts, setAccounts] = useState([]);
@@ -88,8 +92,9 @@ const RiskCalculator = () => {
     };
   }, [specSource, customContractSize, customTickSize, customTickValue, customLotStep, customMinLot, customMaxLot, standardSpec]);
 
-  // Load Accounts & User Preferences
+  // Load Accounts & User Preferences (only when authenticated)
   useEffect(() => {
+    if (!user) return;
     const fetchData = async () => {
       try {
         const [accRes, settingsRes, openTradesRes] = await Promise.all([
@@ -293,11 +298,11 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
     navigate(`/trades/new?${query}`);
   };
 
-  return (
+  const calculatorContent = (
     <div className="max-w-6xl mx-auto space-y-5 font-sans text-foreground pb-12">
       <SEO 
-        title="Position Size & Risk Calculator | JAHZJOURNALS"
-        description="Calculate exact broker-safe lot sizes and verify pre-trade risk for Forex, Metals, and Indices."
+        title="Forex Position Size & Lot Size Risk Calculator | JAHZJOURNALS"
+        description="Free Forex, Gold (XAUUSD), Indices (US30, NAS100), and Crypto position size and risk calculator. Calculate exact broker-safe lot sizes, stop loss pips, and multi-currency account risk."
         canonical="https://jahzjournal.com/risk-calculator"
       />
 
@@ -910,8 +915,52 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
         )}
       </div>
 
+      {/* Educational Documentation for Traders & Search Engines */}
+      <section className="bg-surface rounded-2xl border border-border p-6 sm:p-8 space-y-6 text-sm text-muted leading-relaxed">
+        <h2 className="text-lg sm:text-xl font-black text-foreground">
+          How to Calculate Position Size in Forex, Gold (XAUUSD) &amp; Indices
+        </h2>
+        <p>
+          Accurate position sizing is the cornerstone of institutional risk management and prop firm challenge survival. Whether you are trading major currency pairs like <strong>EUR/USD</strong> and <strong>GBP/USD</strong>, commodities like <strong>XAU/USD (Gold)</strong>, or indices such as <strong>US30</strong> and <strong>NAS100</strong>, calculating your exact lot size before order execution ensures a single losing trade never breaches your daily drawdown limit.
+        </p>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
+            <h3 className="font-bold text-foreground">1. The Position Size Formula</h3>
+            <p className="text-xs">
+              <strong>Lot Size = Capital at Risk ÷ (Stop Loss Distance in Pips × Pip Value per Standard Lot)</strong>. Our calculator automatically adjusts contract sizes across 5-digit Forex pairs, 2-digit JPY pairs, Metals, and CFDs.
+            </p>
+          </div>
+          <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
+            <h3 className="font-bold text-foreground">2. Multi-Currency Account Conversion</h3>
+            <p className="text-xs">
+              Trading USD-quoted pairs from a non-USD account (such as EUR, GBP, NGN, CAD, AUD, or ZAR) requires converting the quote currency pip value into your account base currency so your real monetary risk stays exact.
+            </p>
+          </div>
+          <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
+            <h3 className="font-bold text-foreground">3. Prop Firm Drawdown Protection</h3>
+            <p className="text-xs">
+              Most evaluation challenges enforce a strict 4% to 5% maximum daily loss limit. Risking 0.5% to 1.0% per trade setup gives you a statistical buffer to weather normal losing streaks while maintaining positive expectancy.
+            </p>
+          </div>
+        </div>
+      </section>
+
     </div>
   );
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          {calculatorContent}
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  return calculatorContent;
 };
 
 export default RiskCalculator;

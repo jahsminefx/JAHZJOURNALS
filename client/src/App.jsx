@@ -29,13 +29,20 @@ const CommunicationsHub = lazy(() => import('./pages/admin/communications/Commun
 const ImpersonationBanner = lazy(() => import('./components/ImpersonationBanner'));
 const CookieConsentBanner = lazy(() => import('./components/CookieConsentBanner'));
 
-const Home = lazy(() => import('./pages/Home'));
-const Features = lazy(() => import('./pages/Features'));
-const Pricing = lazy(() => import('./pages/Pricing'));
-const PropFirmTraders = lazy(() => import('./pages/PropFirmTraders'));
-const Mentors = lazy(() => import('./pages/Mentors'));
-const About = lazy(() => import('./pages/About'));
-const Contact = lazy(() => import('./pages/Contact'));
+import Home from './pages/Home';
+import Features from './pages/Features';
+import Pricing from './pages/Pricing';
+import PropFirmTraders from './pages/PropFirmTraders';
+import Mentors from './pages/Mentors';
+import About from './pages/About';
+import Contact from './pages/Contact';
+import Legal from './pages/Legal';
+import BlogList from './pages/BlogList';
+import BlogPost from './pages/BlogPost';
+import TradingPsychology from './pages/TradingPsychology';
+import RiskManagementPage from './pages/RiskManagementPage';
+import RiskCalculator from './pages/RiskCalculator';
+
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
@@ -50,7 +57,6 @@ const TradesList = lazy(() => import('./pages/TradesList'));
 const QuickTradePage = lazy(() => import('./pages/QuickTradePage'));
 const TradeReviewPage = lazy(() => import('./pages/TradeReviewPage'));
 const TradeDetail = lazy(() => import('./pages/TradeDetail'));
-const RiskCalculator = lazy(() => import('./pages/RiskCalculator'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const DailyReviewPage = lazy(() => import('./pages/DailyReviewPage'));
 const SharedTradePage = lazy(() => import('./pages/shared/SharedTradePage'));
@@ -66,11 +72,6 @@ const PromotionsPage = lazy(() => import('./pages/PromotionsPage'));
 const PromotionDetailPage = lazy(() => import('./pages/PromotionDetailPage'));
 const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
 const JoinCohortPage = lazy(() => import('./pages/JoinCohortPage'));
-const Legal = lazy(() => import('./pages/Legal'));
-const BlogList = lazy(() => import('./pages/BlogList'));
-const BlogPost = lazy(() => import('./pages/BlogPost'));
-const TradingPsychology = lazy(() => import('./pages/TradingPsychology'));
-const RiskManagementPage = lazy(() => import('./pages/RiskManagementPage'));
 
 const AiHubPage = lazy(() => import('./pages/ai/AiHubPage'));
 const AiTradeReviewsPage = lazy(() => import('./pages/ai/AiTradeReviewsPage'));
@@ -133,6 +134,7 @@ function App() {
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/trading-psychology" element={<TradingPsychology />} />
               <Route path="/risk-management" element={<RiskManagementPage />} />
+              <Route path="/risk-calculator" element={<RiskCalculator />} />
             </Route>
 
             <Route element={<ProtectedRoute />}>
@@ -164,7 +166,6 @@ function App() {
                 <Route path="/strategies" element={<StrategiesPage />} />
                 <Route path="/trading-plan" element={<TradingPlanBuilder />} />
                 <Route path="/analytics" element={<Analytics />} />
-                <Route path="/risk-calculator" element={<RiskCalculator />} />
                 <Route path="/weekly-review" element={<WeeklyReview />} />
                 <Route path="/daily-review" element={<DailyReviewPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />

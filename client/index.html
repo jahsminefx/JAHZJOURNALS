@@ -47,8 +47,7 @@
       })();
     </script>
     <script>
-      // Google Consent Mode v2 — default consent state
-      // Must execute before any Google advertising/analytics scripts
+      // Google Consent Mode v2 — region-scoped default consent state
       window.dataLayer = window.dataLayer || [];
       function gtag() { window.dataLayer.push(arguments); }
       gtag('consent', 'default', {
@@ -56,12 +55,64 @@
         'analytics_storage': 'denied',
         'ad_user_data': 'denied',
         'ad_personalization': 'denied',
+        'region': ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IS', 'IE', 'IT', 'LV', 'LI', 'LT', 'LU', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'GB', 'CH'],
         'wait_for_update': 500
+      });
+      gtag('consent', 'default', {
+        'ad_storage': 'granted',
+        'analytics_storage': 'granted',
+        'ad_user_data': 'granted',
+        'ad_personalization': 'granted'
       });
     </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <main style="max-width: 960px; margin: 0 auto; padding: 2rem; font-family: system-ui, sans-serif; line-height: 1.6;">
+        <header>
+          <h1>JAHZJOURNALS — Forex Trading Journal, Risk Calculator &amp; Performance Analytics Platform</h1>
+          <p>
+            JAHZJOURNALS is a comprehensive trading journal, position size calculator, and performance analytics platform built for Forex, Gold (XAUUSD), Indices, Crypto, and Prop Firm traders. Track every trade across USD, NGN, GBP, and EUR accounts, monitor drawdown limits, analyze trading psychology, and discover your statistical edge.
+          </p>
+          <nav aria-label="Primary Navigation">
+            <ul>
+              <li><a href="/">Home</a></li>
+              <li><a href="/features">Platform Features</a></li>
+              <li><a href="/risk-calculator">Free Forex &amp; Gold Position Size Calculator</a></li>
+              <li><a href="/prop-firm-traders">Prop Firm Drawdown &amp; Challenge Tracker</a></li>
+              <li><a href="/trading-psychology">Trading Psychology Analytics</a></li>
+              <li><a href="/risk-management">Forex Risk Management Guide</a></li>
+              <li><a href="/mentors">Mentor &amp; Academy Portal</a></li>
+              <li><a href="/pricing">Pricing Plans</a></li>
+              <li><a href="/blog">Forex Trading Education &amp; Blog</a></li>
+              <li><a href="/about">About JAHZJOURNALS</a></li>
+              <li><a href="/contact">Contact Us</a></li>
+              <li><a href="/privacy">Privacy Policy</a></li>
+              <li><a href="/terms">Terms of Service</a></li>
+              <li><a href="/disclaimer">Financial Disclaimer</a></li>
+            </ul>
+          </nav>
+        </header>
+        <section>
+          <h2>Featured Forex Trading Guides &amp; Educational Articles</h2>
+          <ul>
+            <li><a href="/blog/how-to-keep-a-forex-trading-journal">How to Keep a Forex Trading Journal That Actually Improves Your Win Rate</a></li>
+            <li><a href="/blog/how-to-calculate-lot-size-in-forex-and-gold">How to Calculate Lot Size in Forex, Gold (XAUUSD) &amp; Indices</a></li>
+            <li><a href="/blog/risk-management-strategies">Forex Risk Management Strategies: Position Sizing, R-Multiples &amp; Drawdown Control</a></li>
+            <li><a href="/blog/how-to-pass-a-prop-firm-challenge">How to Pass a Prop Firm Challenge in 2026: FTMO, FundedNext &amp; Maven Rules</a></li>
+            <li><a href="/blog/trading-psychology-guide">The Complete Guide to Trading Psychology: Overcoming FOMO, Revenge Trading &amp; Tilt</a></li>
+            <li><a href="/blog/ict-smart-money-trading-journal">How to Journal ICT &amp; Smart Money Concepts (SMC) Trades Effectively</a></li>
+            <li><a href="/blog/forex-trading-sessions-guide-london-new-york-asian">Forex Trading Sessions Guide: London, New York &amp; Asian Killzones Analyzed</a></li>
+            <li><a href="/blog/multi-currency-trading-accounts-risk-management">Managing Multi-Currency Trading Accounts (USD, NGN, GBP, EUR) Without Skewing Your Analytics</a></li>
+            <li><a href="/blog/building-a-winning-forex-trading-plan">How to Build a Mechanical Forex Trading Plan &amp; Pre-Trade Checklist</a></li>
+            <li><a href="/blog/automated-mt4-mt5-trade-sync-vs-manual-journaling">Automated MT4/MT5 Trade Sync vs. Manual Journaling: Which Builds Better Traders?</a></li>
+            <li><a href="/blog/ai-for-forex-traders">How AI Is Transforming Forex Trading Journals &amp; Performance Reviews</a></li>
+            <li><a href="/blog/best-forex-trading-journal-software">7 Best Forex Trading Journal Software Platforms Compared</a></li>
+          </ul>
+        </section>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
