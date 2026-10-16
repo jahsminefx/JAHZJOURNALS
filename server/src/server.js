@@ -169,6 +169,12 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(clientBuildPath, 'sitemap.xml'));
   });
 
+  app.get('/google9806749e7f1feb79.html', (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send('google-site-verification: google9806749e7f1feb79.html');
+  });
+
   app.get('/sw.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
