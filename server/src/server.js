@@ -194,19 +194,31 @@ if (process.env.NODE_ENV === 'production') {
     index: false,
   }));
 
-  // React Router catch-all route for client-side routing
+  const fs = require('fs');
+  const { buildSeoHtml } = require('./middleware/seoPrerenderMiddleware');
+  let indexHtmlTemplate = null;
+  try {
+    indexHtmlTemplate = fs.readFileSync(path.join(clientBuildPath, 'index.html'), 'utf8');
+  } catch (err) {
+    console.error('[Server] Could not read client index.html template:', err.message);
+  }
+
+  // React Router catch-all route for client-side routing with server-side SEO & content pre-rendering
   app.get('{*path}', (req, res, next) => {
     if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/uploads')) {
       return next();
     }
 
-    res.sendFile(path.join(clientBuildPath, 'index.html'), {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-    });
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    if (indexHtmlTemplate) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(buildSeoHtml(indexHtmlTemplate, req.path));
+    }
+
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
   });
 }
 
