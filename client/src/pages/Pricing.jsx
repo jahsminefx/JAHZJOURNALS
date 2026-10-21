@@ -68,9 +68,13 @@ const plans = [
   {
     name: 'Mentor / Academy',
     tagline: 'Build better traders.',
-    price: 'Custom',
+    price: 'From ₦8,000',
     description: 'Designed for mentors, trading coaches, and academies managing student performance.',
-    limits: ['Custom student capacity', 'Dedicated mentor workspace', 'Custom screenshot limits'],
+    planHeader: {
+      title: 'Plans Built Around Your Student Capacity',
+      description: 'Mentor and Academy pricing scales based on the number of active students each plan handles.',
+    },
+    limits: ['Starting at 25 – 50 student capacity', 'Dedicated mentor workspace', 'Telegram discipline layer'],
     features: [
       'MetaTrader (MT4/MT5) Cloud Sync (Coming Soon)',
       'Student portfolio management',
@@ -279,8 +283,11 @@ const Pricing = () => {
   const userRank = planRank[userPlanKey] || 1;
 
   const getPlanStatus = (planName) => {
+    if (userRank === 4 && planName === 'Mentor / Academy') {
+      return { cta: 'Current Plan', to: '/mentor-workspace', onClick: undefined, highlighted: true };
+    }
     if (planName === 'Mentor / Academy') {
-      return { cta: 'Contact Support', to: '/contact', onClick: undefined, highlighted: false };
+      return { cta: 'View More', to: '/pricing/mentor', onClick: undefined, highlighted: false };
     }
 
     const targetKey = planKeyMap[planName] || 'FREE';
@@ -493,6 +500,11 @@ const Pricing = () => {
                   const orig = 8000;
                   const disc = Math.round(orig * (1 - appliedPromo.discountPercent / 100));
                   displayPrice = `₦${disc.toLocaleString()}`;
+                } else if (plan.name === 'Mentor / Academy') {
+                  originalPrice = '₦8,000';
+                  const orig = 8000;
+                  const disc = Math.round(orig * (1 - appliedPromo.discountPercent / 100));
+                  displayPrice = `From ₦${disc.toLocaleString()}`;
                 }
               }
 
@@ -500,6 +512,7 @@ const Pricing = () => {
                 <PricingCard
                   key={plan.name}
                   {...plan}
+                  planHeader={plan.planHeader}
                   price={displayPrice}
                   originalPrice={originalPrice}
                   tagline={appliedPromo && applicable ? `🔥 ${appliedPromo.discountPercent}% OFF APPLIED` : plan.tagline}

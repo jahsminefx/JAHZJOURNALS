@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { 
   Users, UserPlus, FileText, Send, Sparkles, HelpCircle, Trash2, Eye, 
@@ -8,23 +8,49 @@ import {
   Lock, ArrowLeft, RefreshCw, BarChart2, ShieldCheck, GraduationCap,
   Copy, Check, Share2, Mail, Link as LinkIcon, DollarSign, CreditCard,
   Building2, Settings2, Edit3, Image, Target, Layers, Clock, Palette,
-  Globe, PlusCircle, MinusCircle, CheckCircle, Upload
+  Globe, PlusCircle, MinusCircle, CheckCircle, Upload, ArrowRight,
+  Megaphone, Pin, BookOpen, MoreHorizontal, ChevronDown, ChevronUp, ArrowUpDown, Filter
 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
-import api, { resolveImageUrl } from '../utils/api';
+import api, { resolveImageUrl, subscribeToRealtimeSync } from '../utils/api';
 import Button from '../components/Button';
 import SectionHeader from '../components/SectionHeader';
 import ImageModal from '../components/common/ImageModal';
+import ShareTradeToCohortModal from '../components/share/ShareTradeToCohortModal';
+import MentorStudentChatPanel from '../components/mentor/MentorStudentChatPanel';
 
 const MentorDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const resolveMentorTab = (tabParam) => {
+    const raw = String(tabParam || '').toLowerCase();
+    const map = {
+      roster: 'roster',
+      students: 'roster',
+      shares: 'shares',
+      trade_shares: 'shares',
+      announcements: 'announcements',
+      messages: 'messages',
+      chat: 'messages',
+    };
+    return map[raw] || 'roster';
+  };
 
   const isMentor =
-    user?.subscriptionPlan === 'MENTOR' ||
-    user?.role === 'MENTOR' ||
     user?.role === 'ADMIN' ||
-    user?.role === 'SUPER_ADMIN';
+    user?.role === 'SUPER_ADMIN' ||
+    ((user?.subscriptionPlan === 'MENTOR' || user?.role === 'MENTOR') && user?.subscriptionStatus === 'ACTIVE');
+
+  // 14-Day Free Trial & 12-Hour Grace Period Calculations
+  const now = new Date();
+  const trialExpiresAt = user?.mentorTrialExpiresAt ? new Date(user.mentorTrialExpiresAt) : null;
+  const graceExpiresAt = trialExpiresAt ? new Date(trialExpiresAt.getTime() + 12 * 60 * 60 * 1000) : null;
+  const isTrialActive = Boolean(trialExpiresAt && now < trialExpiresAt && (user?.role === 'MENTOR' || user?.subscriptionPlan === 'MENTOR'));
+  const isInGracePeriod = Boolean(trialExpiresAt && graceExpiresAt && now >= trialExpiresAt && now <= graceExpiresAt && (user?.role === 'MENTOR' || user?.subscriptionPlan === 'MENTOR'));
+  const graceHoursRemaining = isInGracePeriod ? Math.max(1, Math.ceil((graceExpiresAt.getTime() - now.getTime()) / (60 * 60 * 1000))) : 0;
+  const trialDaysRemaining = isTrialActive ? Math.max(1, Math.ceil((trialExpiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))) : 0;
 
   // State
   const [groups, setGroups] = useState([]);
@@ -33,6 +59,35 @@ const MentorDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeModalImage, setActiveModalImage] = useState(null);
+
+  // Cohort Sub-Navigation & Broadcast State
+  const [cohortTab, setCohortTab] = useState(() => resolveMentorTab(searchParams.get('tab'))); // 'roster' | 'shares' | 'announcements' | 'messages'
+  const [cohortShares, setCohortShares] = useState([]);
+  const [loadingShares, setLoadingShares] = useState(false);
+  const [isShareTradeModalOpen, setIsShareTradeModalOpen] = useState(false);
+  const [editingTradeShare, setEditingTradeShare] = useState(null);
+  const [isConcludeMode, setIsConcludeMode] = useState(false);
+  const [headerOverflowOpen, setHeaderOverflowOpen] = useState(false);
+  const [shareSearchQuery, setShareSearchQuery] = useState('');
+  const [shareStatusFilter, setShareStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'CLOSED' | 'WIN' | 'LOSS' | 'CASE_STUDY'
+  const [shareSortBy, setShareSortBy] = useState('PINNED'); // 'PINNED' | 'NEWEST' | 'VIEWS'
+  const [expandedShareAnalysis, setExpandedShareAnalysis] = useState({});
+  const [openShareMenuId, setOpenShareMenuId] = useState(null);
+  const [unshareConfirmTarget, setUnshareConfirmTarget] = useState(null);
+  const [unsharing, setUnsharing] = useState(false);
+  const [chatPreselectedStudentId, setChatPreselectedStudentId] = useState(() => searchParams.get('studentId') || null);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [cohortAnnouncements, setCohortAnnouncements] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [isNewAnnouncementOpen, setIsNewAnnouncementOpen] = useState(false);
+  const [announcementTargetCohorts, setAnnouncementTargetCohorts] = useState([]);
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    content: '',
+    category: 'GENERAL',
+    isPinned: false,
+  });
+  const [postingAnnouncement, setPostingAnnouncement] = useState(false);
 
   // Unified Mentor Settings Modal State
   const [isMentorSettingsOpen, setIsMentorSettingsOpen] = useState(false);
@@ -58,6 +113,12 @@ const MentorDashboard = () => {
     price: 50,
     currency: 'USD',
     billingCycle: 'ONE_TIME',
+    enforceRiskGuard: true,
+    maxRiskPerTradePercent: 1.0,
+    maxDailyLossPercent: 3.0,
+    maxDailyTrades: 5,
+    allowedPairs: 'EURUSD, GBPUSD, XAUUSD, USDJPY',
+    requireStopLoss: true,
   });
   const [savingGroup, setSavingGroup] = useState(false);
   const logoFileInputRef = useRef(null);
@@ -70,7 +131,9 @@ const MentorDashboard = () => {
     accountNumber: '',
     accountName: '',
     bankCode: '',
+    subaccountCode: '',
   });
+  const [availableBanks, setAvailableBanks] = useState([]);
   const [savingPayout, setSavingPayout] = useState(false);
 
   // Invite Modal with Tabs (Link vs Direct Email)
@@ -106,19 +169,31 @@ const MentorDashboard = () => {
     }
   }, [isMentor]);
 
-  const fetchGroups = async () => {
-    setLoading(true);
+  const fetchGroups = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const { data } = await api.get('/mentors/groups');
-      setGroups(data || []);
-      if (data && data.length > 0) {
-        setActiveGroupId((prev) => (prev && data.some((g) => g.id === prev) ? prev : data[0].id));
+      const loadedGroups = Array.isArray(data)
+        ? data
+        : (Array.isArray(data?.groups) ? data.groups : []);
+      setGroups(loadedGroups);
+      if (loadedGroups.length > 0) {
+        const queryCohortId = searchParams.get('cohortId');
+        setActiveGroupId((prev) => {
+          if (queryCohortId && loadedGroups.some((g) => g.id === queryCohortId)) return queryCohortId;
+          return prev && loadedGroups.some((g) => g.id === prev) ? prev : loadedGroups[0].id;
+        });
+      } else {
+        setActiveGroupId(null);
       }
     } catch (err) {
       console.error(err);
-      toast.error('Could not load mentor cohorts.');
+      if (!silent) {
+        toast.error('Could not load mentor cohorts.');
+        setGroups([]);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -131,13 +206,197 @@ const MentorDashboard = () => {
           accountNumber: data.mentorAccountNumber || '',
           accountName: data.mentorAccountName || '',
           bankCode: data.mentorBankCode || '',
+          subaccountCode: data.mentorSubaccountCode || '',
         });
+        if (Array.isArray(data.banks)) {
+          setAvailableBanks(data.banks);
+        }
       }
     } catch (_) {}
   };
 
+  const fetchCohortShares = async (groupId, { silent = false } = {}) => {
+    if (!groupId) return;
+    if (!silent) setLoadingShares(true);
+    try {
+      const { data } = await api.get(`/mentors/cohort-trade-shares?cohortId=${groupId}`);
+      setCohortShares(data?.shares || []);
+    } catch (err) {
+      console.error(err);
+      if (!silent) toast.error('Could not load shared trades.');
+    } finally {
+      if (!silent) setLoadingShares(false);
+    }
+  };
+
+  const fetchCohortAnnouncements = async (groupId, { silent = false } = {}) => {
+    if (!groupId) return;
+    if (!silent) setLoadingAnnouncements(true);
+    try {
+      const { data } = await api.get(`/mentors/cohort-announcements?cohortId=${groupId}`);
+      setCohortAnnouncements(data?.announcements || []);
+    } catch (err) {
+      console.error(err);
+      if (!silent) toast.error('Could not load announcements.');
+    } finally {
+      if (!silent) setLoadingAnnouncements(false);
+    }
+  };
+
+  const fetchChatUnreadCount = async (groupId) => {
+    try {
+      const { data } = await api.get(`/mentors/chat/threads${groupId ? `?cohortId=${groupId}` : ''}`);
+      const list = Array.isArray(data?.threads) ? data.threads : [];
+      const totalUnread = list.reduce((acc, t) => acc + (t.unreadCount || 0), 0);
+      setUnreadChatCount(totalUnread);
+    } catch (_) {}
+  };
+
+  const handleDeleteTradeShare = async (shareOrId) => {
+    const targetId = typeof shareOrId === 'string' ? shareOrId : shareOrId?.id;
+    if (!targetId) return;
+    setUnsharing(true);
+    try {
+      await api.delete(`/mentors/cohort-trade-shares/${targetId}`);
+      toast.success('Shared trade removed from cohort.');
+      setUnshareConfirmTarget(null);
+      fetchCohortShares(activeGroupId);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to unshare trade.');
+    } finally {
+      setUnsharing(false);
+    }
+  };
+
+  const handleTogglePinShare = async (share) => {
+    if (!share?.id) return;
+    try {
+      const nextPinned = !(share.pinned || share.isPinned);
+      await api.put(`/mentors/cohort-trade-shares/${share.id}`, {
+        pinned: nextPinned,
+      });
+      toast.success(nextPinned ? 'Trade setup pinned to top of cohort feed.' : 'Trade setup unpinned.');
+      setOpenShareMenuId(null);
+      fetchCohortShares(activeGroupId, { silent: true });
+    } catch (err) {
+      toast.error('Could not update pin state.');
+    }
+  };
+
+  const toggleShareAnalysis = (shareId) => {
+    setExpandedShareAnalysis((prev) => ({ ...prev, [shareId]: !prev[shareId] }));
+  };
+
+  const handleTogglePinAnnouncement = async (ann) => {
+    try {
+      await api.put(`/mentors/cohort-announcements/${ann.id}`, {
+        isPinned: !ann.isPinned,
+      });
+      toast.success(ann.isPinned ? 'Announcement unpinned.' : 'Announcement pinned to top of feed!');
+      fetchCohortAnnouncements(activeGroupId);
+    } catch (err) {
+      toast.error('Failed to update announcement pin.');
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this announcement?')) return;
+    try {
+      await api.delete(`/mentors/cohort-announcements/${id}`);
+      toast.success('Announcement deleted.');
+      fetchCohortAnnouncements(activeGroupId);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to delete announcement.');
+    }
+  };
+
+  const handlePostAnnouncement = async (e) => {
+    e.preventDefault();
+    if (!announcementForm.title.trim() || !announcementForm.content.trim()) {
+      toast.error('Title and message are required.');
+      return;
+    }
+    const targetIds = announcementTargetCohorts.length > 0 ? announcementTargetCohorts : [activeGroupId];
+    setPostingAnnouncement(true);
+    try {
+      await api.post('/mentors/cohort-announcements', {
+        mentorGroupId: activeGroupId,
+        targetCohortIds: targetIds,
+        title: announcementForm.title.trim(),
+        content: announcementForm.content.trim(),
+        category: announcementForm.category,
+        isPinned: announcementForm.isPinned,
+        status: 'PUBLISHED',
+      });
+      toast.success(
+        targetIds.length > 1
+          ? `Announcement broadcasted to ${targetIds.length} cohorts!`
+          : 'Announcement broadcasted to cohort!'
+      );
+      setIsNewAnnouncementOpen(false);
+      setAnnouncementForm({
+        title: '',
+        content: '',
+        category: 'GENERAL',
+        isPinned: false,
+      });
+      fetchCohortAnnouncements(activeGroupId);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to post announcement.');
+    } finally {
+      setPostingAnnouncement(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeGroupId) {
+      fetchCohortShares(activeGroupId);
+      fetchCohortAnnouncements(activeGroupId);
+      fetchChatUnreadCount(activeGroupId);
+      setAnnouncementTargetCohorts([activeGroupId]);
+    }
+  }, [activeGroupId]);
+
+  // Real-time cross-tab sync + silent background polling so student actions appear immediately without refresh
+  useEffect(() => {
+    if (!isMentor) return undefined;
+
+    const refreshMentorDataSilently = () => {
+      fetchGroups({ silent: true });
+      if (activeGroupId) {
+        fetchCohortShares(activeGroupId, { silent: true });
+        fetchCohortAnnouncements(activeGroupId, { silent: true });
+        fetchChatUnreadCount(activeGroupId);
+      }
+      if (selectedStudent?.id) {
+        api
+          .get(`/mentors/students/${selectedStudent.id}/trades`)
+          .then(({ data }) => {
+            if (Array.isArray(data)) setStudentTrades(data);
+          })
+          .catch(() => {});
+      }
+    };
+
+    const unsubscribe = subscribeToRealtimeSync(refreshMentorDataSilently);
+    const interval = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        refreshMentorDataSilently();
+      }
+    }, 3500);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, [isMentor, activeGroupId, selectedStudent?.id]);
+
   const openMentorSettings = (tab = 'branding', group = null) => {
-    const targetGroup = group || (activeGroupId ? groups.find((g) => g.id === activeGroupId) : null) || (groups.length > 0 ? groups[0] : null);
+    const safeGroups = Array.isArray(groups) ? groups : [];
+    const targetGroup = group || (activeGroupId ? safeGroups.find((g) => g.id === activeGroupId) : null) || (safeGroups.length > 0 ? safeGroups[0] : null);
     if (targetGroup) {
       setEditingGroup(targetGroup);
       setGroupFormData({
@@ -162,6 +421,12 @@ const MentorDashboard = () => {
         price: targetGroup.price || 0,
         currency: targetGroup.currency || 'USD',
         billingCycle: targetGroup.billingCycle || 'ONE_TIME',
+        enforceRiskGuard: targetGroup.enforceRiskGuard !== undefined ? Boolean(targetGroup.enforceRiskGuard) : true,
+        maxRiskPerTradePercent: targetGroup.maxRiskPerTradePercent ?? 1.0,
+        maxDailyLossPercent: targetGroup.maxDailyLossPercent ?? 3.0,
+        maxDailyTrades: targetGroup.maxDailyTrades ?? 5,
+        allowedPairs: Array.isArray(targetGroup.allowedPairs) ? targetGroup.allowedPairs.join(', ') : (targetGroup.allowedPairs || 'EURUSD, GBPUSD, XAUUSD, USDJPY'),
+        requireStopLoss: targetGroup.requireStopLoss !== undefined ? Boolean(targetGroup.requireStopLoss) : true,
       });
     } else {
       setEditingGroup(null);
@@ -185,6 +450,12 @@ const MentorDashboard = () => {
         price: 50,
         currency: 'USD',
         billingCycle: 'ONE_TIME',
+        enforceRiskGuard: true,
+        maxRiskPerTradePercent: 1.0,
+        maxDailyLossPercent: 3.0,
+        maxDailyTrades: 5,
+        allowedPairs: 'EURUSD, GBPUSD, XAUUSD, USDJPY',
+        requireStopLoss: true,
       });
     }
     setMentorSettingsTab(tab);
@@ -214,11 +485,18 @@ const MentorDashboard = () => {
         price: 50,
         currency: 'USD',
         billingCycle: 'ONE_TIME',
+        enforceRiskGuard: true,
+        maxRiskPerTradePercent: 1.0,
+        maxDailyLossPercent: 3.0,
+        maxDailyTrades: 5,
+        allowedPairs: 'EURUSD, GBPUSD, XAUUSD, USDJPY',
+        requireStopLoss: true,
       });
       setMentorSettingsTab(preferredTab || 'branding');
       return;
     }
-    const selected = groups.find((g) => g.id === groupId);
+    const safeGroups = Array.isArray(groups) ? groups : [];
+    const selected = safeGroups.find((g) => g.id === groupId);
     if (selected) {
       setEditingGroup(selected);
       setActiveGroupId(selected.id);
@@ -244,6 +522,12 @@ const MentorDashboard = () => {
         price: selected.price || 0,
         currency: selected.currency || 'USD',
         billingCycle: selected.billingCycle || 'ONE_TIME',
+        enforceRiskGuard: selected.enforceRiskGuard !== undefined ? Boolean(selected.enforceRiskGuard) : true,
+        maxRiskPerTradePercent: selected.maxRiskPerTradePercent ?? 1.0,
+        maxDailyLossPercent: selected.maxDailyLossPercent ?? 3.0,
+        maxDailyTrades: selected.maxDailyTrades ?? 5,
+        allowedPairs: Array.isArray(selected.allowedPairs) ? selected.allowedPairs.join(', ') : (selected.allowedPairs || 'EURUSD, GBPUSD, XAUUSD, USDJPY'),
+        requireStopLoss: selected.requireStopLoss !== undefined ? Boolean(selected.requireStopLoss) : true,
       });
       if (preferredTab) {
         setMentorSettingsTab(preferredTab);
@@ -313,13 +597,13 @@ const MentorDashboard = () => {
       if (editingGroup) {
         // Edit existing cohort
         const { data } = await api.put(`/mentors/groups/${editingGroup.id}`, groupFormData);
-        setGroups((prev) => prev.map((g) => (g.id === data.id ? { ...g, ...data } : g)));
+        setGroups((prev) => (Array.isArray(prev) ? prev : []).map((g) => (g.id === data.id ? { ...g, ...data } : g)));
         setEditingGroup(data);
         toast.success('Cohort & banner settings updated!');
       } else {
         // Create new cohort
         const { data } = await api.post('/mentors/groups', groupFormData);
-        setGroups((prev) => [data, ...prev]);
+        setGroups((prev) => [data, ...(Array.isArray(prev) ? prev : [])]);
         setActiveGroupId(data.id);
         setEditingGroup(data);
         toast.success('New cohort & banner created!');
@@ -335,8 +619,18 @@ const MentorDashboard = () => {
     if (e && e.preventDefault) e.preventDefault();
     setSavingPayout(true);
     try {
-      await api.put('/mentors/payout-settings', payoutForm);
-      toast.success('Payout settlement details updated!');
+      const { data } = await api.put('/mentors/payout-settings', payoutForm);
+      if (data?.payoutSettings) {
+        setPayoutForm((prev) => ({
+          ...prev,
+          bankName: data.payoutSettings.mentorBankName || prev.bankName,
+          accountNumber: data.payoutSettings.mentorAccountNumber || prev.accountNumber,
+          accountName: data.payoutSettings.mentorAccountName || prev.accountName,
+          bankCode: data.payoutSettings.mentorBankCode || prev.bankCode,
+          subaccountCode: data.payoutSettings.mentorSubaccountCode || '',
+        }));
+      }
+      toast.success(data?.message || 'Payout settlement details updated!');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update settlement details.');
     } finally {
@@ -351,7 +645,8 @@ const MentorDashboard = () => {
     try {
       await api.delete(`/mentors/groups/${groupId}`);
       toast.success('Cohort removed.');
-      const updated = groups.filter((g) => g.id !== groupId);
+      const safeGroups = Array.isArray(groups) ? groups : [];
+      const updated = safeGroups.filter((g) => g.id !== groupId);
       setGroups(updated);
       if (activeGroupId === groupId) {
         setActiveGroupId(updated.length > 0 ? updated[0].id : null);
@@ -420,6 +715,21 @@ const MentorDashboard = () => {
     setFeedbackRec('');
   };
 
+  const handleIssueViolationWarning = (trade, violation) => {
+    setReviewingTrade(trade);
+    setFeedbackGrade('F');
+    const evidenceText = violation.evidence ? `\n• Hard Proof: ${violation.evidence}` : '';
+    setFeedbackText(
+      `🚨 ACADEMY STRATEGY RISK BREACH NOTICE:\n` +
+      `Your trade on ${trade.pair} breached our cohort risk parameters.\n` +
+      `• Rule Breached: ${violation.title} (Allowed Limit: ${violation.ruleLimit})\n` +
+      `• Actual Execution: ${violation.actualValue}${evidenceText}\n` +
+      `• Details: ${violation.message}\n\n` +
+      `Trading without discipline destroys your statistical edge. Please respect the academy risk rules on all upcoming trades.`
+    );
+    setFeedbackRec(`Strict adherence to ${violation.ruleLimit} risk cap and mandatory stop loss.`);
+  };
+
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
     if (!reviewingTrade || !feedbackText.trim()) {
@@ -428,12 +738,15 @@ const MentorDashboard = () => {
     }
     setSubmittingFeedback(true);
     try {
+      const isBreach = feedbackGrade === 'MISTAKE' || feedbackGrade === 'F' || feedbackGrade === 'D';
       const { data } = await api.post(`/mentors/trades/${reviewingTrade.id}/feedback`, {
         feedback: feedbackText.trim(),
         grade: feedbackGrade,
         recommendation: feedbackRec.trim() || undefined,
+        isViolationWarning: isBreach,
+        violationDetails: reviewingTrade.riskGuardViolations?.length ? reviewingTrade.riskGuardViolations : null,
       });
-      toast.success('Feedback and grade published to student!');
+      toast.success(isBreach ? 'Disciplinary rule violation notice published to student!' : 'Feedback and grade published to student!');
       
       setStudentTrades((prev) =>
         prev.map((t) =>
@@ -482,15 +795,88 @@ const MentorDashboard = () => {
     }
   };
 
+  const safeGroups = useMemo(() => (Array.isArray(groups) ? groups : []), [groups]);
+
   const activeGroup = useMemo(() => {
-    return groups.find((g) => g.id === activeGroupId) || null;
-  }, [groups, activeGroupId]);
+    return safeGroups.find((g) => g.id === activeGroupId) || null;
+  }, [safeGroups, activeGroupId]);
 
   const cohortInviteUrl = useMemo(() => {
     if (!activeGroupId) return '';
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    return `${origin}/join/cohort/${activeGroupId}`;
+    const configuredBase = import.meta.env.VITE_APP_URL
+      ? String(import.meta.env.VITE_APP_URL).replace(/\/$/, '')
+      : typeof window !== 'undefined'
+      ? window.location.origin
+      : '';
+    return `${configuredBase}/join/cohort/${activeGroupId}`;
   }, [activeGroupId]);
+
+  const cohortInviteDisplayUrl = useMemo(() => {
+    if (!activeGroupId) return '';
+    const configuredBase = import.meta.env.VITE_APP_URL
+      ? String(import.meta.env.VITE_APP_URL).replace(/\/$/, '')
+      : typeof window !== 'undefined'
+      ? window.location.origin
+      : '';
+    const hostDisplay = configuredBase.replace(/^https?:\/\//i, '');
+    const slug = (activeGroup?.name || 'cohort')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      .slice(0, 22);
+    const shortCode = String(activeGroupId).slice(0, 6);
+    return `${hostDisplay}/join/cohort/${slug}…${shortCode}`;
+  }, [activeGroupId, activeGroup?.name]);
+
+  const filteredAndSortedShares = useMemo(() => {
+    const list = Array.isArray(cohortShares) ? [...cohortShares] : [];
+    const q = shareSearchQuery.trim().toLowerCase();
+
+    const filtered = list.filter((share) => {
+      const snap = share.tradeSnapshot || {};
+      const outcomeVal = String(snap.result || snap.outcome || 'OPEN').toUpperCase();
+      const isClosed = ['WIN', 'LOSS', 'BREAKEVEN'].includes(outcomeVal) || snap.status === 'CLOSED';
+      const isCaseStudy = Boolean(share.isCaseStudy);
+
+      if (shareStatusFilter === 'ACTIVE' && isClosed) return false;
+      if (shareStatusFilter === 'CLOSED' && !isClosed) return false;
+      if (shareStatusFilter === 'WIN' && outcomeVal !== 'WIN') return false;
+      if (shareStatusFilter === 'LOSS' && outcomeVal !== 'LOSS') return false;
+      if (shareStatusFilter === 'CASE_STUDY' && !isCaseStudy) return false;
+
+      if (!q) return true;
+      const haystack = [
+        snap.pair,
+        snap.direction,
+        share.title,
+        share.setupThesis,
+        share.entryReasoning,
+        share.riskRationale,
+        share.outcomeLessons,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+
+    filtered.sort((a, b) => {
+      if (shareSortBy === 'VIEWS') {
+        const viewsA = a._count?.readReceipts ?? a.viewCount ?? 0;
+        const viewsB = b._count?.readReceipts ?? b.viewCount ?? 0;
+        if (viewsB !== viewsA) return viewsB - viewsA;
+      } else if (shareSortBy === 'PINNED') {
+        const pinA = Boolean(a.pinned || a.isPinned) ? 1 : 0;
+        const pinB = Boolean(b.pinned || b.isPinned) ? 1 : 0;
+        if (pinB !== pinA) return pinB - pinA;
+      }
+      const dateA = new Date(a.publishedAt || a.createdAt || 0).getTime();
+      const dateB = new Date(b.publishedAt || b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+
+    return filtered;
+  }, [cohortShares, shareSearchQuery, shareStatusFilter, shareSortBy]);
 
   const copyInviteLink = () => {
     if (!cohortInviteUrl) return;
@@ -512,20 +898,20 @@ const MentorDashboard = () => {
   }, [activeGroup, searchQuery]);
 
   const totalStudentsCount = useMemo(() => {
-    return groups.reduce((acc, g) => acc + (g.students?.length || 0), 0);
-  }, [groups]);
+    return safeGroups.reduce((acc, g) => acc + (g.students?.length || 0), 0);
+  }, [safeGroups]);
 
-  // Total Mentor Earnings (95% Net Payouts across all cohorts)
+  // Total Mentor Earnings (98.5% Net Payouts across all cohorts)
   const totalEarningsSummary = useMemo(() => {
     let totalUsd = 0;
     let totalNgn = 0;
     let paidEnrollments = 0;
 
-    groups.forEach((g) => {
+    safeGroups.forEach((g) => {
       g.students?.forEach((s) => {
         if (s.paidAmount && s.paidAmount > 0) {
           paidEnrollments++;
-          const payout = s.mentorPayoutAmount || (s.paidAmount * 0.95);
+          const payout = s.mentorPayoutAmount || (s.paidAmount * 0.985);
           if (s.currency === 'NGN') {
             totalNgn += payout;
           } else {
@@ -536,7 +922,7 @@ const MentorDashboard = () => {
     });
 
     return { totalUsd, totalNgn, paidEnrollments };
-  }, [groups]);
+  }, [safeGroups]);
 
   // Non-Mentor Upgrade Landing Gate
   if (!isMentor) {
@@ -610,6 +996,56 @@ const MentorDashboard = () => {
 
   return (
     <div className="space-y-5 sm:space-y-6 pb-12">
+      {/* 12-Hour Grace Period Alert Banner */}
+      {isInGracePeriod && (
+        <div className="rounded-2xl border border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-surface to-surface p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl ring-1 ring-amber-500/30">
+          <div className="flex items-center gap-3.5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 font-black text-xl border border-amber-500/30">
+              ⚠️
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-400">
+                  12-Hour Grace Period Active
+                </span>
+                <span className="text-xs font-bold text-amber-300">
+                  ~{graceHoursRemaining} hour{graceHoursRemaining === 1 ? '' : 's'} remaining
+                </span>
+              </div>
+              <h4 className="text-sm sm:text-base font-black text-foreground mt-0.5">
+                Your 14-day Mentor Free Trial has ended
+              </h4>
+              <p className="text-xs text-muted max-w-xl mt-0.5 leading-relaxed">
+                You are currently in your 12-hour grace period. Upgrade to a paid plan before the grace period ends to maintain access to your student cohorts, Strategy Risk Guards, and reviews.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/pricing/mentor"
+            className="shrink-0 flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-5 text-xs transition shadow-md"
+          >
+            <span>Upgrade Mentor Plan</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      )}
+
+      {/* 14-Day Free Trial Active Banner */}
+      {isTrialActive && (
+        <div className="rounded-xl border border-blue-500/30 bg-blue-500/[0.06] px-4 py-2.5 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-muted">
+            <span className="text-blue-400 font-bold">⚡ 14-Day Free Trial:</span>
+            <span>You have ~{trialDaysRemaining} day{trialDaysRemaining === 1 ? '' : 's'} remaining in your complimentary Private Cohort trial (with a 12-hour grace buffer).</span>
+          </div>
+          <Link
+            to="/pricing/mentor"
+            className="text-[11px] font-bold text-blue-400 hover:text-blue-300 underline underline-offset-2 shrink-0"
+          >
+            View Plans & Pricing →
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <SectionHeader 
@@ -639,7 +1075,7 @@ const MentorDashboard = () => {
         <div className="p-3 sm:p-4 rounded-xl border border-border bg-surface shadow-xs">
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Active Cohorts</p>
           <div className="mt-1.5 sm:mt-2 flex items-center justify-between">
-            <span className="text-xl sm:text-2xl font-black text-foreground">{groups.length}</span>
+            <span className="text-xl sm:text-2xl font-black text-foreground">{safeGroups.length}</span>
             <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Users size={16} className="sm:w-4.5 sm:h-4.5" />
             </div>
@@ -665,7 +1101,7 @@ const MentorDashboard = () => {
                   ? `₦${totalEarningsSummary.totalNgn.toLocaleString()}`
                   : `$${totalEarningsSummary.totalUsd.toLocaleString()}`}
               </span>
-              <span className="block text-[9px] sm:text-[10px] text-muted truncate">95% net payout</span>
+              <span className="block text-[9px] sm:text-[10px] text-muted truncate">98.5% net payout</span>
             </div>
             <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
               <DollarSign size={16} className="sm:w-4.5 sm:h-4.5" />
@@ -687,7 +1123,7 @@ const MentorDashboard = () => {
         </div>
       </div>
 
-      {groups.length === 0 ? (
+      {safeGroups.length === 0 ? (
         <div className="text-center py-12 sm:py-16 px-4 rounded-2xl border border-dashed border-border bg-surface/50">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-4">
             <Users size={28} />
@@ -714,7 +1150,7 @@ const MentorDashboard = () => {
               </button>
             </div>
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-              {groups.map((group) => {
+              {safeGroups.map((group) => {
                 const isActive = group.id === activeGroupId;
                 return (
                   <button
@@ -749,7 +1185,7 @@ const MentorDashboard = () => {
               </button>
             </div>
             <div className="divide-y divide-border">
-              {groups.map((group) => {
+              {safeGroups.map((group) => {
                 const isActive = group.id === activeGroupId;
                 return (
                   <div
@@ -808,182 +1244,1234 @@ const MentorDashboard = () => {
             {activeGroup && (
               <>
                 {/* Cohort Header Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-border">
-                  <div className="min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b border-border">
+                  <div className="min-w-0 space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg sm:text-xl font-black text-foreground break-words">{activeGroup.name}</h2>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <h2 className="text-lg sm:text-xl font-black text-foreground tracking-tight break-words">
+                        {activeGroup.name}
+                      </h2>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                        <Users size={12} />
                         {activeGroup.students?.length || 0} Enrolled
                       </span>
                       {activeGroup.isPaid ? (
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                          <DollarSign size={12} /> {activeGroup.currency === 'NGN' ? '₦' : '$'}{activeGroup.price} {activeGroup.billingCycle === 'MONTHLY' ? '/mo' : ''}
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          <DollarSign size={12} />
+                          {activeGroup.currency === 'NGN' ? '₦' : '$'}
+                          {activeGroup.price}
+                          {activeGroup.billingCycle === 'MONTHLY' ? '/mo' : ' one-time'}
                         </span>
                       ) : (
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-muted text-muted border border-border">
-                          Free Community
+                        <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-surface-muted text-muted border border-border">
+                          Free cohort
                         </span>
                       )}
                     </div>
                     {activeGroup.description && (
-                      <p className="text-xs text-muted mt-1 leading-relaxed">{activeGroup.description}</p>
+                      <p className="text-xs sm:text-sm text-muted leading-relaxed max-w-2xl">
+                        {activeGroup.description}
+                      </p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+
+                  {/* Primary Action + Secondary / Mobile Overflow Actions */}
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                    {/* Desktop Secondary Actions */}
                     <button
+                      type="button"
                       onClick={copyInviteLink}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground transition"
-                      title="Copy Shareable Invite Link"
+                      className="hidden sm:inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground transition focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      title="Copy public enrollment link"
                     >
-                      {copiedLink ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                      <span className="truncate">{copiedLink ? 'Link Copied' : 'Copy Link'}</span>
+                      {copiedLink ? <Check size={14} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={14} className="text-muted" />}
+                      <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => openMentorSettings('branding', activeGroup)}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-border bg-surface-muted hover:bg-surface text-foreground transition"
-                      title="Configure Cohort Branding, Curriculum, Pricing & Community"
+                      className="hidden sm:inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground transition focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      title="Configure cohort branding, curriculum, pricing & community"
                     >
-                      <Settings2 size={14} className="text-emerald-500" />
+                      <Settings2 size={14} className="text-muted" />
                       <span>Settings</span>
                     </button>
+
+                    {/* Primary Action: Invite Students */}
                     <Button
                       onClick={() => setIsInviteModalOpen(true)}
-                      className="col-span-2 sm:col-span-1 w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-2"
+                      className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3.5 shadow-xs"
                     >
                       <UserPlus size={15} className="mr-1.5" /> Invite Students
                     </Button>
+
+                    {/* Narrow-Screen Overflow Menu for Secondary Actions */}
+                    <div className="relative sm:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setHeaderOverflowOpen((prev) => !prev)}
+                        aria-expanded={headerOverflowOpen}
+                        aria-haspopup="menu"
+                        aria-label="More cohort actions"
+                        className="inline-flex items-center justify-center p-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground transition focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                      {headerOverflowOpen && (
+                        <div
+                          role="menu"
+                          className="absolute right-0 mt-1.5 w-48 rounded-xl border border-border bg-surface shadow-lg py-1.5 z-30"
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              copyInviteLink();
+                              setHeaderOverflowOpen(false);
+                            }}
+                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-foreground hover:bg-surface-muted flex items-center gap-2"
+                          >
+                            {copiedLink ? <Check size={14} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={14} className="text-muted" />}
+                            <span>{copiedLink ? 'Link Copied' : 'Copy Link'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setHeaderOverflowOpen(false);
+                              openMentorSettings('branding', activeGroup);
+                            }}
+                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-foreground hover:bg-surface-muted flex items-center gap-2"
+                          >
+                            <Settings2 size={14} className="text-muted" />
+                            <span>Cohort Settings</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Shareable Invite Banner */}
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-                      <Share2 size={16} />
+                {/* Public Enrollment Link Panel */}
+                <div className="rounded-xl border border-border bg-surface-muted/40 px-3.5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                      <LinkIcon size={15} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-foreground truncate">
-                        {activeGroup.isPaid ? 'Public Paid Enrollment Link' : 'Shareable Cohort Invitation Link'}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-bold text-foreground">
+                          Public enrollment link
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                          {activeGroup.isPaid ? 'Paid enrollment' : 'Free enrollment'}
+                        </span>
+                      </div>
+                      <p
+                        className="text-xs font-mono text-muted truncate mt-0.5"
+                        title={cohortInviteUrl}
+                      >
+                        {cohortInviteDisplayUrl}
                       </p>
-                      <p className="text-[11px] text-muted truncate">{cohortInviteUrl}</p>
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={copyInviteLink}
-                    className="shrink-0 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 flex items-center justify-center gap-1 transition px-3 py-1.5 rounded-lg bg-emerald-500/10 sm:bg-transparent"
+                    className="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                   >
-                    {copiedLink ? <Check size={13} /> : <Copy size={13} />}
-                    {copiedLink ? 'Copied' : 'Copy Link'}
+                    {copiedLink ? (
+                      <>
+                        <Check size={13} className="text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-emerald-700 dark:text-emerald-400">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={13} className="text-muted" />
+                        <span>Copy Link</span>
+                      </>
+                    )}
                   </button>
                 </div>
 
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
-                  <input
-                    type="text"
-                    placeholder="Search enrolled traders by name or email..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm rounded-xl border border-border bg-background text-foreground placeholder:text-muted focus:outline-none focus:border-emerald-500"
-                  />
+                {/* Cohort View Sub-Navigation */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
+                  <button
+                    type="button"
+                    onClick={() => setCohortTab('roster')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                      cohortTab === 'roster'
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                        : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent'
+                    }`}
+                  >
+                    <Users size={14} />
+                    <span>Traders Roster</span>
+                    <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-surface-muted text-muted">
+                      {activeGroup.students?.length || 0}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCohortTab('shares');
+                      fetchCohortShares(activeGroupId);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                      cohortTab === 'shares'
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                        : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent'
+                    }`}
+                  >
+                    <Share2 size={14} />
+                    <span>Shared Trades</span>
+                    {cohortShares.length > 0 && (
+                      <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
+                        {cohortShares.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCohortTab('announcements');
+                      fetchCohortAnnouncements(activeGroupId);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                      cohortTab === 'announcements'
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                        : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent'
+                    }`}
+                  >
+                    <Megaphone size={14} />
+                    <span>Announcements</span>
+                    {cohortAnnouncements.length > 0 && (
+                      <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
+                        {cohortAnnouncements.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCohortTab('messages');
+                      fetchChatUnreadCount(activeGroupId);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                      cohortTab === 'messages'
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                        : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent'
+                    }`}
+                  >
+                    <MessageSquare size={14} />
+                    <span>1-on-1 Coaching Chat</span>
+                    {unreadChatCount > 0 && (
+                      <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-600 text-white font-black">
+                        {unreadChatCount}
+                      </span>
+                    )}
+                  </button>
                 </div>
 
-                {/* Student Cards Grid */}
-                {filteredStudents.length === 0 ? (
-                  <div className="text-center py-10 sm:py-12 border border-dashed border-border rounded-xl p-4">
-                    <GraduationCap size={32} className="mx-auto text-muted mb-2 opacity-50" />
-                    <p className="text-sm font-semibold text-foreground">No traders found</p>
-                    <p className="text-xs text-muted mt-1 mb-4 max-w-sm mx-auto leading-relaxed">
-                      {searchQuery
-                        ? 'Try checking for typos or searching by email address.'
-                        : 'Share your cohort invitation link on WhatsApp, Telegram, or Discord to welcome your first students.'}
-                    </p>
-                    {!searchQuery && (
-                      <Button onClick={() => setIsInviteModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs">
-                        <UserPlus size={14} className="mr-1.5" /> Invite Traders
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-                    {filteredStudents.map((item) => {
-                      const st = item.student;
-                      const isSharing = st?.userSettings?.shareTradesWithMentor !== false;
-                      const totalTrades = st?.tradingAccounts?.reduce((sum, acc) => sum + (acc._count?.trades || 0), 0) || 0;
+                {/* TAB 1: TRADERS ROSTER */}
+                {cohortTab === 'roster' && (
+                  <>
+                    {/* Search Bar */}
+                    <div className="relative">
+                      <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
+                      <input
+                        type="text"
+                        placeholder="Search enrolled traders by name or email..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm rounded-xl border border-border bg-background text-foreground placeholder:text-muted focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
 
-                      return (
-                        <div
-                          key={item.id}
-                          className="rounded-xl border border-border bg-surface-muted/30 p-4 flex flex-col justify-between hover:border-border/80 transition space-y-3"
-                        >
-                          <div>
-                            <div className="flex items-start justify-between gap-2 mb-2.5">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-10 w-10 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0 border border-emerald-500/20">
-                                  {st?.name ? st.name.charAt(0).toUpperCase() : 'S'}
+                    {/* Student Cards Grid */}
+                    {filteredStudents.length === 0 ? (
+                      <div className="text-center py-10 sm:py-12 border border-dashed border-border rounded-xl p-4">
+                        <GraduationCap size={32} className="mx-auto text-muted mb-2 opacity-50" />
+                        <p className="text-sm font-semibold text-foreground">No traders found</p>
+                        <p className="text-xs text-muted mt-1 mb-4 max-w-sm mx-auto leading-relaxed">
+                          {searchQuery
+                            ? 'Try checking for typos or searching by email address.'
+                            : 'Share your cohort invitation link on WhatsApp, Telegram, or Discord to welcome your first students.'}
+                        </p>
+                        {!searchQuery && (
+                          <Button onClick={() => setIsInviteModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs">
+                            <UserPlus size={14} className="mr-1.5" /> Invite Traders
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+                        {filteredStudents.map((item) => {
+                          const st = item.student;
+                          const isSharing = st?.userSettings?.shareTradesWithMentor !== false;
+                          const totalTrades = st?.tradingAccounts?.reduce((sum, acc) => sum + (acc._count?.trades || 0), 0) || 0;
+
+                          return (
+                            <div
+                              key={item.id}
+                              className="rounded-xl border border-border bg-surface-muted/30 p-4 flex flex-col justify-between hover:border-border/80 transition space-y-3"
+                            >
+                              <div>
+                                <div className="flex items-start justify-between gap-2 mb-2.5">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <div className="h-10 w-10 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0 border border-emerald-500/20">
+                                      {st?.name ? st.name.charAt(0).toUpperCase() : 'S'}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-bold text-foreground truncate">{st?.name || 'Unnamed Trader'}</p>
+                                      <p className="text-xs text-muted truncate">{st?.email}</p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleRemoveStudent(activeGroup.id, st.id, st.name)}
+                                    className="text-muted hover:text-rose-600 dark:hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition shrink-0"
+                                    title="Remove Student from Cohort"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-bold text-foreground truncate">{st?.name || 'Unnamed Trader'}</p>
-                                  <p className="text-xs text-muted truncate">{st?.email}</p>
+
+                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                                  <span className={`text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                                    isSharing
+                                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                                      : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                                  }`}>
+                                    {isSharing ? <CheckCircle2 size={11} /> : <AlertCircle size={11} />}
+                                    {isSharing ? 'Journal Connected' : 'Sync Paused'}
+                                  </span>
+
+                                  {item.paidAmount && item.paidAmount > 0 ? (
+                                    <span className="text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                                      {item.currency === 'NGN' ? '₦' : '$'}{item.paidAmount} Paid
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] sm:text-[11px] text-muted font-medium">
+                                      Free Access
+                                    </span>
+                                  )}
+
+                                  <span className="text-[10px] sm:text-[11px] text-muted font-medium ml-auto">
+                                    {totalTrades} Logged Trade{totalTrades === 1 ? '' : 's'}
+                                  </span>
                                 </div>
                               </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-border/60">
+                                <button
+                                  onClick={() => openStudentTrades(st)}
+                                  className="flex-1 py-2 px-2.5 rounded-lg bg-surface border border-border hover:bg-surface-muted text-foreground text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95"
+                                >
+                                  <Eye size={13} /> Inspect Trades
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setChatPreselectedStudentId(st.id);
+                                    setCohortTab('messages');
+                                  }}
+                                  className="py-2 px-2.5 rounded-lg bg-surface border border-border hover:border-emerald-500/40 hover:bg-emerald-500/10 text-foreground hover:text-emerald-700 dark:hover:text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95"
+                                  title={`Open 1-on-1 chat with ${st?.name || 'Student'}`}
+                                >
+                                  <MessageSquare size={13} /> Chat
+                                </button>
+                                <button
+                                  disabled={draftingFor === st.id}
+                                  onClick={() => handleDraftSummary(st)}
+                                  className="py-2 px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition disabled:opacity-50 active:scale-95"
+                                  title="Draft coaching feedback using AI"
+                                >
+                                  <Sparkles size={13} />
+                                  {draftingFor === st.id ? 'Drafting...' : 'AI Review'}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* TAB 2: SHARED TRADES */}
+                {cohortTab === 'shares' && (
+                  <div className="space-y-4">
+                    {/* Trade-Feed Header & Compact Toolbar */}
+                    <div className="rounded-xl border border-border bg-surface-muted/30 p-3.5 sm:p-4 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm sm:text-base font-bold text-foreground">Shared trades</h4>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-surface border border-border text-muted">
+                              {cohortShares.length}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted mt-0.5">
+                            Publish live setups or post-trade case studies and control which metrics students can see.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          <Link
+                            to="/trades"
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl text-muted hover:text-foreground hover:bg-surface transition"
+                          >
+                            <span>Trade Log</span>
+                            <ExternalLink size={12} />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsConcludeMode(false);
+                              setEditingTradeShare(null);
+                              setIsShareTradeModalOpen(true);
+                            }}
+                            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                          >
+                            <Plus size={14} /> Share Trade
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Search, Status Filter & Sort Bar */}
+                      {cohortShares.length > 0 && (
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 pt-2.5 border-t border-border/60">
+                          <div className="relative flex-1 min-w-0">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                            <input
+                              type="text"
+                              value={shareSearchQuery}
+                              onChange={(e) => setShareSearchQuery(e.target.value)}
+                              placeholder="Search instrument, title, or commentary..."
+                              aria-label="Search shared trades"
+                              className="w-full pl-9 pr-8 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground placeholder:text-muted focus:outline-none focus:border-emerald-500"
+                            />
+                            {shareSearchQuery && (
                               <button
-                                onClick={() => handleRemoveStudent(activeGroup.id, st.id, st.name)}
-                                className="text-muted hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-500/10 transition shrink-0"
-                                title="Remove Student from Cohort"
+                                type="button"
+                                onClick={() => setShareSearchQuery('')}
+                                aria-label="Clear search"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
                               >
-                                <Trash2 size={14} />
+                                <X size={13} />
                               </button>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
-                              <span className={`text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                                isSharing
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                              }`}>
-                                {isSharing ? <CheckCircle2 size={11} /> : <AlertCircle size={11} />}
-                                {isSharing ? 'Journal Connected' : 'Sync Paused'}
-                              </span>
-
-                              {item.paidAmount && item.paidAmount > 0 ? (
-                                <span className="text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                                  {item.currency === 'NGN' ? '₦' : '$'}{item.paidAmount} Paid
-                                </span>
-                              ) : (
-                                <span className="text-[10px] sm:text-[11px] text-muted font-medium">
-                                  Free Access
-                                </span>
-                              )}
-
-                              <span className="text-[10px] sm:text-[11px] text-muted font-medium ml-auto">
-                                {totalTrades} Logged Trade{totalTrades === 1 ? '' : 's'}
-                              </span>
-                            </div>
+                            )}
                           </div>
 
-                          {/* Action Buttons */}
-                          <div className="flex items-center gap-2 pt-2.5 border-t border-border/60">
-                            <button
-                              onClick={() => openStudentTrades(st)}
-                              className="flex-1 py-2 px-3 rounded-lg bg-surface border border-border hover:bg-surface-muted text-foreground text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95"
-                            >
-                              <Eye size={14} /> Inspect Trades
-                            </button>
-                            <button
-                              disabled={draftingFor === st.id}
-                              onClick={() => handleDraftSummary(st)}
-                              className="py-2 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition disabled:opacity-50 active:scale-95"
-                              title="Draft coaching feedback using AI"
-                            >
-                              <Sparkles size={14} />
-                              {draftingFor === st.id ? 'Drafting...' : 'AI Review'}
-                            </button>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {[
+                              { id: 'ALL', label: 'All' },
+                              { id: 'ACTIVE', label: 'Active' },
+                              { id: 'CLOSED', label: 'Closed' },
+                              { id: 'WIN', label: 'Win' },
+                              { id: 'LOSS', label: 'Loss' },
+                              { id: 'CASE_STUDY', label: 'Case Study' },
+                            ].map((pill) => (
+                              <button
+                                key={pill.id}
+                                type="button"
+                                onClick={() => setShareStatusFilter(pill.id)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition border ${
+                                  shareStatusFilter === pill.id
+                                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-bold'
+                                    : 'bg-surface text-muted hover:text-foreground border-border'
+                                }`}
+                              >
+                                {pill.label}
+                              </button>
+                            ))}
+
+                            <div className="flex items-center gap-1.5 ml-auto sm:ml-1">
+                              <ArrowUpDown size={13} className="text-muted shrink-0" />
+                              <select
+                                value={shareSortBy}
+                                onChange={(e) => setShareSortBy(e.target.value)}
+                                aria-label="Sort shared trades"
+                                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-border bg-surface text-foreground focus:outline-none focus:border-emerald-500"
+                              >
+                                <option value="PINNED">Pinned & newest</option>
+                                <option value="NEWEST">Newest first</option>
+                                <option value="VIEWS">Most viewed</option>
+                              </select>
+                            </div>
                           </div>
                         </div>
-                      );
-                    })}
+                      )}
+                    </div>
+
+                    {loadingShares ? (
+                      <div className="py-12 text-center text-xs text-muted">
+                        <RefreshCw size={20} className="animate-spin mx-auto text-emerald-600 dark:text-emerald-400 mb-2" />
+                        Loading shared trade setups...
+                      </div>
+                    ) : cohortShares.length === 0 ? (
+                      <div className="text-center py-12 border border-dashed border-border rounded-xl p-4">
+                        <Share2 size={32} className="mx-auto text-muted mb-2 opacity-50" />
+                        <p className="text-sm font-bold text-foreground">No trades shared with this cohort yet</p>
+                        <p className="text-xs text-muted mt-1 mb-4 max-w-sm mx-auto leading-relaxed">
+                          Publish a live signal or share a completed trade from your journal with tailored student visibility and commentary.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsConcludeMode(false);
+                            setEditingTradeShare(null);
+                            setIsShareTradeModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition"
+                        >
+                          <Plus size={14} /> Share Trade
+                        </button>
+                      </div>
+                    ) : filteredAndSortedShares.length === 0 ? (
+                      <div className="text-center py-10 border border-dashed border-border rounded-xl p-4 space-y-2">
+                        <p className="text-sm font-bold text-foreground">No matching shared trades</p>
+                        <p className="text-xs text-muted">
+                          No shared setups match your current search or status filter.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShareSearchQuery('');
+                            setShareStatusFilter('ALL');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition"
+                        >
+                          Reset filters
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3.5">
+                        {filteredAndSortedShares.map((share) => {
+                          const snap = share.tradeSnapshot || {};
+                          const vis = snap.visibilityOptions || {};
+                          const rawOutcome = String(snap.result || snap.outcome || 'OPEN').toUpperCase();
+                          const isClosed = ['WIN', 'LOSS', 'BREAKEVEN'].includes(rawOutcome) || snap.status === 'CLOSED';
+                          const rrVal = snap.riskRewardRatio ?? snap.plannedRR ?? snap.realizedRR;
+                          const pnlPct = snap.profitLossPercent;
+                          const pnlDollar = snap.profitLoss ?? snap.pnl;
+                          const pipsVal = snap.pips;
+                          const viewCount = share._count?.readReceipts ?? share.viewCount ?? 0;
+                          const isPinned = Boolean(share.isPinned || share.pinned);
+                          const isCaseStudy = Boolean(share.isCaseStudy);
+                          const isBuy = snap.direction === 'BUY';
+
+                          // Format Result summary
+                          const returnParts = [];
+                          if (pnlPct !== null && pnlPct !== undefined && vis.showPnLPercent !== false) {
+                            returnParts.push(`${Number(pnlPct) > 0 ? '+' : ''}${Number(pnlPct)}%`);
+                          }
+                          if (pnlDollar !== null && pnlDollar !== undefined && Boolean(vis.showPnLDollar)) {
+                            returnParts.push(`${Number(pnlDollar) >= 0 ? '+$' : '-$'}${Math.abs(Number(pnlDollar)).toLocaleString()}`);
+                          }
+                          if (pipsVal !== null && pipsVal !== undefined && vis.showPips !== false) {
+                            returnParts.push(`${Number(pipsVal) > 0 ? '+' : ''}${Number(pipsVal)} pips`);
+                          }
+                          const actualReturnDisplay = returnParts.length > 0
+                            ? returnParts.join(' · ')
+                            : !isClosed
+                            ? 'Open setup'
+                            : 'Result hidden';
+
+                          const isPositiveReturn =
+                            rawOutcome === 'WIN' ||
+                            (pnlPct !== null && pnlPct !== undefined && Number(pnlPct) > 0) ||
+                            (pnlDollar !== null && pnlDollar !== undefined && Number(pnlDollar) > 0);
+                          const isNegativeReturn =
+                            rawOutcome === 'LOSS' ||
+                            (pnlPct !== null && pnlPct !== undefined && Number(pnlPct) < 0) ||
+                            (pnlDollar !== null && pnlDollar !== undefined && Number(pnlDollar) < 0);
+
+                          // Count visible student metrics out of 7
+                          const visibilityList = [
+                            { label: 'Prices', on: vis.showPrices !== false },
+                            { label: 'R:R', on: vis.showRR !== false },
+                            { label: 'Win/Loss', on: vis.showResult !== false },
+                            { label: '% Return', on: vis.showPnLPercent !== false },
+                            { label: '$ P&L', on: Boolean(vis.showPnLDollar) },
+                            { label: 'Pips', on: vis.showPips !== false },
+                            { label: 'Lot size', on: Boolean(vis.showLotSize) },
+                          ];
+                          const visibleCount = visibilityList.filter((m) => m.on).length;
+                          const visibleNames = visibilityList.filter((m) => m.on).map((m) => m.label).join(', ');
+
+                          // Commentary progressive disclosure
+                          const thesisText = (share.setupThesis || share.thesis || '').trim();
+                          const entryText = (share.entryReasoning || '').trim();
+                          const riskText = (share.riskRationale || '').trim();
+                          const lessonsText = (share.outcomeLessons || share.takeaways || '').trim();
+                          const screenshots = Array.isArray(snap.screenshots) ? snap.screenshots : [];
+                          const hasExtraAnalysis =
+                            Boolean(entryText || riskText || lessonsText || screenshots.length > 0) ||
+                            thesisText.length > 180;
+                          const isExpanded = Boolean(expandedShareAnalysis[share.id]);
+
+                          return (
+                            <article
+                              key={share.id}
+                              className="rounded-xl border border-border bg-surface p-4 sm:p-5 space-y-3.5 shadow-2xs hover:border-border/90 transition"
+                            >
+                              {/* 1. Card Header: Instrument, Direction, Status, Metadata & Actions */}
+                              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                <div className="space-y-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-base font-black text-foreground tracking-tight">
+                                      {snap.pair || 'Instrument'}
+                                    </span>
+
+                                    {/* Semantic Direction Badge with Icon + Label */}
+                                    <span
+                                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold border ${
+                                        isBuy
+                                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25'
+                                          : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25'
+                                      }`}
+                                    >
+                                      {isBuy ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                                      {isBuy ? 'Buy' : 'Sell'}
+                                    </span>
+
+                                    {/* Outcome / Status Badge with Icon + Label */}
+                                    {!isClosed ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                                        <Clock size={11} /> Active setup
+                                      </span>
+                                    ) : rawOutcome === 'WIN' ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
+                                        <CheckCircle2 size={11} /> Closed · Win
+                                      </span>
+                                    ) : rawOutcome === 'LOSS' ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/25">
+                                        <AlertCircle size={11} /> Closed · Loss
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-surface-muted text-muted border border-border">
+                                        Closed · Breakeven
+                                      </span>
+                                    )}
+
+                                    {isCaseStudy && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-surface-muted text-foreground border border-border">
+                                        <BookOpen size={11} className="text-emerald-600 dark:text-emerald-400" />
+                                        Case study
+                                      </span>
+                                    )}
+
+                                    {isPinned && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                                        <Pin size={11} /> Pinned
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {share.title && (
+                                    <h5 className="text-sm font-bold text-foreground truncate">
+                                      {share.title}
+                                    </h5>
+                                  )}
+
+                                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted">
+                                    <span>
+                                      Shared {new Date(share.publishedAt || share.createdAt).toLocaleDateString()}
+                                    </span>
+                                    <span aria-hidden="true">·</span>
+                                    <span>{activeGroup?.name || 'Cohort'}</span>
+                                    <span aria-hidden="true">·</span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <Eye size={11} />
+                                      {viewCount} student view{viewCount === 1 ? '' : 's'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Card Actions: Primary Contextual Action + Edit Student View + Overflow Menu */}
+                                <div className="flex flex-wrap items-center gap-2 self-end sm:self-start shrink-0">
+                                  {!isClosed && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingTradeShare(share);
+                                        setIsConcludeMode(true);
+                                        setIsShareTradeModalOpen(true);
+                                      }}
+                                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold inline-flex items-center gap-1.5 transition shadow-xs"
+                                    >
+                                      <CheckCircle2 size={13} />
+                                      <span>Conclude trade</span>
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingTradeShare(share);
+                                      setIsConcludeMode(false);
+                                      setIsShareTradeModalOpen(true);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-semibold inline-flex items-center gap-1.5 transition"
+                                  >
+                                    <Edit3 size={12} className="text-emerald-600 dark:text-emerald-400" />
+                                    <span>Edit student view</span>
+                                  </button>
+
+                                  {/* Secondary Overflow Menu (Pin / Update Outcome / Unshare with confirmation) */}
+                                  <div className="relative">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setOpenShareMenuId((prev) => (prev === share.id ? null : share.id))
+                                      }
+                                      aria-expanded={openShareMenuId === share.id}
+                                      aria-haspopup="menu"
+                                      aria-label="More trade actions"
+                                      className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-muted hover:text-foreground transition"
+                                    >
+                                      <MoreHorizontal size={15} />
+                                    </button>
+                                    {openShareMenuId === share.id && (
+                                      <div
+                                        role="menu"
+                                        className="absolute right-0 mt-1.5 w-48 rounded-xl border border-border bg-surface shadow-lg py-1.5 z-20"
+                                      >
+                                        <button
+                                          type="button"
+                                          role="menuitem"
+                                          onClick={() => handleTogglePinShare(share)}
+                                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-foreground hover:bg-surface-muted flex items-center gap-2"
+                                        >
+                                          <Pin size={13} className="text-amber-600 dark:text-amber-400" />
+                                          <span>{isPinned ? 'Unpin from top' : 'Pin setup to top'}</span>
+                                        </button>
+                                        {isClosed && (
+                                          <button
+                                            type="button"
+                                            role="menuitem"
+                                            onClick={() => {
+                                              setOpenShareMenuId(null);
+                                              setEditingTradeShare(share);
+                                              setIsConcludeMode(true);
+                                              setIsShareTradeModalOpen(true);
+                                            }}
+                                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-foreground hover:bg-surface-muted flex items-center gap-2"
+                                          >
+                                            <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
+                                            <span>Update outcome & sync</span>
+                                          </button>
+                                        )}
+                                        <div className="my-1 border-t border-border" />
+                                        <button
+                                          type="button"
+                                          role="menuitem"
+                                          onClick={() => {
+                                            setOpenShareMenuId(null);
+                                            setUnshareConfirmTarget(share);
+                                          }}
+                                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 flex items-center gap-2"
+                                        >
+                                          <Trash2 size={13} />
+                                          <span>Unshare trade…</span>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 2. Core Trade Metrics: 4 Scannable Blocks (Entry, Risk, Exit, Result) */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                                {/* Block 1: Entry */}
+                                <div className="p-3 rounded-xl bg-surface-muted/40 border border-border/70 space-y-1">
+                                  <div className="flex items-center justify-between text-[11px] text-muted">
+                                    <span className="font-semibold">Entry</span>
+                                    {vis.showPrices === false && (
+                                      <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                                        Hidden
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="font-mono font-bold text-sm text-foreground">
+                                    {snap.entryPrice ?? '—'}
+                                  </p>
+                                  <p className="text-[11px] text-muted truncate">
+                                    {[
+                                      snap.session ? `${snap.session} session` : null,
+                                      snap.lotSize && vis.showLotSize ? `${snap.lotSize} lots` : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' · ') || 'Execution price'}
+                                  </p>
+                                </div>
+
+                                {/* Block 2: Risk (SL / TP / R:R) */}
+                                <div className="p-3 rounded-xl bg-surface-muted/40 border border-border/70 space-y-1">
+                                  <div className="flex items-center justify-between text-[11px] text-muted">
+                                    <span className="font-semibold">Risk & targets</span>
+                                    {rrVal !== null && rrVal !== undefined && (
+                                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                                        1:{rrVal}R{vis.showRR === false ? ' (Hidden)' : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="font-mono font-bold text-xs text-foreground truncate">
+                                    SL {snap.stopLoss ?? '—'} · TP {snap.takeProfit ?? '—'}
+                                  </p>
+                                  <p className="text-[11px] text-muted">
+                                    {vis.showPrices === false && vis.showRR === false
+                                      ? 'Prices & R:R hidden from students'
+                                      : 'Stop loss & target levels'}
+                                  </p>
+                                </div>
+
+                                {/* Block 3: Exit */}
+                                <div className="p-3 rounded-xl bg-surface-muted/40 border border-border/70 space-y-1">
+                                  <div className="flex items-center justify-between text-[11px] text-muted">
+                                    <span className="font-semibold">Exit</span>
+                                    <span className="text-[10px] font-semibold">
+                                      {isClosed ? 'Closed' : 'Open'}
+                                    </span>
+                                  </div>
+                                  <p className="font-mono font-bold text-sm text-foreground">
+                                    {snap.exitPrice ?? (isClosed ? 'Closed' : 'Active position')}
+                                  </p>
+                                  <p className="text-[11px] text-muted">
+                                    {isClosed ? 'Final close level' : 'Awaiting trade conclusion'}
+                                  </p>
+                                </div>
+
+                                {/* Block 4: Result */}
+                                <div className="p-3 rounded-xl bg-surface-muted/40 border border-border/70 space-y-1">
+                                  <div className="flex items-center justify-between text-[11px] text-muted">
+                                    <span className="font-semibold">Result</span>
+                                    {vis.showResult === false && (
+                                      <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                                        Outcome hidden
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p
+                                    className={`font-mono font-bold text-sm truncate ${
+                                      isPositiveReturn
+                                        ? 'text-emerald-700 dark:text-emerald-400'
+                                        : isNegativeReturn
+                                        ? 'text-rose-700 dark:text-rose-400'
+                                        : 'text-foreground'
+                                    }`}
+                                  >
+                                    {actualReturnDisplay}
+                                  </p>
+                                  <p className="text-[11px] text-muted">
+                                    {!isClosed
+                                      ? 'Live signal in progress'
+                                      : `Outcome: ${rawOutcome}`}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* 3. Concise Student Visibility Bar */}
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2 rounded-lg bg-surface-muted/30 border border-border/60 text-xs">
+                                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                  <span className="inline-flex items-center gap-1.5 font-bold text-foreground">
+                                    <Eye size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                    Student view: {visibleCount} of 7 metrics visible
+                                  </span>
+                                  <span className="text-muted truncate text-[11px]">
+                                    ({visibleNames || 'Commentary only'})
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingTradeShare(share);
+                                    setIsConcludeMode(false);
+                                    setIsShareTradeModalOpen(true);
+                                  }}
+                                  className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline self-start sm:self-center shrink-0"
+                                >
+                                  Customize visibility
+                                </button>
+                              </div>
+
+                              {/* 4. Progressive Disclosure Educational Commentary */}
+                              {(thesisText || entryText || riskText || lessonsText || screenshots.length > 0) && (
+                                <div className="space-y-2.5 pt-1">
+                                  {thesisText && (
+                                    <div className="text-xs space-y-1">
+                                      <span className="text-[11px] font-bold text-muted">
+                                        Thesis & market context
+                                      </span>
+                                      <p
+                                        className={`text-foreground leading-relaxed whitespace-pre-wrap ${
+                                          !isExpanded && hasExtraAnalysis ? 'line-clamp-2' : ''
+                                        }`}
+                                      >
+                                        {thesisText}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {isExpanded && (
+                                    <div className="space-y-2.5 pt-2 border-t border-border/60 animate-fadeIn">
+                                      {(entryText || riskText) && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                          {entryText && (
+                                            <div className="p-3 rounded-lg bg-surface-muted/30 border border-border/60 text-xs space-y-1">
+                                              <span className="text-[11px] font-bold text-foreground block">
+                                                Entry confirmation
+                                              </span>
+                                              <p className="text-muted leading-relaxed whitespace-pre-wrap">
+                                                {entryText}
+                                              </p>
+                                            </div>
+                                          )}
+                                          {riskText && (
+                                            <div className="p-3 rounded-lg bg-surface-muted/30 border border-border/60 text-xs space-y-1">
+                                              <span className="text-[11px] font-bold text-foreground block">
+                                                Invalidation & risk plan
+                                              </span>
+                                              <p className="text-muted leading-relaxed whitespace-pre-wrap">
+                                                {riskText}
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {lessonsText && (
+                                        <div className="p-3 rounded-lg bg-surface-muted/30 border border-border/60 text-xs space-y-1">
+                                          <span className="text-[11px] font-bold text-foreground block">
+                                            Lesson & outcome
+                                          </span>
+                                          <p className="text-muted leading-relaxed whitespace-pre-wrap">
+                                            {lessonsText}
+                                          </p>
+                                        </div>
+                                      )}
+
+                                      {screenshots.length > 0 && (
+                                        <div className="space-y-1.5">
+                                          <span className="text-[11px] font-bold text-muted block">
+                                            Chart screenshots ({screenshots.length})
+                                          </span>
+                                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {screenshots.map((shot, idx) => (
+                                              <button
+                                                key={shot.id || idx}
+                                                type="button"
+                                                onClick={() =>
+                                                  setActiveModalImage({
+                                                    ...shot,
+                                                    imageUrl: resolveImageUrl(shot.imageUrl),
+                                                  })
+                                                }
+                                                className="group relative rounded-lg overflow-hidden border border-border bg-surface-muted aspect-video text-left"
+                                              >
+                                                <img
+                                                  src={resolveImageUrl(shot.imageUrl)}
+                                                  alt={shot.note || 'Shared trade chart'}
+                                                  className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                                                />
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {hasExtraAnalysis && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleShareAnalysis(share.id)}
+                                      aria-expanded={isExpanded}
+                                      className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline pt-0.5"
+                                    >
+                                      {isExpanded ? (
+                                        <>
+                                          <ChevronUp size={13} /> Hide mentor analysis
+                                        </>
+                                      ) : (
+                                        <>
+                                          <ChevronDown size={13} /> Expand mentor analysis
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </article>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 3: ANNOUNCEMENTS */}
+                {cohortTab === 'announcements' && (
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-surface-muted/30 border border-border">
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">Cohort Announcements</h4>
+                        <p className="text-xs text-muted">Broadcast market updates, session schedules, assignments, or risk notices directly to students' feeds.</p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setAnnouncementTargetCohorts([activeGroupId]);
+                          setIsNewAnnouncementOpen(true);
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-2"
+                      >
+                        <Plus size={14} className="mr-1.5" /> Post Announcement
+                      </Button>
+                    </div>
+
+                    {/* Post Announcement Form */}
+                    {isNewAnnouncementOpen && (
+                      <div className="p-4 rounded-xl border border-emerald-500/30 bg-surface shadow-md space-y-3.5 animate-fadeIn">
+                        <div className="flex items-center justify-between pb-2 border-b border-border">
+                          <h5 className="text-xs font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
+                            <Megaphone size={14} /> New Cohort Broadcast
+                          </h5>
+                          <button
+                            onClick={() => setIsNewAnnouncementOpen(false)}
+                            className="text-muted hover:text-foreground text-xs"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+
+                        <form onSubmit={handlePostAnnouncement} className="space-y-3">
+                          {safeGroups.length > 1 && (
+                            <div>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-[11px] font-bold text-muted uppercase tracking-wider">
+                                  Target Cohorts
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setAnnouncementTargetCohorts(
+                                      announcementTargetCohorts.length === safeGroups.length
+                                        ? [activeGroupId]
+                                        : safeGroups.map((g) => g.id)
+                                    )
+                                  }
+                                  className="text-[11px] font-bold text-emerald-500 hover:underline"
+                                >
+                                  {announcementTargetCohorts.length === safeGroups.length
+                                    ? 'Current Cohort Only'
+                                    : 'Broadcast to All My Cohorts'}
+                                </button>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {safeGroups.map((g) => {
+                                  const isSelected = announcementTargetCohorts.includes(g.id);
+                                  return (
+                                    <button
+                                      key={g.id}
+                                      type="button"
+                                      onClick={() =>
+                                        setAnnouncementTargetCohorts((prev) =>
+                                          prev.includes(g.id)
+                                            ? prev.length > 1
+                                              ? prev.filter((id) => id !== g.id)
+                                              : prev
+                                            : [...prev, g.id]
+                                        )
+                                      }
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 ${
+                                        isSelected
+                                          ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/40'
+                                          : 'bg-background text-muted border-border hover:text-foreground'
+                                      }`}
+                                    >
+                                      {isSelected && <Check size={12} />}
+                                      <span>{g.name}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1">
+                              Announcement Title *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. CPI Release & Gold Trading Bias for Today"
+                              value={announcementForm.title}
+                              onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, title: e.target.value }))}
+                              className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1">
+                                Category
+                              </label>
+                              <select
+                                value={announcementForm.category}
+                                onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, category: e.target.value }))}
+                                className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500"
+                              >
+                                <option value="GENERAL">General Announcement</option>
+                                <option value="MARKET_UPDATE">Market Analysis & Bias</option>
+                                <option value="TRADE_ALERT">Trade Execution Alert</option>
+                                <option value="WEBINAR">Live Session / Webinar</option>
+                                <option value="ASSIGNMENT">Homework / Assignment</option>
+                                <option value="RISK_NOTICE">Risk Management Notice</option>
+                              </select>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-5">
+                              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                                <input
+                                  type="checkbox"
+                                  checked={announcementForm.isPinned}
+                                  onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, isPinned: e.target.checked }))}
+                                  className="rounded text-emerald-600 focus:ring-emerald-500"
+                                />
+                                <Pin size={13} className="text-amber-500" /> Pin announcement to top of feed
+                              </label>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-muted uppercase tracking-wider mb-1">
+                              Message Content *
+                            </label>
+                            <textarea
+                              required
+                              rows={4}
+                              placeholder="Write clear instructions, session links, or market levels for your students..."
+                              value={announcementForm.content}
+                              onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, content: e.target.value }))}
+                              className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500 leading-relaxed"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsNewAnnouncementOpen(false)}
+                              className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted hover:text-foreground"
+                            >
+                              Cancel
+                            </button>
+                            <Button
+                              type="submit"
+                              disabled={postingAnnouncement}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-1.5"
+                            >
+                              <Send size={13} className="mr-1.5" />
+                              {postingAnnouncement
+                                ? 'Broadcasting...'
+                                : announcementTargetCohorts.length > 1
+                                ? `Broadcast to ${announcementTargetCohorts.length} Cohorts`
+                                : 'Broadcast to Cohort'}
+                            </Button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {loadingAnnouncements ? (
+                      <div className="py-12 text-center text-xs text-muted">
+                        <RefreshCw size={20} className="animate-spin mx-auto text-emerald-500 mb-2" />
+                        Loading cohort announcements...
+                      </div>
+                    ) : cohortAnnouncements.length === 0 ? (
+                      <div className="text-center py-12 border border-dashed border-border rounded-xl p-4">
+                        <Megaphone size={32} className="mx-auto text-muted mb-2 opacity-50" />
+                        <p className="text-sm font-bold text-foreground">No announcements yet</p>
+                        <p className="text-xs text-muted mt-1 mb-4 max-w-sm mx-auto">
+                          Keep your students updated on high-impact news events, live webinars, and market biases.
+                        </p>
+                        <Button
+                          onClick={() => setIsNewAnnouncementOpen(true)}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs"
+                        >
+                          <Plus size={14} className="mr-1.5" /> Create First Announcement
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {cohortAnnouncements.map((ann) => (
+                          <div
+                            key={ann.id}
+                            className="rounded-xl border border-border bg-surface-muted/20 p-4 space-y-2.5 hover:border-border/80 transition"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500">
+                                    {(ann.category || 'ANNOUNCEMENT').replace(/_/g, ' ')}
+                                  </span>
+                                  {ann.isPinned && (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 flex items-center gap-1">
+                                      <Pin size={10} /> Pinned
+                                    </span>
+                                  )}
+                                  <span className="text-[11px] text-muted">
+                                    {new Date(ann.publishedAt || ann.createdAt).toLocaleDateString()} · {ann._count?.readReceipts || 0} student views
+                                  </span>
+                                </div>
+                                <h5 className="text-sm font-bold text-foreground">{ann.title}</h5>
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleTogglePinAnnouncement(ann)}
+                                  className={`p-1.5 rounded-lg transition ${
+                                    ann.isPinned
+                                      ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20'
+                                      : 'text-muted hover:text-amber-500 hover:bg-surface-muted'
+                                  }`}
+                                  title={ann.isPinned ? 'Unpin announcement' : 'Pin announcement to top'}
+                                >
+                                  <Pin size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAnnouncement(ann.id)}
+                                  className="text-muted hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-500/10 transition"
+                                  title="Delete announcement"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                              {ann.body || ann.content}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 4: 1-ON-1 DIRECT COACHING CHAT */}
+                {cohortTab === 'messages' && (
+                  <div className="space-y-3">
+                    <MentorStudentChatPanel
+                      role="MENTOR"
+                      activeGroup={activeGroup}
+                      groups={safeGroups}
+                      initialStudentId={chatPreselectedStudentId}
+                    />
                   </div>
                 )}
               </>
@@ -1012,7 +2500,7 @@ const MentorDashboard = () => {
 
               {/* Cohort Selector Switcher in Settings Header */}
               <div className="flex items-center gap-2">
-                {groups.length > 0 && (
+                {safeGroups.length > 0 && (
                   <div className="flex items-center gap-1.5 bg-background border border-border rounded-xl px-2.5 py-1 text-xs">
                     <span className="text-muted font-medium text-[11px] hidden sm:inline">Cohort:</span>
                     <select
@@ -1020,7 +2508,7 @@ const MentorDashboard = () => {
                       onChange={(e) => handleSwitchSettingsCohort(e.target.value)}
                       className="bg-transparent text-foreground font-semibold text-xs focus:outline-none cursor-pointer py-1"
                     >
-                      {groups.map((g) => (
+                      {safeGroups.map((g) => (
                         <option key={g.id} value={g.id} className="bg-surface text-foreground">
                           {g.name} {g.isPaid ? `(${g.currency === 'NGN' ? '₦' : '$'}${g.price})` : '(Free)'}
                         </option>
@@ -1066,6 +2554,17 @@ const MentorDashboard = () => {
                   }`}
                 >
                   <CheckCircle size={15} /> Benefits & Curriculum
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMentorSettingsTab('risk')}
+                  className={`shrink-0 md:w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap ${
+                    mentorSettingsTab === 'risk'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold'
+                      : 'text-muted hover:text-foreground hover:bg-surface-muted'
+                  }`}
+                >
+                  <ShieldCheck size={15} /> Strategy & Risk Guard
                 </button>
                 <button
                   type="button"
@@ -1402,6 +2901,145 @@ const MentorDashboard = () => {
                   </div>
                 )}
 
+                {/* TAB: Strategy & Risk Guard */}
+                {mentorSettingsTab === 'risk' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                          <ShieldCheck size={16} className="text-emerald-500" />
+                          Student Strategy Risk Guard & Rule Enforcement
+                        </h4>
+                        <p className="text-xs text-muted">
+                          Set strict cohort risk parameters. JahzJournal audits student logs and flags rule breaches with mathematical proof.
+                        </p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={groupFormData.enforceRiskGuard}
+                          onChange={(e) => setGroupFormData((prev) => ({ ...prev, enforceRiskGuard: e.target.checked }))}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                      </label>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-xs text-muted leading-relaxed">
+                      💡 <strong className="text-foreground">Why this eliminates Telegram arguments:</strong> Students often blow funded or personal accounts by risking 10%–15% on Gold, then run to group chats claiming "the strategy failed". JahzJournal's Risk Guard engine automatically captures the mathematical violation and attaches cold-hard proof before you give feedback.
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Max Risk Per Trade */}
+                      <div className="p-3.5 rounded-xl border border-border bg-surface space-y-2">
+                        <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                          <span>Max Risk Per Trade (%)</span>
+                          <span className="text-emerald-500 font-mono font-bold text-xs">{groupFormData.maxRiskPerTradePercent || 1.0}%</span>
+                        </label>
+                        <p className="text-[11px] text-muted">
+                          Trades where calculated risk or loss exceeds this % of account balance are immediately flagged.
+                        </p>
+                        <div className="relative mt-1">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            max="50"
+                            value={groupFormData.maxRiskPerTradePercent ?? 1.0}
+                            onChange={(e) => setGroupFormData((prev) => ({ ...prev, maxRiskPerTradePercent: parseFloat(e.target.value) || 0 }))}
+                            className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500"
+                            placeholder="1.0"
+                          />
+                          <span className="absolute right-3 top-2 text-xs text-muted font-bold">%</span>
+                        </div>
+                      </div>
+
+                      {/* Max Daily Loss */}
+                      <div className="p-3.5 rounded-xl border border-border bg-surface space-y-2">
+                        <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                          <span>Max Daily Loss Drawdown (%)</span>
+                          <span className="text-rose-500 font-mono font-bold text-xs">{groupFormData.maxDailyLossPercent || 3.0}%</span>
+                        </label>
+                        <p className="text-[11px] text-muted">
+                          Daily stop-out threshold to teach prop firm drawdown management.
+                        </p>
+                        <div className="relative mt-1">
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="0.5"
+                            max="50"
+                            value={groupFormData.maxDailyLossPercent ?? 3.0}
+                            onChange={(e) => setGroupFormData((prev) => ({ ...prev, maxDailyLossPercent: parseFloat(e.target.value) || 0 }))}
+                            className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500"
+                            placeholder="3.0"
+                          />
+                          <span className="absolute right-3 top-2 text-xs text-muted font-bold">%</span>
+                        </div>
+                      </div>
+
+                      {/* Max Daily Trades */}
+                      <div className="p-3.5 rounded-xl border border-border bg-surface space-y-2">
+                        <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                          <span>Max Daily Trades (Overtrading Guard)</span>
+                          <span className="text-foreground font-mono font-bold text-xs">{groupFormData.maxDailyTrades || 5} trades/day</span>
+                        </label>
+                        <p className="text-[11px] text-muted">
+                          Prevents tilt & revenge trading. Any trade past this daily execution limit gets flagged.
+                        </p>
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          max="50"
+                          value={groupFormData.maxDailyTrades ?? 5}
+                          onChange={(e) => setGroupFormData((prev) => ({ ...prev, maxDailyTrades: parseInt(e.target.value, 10) || 1 }))}
+                          className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500 mt-1"
+                          placeholder="5"
+                        />
+                      </div>
+
+                      {/* Mandatory Stop Loss */}
+                      <div className="p-3.5 rounded-xl border border-border bg-surface space-y-2">
+                        <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                          <span>Mandatory Stop Loss Rule</span>
+                          <input
+                            type="checkbox"
+                            checked={groupFormData.requireStopLoss}
+                            onChange={(e) => setGroupFormData((prev) => ({ ...prev, requireStopLoss: e.target.checked }))}
+                            className="h-4 w-4 rounded border-border text-emerald-600 focus:ring-emerald-500"
+                          />
+                        </label>
+                        <p className="text-[11px] text-muted">
+                          Strict requirement: automatically flags any trade opened or closed without a Stop Loss.
+                        </p>
+                        <span className={`inline-block mt-1 text-[11px] font-semibold px-2 py-0.5 rounded ${
+                          groupFormData.requireStopLoss ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-surface-muted text-muted'
+                        }`}>
+                          {groupFormData.requireStopLoss ? 'Strict Stop Loss Required' : 'Optional Stop Loss'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Approved Strategy Pairs */}
+                    <div className="p-3.5 rounded-xl border border-border bg-surface space-y-2">
+                      <label className="text-xs font-bold text-foreground block">
+                        Approved Focus Trading Pairs (Curriculum Scope)
+                      </label>
+                      <p className="text-[11px] text-muted">
+                        Comma-separated list of symbols taught in this cohort (e.g. <code className="text-emerald-500 font-mono">EURUSD, GBPUSD, XAUUSD, USDJPY, NAS100</code>). Trades taken outside these pairs will be flagged as unauthorized. Leave blank to allow all pairs.
+                      </p>
+                      <input
+                        type="text"
+                        value={groupFormData.allowedPairs || ''}
+                        onChange={(e) => setGroupFormData((prev) => ({ ...prev, allowedPairs: e.target.value }))}
+                        placeholder="e.g. EURUSD, GBPUSD, XAUUSD, USDJPY"
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500 uppercase font-mono"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* TAB 3: Pricing & Fees */}
                 {mentorSettingsTab === 'pricing' && (
                   <div className="space-y-4">
@@ -1470,7 +3108,7 @@ const MentorDashboard = () => {
 
                           {/* Revenue Split Transparent Note */}
                           <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600 dark:text-emerald-400 leading-relaxed">
-                            <strong>Transparent Revenue Split:</strong> Mentor net payout is <strong>95%</strong> ({groupFormData.currency === 'NGN' ? '₦' : '$'}{(groupFormData.price * 0.95).toLocaleString()}), JahzJournals platform commission is <strong>5%</strong> ({groupFormData.currency === 'NGN' ? '₦' : '$'}{(groupFormData.price * 0.05).toLocaleString()}).
+                            <strong>Transparent Revenue Split:</strong> Mentor net payout is <strong>98.5%</strong> ({groupFormData.currency === 'NGN' ? '₦' : '$'}{(groupFormData.price * 0.985).toLocaleString()}), JahzJournals platform commission is <strong>1.5%</strong> ({groupFormData.currency === 'NGN' ? '₦' : '$'}{(groupFormData.price * 0.015).toLocaleString()}).
                           </div>
                         </div>
                       )}
@@ -1519,34 +3157,66 @@ const MentorDashboard = () => {
                 {/* TAB 5: Settlement Bank Details */}
                 {mentorSettingsTab === 'payout' && (
                   <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground">Settlement Bank Account (95% Payouts)</h4>
-                      <p className="text-xs text-muted">Configure the bank account where your 95% student mentorship fees will be deposited.</p>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">Settlement Bank Account (98.5% Payouts · 1.5% Platform Fee)</h4>
+                        <p className="text-xs text-muted">Configure the bank account where your 98.5% student mentorship fees will be deposited directly via Paystack.</p>
+                      </div>
+                      {payoutForm.subaccountCode && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-[11px] font-bold">
+                          <CheckCircle2 size={12} /> Paystack Subaccount: {payoutForm.subaccountCode}
+                        </span>
+                      )}
                     </div>
 
                     <div className="space-y-3.5">
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                          Bank Name *
+                          Settlement Bank *
                         </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Guaranty Trust Bank / Chase Bank"
-                          value={payoutForm.bankName}
-                          onChange={(e) => setPayoutForm((prev) => ({ ...prev, bankName: e.target.value }))}
-                          className="w-full px-3.5 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500"
-                        />
+                        {availableBanks.length > 0 ? (
+                          <select
+                            required
+                            value={payoutForm.bankCode || ''}
+                            onChange={(e) => {
+                              const code = e.target.value;
+                              const matched = availableBanks.find((b) => b.code === code);
+                              setPayoutForm((prev) => ({
+                                ...prev,
+                                bankCode: code,
+                                bankName: matched ? matched.name : prev.bankName,
+                              }));
+                            }}
+                            className="w-full px-3.5 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500"
+                          >
+                            <option value="">{payoutForm.bankName ? `${payoutForm.bankName} (Select to change)` : 'Select your bank...'}</option>
+                            {availableBanks.map((bank) => (
+                              <option key={`${bank.code}-${bank.name}`} value={bank.code}>
+                                {bank.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Guaranty Trust Bank / Access Bank"
+                            value={payoutForm.bankName}
+                            onChange={(e) => setPayoutForm((prev) => ({ ...prev, bankName: e.target.value }))}
+                            className="w-full px-3.5 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:border-emerald-500"
+                          />
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                            Account Number *
+                            Account Number (10-digit NUBAN) *
                           </label>
                           <input
                             type="text"
                             required
+                            maxLength={10}
                             placeholder="e.g. 0123456789"
                             value={payoutForm.accountNumber}
                             onChange={(e) => setPayoutForm((prev) => ({ ...prev, accountNumber: e.target.value }))}
@@ -1555,7 +3225,7 @@ const MentorDashboard = () => {
                         </div>
                         <div>
                           <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
-                            Account Holder Name *
+                            Account Holder / Business Name *
                           </label>
                           <input
                             type="text"
@@ -1570,10 +3240,10 @@ const MentorDashboard = () => {
 
                       <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-xs text-muted space-y-1">
                         <span className="font-semibold text-foreground flex items-center gap-1.5">
-                          <ShieldCheck size={14} className="text-emerald-500" /> Automated Direct Payouts
+                          <ShieldCheck size={14} className="text-emerald-500" /> Automated Direct Payouts via Paystack Subaccount
                         </span>
                         <p>
-                          Student mentorship payments processed via Paystack/Card are automatically credited to your settlement account net of the 5% platform fee.
+                          Saving your bank details automatically creates or updates your Paystack subaccount so student mentorship payments are split automatically (98.5% to your settlement account, 1.5% platform fee).
                         </p>
                       </div>
 
@@ -1583,7 +3253,7 @@ const MentorDashboard = () => {
                           disabled={savingPayout}
                           className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"
                         >
-                          {savingPayout ? 'Saving Settlement Bank...' : 'Save Bank Details'}
+                          {savingPayout ? 'Syncing Paystack Subaccount...' : 'Save Bank & Sync Subaccount'}
                         </Button>
                       </div>
                     </div>
@@ -1720,7 +3390,7 @@ const MentorDashboard = () => {
                     </div>
 
                     <div className="space-y-2.5">
-                      {groups.map((g) => (
+                      {safeGroups.map((g) => (
                         <div
                           key={g.id}
                           className="p-3.5 rounded-xl border border-border bg-surface-muted/30 flex items-center justify-between gap-3"
@@ -1912,12 +3582,26 @@ const MentorDashboard = () => {
                   <p className="text-[11px] sm:text-xs text-muted truncate">{selectedStudent.email}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setSelectedStudent(null)} 
-                className="text-muted hover:text-foreground p-1 rounded-lg hover:bg-surface-muted transition shrink-0"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const stId = selectedStudent.id;
+                    setSelectedStudent(null);
+                    setChatPreselectedStudentId(stId);
+                    setCohortTab('messages');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-500 text-xs font-bold flex items-center gap-1.5 transition"
+                >
+                  <MessageSquare size={13} /> 1-on-1 Chat
+                </button>
+                <button 
+                  onClick={() => setSelectedStudent(null)} 
+                  className="text-muted hover:text-foreground p-1 rounded-lg hover:bg-surface-muted transition shrink-0"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Drawer Body: Trades List */}
@@ -2005,10 +3689,95 @@ const MentorDashboard = () => {
                           <span className="font-semibold text-foreground">{trade.riskRewardRatio ? `${trade.riskRewardRatio}R` : '-'}</span>
                         </div>
                         <div className="p-2 rounded-lg bg-surface border border-border/50">
+                          <span className="text-[10px] text-muted block">Stop Loss</span>
+                          <span className={`font-semibold ${!trade.stopLoss ? 'text-rose-500 font-bold' : 'text-foreground'}`}>
+                            {trade.stopLoss || 'None (Unprotected)'}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-surface border border-border/50">
+                          <span className="text-[10px] text-muted block">Risk Amount</span>
+                          <span className="font-semibold text-foreground">
+                            {trade.riskAmount ? `$${trade.riskAmount.toLocaleString()}` : '-'}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-surface border border-border/50">
+                          <span className="text-[10px] text-muted block">Calculated Risk %</span>
+                          <span className={`font-semibold ${
+                            trade.riskGuardViolations?.some((v) => v.type === 'EXCESSIVE_RISK')
+                              ? 'text-rose-500 font-bold flex items-center gap-1'
+                              : 'text-foreground'
+                          }`}>
+                            {trade.calculatedRiskPercent !== null && trade.calculatedRiskPercent !== undefined
+                              ? `${trade.calculatedRiskPercent}%`
+                              : '-'}
+                            {trade.riskGuardViolations?.some((v) => v.type === 'EXCESSIVE_RISK') && (
+                              <ShieldAlert size={12} className="text-rose-500 shrink-0" />
+                            )}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-surface border border-border/50">
                           <span className="text-[10px] text-muted block">Trading Session</span>
                           <span className="font-semibold text-foreground">{trade.session || 'Standard'}</span>
                         </div>
+                        <div className="p-2 rounded-lg bg-surface border border-border/50">
+                          <span className="text-[10px] text-muted block">Account Balance</span>
+                          <span className="font-semibold text-foreground">
+                            {trade.tradingAccount?.startingBalance
+                              ? `$${trade.tradingAccount.startingBalance.toLocaleString()}`
+                              : '-'}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* ACADEMY STRATEGY RISK GUARD VIOLATIONS */}
+                      {trade.riskGuardViolations && trade.riskGuardViolations.length > 0 && (
+                        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 sm:p-3.5 space-y-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-rose-500/20 text-rose-500">
+                                <ShieldAlert size={15} />
+                              </span>
+                              <span className="text-xs font-bold text-rose-500 tracking-wide uppercase">
+                                Strategy Risk Violation Proof ({trade.riskGuardViolations.length} Detected)
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-semibold border border-rose-500/30">
+                              Academy Rule Breach
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            {trade.riskGuardViolations.map((v, vIdx) => (
+                              <div key={vIdx} className="p-2.5 rounded-lg bg-background/80 border border-rose-500/20 text-xs space-y-1">
+                                <div className="flex flex-wrap items-center justify-between gap-1 font-bold text-rose-500">
+                                  <span className="flex items-center gap-1.5">
+                                    <AlertCircle size={13} /> {v.title}
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono">
+                                    Rule Limit: {v.ruleLimit} vs Actual: {v.actualValue}
+                                  </span>
+                                </div>
+                                <p className="text-foreground text-[11px] leading-relaxed">
+                                  {v.message}
+                                </p>
+                                {v.evidence && (
+                                  <p className="text-muted text-[10px] font-mono">
+                                    Proof: {v.evidence}
+                                  </p>
+                                )}
+                                <div className="pt-1 flex justify-end">
+                                  <button
+                                    onClick={() => handleIssueViolationWarning(trade, v)}
+                                    className="text-[11px] font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 hover:underline transition"
+                                  >
+                                    <FileText size={12} /> 1-Click Disciplinary Warning Notice &rarr;
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Reasons & Notes */}
                       {trade.entryReason && (
@@ -2160,6 +3929,22 @@ const MentorDashboard = () => {
               </div>
             )}
 
+            {/* Risk Guard Violation Banner inside Review Modal */}
+            {reviewingTrade.riskGuardViolations && reviewingTrade.riskGuardViolations.length > 0 && (
+              <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 space-y-1.5 text-xs">
+                <span className="font-bold text-rose-500 flex items-center gap-1.5">
+                  <ShieldAlert size={14} /> Strategy Risk Breaches Detected ({reviewingTrade.riskGuardViolations.length}):
+                </span>
+                <ul className="list-disc list-inside space-y-0.5 text-foreground text-[11px]">
+                  {reviewingTrade.riskGuardViolations.map((v, i) => (
+                    <li key={i}>
+                      <strong className="text-rose-400">{v.title}:</strong> {v.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <form onSubmit={handleSubmitFeedback} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
@@ -2176,6 +3961,7 @@ const MentorDashboard = () => {
                   <option value="C">C · Hesitation, early close, or skewed R:R</option>
                   <option value="D">D · Off-session entry or rushed setup</option>
                   <option value="MISTAKE">Rule Breach · Emotional entry, FOMO, or oversized risk</option>
+                  <option value="F">F · Critical Strategy Risk Breach (Disciplinary Flag)</option>
                 </select>
               </div>
 
@@ -2288,6 +4074,82 @@ const MentorDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Unshare Trade Confirmation Modal */}
+      {unshareConfirmTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="unshare-confirm-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xs p-4"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-xl space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                  <Trash2 size={16} />
+                </div>
+                <div>
+                  <h3 id="unshare-confirm-title" className="text-sm font-bold text-foreground">
+                    Unshare trade from cohort?
+                  </h3>
+                  <p className="text-xs text-muted mt-0.5">
+                    {unshareConfirmTarget.tradeSnapshot?.pair || 'Setup'} —{' '}
+                    {unshareConfirmTarget.title || 'Shared trade'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUnshareConfirmTarget(null)}
+                aria-label="Close confirmation dialog"
+                className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted leading-relaxed">
+              Removing this shared trade revokes cohort student access to this setup and its commentary. Your personal journal trade record will not be deleted.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setUnshareConfirmTarget(null)}
+                disabled={unsharing}
+                className="px-3.5 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteTradeShare(unshareConfirmTarget)}
+                disabled={unsharing}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold inline-flex items-center gap-1.5 transition disabled:opacity-60"
+              >
+                <Trash2 size={13} />
+                {unsharing ? 'Removing…' : 'Unshare trade'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share or Customize Trade Setup Modal */}
+      <ShareTradeToCohortModal
+        isOpen={isShareTradeModalOpen}
+        onClose={() => {
+          setIsShareTradeModalOpen(false);
+          setEditingTradeShare(null);
+          setIsConcludeMode(false);
+        }}
+        trade={editingTradeShare?.trade || null}
+        editingShare={editingTradeShare}
+        concludeMode={isConcludeMode}
+        defaultCohortId={activeGroupId}
+        onShared={() => fetchCohortShares(activeGroupId)}
+      />
 
       {/* Image Modal Lightbox for Trade Screenshots */}
       <ImageModal

@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, CreditCard, Medal, Gift, BrainCircuit, 
   LineChart, BarChart2, DollarSign, LifeBuoy, Megaphone, Flag, 
-  Activity, ShieldCheck, Settings, LogOut, Bug, Lightbulb, Menu, X
+  Activity, ShieldCheck, Settings, LogOut, Bug, Lightbulb, Menu, X, BookOpen
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -31,6 +31,12 @@ const AdminLayout = () => {
       items: [
         { label: 'Founding Traders', path: '/admin/founding-trader', icon: Medal },
         { label: 'Promotions & Discounts', path: '/admin/promotions', icon: Gift },
+      ]
+    },
+    {
+      title: 'Content & Education',
+      items: [
+        { label: 'Blog Management', path: '/admin/blog', icon: BookOpen },
       ]
     },
     {

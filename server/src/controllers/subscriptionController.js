@@ -108,7 +108,7 @@ const inferPlanFromTransaction = (txData) => {
     return planObjName;
   }
   const amountNgn = (txData?.amount || 0) / 100;
-  if (amountNgn >= 20000) return 'MENTOR';
+  if (metadata.studentCount || amountNgn >= 10000) return 'MENTOR';
   if (amountNgn >= 6000) return 'PRO';
   return 'STARTER';
 };
@@ -199,12 +199,22 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
 
   let updatedUser = user;
   if (shouldUpdateActivePlan) {
+    const updateData = {
+      subscriptionPlan: effectivePlan,
+      subscriptionStatus: 'ACTIVE',
+    };
+
+    if (effectivePlan === 'MENTOR') {
+      const tierKey = metadata.mentorTier || (amount >= 65000 ? 'MEGA' : amount >= 25000 ? 'GROWTH' : 'PRIVATE_COHORT');
+      updateData.role = 'MENTOR';
+      updateData.mentorTier = tierKey;
+      updateData.mentorMaxStudents = tierKey === 'MEGA' ? 1000 : tierKey === 'GROWTH' ? 150 : 50;
+      updateData.mentorMaxCohorts = tierKey === 'MEGA' ? 100 : tierKey === 'GROWTH' ? 5 : 2;
+    }
+
     updatedUser = await prisma.user.update({
       where: { id: user.id },
-      data: {
-        subscriptionPlan: effectivePlan,
-        subscriptionStatus: 'ACTIVE',
-      },
+      data: updateData,
     });
 
     if (currentSub) {
@@ -249,6 +259,7 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
   });
 
   if (!existingHistory) {
+    const studentNote = metadata.studentCount ? ` [${metadata.studentCount} Students Capacity]` : '';
     const discountNote = metadata.discountPercent ? ` [${metadata.discountPercent}% Promo Discount]` : '';
     await prisma.subscriptionHistory.create({
       data: {
@@ -260,7 +271,7 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
         promotionId: validPromotionId,
         paymentReference: reference,
         changedBy: 'USER',
-        notes: `Paystack payment of ${currency} ${amount.toLocaleString()} verified via ${channel} (Ref: ${reference})${discountNote}`,
+        notes: `Paystack payment of ${currency} ${amount.toLocaleString()} verified via ${channel} (Ref: ${reference})${studentNote}${discountNote}`,
         createdAt: paidAt,
       },
     });
@@ -360,7 +371,7 @@ const syncPaystackTransactions = async (options = {}) => {
 
 const initializeSubscription = async (req, res) => {
   try {
-    const { plan, email, promoCode } = req.body;
+    const { plan, email, promoCode, studentCount } = req.body;
     const planMappings = getPlanMappings();
     const planConfig = planMappings[plan];
     if (!planConfig) {
@@ -369,6 +380,26 @@ const initializeSubscription = async (req, res) => {
 
     let appliedPromo = null;
     let amountInKobo = planConfig.amountInKobo;
+    let mentorStudentCount = null;
+
+    let selectedMentorTier = null;
+    if (plan === 'MENTOR') {
+      const { tier } = req.body;
+      const parsed = parseInt(studentCount, 10);
+      if (tier === 'GROWTH' || (!tier && parsed > 50 && parsed <= 150)) {
+        selectedMentorTier = 'GROWTH';
+        amountInKobo = 25000 * 100;
+        mentorStudentCount = 150;
+      } else if (tier === 'MEGA' || (!tier && parsed > 150)) {
+        selectedMentorTier = 'MEGA';
+        amountInKobo = 65000 * 100;
+        mentorStudentCount = 1000;
+      } else {
+        selectedMentorTier = 'PRIVATE_COHORT';
+        amountInKobo = 8000 * 100;
+        mentorStudentCount = 50;
+      }
+    }
 
     if (promoCode && promoCode.trim()) {
       const cleanCode = promoCode.toLowerCase().trim();
@@ -390,7 +421,7 @@ const initializeSubscription = async (req, res) => {
         if (isNotExpired && isStarted && hasRedemptions && isPlanApplicable) {
           if (promo.discountType === 'PERCENTAGE_DISCOUNT' || (promo.discountPercent && promo.discountPercent > 0 && promo.discountPercent < 100)) {
             const percent = promo.discountPercent || 50;
-            amountInKobo = Math.round(planConfig.amountInKobo * (1 - percent / 100));
+            amountInKobo = Math.round(amountInKobo * (1 - percent / 100));
             appliedPromo = promo;
           }
         }
@@ -415,12 +446,15 @@ const initializeSubscription = async (req, res) => {
         email: userEmail,
         amount: amountInKobo,
         currency: 'NGN',
-        plan: includePlanCode && !appliedPromo ? (planConfig.planCode || undefined) : undefined,
+        plan: includePlanCode && !appliedPromo && plan !== 'MENTOR' ? (planConfig.planCode || undefined) : undefined,
         callback_url: `${clientUrl}/pricing?payment=success`,
         metadata: {
           userId: req.user.id,
           userEmail: req.user.email,
           requestedPlan: plan,
+          mentorTier: selectedMentorTier || undefined,
+          studentCount: mentorStudentCount || undefined,
+          calculatedAmountNgn: Math.round(amountInKobo / 100),
           promotionId: appliedPromo ? appliedPromo.id : undefined,
           discountPercent: appliedPromo ? appliedPromo.discountPercent : undefined,
         },
@@ -667,16 +701,82 @@ const handlePaystackWebhook = async (req, res) => {
     const event = req.body;
 
     if (event.event === 'charge.success' && event.data) {
-      const result = await fulfillPaystackTransaction(event.data, {
-        isHistoricalSync: false,
-      });
+      const metadata = event.data.metadata || {};
 
-      if (result.fulfilled) {
-        console.log(`Payment confirmed and account upgraded for user ${result.user.id} (${result.plan})`);
-        if (!result.wasAlreadySuccess && result.user) {
-          sendSubscriptionConfirmationEmail(result.user, result.plan).catch((err) => {
-            console.warn('Subscription webhook confirmation email warning:', err?.message || err);
-          });
+      if (metadata.paymentType === 'COHORT_ENROLLMENT' && metadata.groupId && metadata.studentId) {
+        const reference = String(event.data.reference || '');
+        const paidAmount = Number(event.data.amount || 0) / 100;
+        const feePercent = 1.5;
+        const platformFeeAmount = paidAmount * (feePercent / 100);
+        const mentorPayoutAmount = paidAmount - platformFeeAmount;
+        const currency = String(event.data.currency || 'NGN').toUpperCase();
+
+        await prisma.payment.upsert({
+          where: { reference },
+          update: {
+            amount: paidAmount,
+            currency,
+            provider: 'PAYSTACK',
+            status: 'SUCCESS',
+            paidAt: event.data.paid_at ? new Date(event.data.paid_at) : new Date(),
+          },
+          create: {
+            userId: metadata.studentId,
+            amount: paidAmount,
+            currency,
+            provider: 'PAYSTACK',
+            reference,
+            status: 'SUCCESS',
+            paidAt: event.data.paid_at ? new Date(event.data.paid_at) : new Date(),
+          },
+        }).catch(() => {});
+
+        await prisma.userSettings.upsert({
+          where: { userId: metadata.studentId },
+          update: { shareTradesWithMentor: true },
+          create: { userId: metadata.studentId, shareTradesWithMentor: true },
+        }).catch(() => {});
+
+        await prisma.mentorStudent.upsert({
+          where: {
+            mentorGroupId_studentId: {
+              mentorGroupId: metadata.groupId,
+              studentId: metadata.studentId,
+            },
+          },
+          update: {
+            status: 'ACTIVE',
+            paidAmount,
+            currency,
+            platformFeeAmount,
+            mentorPayoutAmount,
+            paymentReference: reference,
+            paidAt: new Date(),
+          },
+          create: {
+            mentorGroupId: metadata.groupId,
+            studentId: metadata.studentId,
+            status: 'ACTIVE',
+            paidAmount,
+            currency,
+            platformFeeAmount,
+            mentorPayoutAmount,
+            paymentReference: reference,
+            paidAt: new Date(),
+          },
+        }).catch((err) => console.warn('Cohort webhook fulfillment warning:', err?.message));
+      } else {
+        const result = await fulfillPaystackTransaction(event.data, {
+          isHistoricalSync: false,
+        });
+
+        if (result.fulfilled) {
+          console.log(`Payment confirmed and account upgraded for user ${result.user.id} (${result.plan})`);
+          if (!result.wasAlreadySuccess && result.user) {
+            sendSubscriptionConfirmationEmail(result.user, result.plan).catch((err) => {
+              console.warn('Subscription webhook confirmation email warning:', err?.message || err);
+            });
+          }
         }
       }
     }
@@ -688,6 +788,228 @@ const handlePaystackWebhook = async (req, res) => {
   }
 };
 
+// @desc    Activate 14-day free trial for Mentor/Academy account
+// @route   POST /api/subscriptions/mentor-trial/activate
+// @access  Private (Authenticated users)
+const activateMentorFreeTrial = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        subscriptions: { where: { status: 'ACTIVE' } }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // 1. Check if user already has an active full paid mentor subscription
+    if (user.role === 'MENTOR' && user.subscriptionStatus === 'ACTIVE' && !user.mentorTrialExpiresAt) {
+      return res.status(400).json({ message: 'You already have an active paid Mentor/Academy account.' });
+    }
+
+    // 2. Strict single-use protection: has user ever claimed or used the mentor free trial?
+    let alreadyClaimed = Boolean(user.hasUsedMentorTrial || user.mentorTrialExpiresAt);
+
+    if (!alreadyClaimed) {
+      // Check historical subscriptions for any prior trial / promotional mentor records
+      const priorTrialSub = await prisma.subscription.findFirst({
+        where: {
+          userId,
+          plan: 'MENTOR',
+          source: 'PROMOTION'
+        }
+      });
+      if (priorTrialSub) alreadyClaimed = true;
+    }
+
+    if (!alreadyClaimed) {
+      // Check audit history for previous redemption records
+      const priorTrialHistory = await prisma.subscriptionHistory.findFirst({
+        where: {
+          userId,
+          OR: [
+            { notes: { contains: 'Trial', mode: 'insensitive' } },
+            { reason: 'PROMOTION_REDEEMED', newPlan: 'MENTOR' }
+          ]
+        }
+      });
+      if (priorTrialHistory) alreadyClaimed = true;
+    }
+
+    if (alreadyClaimed) {
+      if (!user.hasUsedMentorTrial) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { hasUsedMentorTrial: true }
+        }).catch(() => {});
+      }
+      return res.status(403).json({
+        message: 'You have already used your 14-day Mentor free trial. Each user is strictly limited to one free trial.',
+        code: 'TRIAL_ALREADY_USED',
+        upgradePath: '/pricing/mentor'
+      });
+    }
+
+    // 3. Exactly 14 days (two weeks) + 12 hours grace buffer
+    const TRIAL_DAYS = 14;
+    const GRACE_PERIOD_HOURS = 12;
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+    const graceExpiresAt = new Date(expiresAt.getTime() + GRACE_PERIOD_HOURS * 60 * 60 * 1000);
+
+    await prisma.$transaction(async (tx) => {
+      // Cancel previous active subscriptions
+      await tx.subscription.updateMany({
+        where: { userId, status: 'ACTIVE' },
+        data: { status: 'CANCELLED' }
+      });
+
+      // Create new trial subscription
+      await tx.subscription.create({
+        data: {
+          userId,
+          plan: 'MENTOR',
+          status: 'ACTIVE',
+          source: 'PROMOTION',
+          startedAt: now,
+          expiresAt: expiresAt,
+          autoRenew: false,
+        }
+      });
+
+      // Record subscription history
+      await tx.subscriptionHistory.create({
+        data: {
+          userId,
+          previousPlan: user.subscriptionPlan,
+          newPlan: 'MENTOR',
+          source: 'PROMOTION',
+          reason: 'PROMOTION_REDEEMED',
+          notes: '14-Day Free Mentor/Academy Trial activated (with 12-hour grace period)',
+          changedBy: 'USER'
+        }
+      });
+
+      // Upgrade user to MENTOR role and Private Cohort tier
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          role: 'MENTOR',
+          subscriptionPlan: 'MENTOR',
+          subscriptionStatus: 'ACTIVE',
+          mentorTier: 'PRIVATE_COHORT',
+          mentorMaxStudents: 50,
+          mentorMaxCohorts: 2,
+          hasUsedMentorTrial: true,
+          mentorTrialExpiresAt: expiresAt,
+        }
+      });
+
+      // Create in-app welcome notification
+      const notif = await tx.notification.create({
+        data: {
+          type: 'SUBSCRIPTION',
+          category: 'SUCCESS',
+          title: '🎉 14-Day Mentor Free Trial Activated',
+          message: `Welcome to the Mentor Workspace! You have 14 days of complimentary Private Cohort access (up to 50 students, 2 cohorts, and Strategy Risk Guards) ending on ${expiresAt.toLocaleDateString()}, plus a 12-hour grace buffer.`,
+          actionUrl: '/mentor-workspace',
+          senderId: 'SYSTEM'
+        }
+      });
+
+      await tx.notificationRecipient.create({
+        data: {
+          notificationId: notif.id,
+          userId,
+          status: 'UNREAD'
+        }
+      });
+    });
+
+    res.json({
+      success: true,
+      message: 'Your 14-day Mentor Free Trial is now active! You can now create cohorts and invite students.',
+      trialDays: TRIAL_DAYS,
+      gracePeriodHours: GRACE_PERIOD_HOURS,
+      expiresAt,
+      graceExpiresAt,
+      mentorTier: 'PRIVATE_COHORT',
+      maxStudents: 50,
+      maxCohorts: 2,
+    });
+  } catch (error) {
+    console.error('activateMentorFreeTrial error:', error);
+    res.status(500).json({ message: 'Failed to activate Mentor Free Trial.' });
+  }
+};
+
+// @desc    Get mentor free trial status
+// @route   GET /api/subscriptions/mentor-trial/status
+// @access  Private
+const getMentorTrialStatus = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        role: true,
+        subscriptionPlan: true,
+        subscriptionStatus: true,
+        hasUsedMentorTrial: true,
+        mentorTrialExpiresAt: true,
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const now = new Date();
+    const GRACE_PERIOD_HOURS = 12;
+    const GRACE_PERIOD_MS = GRACE_PERIOD_HOURS * 60 * 60 * 1000;
+
+    let isTrialActive = false;
+    let isInGracePeriod = false;
+    let daysRemaining = 0;
+    let graceHoursRemaining = 0;
+    let graceExpiresAt = null;
+
+    if (user.hasUsedMentorTrial && user.mentorTrialExpiresAt) {
+      const trialExpiresAt = new Date(user.mentorTrialExpiresAt);
+      graceExpiresAt = new Date(trialExpiresAt.getTime() + GRACE_PERIOD_MS);
+
+      if (user.role === 'MENTOR' && user.subscriptionStatus === 'ACTIVE') {
+        if (now < trialExpiresAt) {
+          isTrialActive = true;
+          daysRemaining = Math.max(0, Math.ceil((trialExpiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+        } else if (now < graceExpiresAt) {
+          isInGracePeriod = true;
+          graceHoursRemaining = Math.max(0, Math.ceil((graceExpiresAt.getTime() - now.getTime()) / (60 * 60 * 1000)));
+        }
+      }
+    }
+
+    const canActivateTrial = !user.hasUsedMentorTrial && !user.mentorTrialExpiresAt && user.role !== 'MENTOR';
+
+    res.json({
+      hasUsedMentorTrial: user.hasUsedMentorTrial,
+      isTrialActive,
+      isInGracePeriod,
+      mentorTrialExpiresAt: user.mentorTrialExpiresAt,
+      graceExpiresAt,
+      daysRemaining,
+      graceHoursRemaining,
+      gracePeriodHours: GRACE_PERIOD_HOURS,
+      canActivateTrial,
+    });
+  } catch (error) {
+    console.error('getMentorTrialStatus error:', error);
+    res.status(500).json({ message: 'Failed to check trial status.' });
+  }
+};
+
 module.exports = {
   initializeSubscription,
   verifySubscription,
@@ -696,5 +1018,8 @@ module.exports = {
   handlePaystackWebhook,
   fulfillPaystackTransaction,
   syncPaystackTransactions,
-   getPaystackSecret,
+  getPaystackSecret,
+  resolveClientUrl,
+  activateMentorFreeTrial,
+  getMentorTrialStatus,
 };

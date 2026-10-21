@@ -1,23 +1,20 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Save, Trash } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles } from 'lucide-react';
 import api from '../../utils/api';
 import SetupList from './SetupList';
 
-const inputClass = 'mt-2 block w-full rounded-lg border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition focus:border-green-400 disabled:cursor-not-allowed disabled:opacity-60';
+const inputClass = 'mt-1.5 block w-full rounded-xl border border-border/80 bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-muted/60 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60';
 
-const Field = ({ label, description, children }) => (
-  <label className="block text-sm text-muted">
-    <span className="font-medium text-foreground">{label}</span>
-    {description && <span className="mt-1 block text-xs leading-5 text-muted">{description}</span>}
+const Field = ({ label, description, required, children }) => (
+  <label className="block text-sm">
+    <div className="flex items-center gap-1 font-medium text-foreground">
+      <span>{label}</span>
+      {required && <span className="text-emerald-400">*</span>}
+    </div>
+    {description && <p className="mt-0.5 text-xs text-muted leading-relaxed">{description}</p>}
     {children}
   </label>
-);
-
-const TextInput = ({ label, description, ...props }) => (
-  <Field label={label} description={description}>
-    <input {...props} className={inputClass} />
-  </Field>
 );
 
 const StrategyForm = ({ strategy, onBack, onSaved }) => {
@@ -43,8 +40,8 @@ const StrategyForm = ({ strategy, onBack, onSaved }) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.name) return toast.error('Strategy name is required.');
+    if (e) e.preventDefault();
+    if (!formData.name.trim()) return toast.error('Strategy name is required.');
     
     setSaving(true);
     try {
@@ -65,73 +62,148 @@ const StrategyForm = ({ strategy, onBack, onSaved }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-border pb-4">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground">
-            <ArrowLeft size={20} />
+      {/* Header Bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <button 
+            type="button"
+            onClick={onBack} 
+            className="rounded-xl border border-border/80 bg-surface/80 p-2 text-muted transition hover:bg-surface-muted hover:text-foreground"
+            title="Back to strategies"
+          >
+            <ArrowLeft size={18} />
           </button>
-          <h2 className="text-xl font-bold text-foreground">
-            {strategy ? 'Edit Strategy' : 'New Strategy'}
-          </h2>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+              {strategy ? `Edit: ${strategy.name}` : 'New Trading Strategy'}
+            </h1>
+            <p className="text-xs text-muted mt-0.5">
+              {strategy ? 'Refine playbook parameters, associated setups, and execution rules.' : 'Build a repeatable trading edge with structured entry criteria.'}
+            </p>
+          </div>
         </div>
-        <button
-          onClick={handleSubmit}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 transition hover:bg-green-400 disabled:opacity-70"
-        >
-          <Save size={16} />
-          {saving ? 'Saving...' : 'Save Strategy'}
-        </button>
+
+        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-emerald-400 disabled:opacity-60"
+          >
+            <Save size={15} />
+            {saving ? 'Saving...' : 'Save Strategy'}
+          </button>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-surface-muted p-5 sm:p-6">
-        <h3 className="mb-4 text-base font-bold text-foreground">System Details</h3>
-        <div className="grid gap-5 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <TextInput 
-              label="Strategy Name" 
+      {/* Main Details Form */}
+      <form onSubmit={handleSubmit} className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 space-y-6 shadow-sm">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Strategy Overview</h2>
+          <p className="text-xs text-muted mt-0.5">Core identification and premise for this playbook.</p>
+        </div>
+
+        <div className="grid gap-5">
+          <Field label="Strategy Name" required>
+            <input 
+              type="text"
               value={formData.name} 
               onChange={e => setFormData({ ...formData, name: e.target.value })} 
               required
-              placeholder="e.g. Silver Bullet, ICT London..."
+              placeholder="e.g. Silver Bullet, ICT London Open, Trend Continuation..."
+              className={inputClass}
             />
-          </div>
-          <div className="md:col-span-2">
-            <Field label="Description" description="A short summary of what this strategy is designed to capture.">
-              <textarea 
-                className={inputClass + ' resize-y'} 
-                rows={3}
-                value={formData.description}
-                onChange={e => setFormData({ ...formData, description: e.target.value })}
+          </Field>
+
+          <Field 
+            label="Description & Philosophy" 
+            description="A concise summary of market conditions and the core edge this strategy exploits."
+          >
+            <textarea 
+              rows={3}
+              value={formData.description}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
+              placeholder="e.g. Focuses on liquidity sweeps during the London killzone followed by a MSS on the 5m timeframe..."
+              className={inputClass + ' resize-y leading-relaxed'}
+            />
+          </Field>
+        </div>
+
+        <div className="border-t border-border/70 pt-5">
+          <h2 className="text-base font-semibold text-foreground mb-1">Execution Parameters</h2>
+          <p className="text-xs text-muted mb-4">Default trading parameters applied when logging trades with this strategy.</p>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Trading Style">
+              <input 
+                type="text"
+                value={formData.style} 
+                onChange={e => setFormData({ ...formData, style: e.target.value })} 
+                placeholder="e.g. Scalping, Day Trading, Swing"
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Primary Market">
+              <input 
+                type="text"
+                value={formData.market} 
+                onChange={e => setFormData({ ...formData, market: e.target.value })} 
+                placeholder="e.g. Forex Majors, Indices, Gold"
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Default Risk (%)">
+              <input 
+                type="number" 
+                step="0.1" 
+                min="0"
+                max="100"
+                value={formData.defaultRiskPercent} 
+                onChange={e => setFormData({ ...formData, defaultRiskPercent: e.target.value })} 
+                placeholder="e.g. 1.0"
+                className={inputClass}
               />
             </Field>
           </div>
-          <TextInput 
-            label="Style" 
-            value={formData.style} 
-            onChange={e => setFormData({ ...formData, style: e.target.value })} 
-            placeholder="e.g. Day Trading, Scalping"
-          />
-          <TextInput 
-            label="Primary Market" 
-            value={formData.market} 
-            onChange={e => setFormData({ ...formData, market: e.target.value })} 
-            placeholder="e.g. Forex, Crypto, Indices"
-          />
-          <TextInput 
-            type="number" 
-            step="0.1" 
-            label="Default Risk (%)" 
-            value={formData.defaultRiskPercent} 
-            onChange={e => setFormData({ ...formData, defaultRiskPercent: e.target.value })} 
-            placeholder="e.g. 1.0"
-          />
         </div>
-      </div>
 
+        {/* Bottom Form Actions */}
+        <div className="border-t border-border/70 pt-4 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-emerald-400 disabled:opacity-60"
+          >
+            <Save size={15} />
+            {saving ? 'Saving...' : 'Save Strategy'}
+          </button>
+        </div>
+      </form>
+
+      {/* Setups & Checklists Section */}
       {currentStrategy?.id && (
         <div className="mt-8">
-          <SetupList strategyId={currentStrategy.id} initialSetups={currentStrategy.setups} onSetupsChanged={refreshStrategy} />
+          <SetupList 
+            strategyId={currentStrategy.id} 
+            initialSetups={currentStrategy.setups} 
+            onSetupsChanged={refreshStrategy} 
+          />
         </div>
       )}
     </div>

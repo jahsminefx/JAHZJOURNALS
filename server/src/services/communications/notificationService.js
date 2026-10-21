@@ -15,7 +15,7 @@ const notificationService = {
     });
   },
 
-  async sendManualNotification(title, message, userIds = [], category = 'INFO', senderId = null) {
+  async sendManualNotification(title, message, userIds = [], category = 'INFO', senderId = null, actionUrl = null) {
     // 1. Create the base notification
     const notification = await prisma.notification.create({
       data: {
@@ -23,6 +23,7 @@ const notificationService = {
         category,
         title,
         message,
+        actionUrl: actionUrl || null,
         isGlobal: userIds.length === 0,
         senderId,
       }
@@ -57,7 +58,7 @@ const notificationService = {
     sendPushToAll({
       title: `🔔 ${title}`,
       message,
-      url: '/notifications',
+      url: actionUrl || '/notifications',
       category
     }, userIds).catch(err => {
       console.error('Asynchronous Web Push dispatch error:', err);

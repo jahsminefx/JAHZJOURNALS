@@ -163,6 +163,11 @@ const updateDataPrivacy = (req, res) => updateSettingsSection(req, res, [
   'allowScreenshotAnalysis',
   'allowTradeDataAnalysis',
   'enableJahzAi',
+  'shareTradesWithMentor',
+  'shareScreenshots',
+  'shareEmotions',
+  'shareWeeklyReviews',
+  'allowMentorComments',
 ]);
 
 module.exports = {

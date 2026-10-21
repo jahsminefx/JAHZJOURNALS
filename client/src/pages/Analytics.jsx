@@ -19,10 +19,10 @@ import { createCacheKey, getCachedData, setCachedData } from '../utils/apiCache'
 
 const groupOptions = [
   { id: 'pair', label: 'Pair / Symbol' },
-  { id: 'session', label: 'Trading Session' },
+  { id: 'session', label: 'Session' },
   { id: 'strategy', label: 'Strategy' },
   { id: 'setup', label: 'Setup' },
-  { id: 'direction', label: 'Direction (Long/Short)' },
+  { id: 'direction', label: 'Direction' },
   { id: 'weekday', label: 'Day of Week' },
   { id: 'timeframe', label: 'Timeframe' },
   { id: 'emotion', label: 'Emotion' },
@@ -41,7 +41,7 @@ const emptyFilters = {
   timeframe: '',
 };
 
-const inputStyle = "mt-1 block w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs text-foreground placeholder:text-muted outline-none transition focus:border-emerald-500 focus:bg-surface shadow-sm";
+const inputStyle = "mt-1.5 block w-full rounded-xl border border-border/80 bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted/60 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20";
 
 const Analytics = () => {
   const [accounts, setAccounts] = useState([]);
@@ -54,6 +54,7 @@ const Analytics = () => {
   const [directionPerformance, setDirectionPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const { user } = useAuth();
 
   const handleExportPdf = async () => {
@@ -89,10 +90,13 @@ const Analytics = () => {
   // Curve Mode & Date Preset Controls
   const [curveMode, setCurveMode] = useState('cumulative'); // 'cumulative' | 'balance'
   const [activeDatePreset, setActiveDatePreset] = useState('ALL');
-  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   const activeFilterCount = useMemo(() => {
     return Object.entries(filters).filter(([key, val]) => val !== '').length;
+  }, [filters]);
+
+  const hasAdvancedFilters = useMemo(() => {
+    return Boolean(filters.session || filters.direction || filters.timeframe || filters.setup || filters.strategy);
   }, [filters]);
 
   const queryParams = useMemo(() => {
@@ -213,6 +217,7 @@ const Analytics = () => {
     setFilters(emptyFilters);
     setGroupBy('pair');
     setActiveDatePreset('ALL');
+    setShowAdvancedFilters(false);
   };
 
   const handleRowClick = (groupKey) => {
@@ -382,267 +387,268 @@ const Analytics = () => {
       <Breadcrumbs />
 
       {/* 1. Header & Active Filter Bar */}
-      <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Analytics</h1>
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
+                <Filter size={11} /> {activeFilterCount} active
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-muted mt-1">
+            Deep-dive performance metrics, equity trajectory, and execution edge.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          {activeFilterCount > 0 && (
+            <button 
+              type="button" 
+              onClick={clearFilters} 
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-muted hover:text-foreground hover:bg-surface-muted transition"
+            >
+              <FilterX size={13} />
+              <span>Reset</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={exportingPdf}
+            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition disabled:opacity-50"
+          >
+            <Download size={14} />
+            <span>{exportingPdf ? 'Exporting...' : 'Export PDF Report'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Structured Filter Panel */}
+      <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Filter size={14} className="text-emerald-400" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted">Filter Executions</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1"
+          >
+            <span>{showAdvancedFilters ? 'Fewer filters' : hasAdvancedFilters ? 'Advanced filters (active)' : 'Advanced filters'}</span>
+            {showAdvancedFilters ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+        </div>
+
+        {/* Primary Filters Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">Analytics</h1>
-              {activeFilterCount > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  <Filter size={12} /> {activeFilterCount} active filter{activeFilterCount > 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-            <p className="text-xs sm:text-sm text-muted mt-1">Slice and dice your executions to find the edge hidden in the noise.</p>
+            <label htmlFor="analytics-account" className="block text-xs font-medium text-foreground">Account</label>
+            <select id="analytics-account" value={filters.accountId} onChange={(e) => updateFilter('accountId', e.target.value)} className={inputStyle}>
+              <option value="">All Accounts</option>
+              {accounts.map((acc) => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+            </select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={exportingPdf}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-500 hover:bg-emerald-500/20 transition disabled:opacity-50"
-            >
-              <Download size={14} />
-              <span>{exportingPdf ? 'Generating PDF...' : 'Export PDF Report'}</span>
-            </button>
+          <div>
+            <label htmlFor="analytics-pair" className="block text-xs font-medium text-foreground">Pair / Symbol</label>
+            <input id="analytics-pair" value={filters.pair} onChange={(e) => updateFilter('pair', e.target.value)} placeholder="e.g. EURUSD, XAUUSD" className={`${inputStyle} uppercase font-mono font-medium`} />
+          </div>
 
-            <button
-              type="button"
-              onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
-              className="lg:hidden inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-xs font-bold text-foreground hover:bg-surface-muted/80 transition"
-            >
-              <Filter size={14} />
-              <span>Filters ({activeFilterCount})</span>
-              {isMobileFiltersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
+          <div>
+            <label htmlFor="analytics-start-date" className="block text-xs font-medium text-foreground">From Date</label>
+            <input id="analytics-start-date" type="date" value={filters.startDate} onChange={(e) => updateFilter('startDate', e.target.value)} className={inputStyle} />
+          </div>
 
-            {activeFilterCount > 0 && (
-              <button 
-                type="button" 
-                onClick={clearFilters} 
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-muted px-3.5 py-2 text-xs font-bold text-muted hover:text-foreground hover:bg-surface-muted/80 transition"
-              >
-                <FilterX size={14} /> Reset
-              </button>
-            )}
+          <div>
+            <label htmlFor="analytics-end-date" className="block text-xs font-medium text-foreground">To Date</label>
+            <input id="analytics-end-date" type="date" value={filters.endDate} onChange={(e) => updateFilter('endDate', e.target.value)} className={inputStyle} />
           </div>
         </div>
 
-        {/* Filter Controls Panel (Desktop & Mobile Dropdown) */}
-        <div className={`mt-5 pt-4 border-t border-border ${isMobileFiltersOpen ? 'block' : 'hidden lg:block'}`}>
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
+        {/* Advanced Filters Row (Collapsible) */}
+        {showAdvancedFilters && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 pt-3.5 border-t border-border/60">
             <div>
-              <label htmlFor="analytics-account" className="block text-[11px] font-bold uppercase tracking-wider text-muted">Account</label>
-              <select id="analytics-account" value={filters.accountId} onChange={(e) => updateFilter('accountId', e.target.value)} className={inputStyle}>
-                <option value="" className="bg-surface text-foreground">All Accounts</option>
-                {accounts.map((acc) => <option key={acc.id} value={acc.id} className="bg-surface text-foreground">{acc.name}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="analytics-start-date" className="block text-[11px] font-bold uppercase tracking-wider text-muted">Start Date</label>
-              <input id="analytics-start-date" type="date" value={filters.startDate} onChange={(e) => updateFilter('startDate', e.target.value)} className={inputStyle} />
-            </div>
-
-            <div>
-              <label htmlFor="analytics-end-date" className="block text-[11px] font-bold uppercase tracking-wider text-muted">End Date</label>
-              <input id="analytics-end-date" type="date" value={filters.endDate} onChange={(e) => updateFilter('endDate', e.target.value)} className={inputStyle} />
-            </div>
-
-            <div>
-              <label htmlFor="analytics-pair" className="block text-[11px] font-bold uppercase tracking-wider text-muted">Pair / Symbol</label>
-              <input id="analytics-pair" value={filters.pair} onChange={(e) => updateFilter('pair', e.target.value)} placeholder="e.g. EURUSD" className={`${inputStyle} uppercase font-mono font-bold`} />
-            </div>
-
-            <div>
-              <label htmlFor="analytics-session" className="block text-[11px] font-bold uppercase tracking-wider text-muted">Session</label>
-              <select id="analytics-session" value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className={inputStyle}>
-                <option value="" className="bg-surface text-foreground">Any Session</option>
-                <option value="ASIAN" className="bg-surface text-foreground">Asian</option>
-                <option value="LONDON" className="bg-surface text-foreground">London</option>
-                <option value="NEW_YORK" className="bg-surface text-foreground">New York</option>
-                <option value="LONDON_NEW_YORK_OVERLAP" className="bg-surface text-foreground">London/NY Overlap</option>
-                <option value="OTHER" className="bg-surface text-foreground">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="analytics-direction" className="block text-[11px] font-bold uppercase tracking-wider text-muted">Direction</label>
+              <label htmlFor="analytics-direction" className="block text-xs font-medium text-foreground">Direction</label>
               <select id="analytics-direction" value={filters.direction} onChange={(e) => updateFilter('direction', e.target.value)} className={inputStyle}>
-                <option value="" className="bg-surface text-foreground">Any Direction</option>
-                <option value="BUY" className="bg-surface text-foreground">Long (Buy)</option>
-                <option value="SELL" className="bg-surface text-foreground">Short (Sell)</option>
+                <option value="">Any Direction</option>
+                <option value="BUY">Long (Buy)</option>
+                <option value="SELL">Short (Sell)</option>
               </select>
             </div>
 
             <div>
-              <label htmlFor="analytics-timeframe" className="block text-[11px] font-bold uppercase tracking-wider text-muted">Timeframe</label>
-              <input id="analytics-timeframe" value={filters.timeframe} onChange={(e) => updateFilter('timeframe', e.target.value)} placeholder="e.g. 15M" className={inputStyle} />
+              <label htmlFor="analytics-session" className="block text-xs font-medium text-foreground">Session</label>
+              <select id="analytics-session" value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className={inputStyle}>
+                <option value="">Any Session</option>
+                <option value="ASIAN">Asian</option>
+                <option value="LONDON">London</option>
+                <option value="NEW_YORK">New York</option>
+                <option value="LONDON_NEW_YORK_OVERLAP">London/NY Overlap</option>
+                <option value="OTHER">Other</option>
+              </select>
             </div>
 
             <div>
-              <label htmlFor="analytics-setup" className="block text-[11px] font-bold uppercase tracking-wider text-muted">Setup ID</label>
+              <label htmlFor="analytics-timeframe" className="block text-xs font-medium text-foreground">Timeframe</label>
+              <input id="analytics-timeframe" value={filters.timeframe} onChange={(e) => updateFilter('timeframe', e.target.value)} placeholder="e.g. 5M, 15M, 1H" className={inputStyle} />
+            </div>
+
+            <div>
+              <label htmlFor="analytics-setup" className="block text-xs font-medium text-foreground">Setup ID</label>
               <input id="analytics-setup" value={filters.setup} onChange={(e) => updateFilter('setup', e.target.value)} placeholder="Filter by setup" className={inputStyle} />
             </div>
 
             <div>
-              <label htmlFor="analytics-strategy" className="block text-[11px] font-bold uppercase tracking-wider text-muted">Strategy ID</label>
+              <label htmlFor="analytics-strategy" className="block text-xs font-medium text-foreground">Strategy ID</label>
               <input id="analytics-strategy" value={filters.strategy} onChange={(e) => updateFilter('strategy', e.target.value)} placeholder="Filter by strategy" className={inputStyle} />
             </div>
-
-            <div className="flex items-end">
-              <button 
-                type="button" 
-                onClick={clearFilters} 
-                disabled={activeFilterCount === 0}
-                className="w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs font-bold text-muted hover:text-foreground disabled:opacity-40 transition"
-              >
-                Reset All Filters
-              </button>
-            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {loading ? (
-        <div className="rounded-2xl border border-border bg-surface p-12 text-center text-muted font-medium shadow-sm flex items-center justify-center gap-3">
+        <div className="rounded-2xl border border-border/80 bg-surface/90 p-12 text-center text-muted font-medium shadow-sm flex items-center justify-center gap-3">
           <Activity size={20} className="animate-spin text-emerald-500" />
           <span>Gathering your trading analytics...</span>
         </div>
       ) : (
         <>
-          {/* 2. Core Performance KPIs Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+          {/* 3. Core Performance KPIs Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4">
             {/* Net P/L */}
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-4 sm:p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Net Realised P/L</span>
-                <DollarSign size={16} className={netPnl >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500"} />
+                <span className="text-xs font-medium text-muted">Net Realised P/L</span>
+                <DollarSign size={16} className={netPnl >= 0 ? "text-emerald-400" : "text-rose-400"} />
               </div>
-              <div>
-                <p className={`mt-3 text-2xl font-black tracking-tight ${netPnl >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500"}`}>
+              <div className="mt-3">
+                <p className={`text-xl sm:text-2xl font-bold font-mono tracking-tight ${netPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)}
                 </p>
-                <p className="mt-1 text-[11px] text-muted font-medium">{summary.closedTrades || 0} closed trades</p>
+                <p className="mt-1 text-[11px] text-muted">{summary.closedTrades || 0} closed trades</p>
               </div>
             </div>
 
             {/* Win Rate */}
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-4 sm:p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Win Rate</span>
-                <Award size={16} className="text-sky-500 dark:text-sky-400" />
+                <span className="text-xs font-medium text-muted">Win Rate</span>
+                <Award size={16} className="text-sky-400" />
               </div>
-              <div>
-                <p className="mt-3 text-2xl font-black tracking-tight text-foreground">
+              <div className="mt-3">
+                <p className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-foreground">
                   {Number(summary.winRate || 0).toFixed(1)}%
                 </p>
-                <p className="mt-1 text-[11px] text-muted font-medium">
-                  <span className="text-emerald-500 font-bold">{summary.winningTrades || 0}W</span> · <span className="text-rose-500 font-bold">{summary.losingTrades || 0}L</span> · <span className="text-muted">{summary.breakEvenTrades || 0}BE</span>
+                <p className="mt-1 text-[11px] text-muted">
+                  <span className="text-emerald-400 font-semibold">{summary.winningTrades || 0}W</span> · <span className="text-rose-400 font-semibold">{summary.losingTrades || 0}L</span> · <span className="text-muted">{summary.breakEvenTrades || 0}BE</span>
                 </p>
               </div>
             </div>
 
             {/* Profit Factor */}
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-4 sm:p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Profit Factor</span>
-                <TrendingUp size={16} className="text-emerald-500 dark:text-emerald-400" />
+                <span className="text-xs font-medium text-muted">Profit Factor</span>
+                <TrendingUp size={16} className="text-emerald-400" />
               </div>
-              <div>
-                <p className="mt-3 text-2xl font-black tracking-tight text-foreground">
+              <div className="mt-3">
+                <p className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-foreground">
                   {summary?.profitFactor === null || summary?.profitFactor === undefined ? 'N/A' : Number(summary.profitFactor || 0).toFixed(2)}
                 </p>
-                <p className="mt-1 text-[11px] text-muted font-medium">Gross win / Gross loss</p>
+                <p className="mt-1 text-[11px] text-muted">Gross win / Gross loss</p>
               </div>
             </div>
 
             {/* Expectancy */}
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-4 sm:p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Expectancy</span>
-                <Target size={16} className="text-indigo-500 dark:text-indigo-400" />
+                <span className="text-xs font-medium text-muted">Expectancy</span>
+                <Target size={16} className="text-indigo-400" />
               </div>
-              <div>
-                <p className="mt-3 text-2xl font-black tracking-tight text-foreground">
+              <div className="mt-3">
+                <p className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-foreground">
                   ${Number(summary.expectancy || 0).toFixed(2)}
                 </p>
-                <p className="mt-1 text-[11px] text-muted font-medium">Expected return / trade</p>
+                <p className="mt-1 text-[11px] text-muted">Expected return / trade</p>
               </div>
             </div>
 
             {/* Avg Win / Avg Loss */}
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-4 sm:p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Avg Win / Loss</span>
+                <span className="text-xs font-medium text-muted">Avg Win / Loss</span>
                 <BarChart2 size={16} className="text-muted" />
               </div>
-              <div>
-                <p className="mt-3 text-lg font-black tracking-tight text-foreground">
-                  <span className="text-emerald-500 dark:text-emerald-400">${Number(summary.averageWin || 0).toFixed(2)}</span>
-                  <span className="text-muted text-xs font-normal"> / </span>
-                  <span className="text-rose-500">${Number(summary.averageLoss || 0).toFixed(2)}</span>
+              <div className="mt-3">
+                <p className="text-base sm:text-lg font-bold font-mono tracking-tight text-foreground">
+                  <span className="text-emerald-400">${Number(summary.averageWin || 0).toFixed(0)}</span>
+                  <span className="text-muted font-normal text-xs"> / </span>
+                  <span className="text-rose-400">${Number(summary.averageLoss || 0).toFixed(0)}</span>
                 </p>
-                <p className="mt-1 text-[11px] text-muted font-medium">Avg payout ratio</p>
+                <p className="mt-1 text-[11px] text-muted">Avg payout ratio</p>
               </div>
             </div>
 
             {/* Avg R:R */}
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-4 sm:p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Avg R:R</span>
-                <Compass size={16} className="text-teal-500 dark:text-teal-400" />
+                <span className="text-xs font-medium text-muted">Avg R:R</span>
+                <Compass size={16} className="text-teal-400" />
               </div>
-              <div>
-                <p className="mt-3 text-2xl font-black tracking-tight text-foreground">
+              <div className="mt-3">
+                <p className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-foreground">
                   {summary.averageRiskRewardRatio === null ? 'N/A' : `1 : ${Number(summary.averageRiskRewardRatio || 0).toFixed(2)}`}
                 </p>
-                <p className="mt-1 text-[11px] text-muted font-medium">Planned R:R ratio</p>
+                <p className="mt-1 text-[11px] text-muted">Planned R:R ratio</p>
               </div>
             </div>
           </div>
 
-          {/* 3. Performance Curve & Edge Summary Section (2:1 Grid) */}
+          {/* 4. Performance Curve & Edge Summary Section (2:1 Grid) */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.8fr_1fr]">
             {/* Performance Curve Chart */}
-            <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-black tracking-tight text-foreground flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-semibold tracking-tight text-foreground flex items-center gap-2">
                       Performance Curve
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-surface-muted text-muted">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-surface-muted text-muted">
                         {curveMode === 'cumulative' ? 'Pure Trading P/L' : 'Real Capital Trajectory'}
                       </span>
                     </h3>
                     <p className="text-xs text-muted mt-0.5">
                       {curveMode === 'cumulative' 
-                        ? 'Starts at $0. Tracks realized trading edge independently of deposits/withdrawals.' 
+                        ? 'Tracks realized trading edge independently of deposits/withdrawals.' 
                         : 'Tracks actual account balance over time (Deposits + Trading P/L - Withdrawals).'}
                     </p>
                   </div>
 
                   {/* Mode Toggle & Preset Buttons */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 text-xs">
+                    <div className="inline-flex rounded-xl border border-border/80 bg-surface p-1 text-xs">
                       <button
                         type="button"
                         onClick={() => setCurveMode('cumulative')}
-                        className={`rounded-lg px-2.5 py-1 font-bold transition ${curveMode === 'cumulative' ? 'bg-surface text-emerald-500 shadow-sm' : 'text-muted hover:text-foreground'}`}
+                        className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${curveMode === 'cumulative' ? 'bg-emerald-500/10 text-emerald-400 font-semibold' : 'text-muted hover:text-foreground'}`}
                       >
                         Cumulative P/L
                       </button>
                       <button
                         type="button"
                         onClick={() => setCurveMode('balance')}
-                        className={`rounded-lg px-2.5 py-1 font-bold transition ${curveMode === 'balance' ? 'bg-surface text-indigo-500 shadow-sm' : 'text-muted hover:text-foreground'}`}
+                        className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${curveMode === 'balance' ? 'bg-indigo-500/10 text-indigo-400 font-semibold' : 'text-muted hover:text-foreground'}`}
                       >
                         Account Balance
                       </button>
                     </div>
 
-                    <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 text-[11px] font-bold">
+                    <div className="inline-flex rounded-xl border border-border/80 bg-surface p-1 text-[11px] font-semibold">
                       {['7D', '30D', '90D', '1Y', 'ALL'].map((preset) => (
                         <button
                           key={preset}
@@ -658,28 +664,28 @@ const Analytics = () => {
                 </div>
 
                 {/* Compact Capital Summary Bar */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-5 p-3.5 rounded-xl border border-border bg-surface-muted">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-5 p-3.5 rounded-xl border border-border/70 bg-surface-muted/60">
                   <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted">Total Deposits</span>
-                    <span className="text-sm font-extrabold text-foreground">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Total Deposits</span>
+                    <span className="text-sm font-bold font-mono text-foreground">
                       ${Number(capitalMetrics.totalDeposits || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted">Total Withdrawals</span>
-                    <span className="text-sm font-extrabold text-foreground">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Total Withdrawals</span>
+                    <span className="text-sm font-bold font-mono text-foreground">
                       ${Number(capitalMetrics.totalWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted">Trading P/L</span>
-                    <span className={`text-sm font-extrabold ${Number(capitalMetrics.tradingPnl || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Trading P/L</span>
+                    <span className={`text-sm font-bold font-mono ${Number(capitalMetrics.tradingPnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {Number(capitalMetrics.tradingPnl || 0) >= 0 ? '+' : ''}${Number(capitalMetrics.tradingPnl || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-muted">Current Balance</span>
-                    <span className="text-sm font-extrabold text-foreground">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Current Balance</span>
+                    <span className="text-sm font-bold font-mono text-foreground">
                       ${Number(capitalMetrics.currentAccountBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -691,7 +697,7 @@ const Analytics = () => {
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={equityCurve} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                         <XAxis dataKey="label" stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} hide />
                         <YAxis stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} />
                         <Tooltip 
@@ -702,7 +708,7 @@ const Analytics = () => {
                           type="monotone" 
                           dataKey={curveMode === 'cumulative' ? 'cumulativeProfitLoss' : 'accountBalance'} 
                           stroke={curveMode === 'cumulative' ? '#10b981' : '#6366f1'} 
-                          strokeWidth={3} 
+                          strokeWidth={2.5} 
                           dot={false} 
                         />
                       </LineChart>
@@ -713,33 +719,33 @@ const Analytics = () => {
             </div>
 
             {/* Edge Summary Card */}
-            <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
+                <div className="flex items-center justify-between mb-4 border-b border-border/70 pb-3">
                   <div className="flex items-center gap-2">
-                    <Zap size={18} className="text-emerald-500" />
-                    <h3 className="text-base font-black tracking-tight text-foreground">Edge Summary</h3>
+                    <Zap size={16} className="text-emerald-400" />
+                    <h3 className="text-base font-semibold tracking-tight text-foreground">Edge Summary</h3>
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted">By {groupBy}</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">By {groupBy}</span>
                 </div>
 
                 {!edgeSummary ? (
                   <div className="py-12 text-center space-y-2">
-                    <ShieldAlert size={32} className="mx-auto text-muted/50" />
+                    <ShieldAlert size={28} className="mx-auto text-muted/40" />
                     <p className="text-xs font-semibold text-foreground">Not enough trade data</p>
                     <p className="text-[11px] text-muted">Log at least 2 trades to calculate dynamic edge highlights.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {/* Strongest Area */}
                     {edgeSummary.bestPnl && (
                       <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3.5 flex items-center justify-between">
                         <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Strongest {groupBy}</p>
-                          <p className="text-sm font-bold text-foreground mt-0.5">{edgeSummary.bestPnl.label}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Strongest {groupBy}</p>
+                          <p className="text-sm font-semibold text-foreground mt-0.5">{edgeSummary.bestPnl.label}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-black text-emerald-500 dark:text-emerald-400">+${Number(edgeSummary.bestPnl.netRealisedProfitLoss).toFixed(2)}</p>
+                          <p className="text-sm font-bold font-mono text-emerald-400">+${Number(edgeSummary.bestPnl.netRealisedProfitLoss).toFixed(2)}</p>
                           <p className="text-[10px] text-muted font-medium">{edgeSummary.bestPnl.winRate}% Win Rate</p>
                         </div>
                       </div>
@@ -749,11 +755,11 @@ const Analytics = () => {
                     {edgeSummary.worstPnl && (
                       <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 flex items-center justify-between">
                         <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Weakest {groupBy}</p>
-                          <p className="text-sm font-bold text-foreground mt-0.5">{edgeSummary.worstPnl.label}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-400">Weakest {groupBy}</p>
+                          <p className="text-sm font-semibold text-foreground mt-0.5">{edgeSummary.worstPnl.label}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-black text-rose-500">-${Math.abs(Number(edgeSummary.worstPnl.netRealisedProfitLoss)).toFixed(2)}</p>
+                          <p className="text-sm font-bold font-mono text-rose-400">-${Math.abs(Number(edgeSummary.worstPnl.netRealisedProfitLoss)).toFixed(2)}</p>
                           <p className="text-[10px] text-muted font-medium">{edgeSummary.worstPnl.winRate}% Win Rate</p>
                         </div>
                       </div>
@@ -761,13 +767,13 @@ const Analytics = () => {
 
                     {/* Highest Win Rate */}
                     {edgeSummary.bestWinRate && (
-                      <div className="rounded-xl border border-border bg-surface-muted p-3.5 flex items-center justify-between">
+                      <div className="rounded-xl border border-border/80 bg-surface-muted/50 p-3.5 flex items-center justify-between">
                         <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Highest Accuracy</p>
-                          <p className="text-sm font-bold text-foreground mt-0.5">{edgeSummary.bestWinRate.label}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Highest Accuracy</p>
+                          <p className="text-sm font-semibold text-foreground mt-0.5">{edgeSummary.bestWinRate.label}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-black text-sky-500 dark:text-sky-400">{edgeSummary.bestWinRate.winRate}%</p>
+                          <p className="text-sm font-bold font-mono text-sky-400">{edgeSummary.bestWinRate.winRate}%</p>
                           <p className="text-[10px] text-muted font-medium">{edgeSummary.bestWinRate.associatedTradeCount ?? edgeSummary.bestWinRate.totalTrades} trades</p>
                         </div>
                       </div>
@@ -778,26 +784,30 @@ const Analytics = () => {
             </div>
           </div>
 
-          {/* 4. Performance Breakdown & Drawdown Section */}
+          {/* 5. Performance Breakdown & Drawdown Section */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.8fr_1fr]">
             {/* Grouped Performance Bar Chart with Dimension Switcher */}
-            <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
               <div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-black tracking-tight text-foreground">Performance Breakdown</h3>
-                    <p className="text-xs text-muted mt-0.5">Switch dimensions to compare group outcomes.</p>
+                    <h3 className="text-base sm:text-lg font-semibold tracking-tight text-foreground">Performance Breakdown</h3>
+                    <p className="text-xs text-muted mt-0.5">Compare profitability across different execution dimensions.</p>
                   </div>
                 </div>
 
                 {/* Dimension Switcher Tabs */}
-                <div className="flex flex-wrap gap-1.5 mb-6 border-b border-border pb-4">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-5 border-b border-border/70 scrollbar-none">
                   {groupOptions.map((opt) => (
                     <button
                       key={opt.id}
                       type="button"
                       onClick={() => setGroupBy(opt.id)}
-                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${groupBy === opt.id ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'border border-border bg-surface-muted text-muted hover:text-foreground'}`}
+                      className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-medium transition ${
+                        groupBy === opt.id 
+                          ? 'bg-emerald-500 text-slate-950 font-semibold shadow-sm' 
+                          : 'border border-border/70 bg-surface text-muted hover:text-foreground hover:bg-surface-muted'
+                      }`}
                     >
                       {opt.label}
                     </button>
@@ -810,7 +820,7 @@ const Analytics = () => {
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={groupedData.slice(0, 12)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                         <XAxis dataKey="label" stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} />
                         <YAxis stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} />
                         <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--surface-elevated))', borderColor: 'rgb(var(--border))', color: 'rgb(var(--foreground))', borderRadius: '0.75rem', fontSize: '12px' }} />
@@ -827,26 +837,26 @@ const Analytics = () => {
 
               {/* Best vs Worst Performers Micro-Lists */}
               {hasData && (topPerformers.length > 0 || weakestPerformers.length > 0) && (
-                <div className="mt-6 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="mt-6 pt-4 border-t border-border/70 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-2">Top Performers ({groupBy})</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400 block mb-2">Top Performers ({groupBy})</span>
                     <div className="space-y-1.5">
                       {topPerformers.map((item) => (
-                        <div key={item.key} className="flex items-center justify-between text-xs rounded-lg bg-emerald-500/5 px-2.5 py-1.5 border border-emerald-500/10">
-                          <span className="font-semibold text-foreground truncate">{item.label}</span>
-                          <span className="font-bold text-emerald-500 dark:text-emerald-400">+${Number(item.netRealisedProfitLoss).toFixed(2)}</span>
+                        <div key={item.key} className="flex items-center justify-between text-xs rounded-xl bg-emerald-500/5 px-3 py-2 border border-emerald-500/10">
+                          <span className="font-medium text-foreground truncate">{item.label}</span>
+                          <span className="font-bold font-mono text-emerald-400">+${Number(item.netRealisedProfitLoss).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500 block mb-2">Weakest Performers ({groupBy})</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-400 block mb-2">Weakest Performers ({groupBy})</span>
                     <div className="space-y-1.5">
                       {weakestPerformers.map((item) => (
-                        <div key={item.key} className="flex items-center justify-between text-xs rounded-lg bg-rose-500/5 px-2.5 py-1.5 border border-rose-500/10">
-                          <span className="font-semibold text-foreground truncate">{item.label}</span>
-                          <span className="font-bold text-rose-500">-${Math.abs(Number(item.netRealisedProfitLoss)).toFixed(2)}</span>
+                        <div key={item.key} className="flex items-center justify-between text-xs rounded-xl bg-rose-500/5 px-3 py-2 border border-rose-500/10">
+                          <span className="font-medium text-foreground truncate">{item.label}</span>
+                          <span className="font-bold font-mono text-rose-400">-${Math.abs(Number(item.netRealisedProfitLoss)).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -856,12 +866,12 @@ const Analytics = () => {
             </div>
 
             {/* Drawdown Analysis Section */}
-            <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
+                <div className="flex items-center justify-between mb-4 border-b border-border/70 pb-3">
                   <div className="flex items-center gap-2">
-                    <ShieldAlert size={18} className="text-rose-500" />
-                    <h3 className="text-base font-black tracking-tight text-foreground">Drawdown Analysis</h3>
+                    <ShieldAlert size={16} className="text-rose-400" />
+                    <h3 className="text-base font-semibold tracking-tight text-foreground">Drawdown Analysis</h3>
                   </div>
                 </div>
 
@@ -870,39 +880,39 @@ const Analytics = () => {
                 ) : (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-xl border border-border bg-surface-muted p-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Max Drawdown</span>
-                        <p className="text-base font-black text-rose-500 mt-1">-${drawdownAnalysis.maxDd.toFixed(2)}</p>
+                      <div className="rounded-xl border border-border/80 bg-surface-muted/50 p-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted block">Max Drawdown</span>
+                        <p className="text-base font-bold font-mono text-rose-400 mt-1">-${drawdownAnalysis.maxDd.toFixed(2)}</p>
                       </div>
 
-                      <div className="rounded-xl border border-border bg-surface-muted p-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Current Drawdown</span>
-                        <p className="text-base font-black text-foreground mt-1">-${drawdownAnalysis.currentDd.toFixed(2)}</p>
+                      <div className="rounded-xl border border-border/80 bg-surface-muted/50 p-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted block">Current Drawdown</span>
+                        <p className="text-base font-bold font-mono text-foreground mt-1">-${drawdownAnalysis.currentDd.toFixed(2)}</p>
                       </div>
 
-                      <div className="rounded-xl border border-border bg-surface-muted p-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Recovery Rate</span>
-                        <p className="text-base font-black text-emerald-500 dark:text-emerald-400 mt-1">{drawdownAnalysis.recoveryPct}%</p>
+                      <div className="rounded-xl border border-border/80 bg-surface-muted/50 p-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted block">Recovery Rate</span>
+                        <p className="text-base font-bold font-mono text-emerald-400 mt-1">{drawdownAnalysis.recoveryPct}%</p>
                       </div>
 
-                      <div className="rounded-xl border border-border bg-surface-muted p-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Longest DD Streak</span>
-                        <p className="text-base font-black text-foreground mt-1">{drawdownAnalysis.longestStreak} trades</p>
+                      <div className="rounded-xl border border-border/80 bg-surface-muted/50 p-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted block">Longest DD Streak</span>
+                        <p className="text-base font-bold font-mono text-foreground mt-1">{drawdownAnalysis.longestStreak} trades</p>
                       </div>
                     </div>
 
                     {/* Compact Drawdown Depth Chart */}
                     {drawdownAnalysis.drawdownSeries.length > 0 && (
-                      <div className="pt-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-2">Drawdown Curve Depth ($)</span>
+                      <div className="pt-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted block mb-2">Drawdown Curve Depth ($)</span>
                         <div className="h-28">
                           <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={drawdownAnalysis.drawdownSeries} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" vertical={false} />
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                               <XAxis dataKey="timestamp" hide />
                               <YAxis stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 10 }} />
                               <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--surface-elevated))', borderColor: 'rgb(var(--border))', color: 'rgb(var(--foreground))', borderRadius: '0.5rem', fontSize: '11px' }} />
-                              <Area type="monotone" dataKey="dd" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.2} />
+                              <Area type="monotone" dataKey="dd" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.15} />
                             </AreaChart>
                           </ResponsiveContainer>
                         </div>
@@ -914,37 +924,37 @@ const Analytics = () => {
             </div>
           </div>
 
-          {/* 5. Trading Behaviour & Execution Asymmetry Section */}
+          {/* 6. Trading Behaviour & Execution Asymmetry Section */}
           {longShortMetrics && (longShortMetrics.longData || longShortMetrics.shortData) && (
-            <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
-                <Compass size={18} className="text-indigo-500" />
-                <h3 className="text-base font-black tracking-tight text-foreground">Long vs Short Execution Asymmetry</h3>
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4 border-b border-border/70 pb-3">
+                <Compass size={16} className="text-indigo-400" />
+                <h3 className="text-base font-semibold tracking-tight text-foreground">Long vs Short Execution Asymmetry</h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Long (Buy) Card */}
                 <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase text-emerald-600 dark:text-emerald-400">
-                      <ArrowUpRight size={16} /> Long (Buy) Trades
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                      <ArrowUpRight size={15} /> Long (Buy) Trades
                     </span>
-                    <span className="text-xs font-bold text-muted">{longShortMetrics.longData?.associatedTradeCount ?? longShortMetrics.longData?.totalTrades ?? 0} Executions</span>
+                    <span className="text-xs font-medium text-muted">{longShortMetrics.longData?.associatedTradeCount ?? longShortMetrics.longData?.totalTrades ?? 0} Executions</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                    <div className="bg-surface p-2 rounded-lg border border-border">
-                      <span className="text-[10px] text-muted font-semibold block uppercase">Win Rate</span>
-                      <span className="text-sm font-bold text-foreground">{longShortMetrics.longData?.winRate || 0}%</span>
+                    <div className="bg-surface p-2.5 rounded-xl border border-border/80">
+                      <span className="text-[10px] text-muted font-medium block uppercase tracking-wider">Win Rate</span>
+                      <span className="text-sm font-bold font-mono text-foreground">{longShortMetrics.longData?.winRate || 0}%</span>
                     </div>
-                    <div className="bg-surface p-2 rounded-lg border border-border">
-                      <span className="text-[10px] text-muted font-semibold block uppercase">Net P/L</span>
-                      <span className={`text-sm font-bold ${Number(longShortMetrics.longData?.netRealisedProfitLoss || 0) >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
+                    <div className="bg-surface p-2.5 rounded-xl border border-border/80">
+                      <span className="text-[10px] text-muted font-medium block uppercase tracking-wider">Net P/L</span>
+                      <span className={`text-sm font-bold font-mono ${Number(longShortMetrics.longData?.netRealisedProfitLoss || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         ${Number(longShortMetrics.longData?.netRealisedProfitLoss || 0).toFixed(2)}
                       </span>
                     </div>
-                    <div className="bg-surface p-2 rounded-lg border border-border">
-                      <span className="text-[10px] text-muted font-semibold block uppercase">Profit Factor</span>
-                      <span className="text-sm font-bold text-foreground">{longShortMetrics.longData?.profitFactor ?? 'N/A'}</span>
+                    <div className="bg-surface p-2.5 rounded-xl border border-border/80">
+                      <span className="text-[10px] text-muted font-medium block uppercase tracking-wider">Profit Factor</span>
+                      <span className="text-sm font-bold font-mono text-foreground">{longShortMetrics.longData?.profitFactor ?? 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -952,25 +962,25 @@ const Analytics = () => {
                 {/* Short (Sell) Card */}
                 <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase text-rose-500">
-                      <ArrowDownRight size={16} /> Short (Sell) Trades
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-rose-400">
+                      <ArrowDownRight size={15} /> Short (Sell) Trades
                     </span>
-                    <span className="text-xs font-bold text-muted">{longShortMetrics.shortData?.associatedTradeCount ?? longShortMetrics.shortData?.totalTrades ?? 0} Executions</span>
+                    <span className="text-xs font-medium text-muted">{longShortMetrics.shortData?.associatedTradeCount ?? longShortMetrics.shortData?.totalTrades ?? 0} Executions</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                    <div className="bg-surface p-2 rounded-lg border border-border">
-                      <span className="text-[10px] text-muted font-semibold block uppercase">Win Rate</span>
-                      <span className="text-sm font-bold text-foreground">{longShortMetrics.shortData?.winRate || 0}%</span>
+                    <div className="bg-surface p-2.5 rounded-xl border border-border/80">
+                      <span className="text-[10px] text-muted font-medium block uppercase tracking-wider">Win Rate</span>
+                      <span className="text-sm font-bold font-mono text-foreground">{longShortMetrics.shortData?.winRate || 0}%</span>
                     </div>
-                    <div className="bg-surface p-2 rounded-lg border border-border">
-                      <span className="text-[10px] text-muted font-semibold block uppercase">Net P/L</span>
-                      <span className={`text-sm font-bold ${Number(longShortMetrics.shortData?.netRealisedProfitLoss || 0) >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
+                    <div className="bg-surface p-2.5 rounded-xl border border-border/80">
+                      <span className="text-[10px] text-muted font-medium block uppercase tracking-wider">Net P/L</span>
+                      <span className={`text-sm font-bold font-mono ${Number(longShortMetrics.shortData?.netRealisedProfitLoss || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         ${Number(longShortMetrics.shortData?.netRealisedProfitLoss || 0).toFixed(2)}
                       </span>
                     </div>
-                    <div className="bg-surface p-2 rounded-lg border border-border">
-                      <span className="text-[10px] text-muted font-semibold block uppercase">Profit Factor</span>
-                      <span className="text-sm font-bold text-foreground">{longShortMetrics.shortData?.profitFactor ?? 'N/A'}</span>
+                    <div className="bg-surface p-2.5 rounded-xl border border-border/80">
+                      <span className="text-[10px] text-muted font-medium block uppercase tracking-wider">Profit Factor</span>
+                      <span className="text-sm font-bold font-mono text-foreground">{longShortMetrics.shortData?.profitFactor ?? 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -978,33 +988,33 @@ const Analytics = () => {
             </div>
           )}
 
-          {/* 6. Interactive Performance Table */}
-          <div className="rounded-2xl border border-border bg-surface overflow-hidden shadow-sm">
-            <div className="border-b border-border px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* 7. Interactive Performance Table */}
+          <div className="rounded-2xl border border-border/80 bg-surface/90 overflow-hidden shadow-sm">
+            <div className="border-b border-border/70 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h3 className="font-black text-base text-foreground">Performance Table ({groupBy})</h3>
-                <p className="text-xs text-muted mt-0.5">Click any group row to filter the analytics by that item.</p>
+                <h3 className="font-semibold text-base text-foreground">Performance Table ({groupBy})</h3>
+                <p className="text-xs text-muted mt-0.5">Click any row to filter analytics by that item.</p>
               </div>
               <div className="text-right">
                 <span className="text-xs text-muted">Max Drawdown: </span>
-                <strong className="text-xs font-bold text-rose-500">${Number(drawdown?.maximumDrawdown || 0).toFixed(2)}</strong>
+                <strong className="text-xs font-bold font-mono text-rose-400">${Number(drawdown?.maximumDrawdown || 0).toFixed(2)}</strong>
               </div>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-surface-muted text-muted uppercase tracking-wider font-bold border-b border-border">
+                <thead className="bg-surface-muted/60 text-muted uppercase tracking-wider font-semibold border-b border-border/70">
                   <tr>
-                    <th className="px-6 py-3.5">Group ({groupBy})</th>
-                    <th className="px-6 py-3.5">Trades</th>
-                    <th className="px-6 py-3.5">Win Rate</th>
-                    <th className="px-6 py-3.5">Net P/L</th>
-                    <th className="px-6 py-3.5">Profit Factor</th>
-                    <th className="px-6 py-3.5">Expectancy</th>
-                    <th className="px-6 py-3.5">Avg R:R</th>
+                    <th className="px-6 py-3">Group ({groupBy})</th>
+                    <th className="px-6 py-3">Trades</th>
+                    <th className="px-6 py-3">Win Rate</th>
+                    <th className="px-6 py-3">Net P/L</th>
+                    <th className="px-6 py-3">Profit Factor</th>
+                    <th className="px-6 py-3">Expectancy</th>
+                    <th className="px-6 py-3">Avg R:R</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-foreground font-medium">
+                <tbody className="divide-y divide-border/60 text-foreground font-medium">
                   {!hasData ? (
                     <tr><td colSpan="7" className="px-6 py-8 text-center text-muted">No records to display right now.</td></tr>
                   ) : groupedData.map((row) => (
@@ -1014,17 +1024,17 @@ const Analytics = () => {
                       className="hover:bg-emerald-500/5 cursor-pointer transition-colors"
                       title={`Click to filter by ${row.label}`}
                     >
-                      <td className="px-6 py-4 font-bold text-foreground flex items-center gap-1.5">
+                      <td className="px-6 py-3.5 font-semibold text-foreground flex items-center gap-1.5">
                         <span>{row.label}</span>
                       </td>
-                      <td className="px-6 py-4 text-muted">{row.associatedTradeCount ?? row.totalTrades}</td>
-                      <td className="px-6 py-4 text-muted">{Number(row.winRate || 0).toFixed(1)}%</td>
-                      <td className={`px-6 py-4 font-bold ${row.netRealisedProfitLoss >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
+                      <td className="px-6 py-3.5 text-muted">{row.associatedTradeCount ?? row.totalTrades}</td>
+                      <td className="px-6 py-3.5 text-muted font-mono">{Number(row.winRate || 0).toFixed(1)}%</td>
+                      <td className={`px-6 py-3.5 font-bold font-mono ${row.netRealisedProfitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {row.netRealisedProfitLoss >= 0 ? '+' : ''}${Number(row.netRealisedProfitLoss || 0).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 text-muted">{row?.profitFactor === null || row?.profitFactor === undefined ? 'N/A' : Number(row.profitFactor || 0).toFixed(2)}</td>
-                      <td className="px-6 py-4 text-muted">${Number(row.expectancy || 0).toFixed(2)}</td>
-                      <td className="px-6 py-4 text-muted">{row.averageRiskRewardRatio === null ? 'N/A' : `1 : ${row.averageRiskRewardRatio}`}</td>
+                      <td className="px-6 py-3.5 text-muted font-mono">{row?.profitFactor === null || row?.profitFactor === undefined ? 'N/A' : Number(row.profitFactor || 0).toFixed(2)}</td>
+                      <td className="px-6 py-3.5 text-muted font-mono">${Number(row.expectancy || 0).toFixed(2)}</td>
+                      <td className="px-6 py-3.5 text-muted font-mono">{row.averageRiskRewardRatio === null ? 'N/A' : `1 : ${row.averageRiskRewardRatio}`}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1032,11 +1042,11 @@ const Analytics = () => {
             </div>
           </div>
 
-          {/* 7. JAHZ AI Insights Section (Non-Blocking & Fast) */}
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 shadow-sm space-y-3">
+          {/* 8. JAHZ AI Insights Section (Non-Blocking & Fast) */}
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 sm:p-6 shadow-sm space-y-3">
             <div className="flex items-center gap-2">
-              <Sparkles size={18} className="text-emerald-500" />
-              <h3 className="text-base font-black tracking-tight text-foreground">JAHZ AI Insights</h3>
+              <Sparkles size={16} className="text-emerald-400" />
+              <h3 className="text-base font-semibold tracking-tight text-foreground">JAHZ AI Insights</h3>
             </div>
             
             {!aiInsights ? (
@@ -1044,8 +1054,8 @@ const Analytics = () => {
             ) : (
               <ul className="space-y-2">
                 {aiInsights.map((insight, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-xs font-medium text-foreground">
-                    <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                  <li key={idx} className="flex items-start gap-2 text-xs font-medium text-foreground leading-relaxed">
+                    <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                     <span>{insight}</span>
                   </li>
                 ))}

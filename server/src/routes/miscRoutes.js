@@ -41,6 +41,12 @@ const {
   getAiTradeReview,
   createUserFeedback,
 } = require('../controllers/miscController');
+const {
+  subscribeNewsletter,
+  submitBlogFeedback,
+  getPublicBlogPosts,
+  getPublicBlogPostBySlug,
+} = require('../controllers/blogController');
 
 const contactLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -48,6 +54,22 @@ const contactLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many contact submissions. Please try again later.' },
+});
+
+const newsletterLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many subscription requests. Please try again later.' },
+});
+
+const blogFeedbackLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many feedback submissions. Please try again later.' },
 });
 
 router.get('/rules', protect, getRules);
@@ -78,7 +100,7 @@ router.get('/analytics/risk-reward', protect, getRiskReward);
 router.get('/weekly-reviews', protect, getWeeklyReviews);
 router.post('/weekly-reviews/generate', protect, generateWeeklyReview);
 router.get('/weekly-reviews/:id', protect, getWeeklyReviewById);
-router.put('/weekly-reviews/:id', protect, updateWeeklyReview);
+router.put('/weekly-reviews/:id', updateWeeklyReview);
 
 router.post('/contact-messages', contactLimiter, optionalProtect, createContactMessage);
 router.get('/announcements', optionalProtect, require('../controllers/announcementController').getUserAnnouncements);
@@ -90,6 +112,12 @@ router.post('/automated/trades/:id/review', protect, createAiTradeReview);
 router.get('/automated/trades/:tradeId/review', protect, getAiTradeReview);
 router.post('/ai/trades/:id/review', protect, createAiTradeReview);
 router.get('/ai/trades/:tradeId/review', protect, getAiTradeReview);
+
+// Public Blog Content & Reader Engagement Endpoints
+router.get('/blog/posts', getPublicBlogPosts);
+router.get('/blog/posts/:slug', getPublicBlogPostBySlug);
+router.post('/newsletter/subscribe', newsletterLimiter, subscribeNewsletter);
+router.post('/blog/feedback', blogFeedbackLimiter, submitBlogFeedback);
 
 // Phase 10: Pre-Beta Hardening Native Feedback Hooks
 router.post('/feedback', protect, createUserFeedback);

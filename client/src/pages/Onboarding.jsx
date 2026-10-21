@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { useAuth } from '../context/useAuth';
@@ -8,8 +8,12 @@ import { useAuth } from '../context/useAuth';
 const Onboarding = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { refreshUser } = useAuth();
   const { register, handleSubmit } = useForm();
+
+  const rawRedirect = searchParams.get('redirect') || '';
+  const safeRedirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '';
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -24,7 +28,7 @@ const Onboarding = () => {
       });
       await refreshUser();
       toast.success('Onboarding complete!');
-      navigate('/dashboard', { replace: true });
+      navigate(safeRedirect || '/dashboard', { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.message || 'We hit a snag saving your profile.');
     } finally {

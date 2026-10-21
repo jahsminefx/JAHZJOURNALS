@@ -7,12 +7,16 @@ const {
   cancelSubscription,
   getBillingHistory,
   handlePaystackWebhook,
+  activateMentorFreeTrial,
+  getMentorTrialStatus,
 } = require('../controllers/subscriptionController');
 
 router.post('/initialize', protect, initializeSubscription);
 router.get('/verify/:reference', optionalProtect, verifySubscription);
 router.post('/cancel', protect, cancelSubscription);
 router.get('/history', protect, getBillingHistory);
+router.post('/mentor-trial/activate', protect, activateMentorFreeTrial);
+router.get('/mentor-trial/status', protect, getMentorTrialStatus);
 router.post('/webhook', handlePaystackWebhook);
 router.post('/paystack-webhook', handlePaystackWebhook);
 

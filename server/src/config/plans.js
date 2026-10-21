@@ -82,6 +82,67 @@ const PLANS = {
   },
 };
 
+const MENTOR_TIERS = {
+  PRIVATE_COHORT: {
+    key: 'PRIVATE_COHORT',
+    name: 'Private Cohort',
+    priceNgn: 8000,
+    priceFormatted: '₦8,000 / month',
+    maxStudents: 50,
+    maxCohorts: 2,
+    studentRange: '25 – 50 Students',
+    tagline: 'Ideal for private masterminds & small coaching cohorts',
+    features: [
+      'Up to 50 active student trading journals',
+      '2 private trading cohorts with invite links',
+      'Strategy Risk Guard rules (e.g. 1% max risk)',
+      'Direct trade comments & feedback grading',
+      'Full Pro trading features for the mentor',
+    ],
+  },
+  GROWTH: {
+    key: 'GROWTH',
+    name: 'Growth Community',
+    priceNgn: 25000,
+    priceFormatted: '₦25,000 / month',
+    maxStudents: 150,
+    maxCohorts: 5,
+    studentRange: '100 – 150 Students',
+    tagline: 'Most popular for active trading coaches & communities',
+    features: [
+      'Up to 150 active student trading journals',
+      '5 private trading cohorts',
+      'Everything in Private Cohort',
+      'Automated cohort risk adherence & violation reports',
+      'Review assignments and student submissions',
+      'Paid student cohort checkouts (1.5% platform fee)',
+      'Custom academy branding',
+    ],
+  },
+  MEGA: {
+    key: 'MEGA',
+    name: 'Mega Academy',
+    priceNgn: 65000,
+    priceFormatted: '₦65,000 / month',
+    maxStudents: 1000,
+    maxCohorts: Infinity,
+    studentRange: '500 – 1,000+ Students',
+    tagline: 'Flat rate for large communities & institutional academies',
+    features: [
+      'Up to 1,000 active student trading journals',
+      'Unlimited trading cohorts',
+      'Everything in Growth Community',
+      'Bulk student invite links & CSV data exports',
+      'Aggregated academy risk & performance analytics',
+      'Priority mentor onboarding & dedicated VIP support',
+    ],
+  },
+};
+
+const getMentorTierConfig = (tierKey = 'PRIVATE_COHORT') => {
+  return MENTOR_TIERS[tierKey] || MENTOR_TIERS.PRIVATE_COHORT;
+};
+
 /**
  * Returns effective plan details for a user based on user object and subscription status.
  * Takes launch mode / promotion into account.
@@ -93,7 +154,12 @@ const getEffectivePlanKey = (user) => {
   if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
     return 'PRO';
   }
+
+  // If user has MENTOR role, check if subscription is explicitly expired or inactive
   if (user.role === 'MENTOR') {
+    if (user.subscriptionStatus && user.subscriptionStatus !== 'ACTIVE') {
+      return 'FREE';
+    }
     return 'MENTOR';
   }
 
@@ -157,6 +223,8 @@ const buildLimitReachedPayload = ({ feature, current, limit, userPlan, requiredP
 
 module.exports = {
   PLANS,
+  MENTOR_TIERS,
+  getMentorTierConfig,
   getEffectivePlanKey,
   getPlanConfig,
   buildLimitReachedPayload,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   CheckCheck, 
@@ -19,8 +20,73 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/useAuth';
+
+const resolveNotificationTargetUrl = (notif = {}, user = null) => {
+  const isMentor = user?.role === 'MENTOR' || user?.subscriptionPlan === 'MENTOR';
+  const rawUrl = String(notif.actionUrl || '').trim();
+
+  if (rawUrl && rawUrl !== '/notifications') {
+    if (rawUrl === '/mentors/groups') return '/mentor-workspace';
+    return rawUrl;
+  }
+
+  const title = String(notif.title || '').toLowerCase();
+  const message = String(notif.message || '').toLowerCase();
+  const category = String(notif.category || '').toUpperCase();
+
+  if (title.includes('direct message') || title.includes('new message')) {
+    return isMentor ? '/mentor-workspace?tab=messages' : '/student-cohorts?tab=chat';
+  }
+  if (title.includes('mentor trade shared') || message.includes('shared a ') || message.includes('breakdown with your academy')) {
+    return '/student-cohorts?tab=trade_shares';
+  }
+  if (title.includes('announcement')) {
+    return '/student-cohorts?tab=announcements';
+  }
+  if (title.includes('feedback on your trade') || title.includes('mentor risk warning') || title.includes('coaching summary')) {
+    return '/student-cohorts?tab=my_reviews';
+  }
+  if (title.includes('student replied to feedback') || category === 'STUDENT_REPLY') {
+    return '/mentor-workspace?tab=roster';
+  }
+  if (title.includes('assignment submitted') || category === 'SUBMISSION') {
+    return '/mentor-workspace?tab=roster';
+  }
+  if (title.includes('assignment') || category === 'ASSIGNMENT' || category === 'ASSIGNMENT_REVIEW') {
+    return '/student-cohorts?tab=assignments';
+  }
+  if (
+    title.includes('student enrolled') ||
+    title.includes('accepted invitation') ||
+    title.includes('student left cohort')
+  ) {
+    return '/mentor-workspace?tab=roster';
+  }
+  if (title.includes('academy invitation') || title.includes('invited you to join') || title.includes('academy membership')) {
+    return '/student-cohorts';
+  }
+  if (category === 'MENTOR_UPDATE') {
+    return isMentor ? '/mentor-workspace' : '/student-cohorts';
+  }
+  if (category === 'AI_COACH' || title.includes('ai')) {
+    return '/ai';
+  }
+  if (category === 'RISK_WARNING' || title.includes('drawdown') || title.includes('risk')) {
+    return '/accounts';
+  }
+  if (title.includes('promotion') || title.includes('offer')) {
+    return '/promotions';
+  }
+  if (title.includes('trade')) {
+    return '/trades';
+  }
+  return '/dashboard';
+};
 
 const Notifications = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -153,7 +219,7 @@ const Notifications = () => {
       return;
     }
 
-    if (notif.type === 'SUPPORT_REPLY' || (notif.title && notif.title.toLowerCase().includes('reply'))) {
+    if (notif.type === 'SUPPORT_REPLY' || (notif.title && notif.title.toLowerCase().includes('support') && notif.title.toLowerCase().includes('reply'))) {
       // Fetch user's support threads to open matching thread
       try {
         const userThreadsRes = await api.get('/support/threads');
@@ -165,9 +231,12 @@ const Notifications = () => {
       } catch (_) {}
     }
 
-    // Default navigation for non-chat notifications
-    if (notif.actionUrl) {
-      window.location.href = notif.actionUrl;
+    // Navigate to resolved destination
+    const targetUrl = resolveNotificationTargetUrl(notif, user);
+    if (targetUrl.startsWith('/')) {
+      navigate(targetUrl);
+    } else if (targetUrl) {
+      window.location.href = targetUrl;
     }
   };
 

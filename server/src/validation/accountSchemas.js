@@ -51,6 +51,7 @@ const createRegularAccountSchema = z.object({
   maxTradesPerDay: nonNegativeInt,
   maxLossesPerDay: nonNegativeInt,
   notes: optionalString,
+  isSharedWithMentor: booleanValue.optional(),
 });
 
 const updateRegularAccountSchema = createRegularAccountSchema.partial().extend({

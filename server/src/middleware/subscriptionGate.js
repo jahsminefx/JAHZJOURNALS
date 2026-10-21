@@ -146,8 +146,45 @@ const requireProFeature = (featureName = 'feature') => async (req, res, next) =>
 const requireMentorPlan = async (req, res, next) => {
   try {
     const userPlanKey = getEffectivePlanKey(req.user);
+    const isPlatformAdmin = req.user.role === 'ADMIN' || req.user.role === 'SUPER_ADMIN';
 
-    if (userPlanKey === 'MENTOR' || req.user.role === 'MENTOR' || req.user.role === 'ADMIN' || req.user.role === 'SUPER_ADMIN') {
+    if (isPlatformAdmin) {
+      return next();
+    }
+
+    const isExplicitlyExpired = req.user.subscriptionStatus && req.user.subscriptionStatus !== 'ACTIVE';
+    if (isExplicitlyExpired) {
+      return res.status(403).json(buildLimitReachedPayload({
+        feature: 'mentor',
+        current: 0,
+        limit: 0,
+        userPlan: userPlanKey,
+        requiredPlan: 'MENTOR',
+        customMessage: 'Your Mentor/Academy subscription has expired or is inactive. Please renew your plan to manage cohorts and review student journals.',
+      }));
+    }
+
+    // Check if user is on a mentor trial that has exceeded the 12-hour grace period
+    if (req.user.mentorTrialExpiresAt) {
+      const now = new Date();
+      const trialExpiresAt = new Date(req.user.mentorTrialExpiresAt);
+      const GRACE_PERIOD_MS = 12 * 60 * 60 * 1000;
+      const graceCutoff = new Date(trialExpiresAt.getTime() + GRACE_PERIOD_MS);
+
+      if (now > graceCutoff) {
+        return res.status(403).json(buildLimitReachedPayload({
+          feature: 'mentor',
+          current: 0,
+          limit: 0,
+          userPlan: userPlanKey,
+          requiredPlan: 'MENTOR',
+          code: 'TRIAL_GRACE_EXPIRED',
+          customMessage: 'Your 14-day Mentor Free Trial and 12-hour grace period have ended. Please choose a plan to continue managing cohorts and students.',
+        }));
+      }
+    }
+
+    if (userPlanKey === 'MENTOR' || req.user.role === 'MENTOR' || req.user.subscriptionPlan === 'MENTOR') {
       return next();
     }
 
@@ -157,6 +194,7 @@ const requireMentorPlan = async (req, res, next) => {
       limit: 0,
       userPlan: userPlanKey,
       requiredPlan: 'MENTOR',
+      customMessage: 'Mentor and student management features require an active Mentor/Academy plan.',
     }));
   } catch (error) {
     console.error('Subscription Gate Error (mentor):', error);

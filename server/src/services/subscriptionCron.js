@@ -33,9 +33,16 @@ const sweepAndDowngradeExpiredPromotions = async () => {
     for (const sub of candidateSubs) {
       let isExpired = false;
 
-      // Check explicit expiresAt
-      if (sub.expiresAt && new Date(sub.expiresAt) <= now) {
-        isExpired = true;
+      // 12-Hour Grace Period for Mentor Free Trials
+      const isMentorTrial = sub.plan === 'MENTOR' && sub.source === 'PROMOTION';
+      const GRACE_PERIOD_MS = isMentorTrial ? (12 * 60 * 60 * 1000) : 0;
+
+      // Check explicit expiresAt (with 12-hour grace buffer for trials)
+      if (sub.expiresAt) {
+        const cutoffTime = new Date(new Date(sub.expiresAt).getTime() + GRACE_PERIOD_MS);
+        if (now > cutoffTime) {
+          isExpired = true;
+        }
       }
       // Check linked promotion endsAt
       else if (sub.promotion && sub.promotion.endsAt && new Date(sub.promotion.endsAt) <= now) {
@@ -82,11 +89,17 @@ const sweepAndDowngradeExpiredPromotions = async () => {
               }
             });
 
+            const isMentorUser = sub.plan === 'MENTOR' || sub.user?.role === 'MENTOR';
+            const revertRole = (sub.user?.role === 'SUPER_ADMIN' || sub.user?.role === 'ADMIN')
+              ? sub.user.role
+              : (isMentorUser ? 'TRADER' : sub.user?.role || 'TRADER');
+
             await tx.user.update({
               where: { id: sub.userId },
               data: {
                 subscriptionPlan: 'FREE',
-                subscriptionStatus: 'ACTIVE'
+                subscriptionStatus: 'ACTIVE',
+                role: revertRole,
               }
             });
 
@@ -145,7 +158,9 @@ const sweepAndDowngradeExpiredPromotions = async () => {
         }
         if (s.source === 'PROMOTION') {
           const promoExpired = s.promotion && ((s.promotion.endsAt && new Date(s.promotion.endsAt) <= now) || s.promotion.isActive === false);
-          const subExpired = s.expiresAt && new Date(s.expiresAt) <= now;
+          const isMentorTrial = s.plan === 'MENTOR';
+          const GRACE_PERIOD_MS = isMentorTrial ? (12 * 60 * 60 * 1000) : 0;
+          const subExpired = s.expiresAt && (now.getTime() > (new Date(s.expiresAt).getTime() + GRACE_PERIOD_MS));
           return !promoExpired && !subExpired;
         }
         return false;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { 
   GraduationCap, Users, ShieldCheck, CheckCircle2, ArrowRight, RefreshCw, 
@@ -21,19 +21,61 @@ const JoinCohortPage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { user, token } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  const inviteToken = searchParams.get('token');
+  const isPaymentVerify = searchParams.get('payment') === 'verify';
+  const paymentReference = searchParams.get('reference');
 
   const [cohort, setCohort] = useState(null);
+  const [invitationInfo, setInvitationInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [paymentSuccessReceipt, setPaymentSuccessReceipt] = useState(null);
   const [joining, setJoining] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('PAYSTACK');
   const [error, setError] = useState(null);
-  const [paymentSuccessReceipt, setPaymentSuccessReceipt] = useState(null);
 
+  // 1. If returning from Paystack payment redirect
+  useEffect(() => {
+    if (isPaymentVerify && paymentReference && token) {
+      const verifyPayment = async () => {
+        setVerifyingPayment(true);
+        try {
+          const { data } = await api.post(`/mentors/groups/${groupId}/verify-enrollment`, {
+            reference: paymentReference
+          });
+          if (data.membership) {
+            setPaymentSuccessReceipt({
+              paymentReference: data.membership.paymentReference || paymentReference,
+              paidAmount: data.membership.paidAmount ?? 0,
+              currency: data.membership.currency || 'NGN',
+            });
+          }
+          toast.success(data.message || 'Payment confirmed and cohort enrollment active!');
+          navigate('/student-cohorts', { replace: true });
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Failed to verify cohort payment.');
+        } finally {
+          setVerifyingPayment(false);
+        }
+      };
+      verifyPayment();
+    }
+  }, [isPaymentVerify, paymentReference, groupId, token, navigate]);
+
+  // 2. Fetch cohort or invitation info
   useEffect(() => {
     const fetchCohortInfo = async () => {
       try {
-        const { data } = await api.get(`/mentors/groups/${groupId}/public-info`);
-        setCohort(data);
+        if (inviteToken) {
+          const { data: invData } = await api.get(`/mentors/invitations/details/${inviteToken}`);
+          setInvitationInfo(invData);
+          setCohort(invData.group);
+        } else {
+          const { data } = await api.get(`/mentors/groups/${groupId}/public-info`);
+          setCohort(data);
+        }
       } catch (err) {
         setError(err.response?.data?.message || 'This invitation link is invalid or has expired.');
       } finally {
@@ -41,38 +83,53 @@ const JoinCohortPage = () => {
       }
     };
 
-    if (groupId) {
+    if (groupId || inviteToken) {
       fetchCohortInfo();
     }
-  }, [groupId]);
+  }, [groupId, inviteToken]);
 
   const handleEnrollment = async () => {
     if (!token) {
-      navigate(`/login?redirect=/join/cohort/${groupId}`);
+      const redirectUrl = inviteToken ? `/cohorts/join/${groupId}?token=${inviteToken}` : `/cohorts/join/${groupId}`;
+      navigate(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
       return;
     }
 
     setJoining(true);
     try {
+      if (inviteToken) {
+        // Accept invitation directly
+        const { data } = await api.post(`/mentors/invitations/${inviteToken}/accept`);
+        toast.success(data.message || 'Successfully joined cohort!');
+        navigate('/student-cohorts', { replace: true });
+        return;
+      }
+
       if (cohort.isPaid && cohort.price > 0) {
-        // Paid Cohort Checkout
+        // Paid Cohort Checkout via Paystack
         const { data } = await api.post(`/mentors/groups/${groupId}/checkout`, {
           paymentMethod,
         });
 
         if (data.alreadyEnrolled) {
           toast.success(data.message);
-          navigate('/dashboard', { replace: true });
+          navigate('/student-cohorts', { replace: true });
           return;
         }
 
-        setPaymentSuccessReceipt(data.receipt);
-        toast.success(data.message || 'Payment confirmed and enrollment active!');
+        if (data.authorization_url) {
+          toast.loading('Redirecting to secure Paystack checkout...');
+          window.location.href = data.authorization_url;
+          return;
+        }
+
+        toast.success(data.message || 'Enrolled successfully!');
+        navigate('/student-cohorts', { replace: true });
       } else {
         // Free Cohort Join
         const { data } = await api.post(`/mentors/groups/${groupId}/join`);
         toast.success(data.message || 'Enrolled in cohort successfully!');
-        navigate('/dashboard', { replace: true });
+        navigate('/student-cohorts', { replace: true });
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to complete cohort enrollment.');
@@ -86,15 +143,17 @@ const JoinCohortPage = () => {
     return `${symbol}${Number(price).toLocaleString()}`;
   };
 
-  const displayBenefits = cohort?.benefits && cohort.benefits.length > 0
+  const displayBenefits = Array.isArray(cohort?.benefits) && cohort.benefits.length > 0
     ? cohort.benefits
     : defaultBenefits;
 
-  if (loading) {
+  if (loading || verifyingPayment) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-muted gap-3">
         <RefreshCw size={28} className="animate-spin text-emerald-500" />
-        <p className="text-sm font-medium">Loading cohort enrollment details...</p>
+        <p className="text-sm font-medium">
+          {verifyingPayment ? 'Verifying cohort payment...' : 'Loading cohort enrollment details...'}
+        </p>
       </div>
     );
   }
@@ -372,7 +431,10 @@ const JoinCohortPage = () => {
           ) : (
             <div className="space-y-2 sm:space-y-2.5">
               <Button
-                onClick={() => navigate(`/register?redirect=/join/cohort/${groupId}`)}
+                onClick={() => {
+                  const target = inviteToken ? `/cohorts/join/${groupId}?token=${inviteToken}` : `/join/cohort/${groupId}`;
+                  navigate(`/register?redirect=${encodeURIComponent(target)}`);
+                }}
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 sm:py-3 text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm"
               >
                 {cohort.isPaid && cohort.price > 0
@@ -381,7 +443,7 @@ const JoinCohortPage = () => {
                 <ArrowRight size={15} />
               </Button>
               <Link
-                to={`/login?redirect=/join/cohort/${groupId}`}
+                to={`/login?redirect=${encodeURIComponent(inviteToken ? `/cohorts/join/${groupId}?token=${inviteToken}` : `/join/cohort/${groupId}`)}`}
                 className="w-full inline-flex items-center justify-center py-2 sm:py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-semibold transition text-center px-2"
               >
                 Already have an account? Log In to Enroll

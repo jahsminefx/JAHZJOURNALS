@@ -1,21 +1,95 @@
 const fs = require('fs');
 const path = require('path');
+const { PrismaClient } = require('@prisma/client');
+
+let prisma = null;
+function getPrismaClient() {
+  if (!prisma) {
+    prisma = new PrismaClient();
+  }
+  return prisma;
+}
 
 let cachedBlogPosts = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 60 * 1000;
 
-function getBlogPosts() {
-  if (cachedBlogPosts) return cachedBlogPosts;
-  try {
-    const blogPostsPath = path.resolve(__dirname, '../../../client/src/data/blogPosts.js');
-    const raw = fs.readFileSync(blogPostsPath, 'utf8');
-    const cleaned = raw.replace(/export\s+const\s+BLOG_POSTS\s*=\s*/, 'return ');
-    const fn = new Function(cleaned);
-    cachedBlogPosts = fn() || [];
-  } catch (err) {
-    console.error('[SEO Prerender] Failed to load blogPosts.js:', err.message);
-    cachedBlogPosts = [];
+function invalidateBlogCache() {
+  cachedBlogPosts = null;
+  lastCacheTime = 0;
+}
+
+function getFileBlogPosts() {
+  if (process.env.NODE_ENV === 'production' && cachedBlogPosts && cachedBlogPosts.length > 0) {
+    return cachedBlogPosts;
   }
-  return cachedBlogPosts;
+  
+  const candidatePaths = [
+    path.resolve(__dirname, '../../../client/src/data/blogPosts.js'),
+    path.resolve(process.cwd(), 'client/src/data/blogPosts.js'),
+    path.resolve(process.cwd(), '../client/src/data/blogPosts.js'),
+    path.resolve(__dirname, '../../client/src/data/blogPosts.js'),
+  ];
+
+  for (const blogPath of candidatePaths) {
+    if (fs.existsSync(blogPath)) {
+      try {
+        const raw = fs.readFileSync(blogPath, 'utf8');
+        const cleaned = raw.replace(/export\s+const\s+BLOG_POSTS\s*=\s*/, 'return ');
+        const fn = new Function(cleaned);
+        const posts = fn();
+        if (Array.isArray(posts) && posts.length > 0) {
+          cachedBlogPosts = posts;
+          break;
+        }
+      } catch (err) {
+        console.error(`[SEO Prerender] Error loading from ${blogPath}:`, err.message);
+      }
+    }
+  }
+
+  return [];
+}
+
+async function getBlogPosts() {
+  const now = Date.now();
+  const ttl = process.env.NODE_ENV === 'production' ? CACHE_TTL_MS : 3000;
+
+  if (cachedBlogPosts && cachedBlogPosts.length > 0 && now - lastCacheTime < ttl) {
+    return cachedBlogPosts;
+  }
+
+  try {
+    const dbPosts = await getPrismaClient().blogPost.findMany({
+      where: { status: 'PUBLISHED' },
+      orderBy: { publishedAt: 'desc' },
+    });
+
+    if (Array.isArray(dbPosts) && dbPosts.length > 0) {
+      cachedBlogPosts = dbPosts.map((p) => ({
+        ...p,
+        author: {
+          name: p.authorName || 'Jahsmine Aninta',
+          title: p.authorTitle || 'Founder & Senior Architect, JAHZJOURNALS',
+          avatar: p.authorAvatar || '/logo-mark.png',
+        },
+        publishedAt: p.publishedAt ? p.publishedAt.toISOString().split('T')[0] : '2026-08-01',
+      }));
+      lastCacheTime = now;
+      return cachedBlogPosts;
+    }
+  } catch (err) {
+    // DB query failed or offline, fallback to file
+  }
+
+  const filePosts = getFileBlogPosts();
+  if (filePosts.length > 0) {
+    cachedBlogPosts = filePosts;
+    lastCacheTime = now;
+    return cachedBlogPosts;
+  }
+
+  return cachedBlogPosts || [];
 }
 
 const escapeHtml = (str) => {
@@ -98,102 +172,85 @@ const FOOTER_HTML = `
 const STATIC_ROUTES = {
   '/': {
     title: 'JAHZJOURNALS — Forex Trading Journal, Risk Calculator & Prop Firm Analytics',
-    description: 'Log Forex, Gold (XAUUSD), and Indices trades, calculate accurate lot sizes, monitor Prop Firm daily and max drawdown rules, and master trading psychology with JAHZJOURNALS.',
+    description: 'Track trades, eliminate revenge trading, calculate exact position sizes, monitor prop firm drawdowns, and discover your statistical edge with JAHZJOURNALS.',
     body: `
-      <h1>Master Your Forex &amp; Prop Firm Trading Edge with Data-Driven Journaling</h1>
-      <p>JAHZJOURNALS is an institutional-grade Forex trading journal, position size calculator, and performance analytics platform engineered for retail traders, Funded Prop Firm traders, and trading academies. Track every trade across USD, NGN, GBP, and EUR accounts with automated MT4/MT5 synchronization, emotion tracking, and AI-assisted performance diagnostics.</p>
-      <section>
-        <h2>Why Professional Traders Choose JAHZJOURNALS</h2>
-        <ul>
-          <li><strong>Multi-Currency Account Support:</strong> Log and analyze trades in US Dollar ($), Nigerian Naira (₦), British Pound (£), and Euro (€) without currency conversion distortion.</li>
-          <li><strong>Prop Firm Challenge &amp; Drawdown Guardian:</strong> Monitor real-time daily drawdown limits, maximum trailing/static loss thresholds, minimum trading days, and profit targets for FTMO, FundedNext, Maven, and custom challenges.</li>
-          <li><strong>Interactive Position Size &amp; Risk Calculator:</strong> Calculate exact standard, mini, and micro lot sizes for 30+ Forex pairs, Gold (XAUUSD), Silver (XAGUSD), US30, NAS100, and BTCUSD before executing a trade.</li>
-          <li><strong>Trading Psychology &amp; Behavioral Analytics:</strong> Correlate pre-trade emotions (Calm, Confident, Anxious, FOMO, Revenge, Greedy) with actual win rate, profit factor, and expectancy.</li>
-          <li><strong>AI Coach &amp; Edge Finder:</strong> Identify your highest-probability trading sessions (London, New York, Asian, London-NY Overlap), best-performing pairs, and costliest rule violations.</li>
-        </ul>
-      </section>
-      <section>
-        <h2>Explore Our Free Trading Tools &amp; Educational Library</h2>
-        <p>Start with our <a href="/risk-calculator">Free Forex &amp; Gold Position Size Calculator</a> or read our in-depth trading guides on <a href="/blog">the JAHZJOURNALS Trading Blog</a>.</p>
-      </section>
+      <h1>Automated Forex Trading Journal &amp; AI Performance Analytics</h1>
+      <p>JAHZJOURNALS is the institutional-grade trading journal built for serious currency, commodities, and prop firm traders. Connect multiple accounts in USD, NGN, GBP, and EUR, calculate position sizes with zero math errors, and build bulletproof execution discipline.</p>
+      <h2>Core Platform Highlights</h2>
+      <ul>
+        <li><strong>Multi-Currency Trading Accounts:</strong> Native support for USD, NGN, GBP, EUR, and 12 other currencies.</li>
+        <li><strong>Prop Firm Drawdown Guards:</strong> Real-time alerts for FTMO, FundedNext, and custom challenge evaluations.</li>
+        <li><strong>AI Performance Coach:</strong> Actionable weekly reviews identifying your hidden statistical edge.</li>
+        <li><strong>Position Size &amp; Risk Calculator:</strong> Exact pip and lot sizing with spread and commission accounting.</li>
+      </ul>
+      <p>Start with our <a href="/risk-calculator">Free Forex &amp; Gold Position Size Calculator</a> or read our in-depth trading guides on <a href="/blog">the JAHZJOURNALS Trading Blog</a>.</p>
     `
   },
   '/features': {
-    title: 'Platform Features — Automated MT4/MT5 Sync, Analytics & AI Coach | JAHZJOURNALS',
-    description: 'Explore JAHZJOURNALS features: automated MetaTrader 4 & 5 cloud sync, multi-account equity curves, strategy playbook analytics, daily reviews, and AI trading coach.',
+    title: 'Trading Journal Features — Analytics, AI Review & Drawdown Guards | JAHZJOURNALS',
+    description: 'Explore JAHZJOURNALS features: automated MT4/MT5 trade sync, multi-currency P&L, trading psychology tracking, and prop firm risk management.',
     body: `
-      <h1>Complete Feature Suite Built for Serious Forex &amp; Prop Firm Traders</h1>
-      <p>Every tool inside JAHZJOURNALS is designed to replace messy spreadsheets with institutional-grade execution tracking, visual trade replay, and quantitative performance metrics.</p>
-      <h2>1. Automated MT4/MT5 Sync &amp; Fast Manual Logging</h2>
-      <p>Connect your MetaTrader 4 or MetaTrader 5 trading accounts for hands-free trade imports, or log setups manually with custom strategy tags, entry/exit timestamps, pips, commissions, swap fees, and annotated TradingView chart screenshots.</p>
-      <h2>2. Deep Quantitative Analytics &amp; Equity Curves</h2>
-      <p>Filter your historical performance by individual trading account, currency pair, direction (Buy vs. Sell), market session, day of the week, and strategy playbook. Track Net P/L, Win Rate, Profit Factor, Expectancy per Trade, Average R-Multiple, and Maximum Drawdown.</p>
-      <h2>3. Daily &amp; Weekly Structured Trading Reviews</h2>
-      <p>Build daily accountability by grading your discipline, documenting market structure observations, and sharing verified performance cards with your trading mentor or community.</p>
-      <h2>4. AI Trading Coach &amp; Edge Finder</h2>
-      <p>Leverage AI diagnostics to uncover hidden behavioral leaks, revenge trading clusters, and session-specific edges from your own historical trade log.</p>
+      <h1>Features Designed for Consistently Profitable Forex Traders</h1>
+      <p>Every feature in JAHZJOURNALS is engineered to solve a real friction point in a trader's workflow—from calculating lot sizes across different account currencies to identifying post-loss revenge trading patterns.</p>
+      <h2>What Makes JAHZJOURNALS Different</h2>
+      <ul>
+        <li><strong>Automated &amp; Manual Hybrid Logging:</strong> Import executions via MT4/MT5 cloud sync or log setups manually with multi-timeframe chart screenshots.</li>
+        <li><strong>Psychology &amp; Discipline Scoring:</strong> Track FOMO, greed, fear, and rule adherence on every trade.</li>
+        <li><strong>Dynamic Edge Detection:</strong> Breakdown win rate, profit factor, and expectancy by pair, session, setup, and hold time.</li>
+      </ul>
     `
   },
   '/risk-calculator': {
-    title: 'Free Forex, Gold (XAUUSD) & Indices Position Size & Lot Calculator | JAHZJOURNALS',
-    description: 'Calculate exact standard, mini, and micro lot sizes for Forex pairs, Gold (XAUUSD), Silver, US30, NAS100, and Crypto across USD, NGN, GBP, and EUR accounts.',
+    title: 'Free Forex & Gold Position Size Calculator | JAHZJOURNALS',
+    description: 'Calculate exact lot size, monetary risk, pip value, and margin across 15 account currencies (USD, NGN, GBP, EUR) for Forex, Gold (XAUUSD), and Indices.',
     body: `
-      <h1>Forex, Gold (XAUUSD) &amp; Indices Position Size &amp; Risk Calculator</h1>
-      <p>Use the free JAHZJOURNALS Position Size Calculator to determine the exact lot size required to keep your capital risk strictly aligned with your trading plan across USD ($), NGN (₦), GBP (£), and EUR (€) trading accounts.</p>
-      <h2>How to Calculate Position Size in Forex, Gold &amp; Indices</h2>
-      <p>Consistent profitability begins with mathematical position sizing. Whether you have a 10-pip stop loss on EUR/USD or a 45-pip stop loss on Gold (XAU/USD), risking a fixed percentage of equity (0.5% to 1.0% per trade) protects your account from catastrophic drawdown.</p>
-      <h3>The Universal Lot Size Formula</h3>
-      <p><code>Position Size (Lots) = Account Risk Amount ($) / (Stop Loss Distance in Pips × Pip Value per Standard Lot)</code></p>
-      <h3>Contract Specifications by Asset Class</h3>
-      <ul>
-        <li><strong>Major &amp; Minor Forex Pairs (EURUSD, GBPUSD, AUDUSD):</strong> 1 Standard Lot = 100,000 units (~$10 per pip). 0.10 Mini Lot = ~$1 per pip. 0.01 Micro Lot = ~$0.10 per pip.</li>
-        <li><strong>Gold (XAUUSD):</strong> 1 Standard Lot = 100 troy ounces. A $1.00 price move (10 pips) equals $100 per standard lot ($10 per pip).</li>
-        <li><strong>US Indices (US30, NAS100, SPX500):</strong> Contract sizes vary between 1 and 10 contracts per lot depending on broker specifications. Always verify contract size before execution.</li>
-      </ul>
-      <h3>Prop Firm Drawdown Protection Rules</h3>
-      <p>Most prop firms enforce a 4% to 5% maximum daily loss limit and an 8% to 10% maximum overall drawdown. Keeping per-trade risk between 0.25% and 0.75% ensures a normal losing streak never breaches your funded evaluation rules.</p>
+      <h1>Professional Forex, Gold &amp; Indices Position Size Calculator</h1>
+      <p>Never guess your lot size again. The JAHZJOURNALS Position Size Calculator computes exact lot sizes, monetary risk, pip values, and required margin across standard, mini, and micro lots—accounting for broker spreads, slippage buffers, and commission costs.</p>
+      <h2>Supported Instruments</h2>
+      <p>Calculate lot sizes for all major Forex currency pairs (EUR/USD, GBP/USD, USD/JPY, AUD/USD), cross pairs, Spot Gold (XAU/USD), Silver (XAG/USD), and major stock indices (US30, NAS100, SPX500, GER40).</p>
+      <h2>Why Position Sizing Matters</h2>
+      <p>Risking a fixed percentage (such as 0.5% or 1%) per trade ensures that normal statistical losing streaks cannot trigger severe account drawdowns or breach prop firm challenge limits.</p>
     `
   },
   '/prop-firm-traders': {
-    title: 'Prop Firm Challenge Tracker & Drawdown Monitor (FTMO, FundedNext, Maven) | JAHZJOURNALS',
-    description: 'Track Phase 1, Phase 2, and Funded Prop Firm accounts. Monitor daily loss limits, maximum trailing or static drawdown, profit targets, and minimum trading days.',
+    title: 'Prop Firm Challenge Tracker & Drawdown Monitor | JAHZJOURNALS',
+    description: 'Pass your FTMO, FundedNext, and prop firm evaluations with real-time daily drawdown tracking, profit target calculators, and rule violation guards.',
     body: `
-      <h1>Pass &amp; Protect Your Prop Firm Challenges with Real-Time Drawdown Tracking</h1>
-      <p>Over 88% of prop firm challenge failures happen not because the trader lacks a winning setup, but because of accidental daily drawdown breaches or over-leveraging near the profit target. JAHZJOURNALS gives you a dedicated Prop Firm Command Center.</p>
-      <h2>Supported Prop Firm Rules &amp; Evaluation Structures</h2>
+      <h1>Prop Firm Evaluation Management &amp; Drawdown Protection</h1>
+      <p>Over 90% of prop firm challenges fail due to daily drawdown rule breaches. JAHZJOURNALS gives funded and evaluation traders an objective dashboard that monitors high-water mark equity, daily loss limits, and remaining profit targets in real time.</p>
+      <h2>Supported Prop Firm Evaluation Frameworks</h2>
       <ul>
-        <li><strong>1-Step, 2-Step &amp; Instant Funding Tracking:</strong> Seamlessly progress accounts from Phase 1 Evaluation to Phase 2 Verification and Live Funded status while preserving full historical trade logs.</li>
-        <li><strong>Daily Loss Limit Alerts:</strong> Monitor how close your realized and floating losses are to your firm's daily breach threshold.</li>
-        <li><strong>Maximum Static &amp; Trailing Drawdown Visualization:</strong> Track your equity high-water mark and remaining drawdown buffer on every trade.</li>
-        <li><strong>Consistency Rule &amp; Minimum Trading Days:</strong> Ensure your profit distribution complies with funded payout requirements.</li>
+        <li><strong>FTMO &amp; Standard 2-Step Rules:</strong> 5% daily drawdown, 10% maximum drawdown, and 8%/5% profit milestones.</li>
+        <li><strong>1-Step &amp; Trailing Drawdown Challenges:</strong> Dynamic trailing drawdown calculation based on closed and floating equity.</li>
+        <li><strong>Multi-Account Portfolio Monitoring:</strong> Track multiple evaluations simultaneously without confusing credentials or rules.</li>
       </ul>
     `
   },
   '/trading-psychology': {
-    title: 'Trading Psychology Analytics — Overcome FOMO, Revenge Trading & Tilt | JAHZJOURNALS',
-    description: 'Quantify how your emotions impact your P/L. Track pre-trade and post-trade emotional states, rule adherence scores, and behavioral patterns with JAHZJOURNALS.',
+    title: 'Forex Trading Psychology & Emotional Discipline Journal | JAHZJOURNALS',
+    description: 'Eliminate FOMO, revenge trading, and emotional tilt. Log emotional states, track rule compliance, and build mental fortitude in financial markets.',
     body: `
-      <h1>Quantify Your Trading Psychology &amp; Eliminate Emotional Account Blowups</h1>
-      <p>A profitable technical strategy cannot save an undisciplined mindset. JAHZJOURNALS turns subjective trading emotions into objective financial metrics so you can see the exact dollar cost of FOMO, impatience, and revenge trading.</p>
-      <h2>How Behavioral Tagging Transforms Your Results</h2>
+      <h1>Trading Psychology &amp; Behavioral Performance Tracking</h1>
+      <p>Technical analysis gives you a map, but psychology controls the steering wheel. JAHZJOURNALS is the first trading journal designed from the ground up to quantify emotional states and calculate your personal Discipline Score.</p>
+      <h2>Stop Emotional Capital Leaks</h2>
       <ul>
-        <li><strong>Pre-Trade Emotional State Logging:</strong> Tag whether you entered a trade feeling Calm, Focused, Anxious, FOMO, Bored, or Revenge-driven.</li>
-        <li><strong>Plan Adherence Scoring:</strong> Track what percentage of your trades followed 100% of your pre-trade checklist versus impulsive off-plan entries.</li>
-        <li><strong>Tilt &amp; Overtrading Detection:</strong> Identify whether consecutive losses trigger oversized lot sizes or rapid-fire revenge trades within the same session.</li>
+        <li><strong>Pre-Trade Emotional Audit:</strong> Categorize your mental state as Confident, Hesitant, FOMO, or Impatient before placing an order.</li>
+        <li><strong>Rule Violation Dollar Cost:</strong> Measure exactly how much capital was lost to impulsive mistakes versus normal strategy losses.</li>
+        <li><strong>Daily Mindset Reviews:</strong> End each trading day with a structured reflection routine to clear your head for tomorrow.</li>
       </ul>
     `
   },
   '/risk-management': {
-    title: 'Forex Risk Management System — Position Sizing, R-Multiples & Drawdown Control | JAHZJOURNALS',
-    description: 'Master institutional risk management in Forex, Gold, and Indices. Track R-multiples, risk-to-reward ratios, expectancy, and drawdown recovery mathematics.',
+    title: 'Forex Risk Management Framework & Capital Preservation | JAHZJOURNALS',
+    description: 'Learn institutional risk management principles: fixed fractional sizing, asymmetric risk-to-reward ratios, portfolio heat, and drawdown circuits.',
     body: `
-      <h1>Institutional Risk Management Tools for Retail &amp; Funded Traders</h1>
-      <p>Professional traders do not think in raw dollar profits—they think in Risk Multiples (R-Multiples), mathematical expectancy, and asymmetric risk-to-reward profiles.</p>
-      <h2>Core Risk Management Pillars in JAHZJOURNALS</h2>
+      <h1>Institutional Risk Management Architecture for Retail Traders</h1>
+      <p>In financial trading, return on capital is secondary to return of capital. JAHZJOURNALS provides mathematical guardrails that protect your balance from tail-risk events, broker slippage, and consecutive losing streaks.</p>
+      <h2>Core Risk Pillars</h2>
       <ul>
-        <li><strong>Asymmetric R:R Tracking:</strong> Measure planned vs. realized Risk-to-Reward ratios across every strategy in your playbook.</li>
-        <li><strong>Drawdown Recovery Mathematics:</strong> A 10% loss requires an 11.1% gain to recover, while a 50% loss requires a 100% gain. JAHZJOURNALS alerts you when risk per trade creeps above your threshold.</li>
-        <li><strong>Integrated Position Size Calculator:</strong> Calculate exact lot sizes for USD, NGN, GBP, and EUR accounts before placing an order.</li>
+        <li><strong>Fixed Fractional Sizing:</strong> Keep risk uniform regardless of stop loss distance.</li>
+        <li><strong>Asymmetric Risk:Reward Ratio:</strong> Aim for 1:2 and 1:3 minimums so high win rates are not required to generate consistent growth.</li>
+        <li><strong>Hard Circuit Breakers:</strong> Cease trading automatically once daily loss limits are reached.</li>
       </ul>
     `
   },
@@ -294,9 +351,10 @@ const STATIC_ROUTES = {
   }
 };
 
-function buildSeoHtml(indexHtmlTemplate, reqPath) {
+async function buildSeoHtml(indexHtmlTemplate, reqPath) {
   const cleanPath = reqPath === '/' ? '/' : reqPath.replace(/\/+$/, '');
-  const posts = getBlogPosts();
+  const posts = await getBlogPosts();
+  let isNotFound = false;
 
   let pageTitle = 'JAHZJOURNALS — Forex Trading Journal & Analytics Platform';
   let pageDescription = 'Log trades, calculate position sizes, track emotions, analyze performance, and discover your trading edge with JAHZJOURNALS.';
@@ -322,6 +380,19 @@ function buildSeoHtml(indexHtmlTemplate, reqPath) {
       <p>Explore our comprehensive library of institutional trading guides covering Forex position sizing, Gold (XAUUSD) contract math, Prop Firm challenge management, ICT/Smart Money journaling, and behavioral psychology.</p>
       <div>${articlesListHtml}</div>
     `;
+
+    jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: pageTitle,
+      description: pageDescription,
+      url: canonicalUrl,
+      publisher: {
+        '@type': 'Organization',
+        name: 'JAHZJOURNALS',
+        url: 'https://jahzjournal.com',
+      },
+    };
   } else if (cleanPath.startsWith('/blog/')) {
     const slug = cleanPath.replace('/blog/', '');
     const post = posts.find((p) => p.slug === slug);
@@ -358,18 +429,39 @@ function buildSeoHtml(indexHtmlTemplate, reqPath) {
         headline: post.title,
         description: pageDescription,
         datePublished: post.publishedAt,
-        dateModified: post.publishedAt,
+        dateModified: post.updatedAt || post.publishedAt,
         author: {
           '@type': 'Person',
           name: post.author?.name || 'Jahsmine Aninta',
+          jobTitle: post.author?.title || 'Founder, JAHZJOURNALS',
         },
         publisher: {
           '@type': 'Organization',
           name: 'JAHZJOURNALS',
           url: 'https://jahzjournal.com',
+          logo: {
+            '@type': 'ImageObject',
+            url: 'https://jahzjournal.com/logo-mark.png'
+          }
         },
         mainEntityOfPage: canonicalUrl,
+        articleSection: post.category || 'Trading Education',
+        keywords: post.keywords || 'Forex Trading, Risk Management, Trading Journal',
       };
+    } else {
+      // 404 for unknown article slug
+      isNotFound = true;
+      pageTitle = 'Trading Guide Not Found | JAHZJOURNALS';
+      pageDescription = 'The requested forex trading guide could not be found. Browse our complete library of trading guides and tutorials.';
+      mainContentHtml = `
+        <article style="text-align:center;padding:3rem 1rem;">
+          <h1>Trading Guide Not Found</h1>
+          <p>The article you are looking for does not exist or may have been updated.</p>
+          <p style="margin-top:2rem;">
+            <a href="/blog" style="color:#10b981;font-weight:bold;text-decoration:none;">&larr; Browse All Trading Guides</a>
+          </p>
+        </article>
+      `;
     }
   } else if (STATIC_ROUTES[cleanPath]) {
     const routeMeta = STATIC_ROUTES[cleanPath];
@@ -421,7 +513,7 @@ function buildSeoHtml(indexHtmlTemplate, reqPath) {
   const prerenderedRoot = `<div id="root">${NAV_HTML}<main style="max-width:960px;margin:0 auto;padding:2rem 1rem;font-family:system-ui,-apple-system,sans-serif;line-height:1.7;">${mainContentHtml}</main>${FOOTER_HTML}</div>`;
 
   html = html.replace('<div id="root"></div>', prerenderedRoot);
-  return html;
+  return { html, isNotFound };
 }
 
-module.exports = { buildSeoHtml };
+module.exports = { buildSeoHtml, getBlogPosts, invalidateBlogCache };

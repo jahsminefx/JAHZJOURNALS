@@ -42,7 +42,50 @@ const dashboardRefreshPaths = [
   '/rules',
   '/users/trading-goals',
   '/weekly-reviews',
+  '/mentors',
 ];
+
+let realtimeChannel = null;
+if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+  try {
+    realtimeChannel = new BroadcastChannel('jahzjournal:realtime-sync');
+  } catch (e) {
+    realtimeChannel = null;
+  }
+}
+
+export const subscribeToRealtimeSync = (callback) => {
+  if (typeof window === 'undefined') return () => {};
+
+  const handleEvent = () => callback();
+  const handleStorage = (e) => {
+    if (e.key === 'jahzjournal:data-version') callback();
+  };
+  const handleVisibility = () => {
+    if (document.visibilityState === 'visible') callback();
+  };
+
+  window.addEventListener('jahzjournal:data-changed', handleEvent);
+  window.addEventListener('storage', handleStorage);
+  window.addEventListener('focus', handleEvent);
+  document.addEventListener('visibilitychange', handleVisibility);
+
+  let channelListener = null;
+  if (realtimeChannel) {
+    channelListener = () => callback();
+    realtimeChannel.addEventListener('message', channelListener);
+  }
+
+  return () => {
+    window.removeEventListener('jahzjournal:data-changed', handleEvent);
+    window.removeEventListener('storage', handleStorage);
+    window.removeEventListener('focus', handleEvent);
+    document.removeEventListener('visibilitychange', handleVisibility);
+    if (realtimeChannel && channelListener) {
+      realtimeChannel.removeEventListener('message', channelListener);
+    }
+  };
+};
 
 const shouldNotifyDashboard = (config = {}) => {
   const method = String(config.method || '').toLowerCase();
@@ -55,10 +98,18 @@ api.interceptors.response.use(
   (response) => {
     if (typeof window !== 'undefined' && shouldNotifyDashboard(response.config)) {
       const timestamp = String(Date.now());
+      const url = String(response.config?.url || '');
       window.localStorage.setItem('jahzjournal:data-version', timestamp);
       window.dispatchEvent(new CustomEvent('jahzjournal:data-changed', {
-        detail: { version: timestamp },
+        detail: { version: timestamp, url },
       }));
+      if (realtimeChannel) {
+        try {
+          realtimeChannel.postMessage({ version: timestamp, url });
+        } catch (e) {
+          // ignore
+        }
+      }
     }
 
     return response;

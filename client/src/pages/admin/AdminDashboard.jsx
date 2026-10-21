@@ -217,7 +217,7 @@ const AdminDashboard = () => {
           </div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-500 text-xs font-bold border border-indigo-500/20">
-              5% Platform Split Active
+              1.5% Platform Split Active
             </span>
           </div>
         </div>
@@ -242,7 +242,7 @@ const AdminDashboard = () => {
 
           <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
-              5% Platform Revenue
+              1.5% Platform Revenue
             </span>
             <div className="mt-1">
               <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 block truncate">
@@ -255,7 +255,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="p-3.5 rounded-xl border border-border bg-surface">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">95% Mentor Payouts</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">98.5% Mentor Payouts</span>
             <div className="mt-1">
               <span className="text-lg sm:text-xl font-black text-foreground block truncate">
                 {mentorship.mentorPayoutsNgn > 0

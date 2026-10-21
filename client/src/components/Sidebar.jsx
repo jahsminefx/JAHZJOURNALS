@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, LineChart, Briefcase, PlusCircle, Calculator, Compass, Settings, 
   LogOut, Wallet, ShieldCheck, Layers, Sparkles, User as UserIcon, X, 
-  ChevronLeft, ChevronRight, HelpCircle, Bell, Tag, CalendarCheck, Users, Cloud
+  ChevronLeft, ChevronRight, HelpCircle, Bell, Tag, CalendarCheck, Users, Cloud, GraduationCap
 } from 'lucide-react';
 
 import toast from 'react-hot-toast';
@@ -85,10 +85,9 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   };
 
   const canAccessMentor =
-    user?.subscriptionPlan === 'MENTOR' ||
-    user?.role === 'MENTOR' ||
     user?.role === 'ADMIN' ||
-    user?.role === 'SUPER_ADMIN';
+    user?.role === 'SUPER_ADMIN' ||
+    ((user?.subscriptionPlan === 'MENTOR' || user?.role === 'MENTOR') && user?.subscriptionStatus === 'ACTIVE');
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Home, exact: true },
@@ -106,6 +105,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     ...(canAccessMentor
       ? [{ name: 'Mentor Workspace', path: '/mentor-workspace', icon: Users, prefix: '/mentor-workspace' }]
       : []),
+    { name: 'My Academies', path: '/student-cohorts', icon: GraduationCap, prefix: '/student-cohorts' },
     { name: 'Offers & Promos', path: '/promotions', icon: Tag, prefix: '/promotions' },
     { name: 'Notifications', path: '/notifications', icon: Bell },
     { name: 'Upgrade Plan', path: '/pricing', icon: Sparkles },

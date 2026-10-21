@@ -28,16 +28,20 @@ const Register = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const promoParam = searchParams.get('promo') || searchParams.get('code');
   const planParam = searchParams.get('plan');
+  const rawRedirect = searchParams.get('redirect') || '';
+  const safeRedirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '';
 
   React.useEffect(() => {
     if (user) {
-      if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+      if (safeRedirect) {
+        navigate(safeRedirect, { replace: true });
+      } else if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
       }
     }
-  }, [user, navigate]);
+  }, [user, navigate, safeRedirect]);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(registerSchema),
@@ -53,7 +57,9 @@ const Register = () => {
       };
       await registerUser(payload);
       toast.success('Your sanctuary is ready. Let\'s begin.');
-      if (promoParam) {
+      if (safeRedirect) {
+        navigate(safeRedirect, { replace: true });
+      } else if (promoParam) {
         navigate(`/pricing?promo=${encodeURIComponent(promoParam)}`, { replace: true });
       } else {
         navigate('/onboarding', { replace: true });
@@ -149,7 +155,7 @@ const Register = () => {
 
         <p className="text-center text-xs text-muted">
           Already part of the journey?{' '}
-          <Link to="/login" className="font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+          <Link to={safeRedirect ? `/login?redirect=${encodeURIComponent(safeRedirect)}` : '/login'} className="font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
             Sign in
           </Link>
         </p>

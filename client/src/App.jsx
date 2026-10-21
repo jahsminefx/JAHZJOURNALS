@@ -25,6 +25,8 @@ const PlatformSettingsHub = lazy(() => import('./pages/admin/PlatformSettingsHub
 const InfrastructureHub = lazy(() => import('./pages/admin/InfrastructureHub'));
 const BusinessIntelligenceHub = lazy(() => import('./pages/admin/BusinessIntelligenceHub'));
 const CommunicationsHub = lazy(() => import('./pages/admin/communications/CommunicationsHub'));
+const BlogManagement = lazy(() => import('./pages/admin/BlogManagement'));
+const BlogEditorPage = lazy(() => import('./pages/admin/BlogEditorPage'));
 
 const ImpersonationBanner = lazy(() => import('./components/ImpersonationBanner'));
 const CookieConsentBanner = lazy(() => import('./components/CookieConsentBanner'));
@@ -32,6 +34,7 @@ const CookieConsentBanner = lazy(() => import('./components/CookieConsentBanner'
 import Home from './pages/Home';
 import Features from './pages/Features';
 import Pricing from './pages/Pricing';
+import MentorPricing from './pages/MentorPricing';
 import PropFirmTraders from './pages/PropFirmTraders';
 import Mentors from './pages/Mentors';
 import About from './pages/About';
@@ -72,6 +75,7 @@ const PromotionsPage = lazy(() => import('./pages/PromotionsPage'));
 const PromotionDetailPage = lazy(() => import('./pages/PromotionDetailPage'));
 const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
 const JoinCohortPage = lazy(() => import('./pages/JoinCohortPage'));
+const StudentCohortsPage = lazy(() => import('./pages/StudentCohortsPage'));
 
 const AiHubPage = lazy(() => import('./pages/ai/AiHubPage'));
 const AiTradeReviewsPage = lazy(() => import('./pages/ai/AiTradeReviewsPage'));
@@ -116,12 +120,14 @@ function App() {
             <Route path="/shared/trade/:shareToken" element={<SharedTradePage />} />
             <Route path="/shared/daily-review/:shareToken" element={<SharedDailyReviewPage />} />
             <Route path="/join/cohort/:groupId" element={<JoinCohortPage />} />
+            <Route path="/cohorts/join/:groupId" element={<JoinCohortPage />} />
 
             {/* Shared Public/Legal Pages (Accessible to both Anonymous and Authenticated Traders) */}
             <Route element={<SharedRouteLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/features" element={<Features />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/pricing/mentor" element={<MentorPricing />} />
               <Route path="/prop-firm-traders" element={<PropFirmTraders />} />
               <Route path="/mentors" element={<Mentors />} />
               <Route path="/about" element={<About />} />
@@ -171,6 +177,8 @@ function App() {
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/promotions" element={<PromotionsPage />} />
                 <Route path="/promotions/:id" element={<PromotionDetailPage />} />
+                <Route path="/student-cohorts" element={<StudentCohortsPage />} />
+                <Route path="/my-cohorts" element={<StudentCohortsPage />} />
                 <Route path="/settings" element={<Settings />} />
 
                 {/* AI Hub Routes */}
@@ -205,6 +213,9 @@ function App() {
                 <Route path="business/:tab?" element={<BusinessIntelligenceHub />} />
                 <Route path="analytics" element={<BusinessIntelligenceHub />} />
                 <Route path="communications/:tab?" element={<CommunicationsHub />} />
+                <Route path="blog" element={<BlogManagement />} />
+                <Route path="blog/new" element={<BlogEditorPage />} />
+                <Route path="blog/edit/:id" element={<BlogEditorPage />} />
               </Route>
             </Route>
           </Routes>

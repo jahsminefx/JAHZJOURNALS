@@ -96,7 +96,7 @@ const getDashboardMetrics = async (req, res) => {
       }
     });
 
-    // Calculate Mentorship Revenue & 5% Platform Fees
+    // Calculate Mentorship Revenue & 1.5% Platform Fees
     let grossVolumeUsd = 0;
     let grossVolumeNgn = 0;
     let platformFeeUsd = 0;
@@ -106,8 +106,8 @@ const getDashboardMetrics = async (req, res) => {
 
     for (const p of allMentorStudentPayments) {
       const gross = p.paidAmount || 0;
-      const fee = p.platformFeeAmount || (gross * 0.05);
-      const payout = p.mentorPayoutAmount || (gross * 0.95);
+      const fee = p.platformFeeAmount || (gross * 0.015);
+      const payout = p.mentorPayoutAmount || (gross * 0.985);
 
       if (p.currency === 'NGN') {
         grossVolumeNgn += gross;

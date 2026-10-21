@@ -14,7 +14,8 @@ const PricingCard = ({
   highlighted = false,
   cta = 'Start Free',
   onClick,
-  to
+  to,
+  planHeader,
 }) => (
   <div className={`relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 ${
     highlighted
@@ -35,6 +36,19 @@ const PricingCard = ({
     </div>
 
     <p className="mt-3 text-xs leading-5 text-muted min-h-[40px]">{description}</p>
+
+    {planHeader && (
+      <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-left">
+        {typeof planHeader === 'string' ? (
+          <p className="text-xs font-bold text-foreground leading-snug">{planHeader}</p>
+        ) : (
+          <div className="space-y-1">
+            {planHeader.title && <h4 className="text-xs font-black uppercase tracking-wider text-emerald-400">{planHeader.title}</h4>}
+            {planHeader.description && <p className="text-[11px] text-muted leading-relaxed">{planHeader.description}</p>}
+          </div>
+        )}
+      </div>
+    )}
 
     <div className="mt-6 flex items-baseline gap-2">
       {originalPrice && (

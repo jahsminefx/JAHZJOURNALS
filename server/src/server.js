@@ -210,7 +210,7 @@ if (process.env.NODE_ENV === 'production') {
   }
 
   // React Router catch-all route for client-side routing with server-side SEO & content pre-rendering
-  app.get('{*path}', (req, res, next) => {
+  app.get('{*path}', async (req, res, next) => {
     if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/uploads')) {
       return next();
     }
@@ -221,7 +221,13 @@ if (process.env.NODE_ENV === 'production') {
 
     if (indexHtmlTemplate) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      return res.send(buildSeoHtml(indexHtmlTemplate, req.path));
+      const result = await buildSeoHtml(indexHtmlTemplate, req.path);
+      const html = typeof result === 'string' ? result : result.html;
+      const isNotFound = result && result.isNotFound;
+      if (isNotFound) {
+        return res.status(404).send(html);
+      }
+      return res.send(html);
     }
 
     res.sendFile(path.join(clientBuildPath, 'index.html'));

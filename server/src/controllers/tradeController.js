@@ -1,8 +1,72 @@
 const { PrismaClient } = require('@prisma/client');
 const currencyService = require('../services/fx/currencyService');
 const { calculatePips } = require('../utils/pipCalculator');
+const { buildAudienceSafeTradeSnapshot } = require('./cohortSharingController');
 
 const prisma = new PrismaClient();
+
+/**
+ * Automatically syncs any CohortTradeShare records linked to a mentor's trade
+ * (or matches a recent open direct signal by the same mentor on the same pair)
+ * whenever the mentor logs or concludes the trade in their personal account.
+ */
+const syncMentorCohortTradeSharesForTrade = async (trade, userId) => {
+  try {
+    if (!trade || !userId) return;
+
+    // 1. Find any CohortTradeShares explicitly linked to this trade
+    let sharesToSync = await prisma.cohortTradeShare.findMany({
+      where: {
+        mentorId: userId,
+        sourceTradeId: trade.id,
+      },
+    });
+
+    // 2. If none are explicitly linked yet, check if the mentor has a recent OPEN direct signal for the same pair
+    if (sharesToSync.length === 0 && trade.pair) {
+      const recentOpenShares = await prisma.cohortTradeShare.findMany({
+        where: {
+          mentorId: userId,
+          sourceTradeId: null,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+
+      const normPair = String(trade.pair).trim().toUpperCase();
+      const matchingOpenShare = recentOpenShares.find((s) => {
+        const snap = s.tradeSnapshot || {};
+        const snapPair = String(snap.pair || '').trim().toUpperCase();
+        const snapOutcome = String(snap.outcome || snap.result || 'OPEN').toUpperCase();
+        return snapPair === normPair && (snapOutcome === 'OPEN' || snapOutcome === 'ACTIVE');
+      });
+
+      if (matchingOpenShare) {
+        sharesToSync = [matchingOpenShare];
+      }
+    }
+
+    for (const share of sharesToSync) {
+      const existingSnap = share.tradeSnapshot || {};
+      const updatedSnapshot = buildAudienceSafeTradeSnapshot(
+        trade,
+        existingSnap.visibility || existingSnap.visibilityOptions || null,
+        null
+      );
+
+      await prisma.cohortTradeShare.update({
+        where: { id: share.id },
+        data: {
+          sourceTradeId: trade.id,
+          tradeSnapshot: updatedSnapshot,
+          ...(trade.notesAfter && !share.outcomeLessons ? { outcomeLessons: trade.notesAfter } : {}),
+        },
+      });
+    }
+  } catch (err) {
+    console.warn('syncMentorCohortTradeSharesForTrade warning:', err?.message);
+  }
+};
 
 const buildTradeListWhere = (query, userId) => {
   const where = {
@@ -170,6 +234,7 @@ const createTrade = async (req, res) => {
 
     const { reconcileAccountBalance } = require('../services/accountBalanceService');
     await reconcileAccountBalance(tradingAccountId);
+    await syncMentorCohortTradeSharesForTrade(trade, req.user.id);
 
     res.status(201).json(trade);
   } catch (error) {
@@ -193,6 +258,12 @@ const getTradeById = async (req, res) => {
         aiReviews: { orderBy: { createdAt: 'desc' } },
         ruleViolations: { include: { tradeRule: true } },
         emotionLogs: { orderBy: { createdAt: 'desc' } },
+        mentorFeedbacks: {
+          include: {
+            mentor: { select: { id: true, name: true, avatarUrl: true, role: true } }
+          },
+          orderBy: { createdAt: 'desc' }
+        }
       }
     });
 
@@ -323,6 +394,7 @@ const updateTrade = async (req, res) => {
 
     const { reconcileAccountBalance } = require('../services/accountBalanceService');
     await reconcileAccountBalance(trade.tradingAccountId);
+    await syncMentorCohortTradeSharesForTrade(updatedTrade, req.user.id);
 
     res.json(updatedTrade);
   } catch (error) {

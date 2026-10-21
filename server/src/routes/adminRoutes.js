@@ -99,11 +99,37 @@ const {
   getAiIntelligence
 } = require('../controllers/adminBusinessController');
 
+const {
+  getBlogMetrics,
+  getArticles,
+  getArticleById,
+  createArticle,
+  updateArticle,
+  updateArticleStatus,
+  toggleFeatured,
+  deleteArticle,
+  uploadCoverImage,
+  previewDraft,
+} = require('../controllers/adminBlogController');
+const upload = require('../middleware/uploadMiddleware');
+
 const router = express.Router();
 
 // ALL admin routes require authentication AND high-level roles
 router.use(protect);
 router.use(authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'));
+
+// Blog Management (Super Admin & Admin)
+router.get('/blog/metrics', authorize('SUPER_ADMIN', 'ADMIN'), getBlogMetrics);
+router.get('/blog/articles', authorize('SUPER_ADMIN', 'ADMIN'), getArticles);
+router.get('/blog/articles/:id', authorize('SUPER_ADMIN', 'ADMIN'), getArticleById);
+router.post('/blog/articles', authorize('SUPER_ADMIN', 'ADMIN'), createArticle);
+router.put('/blog/articles/:id', authorize('SUPER_ADMIN', 'ADMIN'), updateArticle);
+router.patch('/blog/articles/:id/status', authorize('SUPER_ADMIN', 'ADMIN'), updateArticleStatus);
+router.patch('/blog/articles/:id/featured', authorize('SUPER_ADMIN', 'ADMIN'), toggleFeatured);
+router.delete('/blog/articles/:id', authorize('SUPER_ADMIN'), deleteArticle);
+router.post('/blog/upload-image', authorize('SUPER_ADMIN', 'ADMIN'), upload.single('image'), uploadCoverImage);
+router.get('/blog/preview/:id', authorize('SUPER_ADMIN', 'ADMIN'), previewDraft);
 
 // Analytics & Dashboard
 router.get('/dashboard', authorize('SUPER_ADMIN', 'ADMIN'), getDashboardMetrics);

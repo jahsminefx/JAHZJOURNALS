@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/useAuth';
@@ -17,17 +17,23 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, login } = useAuth();
+
+  const rawRedirect = searchParams.get('redirect') || '';
+  const safeRedirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '';
 
   React.useEffect(() => {
     if (user) {
-      if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+      if (safeRedirect) {
+        navigate(safeRedirect, { replace: true });
+      } else if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
       }
     }
-  }, [user, navigate]);
+  }, [user, navigate, safeRedirect]);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(loginSchema),
@@ -39,7 +45,9 @@ const Login = () => {
       const user = await login(data);
       toast.success('Welcome back — let\'s review.');
       
-      if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+      if (safeRedirect) {
+        navigate(safeRedirect, { replace: true });
+      } else if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
         navigate('/admin', { replace: true });
       } else {
         navigate(user.onboardingCompleted ? '/dashboard' : '/onboarding', { replace: true });
@@ -108,7 +116,7 @@ const Login = () => {
 
         <p className="text-center text-xs text-muted">
           New here?{' '}
-          <Link to="/register" className="font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+          <Link to={safeRedirect ? `/register?redirect=${encodeURIComponent(safeRedirect)}` : '/register'} className="font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
             Create your sanctuary
           </Link>
         </p>

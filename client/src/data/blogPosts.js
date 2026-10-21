@@ -6,15 +6,26 @@ export const BLOG_POSTS = [
     summary: 'Discover the exact step-by-step process professional Forex traders use to log trades, track emotions, analyze risk-to-reward ratios, and build long-term consistency.',
     excerpt: 'Keeping a trading journal is the single most effective habit separating profitable traders from unviable gamblers. Learn what data to track, how to review weekly setups, and how AI accelerates your growth.',
     category: 'Trading Foundations',
+    tags: ['Journaling', 'Forex Basics', 'Discipline', 'Sunday Review', 'Trade Logging'],
     readTime: '9 min read',
     publishedAt: '2026-08-01',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: true,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-home.png',
+    altText: 'Forex trader reviewing a structured trading journal dashboard and performance analytics',
     keywords: 'How to Keep a Forex Trading Journal, Forex Journal Template, Trade Logging Guide, Forex Consistency',
+    contextualCta: {
+      title: 'Ready to Journal Your Trades with AI?',
+      description: 'Put these principles into practice. Log trades, track emotions, and get automated AI reviews with JAHZJOURNALS.',
+      buttonText: 'Start Journaling Free',
+      to: '/register'
+    },
     tableOfContents: [
       { id: 'why-journal', title: '1. Why 90% of Unjournaled Traders Fail' },
       { id: 'essential-metrics', title: '2. Essential Metrics Every Trader Must Log' },
@@ -68,15 +79,26 @@ export const BLOG_POSTS = [
     summary: 'An in-depth comparative review of the top trading journal platforms including JAHZJOURNALS, TraderSync, Edgewonk, Tradervue, and TradesViz.',
     excerpt: 'Compare feature sets, pricing, automated MT4/MT5 import support, prop firm challenge monitoring, and AI review capabilities across the best trading journal software in 2026.',
     category: 'Software Comparison',
+    tags: ['Software Comparison', 'Tools', 'TraderSync', 'Edgewonk', 'Tradervue', 'MT4/MT5'],
     readTime: '10 min read',
     publishedAt: '2026-08-03',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-features.png',
+    altText: 'Side-by-side comparison matrix of top trading journal software platforms in 2026',
     keywords: 'Best Forex Trading Journal, Trading Journal Software, TraderSync Alternative, Edgewonk Review, Tradervue vs JAHZJOURNALS',
+    contextualCta: {
+      title: 'Experience JAHZJOURNALS Today',
+      description: 'Get free automated analytics, risk management tools, and AI trade review designed specifically for currency and prop firm traders.',
+      buttonText: 'Create Your Free Journal',
+      to: '/register'
+    },
     tableOfContents: [
       { id: 'overview', title: '1. Trading Journal Software Overview' },
       { id: 'comparison-matrix', title: '2. Feature & Price Comparison Matrix' },
@@ -147,15 +169,26 @@ export const BLOG_POSTS = [
     summary: 'Master your mind in the Forex markets. Learn psychological frameworks to eliminate revenge trading, overcome FOMO, and maintain bulletproof execution discipline.',
     excerpt: 'Trading psychology accounts for 80% of success. Explore proven psychological frameworks, discipline scoring metrics, and risk management habits that safeguard your trading equity.',
     category: 'Psychology',
+    tags: ['Psychology', 'Revenge Trading', 'FOMO', 'Discipline', 'Mindset'],
     readTime: '8 min read',
     publishedAt: '2026-08-04',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-propfirmtraders.png',
+    altText: 'Forex trader maintaining calm discipline while observing price charts on multiple monitors',
     keywords: 'Trading Psychology, Overcoming Revenge Trading, Forex FOMO, Trading Discipline, Emotional Trade Tracking',
+    contextualCta: {
+      title: 'Track Your Emotional Triggers Automatically',
+      description: 'Log your emotional state before and after every trade to discover your psychological blind spots.',
+      buttonText: 'Start Free Emotional Tracking',
+      to: '/register'
+    },
     tableOfContents: [
       { id: 'psychology-reality', title: '1. The Psychology Paradox in Forex' },
       { id: 'three-demons', title: '2. The 3 Emotional Pitfalls: Greed, Fear, Revenge' },
@@ -198,15 +231,26 @@ export const BLOG_POSTS = [
     summary: 'Learn essential position sizing formulas, drawdown limits, risk-to-reward ratios, and capital preservation rules used by funded traders.',
     excerpt: 'Capital preservation is job #1. Discover how to calculate exact lot sizes, manage daily drawdown limits, and maintain an asymmetric risk-to-reward profile.',
     category: 'Risk Management',
+    tags: ['Risk Management', 'R-Multiples', 'Drawdown', 'Position Sizing', 'Formulas'],
     readTime: '8 min read',
     publishedAt: '2026-08-05',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-pricing.png',
+    altText: 'Forex risk management framework diagram showing asymmetric risk to reward ratios and drawdown thresholds',
     keywords: 'Forex Risk Management, Position Size Calculator, Prop Firm Drawdown Limits, Risk to Reward Ratio',
+    contextualCta: {
+      title: 'Calculate Exact Lot Sizes with Zero Spread Risk',
+      description: 'Use the official JAHZJOURNALS position sizing tool to protect your capital and respect drawdown limits.',
+      buttonText: 'Open Free Position Size Calculator',
+      to: '/risk-calculator'
+    },
     tableOfContents: [
       { id: 'golden-rule', title: '1. The Golden Rule of 1% Capital Risk' },
       { id: 'lot-size-formula', title: '2. The Mathematical Lot Size Formula' },
@@ -240,15 +284,26 @@ export const BLOG_POSTS = [
     summary: 'A complete step-by-step roadmap to passing FTMO, FundedNext, and evaluation challenges without violating maximum daily drawdown limits.',
     excerpt: 'Passing a prop firm evaluation requires risk management over aggressive profit targets. Learn how to track daily drawdown, respect minimum trading days, and get funded.',
     category: 'Prop Firm',
+    tags: ['Prop Firms', 'FTMO', 'FundedNext', 'Evaluation Rules', 'Drawdown'],
     readTime: '9 min read',
     publishedAt: '2026-08-06',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-propfirmtraders.png',
+    altText: 'Prop firm challenge progression tracker showing daily drawdown threshold and phase milestones',
     keywords: 'How to Pass a Prop Firm Challenge, FTMO Challenge Blueprint, Funded Trader Rules, Daily Drawdown Protection',
+    contextualCta: {
+      title: 'Track Your Prop Firm Challenge in Real-Time',
+      description: 'Never breach a daily drawdown rule again. Monitor Phase 1 and Phase 2 targets with JAHZJOURNALS.',
+      buttonText: 'Explore Prop Firm Tracker',
+      to: '/prop-firm-traders'
+    },
     tableOfContents: [
       { id: 'prop-firm-landscape', title: '1. The Prop Firm Challenge Reality' },
       { id: 'drawdown-rules', title: '2. Understanding Daily vs Overall Drawdown' },
@@ -284,15 +339,26 @@ export const BLOG_POSTS = [
     summary: 'Discover how artificial intelligence, machine learning, and automated trade reviews help traders identify hidden statistical edges.',
     excerpt: 'AI is transforming retail trading analytics. Learn how automated trade reviews detect setup probability, optimal session timing, and execution flaws.',
     category: 'AI & Innovation',
+    tags: ['AI Trading', 'Machine Learning', 'Edge Finder', 'Automation', 'Analytics'],
     readTime: '8 min read',
     publishedAt: '2026-08-06',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-about.png',
+    altText: 'Neural network AI trading analytics dashboard breaking down Forex win rates and hold times',
     keywords: 'AI Forex Trading, Artificial Intelligence Trading Journal, AI Trade Review, Machine Learning Forex Analytics',
+    contextualCta: {
+      title: 'Test AI Trade Coaching on Your Executions',
+      description: 'Receive automated statistical feedback, strategy grading, and behavioral analysis after every trade session.',
+      buttonText: 'Try JAHZJOURNALS AI Free',
+      to: '/register'
+    },
     tableOfContents: [
       { id: 'ai-revolution', title: '1. The AI Revolution in Retail Forex' },
       { id: 'edge-finder', title: '2. Uncovering Your Hidden Statistical Edge' },
@@ -323,15 +389,26 @@ export const BLOG_POSTS = [
     summary: 'How to journal Inner Circle Trader (ICT) setups including Fair Value Gaps (FVG), Order Blocks, Breaker Blocks, and Liquidity Sweeps.',
     excerpt: 'Journaling institutional price action requires tracking liquidity runs and displacement. Learn how to log Smart Money Concepts (SMC) setups with precise chart screenshots.',
     category: 'SMC & ICT',
+    tags: ['ICT', 'Smart Money Concepts', 'Order Blocks', 'FVG', 'Liquidity Sweeps'],
     readTime: '8 min read',
     publishedAt: '2026-08-07',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-features.png',
+    altText: 'Forex candlestick chart illustrating institutional Fair Value Gap and Order Block PD arrays',
     keywords: 'ICT Trading Journal, Smart Money Concepts Journal, Order Block Tracker, Fair Value Gap FVG Journal',
+    contextualCta: {
+      title: 'Built for ICT & SMC Playbooks',
+      description: 'Tag your liquidity sweeps, FVG taps, and order block entries with dedicated multi-timeframe screenshots.',
+      buttonText: 'Start Journaling ICT Setups',
+      to: '/register'
+    },
     tableOfContents: [
       { id: 'smc-journaling', title: '1. Why SMC Traders Need Dedicated Journaling' },
       { id: 'key-arrays', title: '2. Logging Institutional PD Arrays & Killzones' },
@@ -362,15 +439,26 @@ export const BLOG_POSTS = [
     summary: 'Master the exact mathematical formulas for standard, mini, and micro lots across Forex pairs, XAUUSD Gold, and US30/NAS100 indices.',
     excerpt: 'Calculating lot sizes across different asset classes is one of the most common sources of costly trading errors. Learn the exact pip and tick formulas for Forex, Gold, and Indices.',
     category: 'Risk Management',
+    tags: ['Lot Size', 'Gold', 'XAUUSD', 'Risk Calculator', 'Pip Math', 'Indices'],
     readTime: '9 min read',
     publishedAt: '2026-08-12',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-pricing.png',
+    altText: 'Forex, Gold and index lot size calculation formula matrix on a dark background',
     keywords: 'How to Calculate Lot Size Forex, XAUUSD Lot Size Calculator, Gold Pip Value, US30 Lot Size Formula',
+    contextualCta: {
+      title: 'Calculate XAUUSD & Forex Lot Sizes Instantly',
+      description: 'Eliminate calculation errors. Enter your account balance, pair, and stop loss for instant broker-safe sizing.',
+      buttonText: 'Open Free Lot Size Calculator',
+      to: '/risk-calculator'
+    },
     tableOfContents: [
       { id: 'what-is-a-lot', title: '1. Understanding Standard, Mini, and Micro Lots' },
       { id: 'forex-pip-math', title: '2. Forex Pip Value & Lot Size Calculation' },
@@ -408,15 +496,26 @@ export const BLOG_POSTS = [
     summary: 'Understand market liquidity cycles across the Asian, London, New York, and Overlap trading sessions to trade when institutional volume is highest.',
     excerpt: 'Timing is just as important as price action. Discover the exact hours, volatility characteristics, and best currency pairs for each major Forex trading session.',
     category: 'Trading Foundations',
+    tags: ['Trading Sessions', 'London Open', 'New York Killzone', 'Asian Session', 'Volatility'],
     readTime: '8 min read',
     publishedAt: '2026-08-18',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-home.png',
+    altText: 'World map showing market session opening and closing clocks for Tokyo, London, and New York',
     keywords: 'Forex Trading Sessions, London Session Forex, New York Session Overlap, Best Time to Trade Forex',
+    contextualCta: {
+      title: 'Filter Your Trades by Session in JAHZJOURNALS',
+      description: 'Find out whether your win rate is higher during the London Open or the New York session overlap.',
+      buttonText: 'Start Journaling Sessions Free',
+      to: '/register'
+    },
     tableOfContents: [
       { id: '24-hour-market', title: '1. How the 24-Hour Interbank Market Works' },
       { id: 'asian-session', title: '2. The Asian Session (Tokyo): Consolidation & Range' },
@@ -446,15 +545,26 @@ export const BLOG_POSTS = [
     summary: 'Learn how trading from EUR, GBP, NGN, CAD, AUD, or ZAR accounts impacts pip values, position sizing, and portfolio P&L normalization.',
     excerpt: 'Trading global markets from a non-USD base currency introduces cross-rate mathematics. Learn how to normalize your portfolio analytics and calculate exact risk in your local currency.',
     category: 'Risk Management',
+    tags: ['Multi-Currency', 'USD', 'NGN', 'GBP', 'EUR', 'Currency Risk', 'Cross Rates'],
     readTime: '7 min read',
     publishedAt: '2026-08-25',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-features.png',
+    altText: 'Global currency symbols USD, EUR, GBP, NGN floating above a portfolio analytics dashboard',
     keywords: 'Multi-Currency Trading Account, NGN Forex Account, EUR GBP Trading Account Risk, Portfolio FX Normalization',
+    contextualCta: {
+      title: 'Multi-Currency Risk Management Made Simple',
+      description: 'Manage accounts in USD, NGN, GBP, EUR, and 12 other currencies with automatic live rate normalization.',
+      buttonText: 'Try Multi-Currency Accounts Free',
+      to: '/register'
+    },
     tableOfContents: [
       { id: 'base-vs-quote', title: '1. Account Currency vs. Instrument Quote Currency' },
       { id: 'cross-rate-impact', title: '2. Why Ignoring Cross Rates Leads to Over-Leveraging' },
@@ -480,15 +590,26 @@ export const BLOG_POSTS = [
     summary: 'A complete blueprint for writing a rule-based Forex trading plan covering market selection, entry triggers, invalidation levels, and daily drawdown rules.',
     excerpt: 'Trading without a written plan is gambling. Learn how to construct an institutional-grade trading plan with objective entry checklists and risk parameters.',
     category: 'Trading Foundations',
+    tags: ['Trading Plan', 'Checklists', 'Rule Execution', 'Pre-Trade', 'Discipline'],
     readTime: '9 min read',
     publishedAt: '2026-09-01',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-about.png',
+    altText: 'Forex trading plan blueprint document with pre-execution checklist and invalidation criteria',
     keywords: 'Forex Trading Plan Template, Pre-Trade Checklist, Rule-Based Trading Strategy, Trading Plan Builder',
+    contextualCta: {
+      title: 'Create Your Pre-Trade Checklist in JAHZJOURNALS',
+      description: 'Build custom strategy setups, checklist rules, and invalidation criteria that enforce execution discipline.',
+      buttonText: 'Build Your Trading Strategy',
+      to: '/strategies'
+    },
     tableOfContents: [
       { id: 'anatomy-of-plan', title: '1. The 5 Pillars of an Institutional Trading Plan' },
       { id: 'defining-edge', title: '2. Defining Your Setup & Invalidation Criteria' },
@@ -525,15 +646,26 @@ export const BLOG_POSTS = [
     summary: 'Learn how to combine automated MetaTrader 4 & MetaTrader 5 cloud synchronization with manual psychological reflection for maximum trading growth.',
     excerpt: 'Should you automate your trade imports or log trades manually? Discover why combining automated MT4/MT5 execution sync with post-trade reflection gives you the best of both worlds.',
     category: 'AI & Innovation',
+    tags: ['MT4/MT5 Sync', 'Cloud Sync', 'Manual vs Auto', 'Hybrid Journaling', 'Automation'],
     readTime: '7 min read',
     publishedAt: '2026-09-05',
+    updatedAt: '2026-09-10',
+    status: 'PUBLISHED',
+    featured: false,
     author: {
       name: 'Jahsmine Aninta',
       title: 'Founder & Senior Architect, JAHZJOURNALS',
       avatar: '/logo-mark.png'
     },
     coverImage: '/heroes/hero-features.png',
+    altText: 'MetaTrader 4 and MetaTrader 5 cloud sync architecture syncing with a modern trading journal',
     keywords: 'MT4 Trade Sync, MT5 Automated Trading Journal, Import MT4 Trades CSV, MetaTrader Journal Sync',
+    contextualCta: {
+      title: 'Experience Hybrid Journaling in JAHZJOURNALS',
+      description: 'Auto-sync trade fills from your broker terminal while keeping full control of psychological and setup tagging.',
+      buttonText: 'Get Started with JAHZJOURNALS',
+      to: '/register'
+    },
     tableOfContents: [
       { id: 'pros-of-automation', title: '1. The Precision of Automated MT4/MT5 Sync' },
       { id: 'power-of-reflection', title: '2. Why Manual Reflection Still Matters' },
@@ -550,6 +682,75 @@ export const BLOG_POSTS = [
 
       <h2 id="hybrid-workflow">3. The Hybrid Professional Workflow in JAHZJOURNALS</h2>
       <p>In JAHZJOURNALS, you can connect your MT4/MT5 account via Cloud Sync, EA Bridge, or CSV Import so every execution is recorded automatically—and then spend 2 minutes at the end of your session tagging your strategy setup, uploading your marked chart screenshot, and completing your Daily Review.</p>
+    `
+  },
+  {
+    id: '13',
+    slug: 'mastering-drawdown-management-forex',
+    title: 'Mastering Drawdown Management: How Institutional Traders Protect Capital & Survive Losing Streaks',
+    summary: 'Master the mathematics of drawdown recovery, understand peak-to-trough equity curves, and learn how professional forex and prop firm traders prevent catastrophic account blowouts.',
+    excerpt: 'Drawdown is an unavoidable reality of probabilistic trading. Discover the exact risk protocols, daily stop thresholds, and position-sizing frameworks used by elite prop firms to protect capital during losing streaks.',
+    category: 'Risk Management',
+    tags: ['Drawdown', 'Risk Management', 'Capital Preservation', 'Position Sizing', 'Prop Firm Trading'],
+    readTime: '8 min read',
+    publishedAt: '2026-10-21',
+    updatedAt: '2026-10-21',
+    status: 'PUBLISHED',
+    featured: false,
+    author: {
+      name: 'Jahsmine Aninta',
+      title: 'Founder & Senior Architect, JAHZJOURNALS',
+      avatar: '/logo-mark.png'
+    },
+    coverImage: '/heroes/hero-features.png',
+    altText: 'Forex drawdown equity curve analytics and risk management dashboard',
+    keywords: 'Forex Drawdown, Risk Management, Max Drawdown Forex, Prop Firm Loss Limits, Capital Preservation',
+    contextualCta: {
+      title: 'Protect Your Capital Automatically',
+      description: 'Calculate position sizes and enforce strict drawdown limits before placing orders.',
+      buttonText: 'Try Risk Calculator Free',
+      to: '/risk-calculator'
+    },
+    tableOfContents: [
+      { id: 'understanding-drawdown', title: '1. What Is Maximum Drawdown?' },
+      { id: 'recovery-math', title: '2. The Exponential Mathematics of Capital Recovery' },
+      { id: 'daily-loss-limits', title: '3. Implementing Hard Daily Stop Limits' },
+      { id: 'dynamic-scaling', title: '4. Dynamic Risk Reduction During Drawdown Periods' },
+      { id: 'journaling-drawdown', title: '5. How JAHZJOURNALS Tracks Drawdown & Alerts Traders' }
+    ],
+    content: `
+      <p className="lead">Drawdown is an unavoidable mathematical reality of trading in probabilistic markets. Even high-expectancy trading strategies with 65% win rates experience clusters of consecutive losses. What separates surviving professional traders from failed accounts is not the absence of drawdown, but how rigorously drawdown is managed.</p>
+
+      <h2 id="understanding-drawdown">1. What Is Maximum Drawdown?</h2>
+      <p>Maximum Drawdown (MDD) is the measure of the largest peak-to-trough decline in your trading account equity before a new equity peak is achieved. For example, if your trading account grows from $10,000 to an equity peak of $15,000, and subsequently suffers a series of losses dropping the equity to $12,000 before recovering, your drawdown is $3,000 or 20%.</p>
+      <p>In proprietary trading firms (such as FTMO, FundedNext, or The Funded Trader), drawdown is the single most strictly monitored parameter. Breaching a maximum trailing drawdown of 8% or 10% immediately terminates the evaluation challenge or forfeits funded capital.</p>
+
+      <h2 id="recovery-math">2. The Exponential Mathematics of Capital Recovery</h2>
+      <p>The primary reason drawdown must be minimized at all costs is the non-linear asymmetry of loss recovery. Losses reduce the base capital available to generate future returns:</p>
+      <ul>
+        <li>A <strong>10% drawdown</strong> requires an <strong>11.1% gain</strong> to recover to breakeven.</li>
+        <li>A <strong>20% drawdown</strong> requires a <strong>25% gain</strong> to recover to breakeven.</li>
+        <li>A <strong>30% drawdown</strong> requires a <strong>42.9% gain</strong> to recover to breakeven.</li>
+        <li>A <strong>50% drawdown</strong> requires a <strong>100% gain</strong> just to get back to zero.</li>
+      </ul>
+      <p>Once an account enters a 30% to 50% drawdown, emotional distress and revenge trading almost inevitably take over, compounding losses until the account is completely liquidated.</p>
+
+      <h2 id="daily-loss-limits">3. Implementing Hard Daily Stop Limits</h2>
+      <p>Professional risk managers enforce hard stop-out rules that cap the amount of capital a trader is allowed to lose in a single calendar day or session. A standard institutional rule is to limit daily losses to no more than <strong>2% to 3%</strong> of account equity.</p>
+      <p>If you risk 1% per trade and lose three consecutive trades during the London session, your daily stop is hit. You must close your trading terminal, step away from the charts, and log your trades in your journal. Halting trading prevents the emotional spiral known as "tilt," ensuring you preserve capital for the next high-probability market opportunity.</p>
+
+      <h2 id="dynamic-scaling">4. Dynamic Risk Reduction During Drawdown Periods</h2>
+      <p>When an account enters a drawdown of 4% or more, professional traders do not increase lot sizes to "win back" capital. Instead, they dynamically halve their risk per trade:</p>
+      <ul>
+        <li><strong>Base Condition (Equity at High):</strong> Risk 1.0% per trade setup.</li>
+        <li><strong>Drawdown &ge; 4%:</strong> Reduce risk to 0.5% per trade setup.</li>
+        <li><strong>Drawdown &ge; 7%:</strong> Reduce risk to 0.25% per trade setup until confidence and positive expectancy are mathematically restored.</li>
+      </ul>
+      <p>Dynamic de-risking acts as a mathematical shock absorber, allowing you to absorb 10 or 15 consecutive losses without endangering the survival of the account.</p>
+
+      <h2 id="journaling-drawdown">5. How JAHZJOURNALS Tracks Drawdown & Alerts Traders</h2>
+      <p>In <strong>JAHZJOURNALS</strong>, every trade execution automatically feeds into your rolling equity curve and drawdown tracker. The platform calculates your historical maximum drawdown, current open risk, and session loss thresholds in real time.</p>
+      <p>Furthermore, our integrated <a href="/risk-calculator">Position Size Calculator</a> factors in your account's exact balance, broker leverage, spread, and open exposure to prevent you from accidentally violating prop firm drawdown limits.</p>
     `
   }
 ];

@@ -64,6 +64,7 @@ const createAccount = async (req, res) => {
         maxTradesPerDay: payload.maxTradesPerDay ?? null,
         maxLossesPerDay: payload.maxLossesPerDay ?? null,
         notes: payload.notes || null,
+        isSharedWithMentor: payload.isSharedWithMentor ?? true,
         isPropFirmAccount: false,
       }
     });
@@ -156,6 +157,7 @@ const updateAccount = async (req, res) => {
         ...(payload.maxTradesPerDay !== undefined && { maxTradesPerDay: payload.maxTradesPerDay ?? null }),
         ...(payload.maxLossesPerDay !== undefined && { maxLossesPerDay: payload.maxLossesPerDay ?? null }),
         ...(payload.notes !== undefined && { notes: payload.notes || null }),
+        ...(payload.isSharedWithMentor !== undefined && { isSharedWithMentor: payload.isSharedWithMentor }),
       }
     });
 

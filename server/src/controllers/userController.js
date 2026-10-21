@@ -23,6 +23,11 @@ const userProfileSelect = {
   subscriptionStatus: true,
   onboardingCompleted: true,
   avatarUrl: true,
+  mentorTier: true,
+  mentorMaxStudents: true,
+  mentorMaxCohorts: true,
+  hasUsedMentorTrial: true,
+  mentorTrialExpiresAt: true,
   subscriptions: {
     where: { status: 'ACTIVE' },
     orderBy: { createdAt: 'desc' },

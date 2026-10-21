@@ -1,11 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Edit3, Image as ImageIcon, Trash2, Brain, Maximize2, Share2 } from 'lucide-react';
+import { 
+  ArrowLeft, Edit3, Image as ImageIcon, Trash2, Brain, Maximize2, Share2,
+  GraduationCap, AlertTriangle, CheckCircle2, MessageSquare, Send
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { resolveImageUrl } from '../utils/api';
+import { useAuth } from '../context/useAuth';
 import DeleteTradeDialog from '../components/trades/DeleteTradeDialog';
 import ImageModal from '../components/common/ImageModal';
 import ShareTradeModal from '../components/share/ShareTradeModal';
+import ShareTradeToCohortModal from '../components/share/ShareTradeToCohortModal';
 
 const TradeDetail = () => {
   const { id } = useParams();
@@ -15,11 +20,34 @@ const TradeDetail = () => {
   const [deletingTrade, setDeletingTrade] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showCohortShareModal, setShowCohortShareModal] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [analyzingScreenshotId, setAnalyzingScreenshotId] = useState(null);
   const [visionInsights, setVisionInsights] = useState({});
   const [aiInsight, setAiInsight] = useState(null);
   const [activeModalImage, setActiveModalImage] = useState(null);
+  const { user } = useAuth();
+  const [replyTextMap, setReplyTextMap] = useState({});
+  const [submittingReplyId, setSubmittingReplyId] = useState(null);
+
+  const handleSendFeedbackReply = async (feedbackId) => {
+    const text = (replyTextMap[feedbackId] || '').trim();
+    if (!text) return;
+    setSubmittingReplyId(feedbackId);
+    try {
+      const { data } = await api.post(`/mentors/trades/${id}/feedback/${feedbackId}/reply`, { reply: text });
+      toast.success('Reply sent to your mentor!');
+      setReplyTextMap(prev => ({ ...prev, [feedbackId]: '' }));
+      setTrade(prev => ({
+        ...prev,
+        mentorFeedbacks: (prev.mentorFeedbacks || []).map(fb => fb.id === feedbackId ? { ...fb, studentReply: data.studentReply, studentRepliedAt: data.studentRepliedAt } : fb)
+      }));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send reply.');
+    } finally {
+      setSubmittingReplyId(null);
+    }
+  };
 
   const fetchTrade = useCallback(async () => {
     try {
@@ -186,6 +214,19 @@ const TradeDetail = () => {
             <Share2 size={18} />
             Share Trade
           </button>
+          {(user?.role === 'MENTOR' || user?.subscriptionPlan === 'MENTOR' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+            <button
+              type="button"
+              onClick={() => setShowCohortShareModal(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-400 hover:bg-emerald-500/20 shadow-xs"
+              title="Broadcast this trade breakdown to your academy cohorts"
+            >
+              <GraduationCap size={18} />
+              Share to Academy
+            </button>
+          )}
+          <button style={{ display: 'none' }}>
+          </button>
           <Link to={`/trades/${id}/edit`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400">
             <Edit3 size={18} />
             Quick Edit
@@ -212,6 +253,118 @@ const TradeDetail = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* Academy Mentor Feedback Section */}
+          {trade.mentorFeedbacks && trade.mentorFeedbacks.length > 0 && (
+            <div className="space-y-4">
+              {trade.mentorFeedbacks.map((fb) => (
+                <div 
+                  key={fb.id} 
+                  className={`p-6 rounded-xl border shadow-lg ${
+                    fb.isViolationWarning 
+                      ? 'bg-rose-500/10 border-rose-500/30' 
+                      : 'bg-emerald-500/10 border-emerald-500/30'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center font-bold text-foreground">
+                        {fb.mentor?.avatarUrl ? (
+                          <img src={resolveImageUrl(fb.mentor.avatarUrl)} alt={fb.mentor.name} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          <GraduationCap className="text-emerald-500" size={20} />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground">{fb.mentor?.name || 'Academy Mentor'}</span>
+                          <span className="text-xs bg-emerald-500/20 text-emerald-400 font-medium px-2 py-0.5 rounded-full">
+                            Verified Mentor
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted">
+                          {new Date(fb.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {fb.grade && (
+                        <span className="px-3 py-1 bg-surface border border-border rounded-lg text-sm font-bold text-foreground">
+                          Grade: <span className="text-emerald-400">{fb.grade}</span>
+                        </span>
+                      )}
+                      {fb.status === 'RESOLVED' && (
+                        <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 text-xs font-semibold rounded-md flex items-center gap-1">
+                          <CheckCircle2 size={13} /> Resolved
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {fb.isViolationWarning && (
+                    <div className="mb-4 p-3.5 bg-rose-500/20 border border-rose-500/40 rounded-lg flex items-start gap-2.5 text-rose-300">
+                      <AlertTriangle className="shrink-0 mt-0.5" size={18} />
+                      <div className="text-xs leading-relaxed">
+                        <strong className="font-semibold block text-sm text-rose-200">Academy Risk Guard Breach</strong>
+                        {fb.violationDetails?.message || 'Trade executed in breach of Academy risk policies.'}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap mb-4">
+                    {fb.feedback}
+                  </div>
+
+                  {fb.recommendation && (
+                    <div className="p-3 bg-surface/50 border border-border/50 rounded-lg text-xs text-muted mb-4">
+                      <span className="font-semibold text-foreground block mb-0.5">Mentor Recommendation:</span>
+                      {fb.recommendation}
+                    </div>
+                  )}
+
+                  {/* Student Reply Display */}
+                  {fb.studentReply ? (
+                    <div className="mt-4 pt-3 border-t border-border/40 bg-surface/30 p-3.5 rounded-lg">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                          <MessageSquare size={13} className="text-blue-400" /> Student Reflection / Reply:
+                        </span>
+                        {fb.studentRepliedAt && (
+                          <span className="text-[11px] text-muted">
+                            {new Date(fb.studentRepliedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-foreground/90 italic">"{fb.studentReply}"</p>
+                    </div>
+                  ) : (
+                    user && user.id === trade.tradingAccount?.userId && (
+                      <div className="mt-4 pt-3 border-t border-border/40">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Acknowledge feedback or reply to your mentor..."
+                            value={replyTextMap[fb.id] || ''}
+                            onChange={(e) => setReplyTextMap(prev => ({ ...prev, [fb.id]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSendFeedbackReply(fb.id); }}
+                            className="flex-1 bg-surface border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-primary"
+                          />
+                          <button
+                            onClick={() => handleSendFeedbackReply(fb.id)}
+                            disabled={submittingReplyId === fb.id || !(replyTextMap[fb.id] || '').trim()}
+                            className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                          >
+                            <Send size={12} /> {submittingReplyId === fb.id ? 'Sending...' : 'Reply'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {aiInsight && (
             <div className="bg-purple-500/10 p-6 rounded-xl border border-purple-500/30 shadow-lg">
               <h3 className="text-lg font-bold text-purple-400 border-b border-purple-500/30 pb-2 mb-4 flex items-center gap-2">
@@ -479,6 +632,11 @@ const TradeDetail = () => {
         note={activeModalImage?.note}
       />
 
+      <ShareTradeToCohortModal
+        isOpen={showCohortShareModal}
+        onClose={() => setShowCohortShareModal(false)}
+        trade={trade}
+      />
       <ShareTradeModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
