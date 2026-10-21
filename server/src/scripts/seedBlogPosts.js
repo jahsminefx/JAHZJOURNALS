@@ -7,11 +7,27 @@ const prisma = new PrismaClient();
 async function seedBlogPosts() {
   console.log('[Seed Blog Posts] Starting idempotent migration of blog articles...');
 
-  const blogPath = path.resolve(__dirname, '../../../client/src/data/blogPosts.js');
-  if (!fs.existsSync(blogPath)) {
-    throw new Error(`Blog posts file not found at: ${blogPath}`);
+  const candidatePaths = [
+    path.resolve(__dirname, '../../../client/src/data/blogPosts.js'),
+    path.resolve(process.cwd(), 'client/src/data/blogPosts.js'),
+    path.resolve(process.cwd(), '../client/src/data/blogPosts.js'),
+    path.resolve(__dirname, '../../client/src/data/blogPosts.js'),
+  ];
+
+  let blogPath = null;
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      blogPath = candidate;
+      break;
+    }
   }
 
+  if (!blogPath) {
+    console.warn('[Seed Blog Posts] blogPosts.js file not found in any candidate paths:', candidatePaths);
+    return;
+  }
+
+  console.log(`[Seed Blog Posts] Found blog source at: ${blogPath}`);
   const raw = fs.readFileSync(blogPath, 'utf8');
   const cleaned = raw.replace(/export\s+const\s+BLOG_POSTS\s*=\s*/, 'return ');
   const fn = new Function(cleaned);
