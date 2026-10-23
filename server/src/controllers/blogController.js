@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { markBlogPostRead } = require('../services/blogNotificationService');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -268,6 +269,13 @@ exports.getPublicBlogPostBySlug = async (req, res) => {
       }).catch((e) => console.warn('[Blog Controller] View increment warning:', e.message));
     }
 
+    // Automatically record read if viewing as authenticated user
+    if (req.user && req.user.id && post.slug) {
+      markBlogPostRead(req.user.id, post.slug).catch((e) =>
+        console.warn('[Blog Controller] Auto-mark read warning:', e.message)
+      );
+    }
+
     // Compute up to 3 related articles
     const relatedPosts = allPublished
       .filter((p) => p.slug !== post.slug)
@@ -290,5 +298,25 @@ exports.getPublicBlogPostBySlug = async (req, res) => {
   } catch (error) {
     console.error('[Blog Controller] Get post by slug error:', error);
     res.status(500).json({ success: false, message: 'Failed to retrieve article.' });
+  }
+};
+
+/**
+ * POST /api/blog/posts/:slug/read
+ * Explicitly marks an article as read for the authenticated user.
+ */
+exports.markBlogPostAsRead = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(200).json({ success: true, message: 'Unauthenticated reader' });
+    }
+
+    const result = await markBlogPostRead(userId, slug);
+    return res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    console.error('[Blog Controller] Mark post read error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to record read status.' });
   }
 };

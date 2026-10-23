@@ -4,6 +4,13 @@ const { encryptCredential, decryptCredential } = require('../utils/cryptoUtils')
 const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions, getAccountConnectionStatus, fetchAccountInformation } = require('../services/metaApiService');
 const { detectTradingSession, resolveTradeRiskReward } = require('../utils/tradeCalculations');
 const { calculatePips } = require('../utils/pipCalculator');
+const {
+  classifyTrade,
+  isStopAtOrPastEntry,
+  CLASSIFICATION_SOURCES,
+  EVIDENCE_SOURCES,
+  EVIDENCE_STATUS,
+} = require('../services/tradeClassificationService');
 
 const getNum = (val) => {
   if (val === null || val === undefined || val === '' || val === 'null') return null;
@@ -158,6 +165,11 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
     where: { tradingAccountId: account.id },
   });
 
+  const userSettings = await prisma.userSettings.findUnique({
+    where: { userId: account.userId },
+  });
+  const userThresholdAmount = userSettings?.breakEvenThresholdAmount !== undefined ? userSettings.breakEvenThresholdAmount : null;
+
   const pendingNewTrades = [];
   const tradesToEnrich = [];
   let skippedCount = 0;
@@ -195,7 +207,31 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
 
     const isClosed = Boolean(exitTime || item.isClosed || exitPrice !== null);
     const status = isClosed ? 'CLOSED' : 'ACTIVE';
-    const result = isClosed ? (netProfit > 0 ? 'WIN' : netProfit < 0 ? 'LOSS' : 'BREAKEVEN') : 'OPEN';
+
+    const isStopBe = (stopLoss !== null && entryPrice !== null && direction)
+      ? isStopAtOrPastEntry({ direction, entryPrice, stopLoss, pair })
+      : false;
+
+    const classification = classifyTrade({
+      status,
+      direction,
+      pair,
+      entryPrice,
+      exitPrice,
+      stopLoss,
+      initialStopLoss: stopLoss,
+      lotSize,
+      grossProfit: profit,
+      commission,
+      swap,
+      fees: 0,
+      profitLossAmount: isClosed ? netProfit : null,
+      breakEvenActivated: isStopBe,
+      breakEvenPrice: isStopBe ? stopLoss : null,
+      breakEvenEvidenceSource: isStopBe ? EVIDENCE_SOURCES.MT_TRAILING_STOP : null,
+      breakEvenEvidenceStatus: isStopBe ? EVIDENCE_STATUS.CONFIRMED : EVIDENCE_STATUS.UNKNOWN,
+      userThresholdAmount,
+    });
 
     const validEntryTime = !isNaN(entryTime.getTime()) ? entryTime : new Date();
     const validExitTime = exitTime && !isNaN(exitTime.getTime()) ? exitTime : null;
@@ -214,9 +250,21 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
       initialTakeProfit: takeProfit,
       exitPrice,
       lotSize,
+      grossProfit: profit,
+      commission,
+      swap,
+      fees: 0,
       profitLossAmount: isClosed ? netProfit : null,
       status,
-      result,
+      result: classification.result,
+      breakEvenActivated: classification.breakEvenActivated,
+      breakEvenPrice: classification.breakEvenPrice,
+      breakEvenActivatedAt: classification.breakEvenActivatedAt,
+      breakEvenEvidenceSource: classification.breakEvenEvidenceSource,
+      breakEvenEvidenceStatus: classification.breakEvenEvidenceStatus,
+      classificationSource: CLASSIFICATION_SOURCES.BROKER_IMPORT,
+      resultCalculatedAt: classification.resultCalculatedAt || new Date(),
+      isManualResultOverride: false,
       session,
       pips,
       entryTime: validEntryTime,
@@ -241,12 +289,54 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
         (match.riskRewardRatio === null && incomingTrade.riskRewardRatio !== null);
 
       if (needsUpdate) {
+        const effectiveGross = incomingTrade.grossProfit ?? match.grossProfit;
+        const effectiveComm = incomingTrade.commission ?? match.commission;
+        const effectiveSwap = incomingTrade.swap ?? match.swap;
+        const effectiveNet = incomingTrade.profitLossAmount ?? match.profitLossAmount;
+
+        const enrichedClassification = classifyTrade({
+          status: incomingTrade.status,
+          direction: match.direction || incomingTrade.direction,
+          pair: match.pair || incomingTrade.pair,
+          entryPrice: match.entryPrice || incomingTrade.entryPrice,
+          exitPrice: incomingTrade.exitPrice || match.exitPrice,
+          stopLoss: incomingTrade.stopLoss || match.stopLoss,
+          initialStopLoss: match.initialStopLoss,
+          lotSize: incomingTrade.lotSize || match.lotSize,
+          grossProfit: effectiveGross,
+          commission: effectiveComm,
+          swap: effectiveSwap,
+          fees: match.fees || 0,
+          profitLossAmount: effectiveNet,
+          slTpHistory: match.slTpHistory,
+          breakEvenActivated: match.breakEvenActivated || incomingTrade.breakEvenActivated,
+          breakEvenPrice: match.breakEvenPrice || incomingTrade.breakEvenPrice,
+          breakEvenEvidenceSource: match.breakEvenEvidenceSource || incomingTrade.breakEvenEvidenceSource,
+          breakEvenEvidenceStatus: match.breakEvenEvidenceStatus || incomingTrade.breakEvenEvidenceStatus,
+          userConfirmedBe: match.breakEvenEvidenceStatus === EVIDENCE_STATUS.USER_CONFIRMED,
+          manualResultOverride: match.isManualResultOverride ? match.result : null,
+          userThresholdAmount,
+        });
+
         tradesToEnrich.push({
           id: match.id,
           data: {
             ...(incomingTrade.externalId && { externalId: incomingTrade.externalId }),
             ...(incomingTrade.exitPrice !== null && { exitPrice: incomingTrade.exitPrice }),
-            ...(incomingTrade.profitLossAmount !== null && { profitLossAmount: incomingTrade.profitLossAmount, result: incomingTrade.result, status: incomingTrade.status }),
+            ...(incomingTrade.profitLossAmount !== null && {
+              profitLossAmount: incomingTrade.profitLossAmount,
+              grossProfit: effectiveGross,
+              commission: effectiveComm,
+              swap: effectiveSwap,
+              result: enrichedClassification.result,
+              breakEvenActivated: enrichedClassification.breakEvenActivated,
+              breakEvenPrice: enrichedClassification.breakEvenPrice,
+              breakEvenActivatedAt: enrichedClassification.breakEvenActivatedAt,
+              breakEvenEvidenceSource: enrichedClassification.breakEvenEvidenceSource,
+              breakEvenEvidenceStatus: enrichedClassification.breakEvenEvidenceStatus,
+              status: incomingTrade.status,
+              resultCalculatedAt: enrichedClassification.resultCalculatedAt,
+            }),
             ...(incomingTrade.exitTime && { exitTime: incomingTrade.exitTime }),
             ...((!match.session && session) && { session }),
             ...((match.pips === null && pips !== null) && { pips }),

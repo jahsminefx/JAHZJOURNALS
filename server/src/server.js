@@ -143,8 +143,9 @@ app.use('/api/push-notifications', require('./routes/pushNotificationRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
 app.use('/api', require('./routes/miscRoutes'));
 
-const { initDailyReminderScheduler } = require('./services/reminderSchedulerService');
+const { initDailyReminderScheduler, initBlogReminderScheduler } = require('./services/reminderSchedulerService');
 initDailyReminderScheduler();
+initBlogReminderScheduler();
 
 // Serve built Vite React frontend in production
 if (process.env.NODE_ENV === 'production') {

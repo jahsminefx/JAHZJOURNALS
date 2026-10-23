@@ -34,11 +34,17 @@ const calculateSummary = (trades = [], startingBalance = 0) => {
   const grossLoss = Math.abs(values.filter((value) => value < 0).reduce((total, value) => total + value, 0));
   const netProfitLoss = grossProfit - grossLoss;
   const winRate = safeDivide(wins.length, closedTrades.length) * 100;
+  const lossRate = safeDivide(losses.length, closedTrades.length) * 100;
+  const breakEvenRate = safeDivide(breakevens.length, closedTrades.length) * 100;
+  const beProtectedTrades = trades.filter((t) => t.breakEvenActivated === true).length;
 
   return {
     netProfitLoss: round(netProfitLoss),
     returnPercentage: startingBalance ? round((netProfitLoss / startingBalance) * 100, 2) : 0,
     winRate: round(winRate, 1),
+    lossRate: round(lossRate, 1),
+    breakEvenRate: round(breakEvenRate, 1),
+    beProtectedTrades,
     totalTrades: trades.length,
     closedTrades: closedTrades.length,
     wins: wins.length,

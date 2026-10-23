@@ -16,7 +16,8 @@ import {
   User,
   ShieldCheck,
   Paperclip,
-  Clock
+  Clock,
+  BookOpen
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -241,6 +242,7 @@ const Notifications = () => {
   };
 
   const getCategoryIcon = (type, category) => {
+    if (type === 'BLOG_POST' || category === 'BLOG' || category === 'BLOG_REMINDER') return <BookOpen className="w-5 h-5 text-emerald-400" />;
     if (type === 'SUPPORT_REPLY') return <MessageSquare className="w-5 h-5 text-indigo-400" />;
     if (category === 'SYSTEM_ALERT' || category === 'WARNING') return <AlertTriangle className="w-5 h-5 text-amber-400" />;
     if (category === 'AI_COACH') return <Sparkles className="w-5 h-5 text-cyan-400" />;

@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const currencyService = require('../services/fx/currencyService');
 const { calculatePips } = require('../utils/pipCalculator');
+const { classifyTrade } = require('../services/tradeClassificationService');
 const { buildAudienceSafeTradeSnapshot } = require('./cohortSharingController');
 
 const prisma = new PrismaClient();
@@ -136,6 +137,15 @@ const createTrade = async (req, res) => {
       pips,
       result,
       status,
+      grossProfit,
+      commission,
+      swap,
+      fees,
+      breakEvenActivated,
+      breakEvenPrice,
+      breakEvenEvidenceSource,
+      breakEvenEvidenceStatus,
+      isManualResultOverride,
       session,
       strategyId,
       setupId,
@@ -177,8 +187,43 @@ const createTrade = async (req, res) => {
     });
 
     const tradeStatus = status || 'ACTIVE';
-    const tradeResult = result || 'OPEN';
-    const isClosed = tradeStatus === 'CLOSED' || ['WIN', 'LOSS', 'BREAKEVEN'].includes(tradeResult);
+    const rawResult = result || 'OPEN';
+
+    // Lookup user settings for configurable BE tolerance
+    const userSettings = await prisma.userSettings.findUnique({
+      where: { userId: req.user.id },
+      select: { breakEvenThresholdAmount: true },
+    });
+
+    const isManualOverride = isManualResultOverride !== undefined
+      ? Boolean(isManualResultOverride)
+      : (rawResult && ['WIN', 'LOSS', 'BREAKEVEN'].includes(rawResult));
+
+    const classification = classifyTrade({
+      status: tradeStatus,
+      direction,
+      pair: pair.toUpperCase().trim(),
+      entryPrice: parseNum(entryPrice),
+      exitPrice: parseNum(exitPrice),
+      stopLoss: parseNum(stopLoss),
+      initialStopLoss: parseNum(stopLoss),
+      lotSize: parseNum(lotSize),
+      grossProfit: parseNum(grossProfit),
+      commission: parseNum(commission),
+      swap: parseNum(swap),
+      fees: parseNum(fees),
+      profitLossAmount: parseNum(profitLossAmount),
+      initialRisk: parseNum(riskAmount),
+      breakEvenActivated: breakEvenActivated !== undefined ? Boolean(breakEvenActivated) : false,
+      breakEvenPrice: parseNum(breakEvenPrice),
+      breakEvenEvidenceSource: breakEvenEvidenceSource || (breakEvenActivated ? 'USER_MANUAL' : null),
+      breakEvenEvidenceStatus: breakEvenEvidenceStatus || (breakEvenActivated ? 'USER_CONFIRMED' : null),
+      userConfirmedBe: Boolean(breakEvenActivated),
+      manualResultOverride: isManualOverride ? rawResult : null,
+      userThresholdAmount: userSettings?.breakEvenThresholdAmount !== undefined ? userSettings.breakEvenThresholdAmount : null,
+    });
+
+    const isClosed = tradeStatus === 'CLOSED' || ['WIN', 'LOSS', 'BREAKEVEN'].includes(classification.result);
 
     // Compute historical FX metadata if trade is closed
     let fxRateToReporting = null;
@@ -208,8 +253,20 @@ const createTrade = async (req, res) => {
         profitLossPercent: parseNum(profitLossPercent),
         riskRewardRatio: parseNum(riskRewardRatio),
         pips: computedPips,
-        result: tradeResult,
+        result: classification.result,
         status: tradeStatus,
+        grossProfit: classification.grossProfit,
+        commission: classification.commission,
+        swap: classification.swap,
+        fees: classification.fees,
+        breakEvenActivated: classification.breakEvenActivated,
+        breakEvenPrice: classification.breakEvenPrice,
+        breakEvenActivatedAt: classification.breakEvenActivatedAt || (classification.breakEvenActivated ? new Date() : null),
+        breakEvenEvidenceSource: classification.breakEvenEvidenceSource,
+        breakEvenEvidenceStatus: classification.breakEvenEvidenceStatus,
+        isManualResultOverride: classification.isManualResultOverride,
+        classificationSource: classification.classificationSource,
+        resultCalculatedAt: classification.resultCalculatedAt,
         session: session || null,
         strategyId: strategyId || null,
         setupId: setupId || null,
@@ -307,6 +364,15 @@ const updateTrade = async (req, res) => {
       pips,
       result,
       status,
+      grossProfit,
+      commission,
+      swap,
+      fees,
+      breakEvenActivated,
+      breakEvenPrice,
+      breakEvenEvidenceSource,
+      breakEvenEvidenceStatus,
+      isManualResultOverride,
       session,
       strategyId,
       setupId,
@@ -331,10 +397,55 @@ const updateTrade = async (req, res) => {
     const finalExitPrice = exitPrice !== undefined ? parseNum(exitPrice) : trade.exitPrice;
     const finalPair = pair !== undefined ? (pair ? String(pair).toUpperCase().trim() : null) : trade.pair;
     const finalStatus = status || trade.status;
+    const finalDirection = direction ? String(direction).toUpperCase() : trade.direction;
+    const finalStopLoss = stopLoss !== undefined ? parseNum(stopLoss) : trade.stopLoss;
+    const finalLotSize = lotSize !== undefined ? parseNum(lotSize) : trade.lotSize;
+    const finalRiskAmount = riskAmount !== undefined ? parseNum(riskAmount) : trade.riskAmount;
+    const finalGrossProfit = grossProfit !== undefined ? parseNum(grossProfit) : trade.grossProfit;
+    const finalCommission = commission !== undefined ? parseNum(commission) : trade.commission;
+    const finalSwap = swap !== undefined ? parseNum(swap) : trade.swap;
+    const finalFees = fees !== undefined ? parseNum(fees) : trade.fees;
+    const finalProfitLoss = profitLossAmount !== undefined ? parseNum(profitLossAmount) : trade.profitLossAmount;
+    const finalBreakEvenActivated = breakEvenActivated !== undefined ? Boolean(breakEvenActivated) : trade.breakEvenActivated;
+    const finalBreakEvenPrice = breakEvenPrice !== undefined ? parseNum(breakEvenPrice) : trade.breakEvenPrice;
+
+    // Lookup user settings for configurable BE tolerance
+    const userSettings = await prisma.userSettings.findUnique({
+      where: { userId: req.user.id },
+      select: { breakEvenThresholdAmount: true },
+    });
+
+    const isManualOverride = isManualResultOverride !== undefined
+      ? Boolean(isManualResultOverride)
+      : (result !== undefined ? Boolean(result && ['WIN', 'LOSS', 'BREAKEVEN'].includes(result)) : trade.isManualResultOverride);
+
+    const classification = classifyTrade({
+      status: finalStatus,
+      direction: finalDirection,
+      pair: finalPair,
+      entryPrice: finalEntryPrice,
+      exitPrice: finalExitPrice,
+      stopLoss: finalStopLoss,
+      initialStopLoss: trade.initialStopLoss,
+      lotSize: finalLotSize,
+      grossProfit: finalGrossProfit,
+      commission: finalCommission,
+      swap: finalSwap,
+      fees: finalFees,
+      profitLossAmount: finalProfitLoss,
+      initialRisk: finalRiskAmount,
+      breakEvenActivated: finalBreakEvenActivated,
+      breakEvenPrice: finalBreakEvenPrice,
+      breakEvenEvidenceSource: breakEvenEvidenceSource !== undefined ? breakEvenEvidenceSource : trade.breakEvenEvidenceSource,
+      breakEvenEvidenceStatus: breakEvenEvidenceStatus !== undefined ? breakEvenEvidenceStatus : trade.breakEvenEvidenceStatus,
+      userConfirmedBe: Boolean(finalBreakEvenActivated),
+      manualResultOverride: isManualOverride ? (result || trade.result) : null,
+      userThresholdAmount: userSettings?.breakEvenThresholdAmount !== undefined ? userSettings.breakEvenThresholdAmount : null,
+    });
 
     let computedPips = pips !== undefined ? parseNum(pips) : null;
     if (computedPips === null && finalEntryPrice !== null && finalExitPrice !== null && finalPair) {
-      computedPips = calculatePips(finalPair, finalEntryPrice, finalExitPrice, direction || trade.direction);
+      computedPips = calculatePips(finalPair, finalEntryPrice, finalExitPrice, finalDirection);
     }
 
     let fxRateToReporting = undefined;
@@ -358,20 +469,32 @@ const updateTrade = async (req, res) => {
       where: { id: req.params.id },
       data: {
         pair: finalPair,
-        direction: direction ? String(direction).toUpperCase() : undefined,
+        direction: finalDirection,
         entryPrice: finalEntryPrice,
-        stopLoss: stopLoss !== undefined ? parseNum(stopLoss) : undefined,
+        stopLoss: finalStopLoss,
         takeProfit: takeProfit !== undefined ? parseNum(takeProfit) : undefined,
         exitPrice: finalExitPrice,
-        lotSize: lotSize !== undefined ? parseNum(lotSize) : undefined,
-        riskAmount: riskAmount !== undefined ? parseNum(riskAmount) : undefined,
+        lotSize: finalLotSize,
+        riskAmount: finalRiskAmount,
         rewardAmount: rewardAmount !== undefined ? parseNum(rewardAmount) : undefined,
-        profitLossAmount: profitLossAmount !== undefined ? parseNum(profitLossAmount) : undefined,
+        profitLossAmount: finalProfitLoss,
         profitLossPercent: profitLossPercent !== undefined ? parseNum(profitLossPercent) : undefined,
         riskRewardRatio: riskRewardRatio !== undefined ? parseNum(riskRewardRatio) : undefined,
         pips: computedPips !== null ? computedPips : undefined,
-        result: result || undefined,
+        result: classification.result,
         status: finalStatus,
+        grossProfit: classification.grossProfit,
+        commission: classification.commission,
+        swap: classification.swap,
+        fees: classification.fees,
+        breakEvenActivated: classification.breakEvenActivated,
+        breakEvenPrice: classification.breakEvenPrice,
+        breakEvenActivatedAt: classification.breakEvenActivatedAt || (classification.breakEvenActivated ? (trade.breakEvenActivatedAt || new Date()) : null),
+        breakEvenEvidenceSource: classification.breakEvenEvidenceSource,
+        breakEvenEvidenceStatus: classification.breakEvenEvidenceStatus,
+        isManualResultOverride: classification.isManualResultOverride,
+        classificationSource: classification.classificationSource,
+        resultCalculatedAt: classification.resultCalculatedAt,
         session: session !== undefined ? session : undefined,
         strategyId: strategyId !== undefined ? strategyId : undefined,
         setupId: setupId !== undefined ? setupId : undefined,
@@ -575,6 +698,32 @@ const getTradedPairs = async (req, res) => {
   }
 };
 
+const captureTradeFromScreenshot = async (req, res) => {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ message: 'Please upload a trade screenshot to analyze.' });
+    }
+
+    const { extractTradeFromScreenshot } = require('../jobs/processors/processScreenshotTradeCapture');
+
+    const userSettings = await prisma.userSettings.findUnique({
+      where: { userId: req.user.id },
+    });
+    const userThresholdAmount = userSettings?.breakEvenThresholdAmount !== undefined ? userSettings.breakEvenThresholdAmount : null;
+
+    const result = await extractTradeFromScreenshot({
+      imageBuffer: req.file.buffer,
+      mimeType: req.file.mimetype || 'image/png',
+      userThresholdAmount,
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error extracting trade from screenshot:', error);
+    res.status(500).json({ message: error.message || 'Failed to extract trade from screenshot.' });
+  }
+};
+
 module.exports = {
   getTrades,
   createTrade,
@@ -584,4 +733,5 @@ module.exports = {
   updateTradeReview,
   exportTradesCsv,
   getTradedPairs,
+  captureTradeFromScreenshot,
 };

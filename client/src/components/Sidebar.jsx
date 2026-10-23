@@ -11,6 +11,7 @@ import { useAuth } from '../context/useAuth';
 import BrandLogo from './BrandLogo';
 import UpgradeCard from './dashboard/UpgradeCard';
 import FoundingTraderBadge from './FoundingTraderBadge';
+import AiTradeCaptureModal from './trades/AiTradeCaptureModal';
 
 const LOCAL_STORAGE_COLLAPSED_KEY = 'jahzjournals-sidebar-collapsed';
 
@@ -18,6 +19,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isAiCaptureOpen, setIsAiCaptureOpen] = useState(false);
 
   // Persistent collapsed state for desktop/tablet
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -92,8 +94,8 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Home, exact: true },
     { name: 'Accounts', path: '/accounts', icon: Wallet, exact: true },
-    { name: 'MT5 / Cloud Sync', path: '/accounts?sync=true', icon: Cloud, badge: 'Soon' },
     { name: 'Trades', path: '/trades', icon: Briefcase, exact: true },
+    { name: 'Log with JAHZ AI', action: 'ai-capture', icon: Sparkles },
     { name: 'New Trade', path: '/trades/new', icon: PlusCircle },
     { name: 'Rules', path: '/rules', icon: ShieldCheck },
     { name: 'Strategies', path: '/strategies', icon: Layers },
@@ -190,6 +192,38 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item);
+
+          if (item.action === 'ai-capture') {
+            return (
+              <button
+                key={item.name}
+                type="button"
+                onClick={() => {
+                  onCloseMobile?.();
+                  setIsAiCaptureOpen(true);
+                }}
+                title={collapsed ? 'Log Trade with JAHZ AI' : undefined}
+                className={`flex items-center w-full px-3.5 py-2.5 rounded-xl transition-all duration-200 group text-left ${
+                  isAiCaptureOpen
+                    ? 'bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-indigo-600/20 text-indigo-400 font-bold border border-indigo-500/30 shadow-xs'
+                    : 'text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 font-semibold'
+                } ${collapsed ? 'justify-center px-2' : ''}`}
+              >
+                <Icon size={19} className={`shrink-0 text-indigo-400 group-hover:scale-110 transition-transform ${collapsed ? '' : 'mr-3'}`} />
+                {!collapsed && (
+                  <span className="flex-1 flex items-center justify-between min-w-0">
+                    <span className="text-sm truncate font-bold bg-gradient-to-r from-indigo-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
+                      {item.name}
+                    </span>
+                    <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      AI
+                    </span>
+                  </span>
+                )}
+              </button>
+            );
+          }
+
           return (
             <NavLink
               key={item.name}
@@ -293,6 +327,15 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
           </div>
         </div>
       )}
+      {/* AI Trade Capture Modal */}
+      <AiTradeCaptureModal
+        isOpen={isAiCaptureOpen}
+        onClose={() => setIsAiCaptureOpen(false)}
+        onTradeSaved={() => {
+          window.dispatchEvent(new CustomEvent('trade-saved'));
+          navigate('/trades');
+        }}
+      />
     </>
   );
 };

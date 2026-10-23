@@ -2,6 +2,13 @@ const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { sendPushToUser } = require('../services/pushNotificationService');
+const {
+  classifyTrade,
+  isStopAtOrPastEntry,
+  CLASSIFICATION_SOURCES,
+  EVIDENCE_SOURCES,
+  EVIDENCE_STATUS,
+} = require('../services/tradeClassificationService');
 
 /**
  * Helper to parse numbers safely
@@ -37,6 +44,11 @@ const handleMtSyncWebhook = async (req, res) => {
     if (!account || !account.syncEnabled) {
       return res.status(403).json({ status: 'error', message: 'Invalid or disabled MetaTrader sync token.' });
     }
+
+    const userSettings = await prisma.userSettings.findUnique({
+      where: { userId: account.userId },
+    });
+    const userThresholdAmount = userSettings?.breakEvenThresholdAmount !== undefined ? userSettings.breakEvenThresholdAmount : null;
 
     const payload = req.body;
     const items = Array.isArray(payload) ? payload : [payload];
@@ -81,11 +93,6 @@ const handleMtSyncWebhook = async (req, res) => {
       const isClosed = Boolean(exitTime || item.isClosed || item.status === 'CLOSED' || item.eventType === 'CLOSE');
       const status = isClosed ? 'CLOSED' : 'ACTIVE';
 
-      let result = 'OPEN';
-      if (isClosed) {
-        result = netProfit > 0 ? 'WIN' : netProfit < 0 ? 'LOSS' : 'BREAKEVEN';
-      }
-
       // Check if trade already exists by ticket number for this account
       const existingTrade = await prisma.trade.findFirst({
         where: {
@@ -97,6 +104,14 @@ const handleMtSyncWebhook = async (req, res) => {
       const now = new Date();
 
       if (!existingTrade) {
+        // Detect if initial stop is already at or past entry (break-even protected)
+        const isInitialStopBe = isStopAtOrPastEntry({
+          direction,
+          entryPrice,
+          stopLoss,
+          pair,
+        });
+
         // Build initial SL/TP history record
         const initialHistory = [];
         if (stopLoss !== null || takeProfit !== null) {
@@ -104,10 +119,32 @@ const handleMtSyncWebhook = async (req, res) => {
             timestamp: now.toISOString(),
             stopLoss,
             takeProfit,
-            note: 'Initial SL/TP set on open',
+            note: isInitialStopBe ? 'Initial SL set at or past entry (BE protected)' : 'Initial SL/TP set on open',
             eventType: 'OPEN',
           });
         }
+
+        const classification = classifyTrade({
+          status,
+          direction,
+          pair,
+          entryPrice,
+          exitPrice,
+          stopLoss,
+          initialStopLoss: stopLoss,
+          lotSize,
+          grossProfit: profit,
+          commission,
+          swap,
+          fees: 0,
+          profitLossAmount: isClosed ? netProfit : null,
+          slTpHistory: initialHistory,
+          breakEvenActivated: isInitialStopBe,
+          breakEvenPrice: isInitialStopBe ? stopLoss : null,
+          breakEvenEvidenceSource: isInitialStopBe ? EVIDENCE_SOURCES.MT_TRAILING_STOP : null,
+          breakEvenEvidenceStatus: isInitialStopBe ? EVIDENCE_STATUS.CONFIRMED : EVIDENCE_STATUS.UNKNOWN,
+          userThresholdAmount,
+        });
 
         const newTrade = await prisma.trade.create({
           data: {
@@ -123,10 +160,22 @@ const handleMtSyncWebhook = async (req, res) => {
             slTpHistory: initialHistory,
             exitPrice,
             lotSize,
+            grossProfit: profit,
+            commission,
+            swap,
+            fees: 0,
             profitLossAmount: isClosed ? netProfit : null,
             pips,
             status,
-            result,
+            result: classification.result,
+            breakEvenActivated: classification.breakEvenActivated,
+            breakEvenPrice: classification.breakEvenPrice,
+            breakEvenActivatedAt: classification.breakEvenActivatedAt,
+            breakEvenEvidenceSource: classification.breakEvenEvidenceSource,
+            breakEvenEvidenceStatus: classification.breakEvenEvidenceStatus,
+            classificationSource: CLASSIFICATION_SOURCES.BROKER_IMPORT,
+            resultCalculatedAt: classification.resultCalculatedAt || now,
+            isManualResultOverride: false,
             entryTime: !isNaN(entryTime.getTime()) ? entryTime : now,
             exitTime: exitTime && !isNaN(exitTime.getTime()) ? exitTime : null,
             notesBefore: item.comment ? `MT Comment: ${item.comment}` : null,
@@ -148,7 +197,7 @@ const handleMtSyncWebhook = async (req, res) => {
           });
         }
 
-        const notifTitle = isClosed ? `🏁 MT Trade Logged: ${pair} (${result})` : `📈 MT Trade Synced: ${pair} ${direction}`;
+        const notifTitle = isClosed ? `🏁 MT Trade Logged: ${pair} (${classification.result})` : `📈 MT Trade Synced: ${pair} ${direction}`;
         const notifMsg = isClosed
           ? `${pair} ${direction} ${lotSize ? lotSize + ' lots' : ''} closed on ${account.name}. P&L: ${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}`
           : `${pair} ${direction} ${lotSize ? lotSize + ' lots' : ''} logged on ${account.name} @ ${entryPrice || 'market'}.`;
@@ -179,15 +228,28 @@ const handleMtSyncWebhook = async (req, res) => {
         processedCount++;
       } else {
         // Trade exists - check if SL/TP modified or if trade closed
-        let history = Array.isArray(existingTrade.slTpHistory) ? existingTrade.slTpHistory : [];
+        let history = Array.isArray(existingTrade.slTpHistory) ? [...existingTrade.slTpHistory] : [];
         let slTpChanged = false;
         let changeNote = 'SL/TP modified in MT';
 
+        const currentEntry = existingTrade.entryPrice ?? entryPrice;
+        const currentDirection = existingTrade.direction ?? direction;
+        const currentPair = existingTrade.pair ?? pair;
+
+        let stopMovedToBe = false;
         if (stopLoss !== null && stopLoss !== existingTrade.stopLoss) {
           slTpChanged = true;
-          if (entryPrice && Math.abs(stopLoss - entryPrice) < 0.0005) {
-            changeNote = 'Moved Stop Loss to Break Even';
-          } else if (existingTrade.stopLoss && Math.abs(stopLoss - entryPrice) < Math.abs(existingTrade.stopLoss - entryPrice)) {
+          const isBeNow = isStopAtOrPastEntry({
+            direction: currentDirection,
+            entryPrice: currentEntry,
+            stopLoss,
+            pair: currentPair,
+          });
+
+          if (isBeNow) {
+            stopMovedToBe = true;
+            changeNote = 'Moved Stop Loss to Break Even / Profit Protection';
+          } else if (existingTrade.stopLoss && currentEntry && Math.abs(stopLoss - currentEntry) < Math.abs(existingTrade.stopLoss - currentEntry)) {
             changeNote = 'Trailed Stop Loss closer to price';
           }
         }
@@ -210,6 +272,36 @@ const handleMtSyncWebhook = async (req, res) => {
 
         const wasClosed = existingTrade.status === 'CLOSED';
         const nowClosing = isClosed && !wasClosed;
+        const updatedStatus = isClosed ? 'CLOSED' : existingTrade.status;
+
+        const effectiveGross = profit !== 0 ? profit : (existingTrade.grossProfit ?? profit);
+        const effectiveComm = commission !== 0 ? commission : (existingTrade.commission ?? commission);
+        const effectiveSwap = swap !== 0 ? swap : (existingTrade.swap ?? swap);
+        const effectiveNet = isClosed ? netProfit : (existingTrade.profitLossAmount ?? null);
+
+        const classification = classifyTrade({
+          status: updatedStatus,
+          direction: currentDirection,
+          pair: currentPair,
+          entryPrice: currentEntry,
+          exitPrice: exitPrice !== null ? exitPrice : existingTrade.exitPrice,
+          stopLoss: stopLoss !== null ? stopLoss : existingTrade.stopLoss,
+          initialStopLoss: existingTrade.initialStopLoss,
+          lotSize: lotSize !== null ? lotSize : existingTrade.lotSize,
+          grossProfit: effectiveGross,
+          commission: effectiveComm,
+          swap: effectiveSwap,
+          fees: existingTrade.fees ?? 0,
+          profitLossAmount: effectiveNet,
+          slTpHistory: history,
+          breakEvenActivated: stopMovedToBe ? true : existingTrade.breakEvenActivated,
+          breakEvenPrice: stopMovedToBe ? stopLoss : existingTrade.breakEvenPrice,
+          breakEvenEvidenceSource: stopMovedToBe ? EVIDENCE_SOURCES.MT_TRAILING_STOP : existingTrade.breakEvenEvidenceSource,
+          breakEvenEvidenceStatus: stopMovedToBe ? EVIDENCE_STATUS.CONFIRMED : existingTrade.breakEvenEvidenceStatus,
+          userConfirmedBe: existingTrade.breakEvenEvidenceStatus === EVIDENCE_STATUS.USER_CONFIRMED,
+          manualResultOverride: existingTrade.isManualResultOverride ? existingTrade.result : null,
+          userThresholdAmount,
+        });
 
         const pnlDelta = nowClosing ? netProfit : (wasClosed && netProfit !== existingTrade.profitLossAmount ? netProfit - (existingTrade.profitLossAmount || 0) : 0);
 
@@ -222,10 +314,20 @@ const handleMtSyncWebhook = async (req, res) => {
             ...(exitPrice !== null && { exitPrice }),
             ...(lotSize !== null && { lotSize }),
             ...(pips !== null && { pips }),
+            grossProfit: effectiveGross,
+            commission: effectiveComm,
+            swap: effectiveSwap,
+            breakEvenActivated: classification.breakEvenActivated,
+            breakEvenPrice: classification.breakEvenPrice,
+            breakEvenActivatedAt: classification.breakEvenActivatedAt || (stopMovedToBe ? now : existingTrade.breakEvenActivatedAt),
+            breakEvenEvidenceSource: classification.breakEvenEvidenceSource,
+            breakEvenEvidenceStatus: classification.breakEvenEvidenceStatus,
+            classificationSource: existingTrade.isManualResultOverride ? CLASSIFICATION_SOURCES.USER_OVERRIDE : classification.classificationSource,
+            resultCalculatedAt: classification.resultCalculatedAt,
             ...(isClosed && {
               status: 'CLOSED',
-              result,
-              profitLossAmount: netProfit,
+              result: classification.result,
+              profitLossAmount: effectiveNet,
               exitTime: exitTime && !isNaN(exitTime.getTime()) ? exitTime : now,
             }),
           },
@@ -248,7 +350,7 @@ const handleMtSyncWebhook = async (req, res) => {
 
         // Notify user if trade closed in this sync update
         if (nowClosing) {
-          const closeTitle = `🏁 MT Trade Closed: ${existingTrade.pair} (${result})`;
+          const closeTitle = `🏁 MT Trade Closed: ${existingTrade.pair} (${classification.result})`;
           const closeMsg = `${existingTrade.pair} ${existingTrade.direction} closed on ${account.name}. P&L: ${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}`;
           const closeUrl = `/trades/${existingTrade.id}`;
 

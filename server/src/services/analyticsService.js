@@ -86,6 +86,8 @@ const calculateSummary = (trades = []) => {
   const averageLoss = safeDivide(grossLoss, losses.length);
   const winRateDecimal = safeDivide(wins.length, closedTrades.length);
   const lossRateDecimal = safeDivide(losses.length, closedTrades.length);
+  const breakEvenRateDecimal = safeDivide(breakevens.length, closedTrades.length);
+  const beProtectedCount = trades.filter((t) => t.breakEvenActivated === true).length;
   const riskRewardValues = trades
     .map((trade) => Number(trade.riskRewardRatio))
     .filter((value) => Number.isFinite(value));
@@ -98,6 +100,8 @@ const calculateSummary = (trades = []) => {
     breakEvenTrades: breakevens.length,
     winRate: round(winRateDecimal * 100, 1),
     lossRate: round(lossRateDecimal * 100, 1),
+    breakEvenRate: round(breakEvenRateDecimal * 100, 1),
+    beProtectedTrades: beProtectedCount,
     grossProfit: round(grossProfit),
     grossLoss: round(grossLoss),
     netRealisedProfitLoss: round(netRealisedProfitLoss),

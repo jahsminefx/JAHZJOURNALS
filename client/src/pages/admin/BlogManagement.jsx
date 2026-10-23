@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import {
   BookOpen, Plus, Search, Filter, Eye, Star, Edit, Trash2,
   ExternalLink, CheckCircle, Clock, Archive, Sparkles, RefreshCw,
-  AlertTriangle, FileText
+  AlertTriangle, FileText, Bell
 } from 'lucide-react';
 
 const BlogManagement = () => {
@@ -25,6 +25,7 @@ const BlogManagement = () => {
 
   // Delete modal state
   const [deleteModal, setDeleteModal] = useState({ open: false, article: null, loading: false });
+  const [dispatchingReminders, setDispatchingReminders] = useState(false);
 
   const fetchMetrics = useCallback(async () => {
     try {
@@ -112,6 +113,18 @@ const BlogManagement = () => {
     }
   };
 
+  const handleDispatchUnreadReminders = async () => {
+    try {
+      setDispatchingReminders(true);
+      const { data } = await api.post('/admin/blog/remind-unread');
+      toast.success(data.message || `Dispatched unread reminders to ${data.usersReminded || 0} traders!`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to dispatch unread blog reminders');
+    } finally {
+      setDispatchingReminders(false);
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Top Header */}
@@ -135,6 +148,15 @@ const BlogManagement = () => {
             title="Refresh articles"
           >
             <RefreshCw size={16} />
+          </button>
+          <button
+            onClick={handleDispatchUnreadReminders}
+            disabled={dispatchingReminders}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground text-sm font-semibold transition disabled:opacity-50"
+            title="Dispatch browser push reminders for unread articles to traders"
+          >
+            <Bell size={16} className={dispatchingReminders ? 'animate-bounce text-emerald-400' : 'text-emerald-400'} />
+            {dispatchingReminders ? 'Dispatching...' : 'Remind Unread'}
           </button>
           <Link
             to="/admin/blog/new"

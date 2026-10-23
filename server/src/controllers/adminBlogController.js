@@ -4,6 +4,10 @@ const { PrismaClient } = require('@prisma/client');
 const cloudinary = require('../utils/cloudinary');
 const streamifier = require('streamifier');
 const { invalidateBlogCache } = require('../middleware/seoPrerenderMiddleware');
+const {
+  sendNewBlogPostNotification,
+  dispatchUnreadBlogPostReminders,
+} = require('../services/blogNotificationService');
 
 const prisma = new PrismaClient();
 
@@ -372,6 +376,12 @@ exports.createArticle = async (req, res) => {
       },
     });
 
+    if (finalStatus === 'PUBLISHED') {
+      sendNewBlogPostNotification(article).catch((err) => {
+        console.error('[Admin Blog] Failed to dispatch new post notification:', err);
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: finalStatus === 'PUBLISHED' ? 'Article published successfully!' : 'Article draft saved!',
@@ -493,6 +503,15 @@ exports.updateArticle = async (req, res) => {
       data: updateData,
     });
 
+    if (
+      updated.status === 'PUBLISHED' &&
+      (currentArticle.status !== 'PUBLISHED' || !currentArticle.notificationSent)
+    ) {
+      sendNewBlogPostNotification(updated).catch((err) => {
+        console.error('[Admin Blog] Failed to dispatch blog update notification:', err);
+      });
+    }
+
     res.json({
       success: true,
       message: 'Article updated successfully.',
@@ -533,6 +552,15 @@ exports.updateArticleStatus = async (req, res) => {
       where: { id },
       data: updateData,
     });
+
+    if (
+      status === 'PUBLISHED' &&
+      (!article.notificationSent || article.status !== 'PUBLISHED')
+    ) {
+      sendNewBlogPostNotification(updated).catch((err) => {
+        console.error('[Admin Blog] Failed to dispatch blog status notification:', err);
+      });
+    }
 
     res.json({
       success: true,
@@ -671,5 +699,23 @@ exports.previewDraft = async (req, res) => {
   } catch (error) {
     console.error('[Admin Blog] Preview draft error:', error);
     res.status(500).json({ success: false, message: 'Failed to load preview.' });
+  }
+};
+
+/**
+ * POST /api/admin/blog/remind-unread
+ * Admin-triggered on-demand dispatch of unread blog post reminders.
+ */
+exports.remindUnreadArticles = async (req, res) => {
+  try {
+    const result = await dispatchUnreadBlogPostReminders({ force: true });
+    return res.json({
+      success: true,
+      message: result.message || 'Unread blog reminders dispatched successfully.',
+      ...result,
+    });
+  } catch (error) {
+    console.error('[Admin Blog] Remind unread error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to dispatch blog reminders.' });
   }
 };

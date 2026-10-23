@@ -124,6 +124,8 @@ const getDailyReviewSummary = async ({ userId, date, accountId, timezone = 'UTC'
 
   const winRate = closedTrades.length > 0 ? round((winningTrades.length / closedTrades.length) * 100, 1) : 0;
   const lossRate = closedTrades.length > 0 ? round((losingTrades.length / closedTrades.length) * 100, 1) : 0;
+  const breakEvenRate = closedTrades.length > 0 ? round((breakevenTrades.length / closedTrades.length) * 100, 1) : 0;
+  const beProtectedTrades = trades.filter((t) => t.breakEvenActivated === true).length;
 
   let fxStatus = 'LIVE';
   let isMultiAccount = !accountId;
@@ -272,6 +274,8 @@ const getDailyReviewSummary = async ({ userId, date, accountId, timezone = 'UTC'
     breakEvenTrades: breakevenTrades.length,
     winRate,
     lossRate,
+    breakEvenRate,
+    beProtectedTrades,
     grossProfit: round(grossProfit),
     grossLoss: round(grossLoss),
     netProfitLoss: round(netProfitLoss),

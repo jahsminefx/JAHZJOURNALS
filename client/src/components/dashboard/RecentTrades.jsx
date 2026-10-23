@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardCard, CardHeader } from './DashboardShell';
 import { formatCurrency } from '../../utils/dashboard';
+import TradeOutcomeBadge from '../trades/TradeOutcomeBadge';
 
 const badgeClass = (direction) => (
   direction === 'SELL'
@@ -61,7 +62,7 @@ const RecentTrades = ({ trades = [], currency, className = '' }) => (
               </div>
               <div className="text-right">
                 <p className={`font-bold ${pnlClass(amount)}`}>{amount > 0 ? '+' : ''}{formatCurrency(amount, currency)}</p>
-                <p className="mt-1 text-xs text-muted">{getTradeStateLabel(trade)}</p>
+                <div className="mt-1 flex justify-end"><TradeOutcomeBadge trade={trade} size="sm" /></div>
               </div>
             </Link>
           );

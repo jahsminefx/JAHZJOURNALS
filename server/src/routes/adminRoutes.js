@@ -110,6 +110,7 @@ const {
   deleteArticle,
   uploadCoverImage,
   previewDraft,
+  remindUnreadArticles,
 } = require('../controllers/adminBlogController');
 const upload = require('../middleware/uploadMiddleware');
 
@@ -130,6 +131,7 @@ router.patch('/blog/articles/:id/featured', authorize('SUPER_ADMIN', 'ADMIN'), t
 router.delete('/blog/articles/:id', authorize('SUPER_ADMIN'), deleteArticle);
 router.post('/blog/upload-image', authorize('SUPER_ADMIN', 'ADMIN'), upload.single('image'), uploadCoverImage);
 router.get('/blog/preview/:id', authorize('SUPER_ADMIN', 'ADMIN'), previewDraft);
+router.post('/blog/remind-unread', authorize('SUPER_ADMIN', 'ADMIN'), remindUnreadArticles);
 
 // Analytics & Dashboard
 router.get('/dashboard', authorize('SUPER_ADMIN', 'ADMIN'), getDashboardMetrics);

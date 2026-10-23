@@ -2,6 +2,13 @@ const csv = require('csv-parser');
 const streamifier = require('streamifier');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const {
+  classifyTrade,
+  isStopAtOrPastEntry,
+  CLASSIFICATION_SOURCES,
+  EVIDENCE_SOURCES,
+  EVIDENCE_STATUS,
+} = require('../services/tradeClassificationService');
 
 const parseTradeCsv = (buffer) => {
   return new Promise((resolve, reject) => {
@@ -22,7 +29,7 @@ const parseBool = (val) => {
   return null;
 };
 
-const mapCsvRowToTrade = (row, accountId) => {
+const mapCsvRowToTrade = (row, accountId, userThresholdAmount = null) => {
   // Normalize row keys to lower-case trimmed strings
   const normalizedRow = Object.keys(row).reduce((acc, key) => {
     acc[key.trim().toLowerCase()] = row[key];
@@ -96,8 +103,27 @@ const mapCsvRowToTrade = (row, accountId) => {
 
   const entryTime = entryTimeStr ? new Date(entryTimeStr) : new Date();
   const exitTime = exitTimeStr && exitTimeStr !== 'null' && exitTimeStr !== 'undefined' ? new Date(exitTimeStr) : null;
-  
-  const profitLossAmount = getNum(
+
+  const commission = getNum(
+    normalizedRow['commission'] ||
+    normalizedRow['comm'] ||
+    normalizedRow['fee'] ||
+    normalizedRow['fees']
+  ) || 0;
+
+  const swap = getNum(
+    normalizedRow['swap'] ||
+    normalizedRow['rollover']
+  ) || 0;
+
+  const rawGross = getNum(
+    normalizedRow['grossprofit'] ||
+    normalizedRow['gross profit'] ||
+    normalizedRow['gross_profit'] ||
+    normalizedRow['gross']
+  );
+
+  const rawNet = getNum(
     normalizedRow['profitlossamount'] ||
     normalizedRow['profit loss amount'] ||
     normalizedRow['profit'] || 
@@ -109,35 +135,89 @@ const mapCsvRowToTrade = (row, accountId) => {
     normalizedRow['net_profit'] || 
     normalizedRow['realized p&l'] || 
     normalizedRow['realized pnl']
-  ) || 0;
+  );
+
+  const grossProfit = rawGross !== null ? rawGross : (rawNet !== null ? rawNet - commission - swap : null);
+  const profitLossAmount = rawNet !== null ? rawNet : (rawGross !== null ? rawGross + commission + swap : 0);
 
   const rawResult = getStr(normalizedRow['result']);
-  const result = rawResult 
-    ? (rawResult.toUpperCase() === 'WIN' || rawResult.toUpperCase() === 'LOSS' || rawResult.toUpperCase() === 'BREAKEVEN' ? rawResult.toUpperCase() : (profitLossAmount > 0 ? 'WIN' : profitLossAmount < 0 ? 'LOSS' : 'BREAKEVEN'))
-    : (profitLossAmount > 0 ? 'WIN' : profitLossAmount < 0 ? 'LOSS' : 'BREAKEVEN');
+  const breakEvenFlag = parseBool(
+    normalizedRow['breakeven'] ||
+    normalizedRow['break even'] ||
+    normalizedRow['be'] ||
+    normalizedRow['be_protected'] ||
+    normalizedRow['beprotected']
+  );
 
   const rawStatus = getStr(normalizedRow['status']);
   const status = rawStatus
     ? (['PLANNED', 'ACTIVE', 'CLOSED', 'CANCELLED'].includes(rawStatus.toUpperCase()) ? rawStatus.toUpperCase() : (exitTime ? 'CLOSED' : 'ACTIVE'))
     : (exitTime ? 'CLOSED' : 'ACTIVE');
 
+  const isClosed = status === 'CLOSED';
+
+  const entryPrice = getNum(normalizedRow['entryprice'] || normalizedRow['entry price'] || normalizedRow['open price'] || normalizedRow['price']);
+  const exitPrice = getNum(normalizedRow['exitprice'] || normalizedRow['exit price'] || normalizedRow['close price']);
+  const stopLoss = getNum(normalizedRow['stoploss'] || normalizedRow['stop loss'] || normalizedRow['s / l'] || normalizedRow['sl']);
+  const takeProfit = getNum(normalizedRow['takeprofit'] || normalizedRow['take profit'] || normalizedRow['t / p'] || normalizedRow['tp']);
+  const lotSize = getNum(normalizedRow['lotsize'] || normalizedRow['lot size'] || normalizedRow['size'] || normalizedRow['volume'] || normalizedRow['lots']);
+
+  const isStopBe = (stopLoss !== null && entryPrice !== null && direction)
+    ? isStopAtOrPastEntry({ direction, entryPrice, stopLoss, pair: String(pair).toUpperCase().trim() })
+    : false;
+
+  const classification = classifyTrade({
+    status,
+    direction,
+    pair: String(pair).toUpperCase().trim(),
+    entryPrice,
+    exitPrice,
+    stopLoss,
+    initialStopLoss: stopLoss,
+    lotSize,
+    grossProfit,
+    commission,
+    swap,
+    fees: 0,
+    profitLossAmount: isClosed ? profitLossAmount : null,
+    breakEvenActivated: breakEvenFlag === true || isStopBe,
+    breakEvenPrice: isStopBe ? stopLoss : null,
+    breakEvenEvidenceSource: breakEvenFlag === true ? EVIDENCE_SOURCES.USER_MANUAL : (isStopBe ? EVIDENCE_SOURCES.CSV_IMPORT : null),
+    breakEvenEvidenceStatus: breakEvenFlag === true ? EVIDENCE_STATUS.USER_CONFIRMED : (isStopBe ? EVIDENCE_STATUS.CONFIRMED : EVIDENCE_STATUS.UNKNOWN),
+    userConfirmedBe: breakEvenFlag === true,
+    manualResultOverride: rawResult && ['WIN', 'LOSS', 'BREAKEVEN'].includes(rawResult.toUpperCase()) ? rawResult.toUpperCase() : null,
+    userThresholdAmount,
+  });
+
   return {
     tradingAccountId: accountId,
     pair: String(pair).toUpperCase().trim(),
     direction,
-    entryPrice: getNum(normalizedRow['entryprice'] || normalizedRow['entry price'] || normalizedRow['open price'] || normalizedRow['price']),
-    stopLoss: getNum(normalizedRow['stoploss'] || normalizedRow['stop loss'] || normalizedRow['s / l'] || normalizedRow['sl']),
-    takeProfit: getNum(normalizedRow['takeprofit'] || normalizedRow['take profit'] || normalizedRow['t / p'] || normalizedRow['tp']),
-    exitPrice: getNum(normalizedRow['exitprice'] || normalizedRow['exit price'] || normalizedRow['close price']),
-    lotSize: getNum(normalizedRow['lotsize'] || normalizedRow['lot size'] || normalizedRow['size'] || normalizedRow['volume'] || normalizedRow['lots']),
+    entryPrice,
+    stopLoss,
+    takeProfit,
+    exitPrice,
+    lotSize,
+    grossProfit,
+    commission,
+    swap,
+    fees: 0,
     riskAmount: getNum(normalizedRow['riskamount'] || normalizedRow['risk amount']),
     rewardAmount: getNum(normalizedRow['rewardamount'] || normalizedRow['reward amount']),
-    profitLossAmount,
+    profitLossAmount: isClosed ? profitLossAmount : null,
     profitLossPercent: getNum(normalizedRow['profitlosspercent'] || normalizedRow['profit loss percent']),
     riskRewardRatio: getNum(normalizedRow['riskrewardratio'] || normalizedRow['risk reward ratio']),
     pips: getNum(normalizedRow['pips']),
     status,
-    result,
+    result: classification.result,
+    breakEvenActivated: classification.breakEvenActivated,
+    breakEvenPrice: classification.breakEvenPrice,
+    breakEvenActivatedAt: classification.breakEvenActivatedAt,
+    breakEvenEvidenceSource: classification.breakEvenEvidenceSource,
+    breakEvenEvidenceStatus: classification.breakEvenEvidenceStatus,
+    classificationSource: classification.classificationSource,
+    resultCalculatedAt: classification.resultCalculatedAt || new Date(),
+    isManualResultOverride: classification.isManualResultOverride,
     session: getStr(normalizedRow['session']) ? getStr(normalizedRow['session']).toUpperCase() : null,
     higherTimeframe: getStr(normalizedRow['highertimeframe'] || normalizedRow['higher timeframe'] || normalizedRow['htf']),
     entryTimeframe: getStr(normalizedRow['entrytimeframe'] || normalizedRow['entry timeframe'] || normalizedRow['ltf']),
@@ -155,7 +235,7 @@ const mapCsvRowToTrade = (row, accountId) => {
   };
 };
 
-const parseMtHtml = (htmlContent, accountId) => {
+const parseMtHtml = (htmlContent, accountId, userThresholdAmount = null) => {
   const trades = [];
   const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
   const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
@@ -231,8 +311,32 @@ const parseMtHtml = (htmlContent, accountId) => {
     const exitTime = exitTimeStr ? new Date(exitTimeStr) : null;
     const netProfit = profit + swap + commission;
     const isClosed = Boolean(exitTime && !isNaN(exitTime.getTime()));
-    const result = isClosed ? (netProfit > 0 ? 'WIN' : netProfit < 0 ? 'LOSS' : 'BREAKEVEN') : 'OPEN';
     const status = isClosed ? 'CLOSED' : 'ACTIVE';
+
+    const isStopBe = (stopLoss !== null && entryPrice !== null && direction)
+      ? isStopAtOrPastEntry({ direction, entryPrice, stopLoss, pair })
+      : false;
+
+    const classification = classifyTrade({
+      status,
+      direction,
+      pair,
+      entryPrice,
+      exitPrice,
+      stopLoss,
+      initialStopLoss: stopLoss,
+      lotSize,
+      grossProfit: profit,
+      commission,
+      swap,
+      fees: 0,
+      profitLossAmount: isClosed ? netProfit : null,
+      breakEvenActivated: isStopBe,
+      breakEvenPrice: isStopBe ? stopLoss : null,
+      breakEvenEvidenceSource: isStopBe ? EVIDENCE_SOURCES.MT_TRAILING_STOP : null,
+      breakEvenEvidenceStatus: isStopBe ? EVIDENCE_STATUS.CONFIRMED : EVIDENCE_STATUS.UNKNOWN,
+      userThresholdAmount,
+    });
 
     trades.push({
       tradingAccountId: accountId,
@@ -246,9 +350,21 @@ const parseMtHtml = (htmlContent, accountId) => {
       initialTakeProfit: takeProfit,
       exitPrice,
       lotSize,
+      grossProfit: profit,
+      commission,
+      swap,
+      fees: 0,
       profitLossAmount: isClosed ? netProfit : null,
       status,
-      result,
+      result: classification.result,
+      breakEvenActivated: classification.breakEvenActivated,
+      breakEvenPrice: classification.breakEvenPrice,
+      breakEvenActivatedAt: classification.breakEvenActivatedAt,
+      breakEvenEvidenceSource: classification.breakEvenEvidenceSource,
+      breakEvenEvidenceStatus: classification.breakEvenEvidenceStatus,
+      classificationSource: CLASSIFICATION_SOURCES.BROKER_IMPORT,
+      resultCalculatedAt: classification.resultCalculatedAt || new Date(),
+      isManualResultOverride: false,
       entryTime: !isNaN(entryTime.getTime()) ? entryTime : new Date(),
       exitTime: exitTime && !isNaN(exitTime.getTime()) ? exitTime : null,
       notesBefore: 'Imported from MetaTrader HTML Report',
@@ -278,17 +394,22 @@ const importTrades = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded or file is empty.' });
     }
 
+    const userSettings = await prisma.userSettings.findUnique({
+      where: { userId: req.user.id },
+    });
+    const userThresholdAmount = userSettings?.breakEvenThresholdAmount !== undefined ? userSettings.breakEvenThresholdAmount : null;
+
     const fileContentStr = req.file.buffer.toString('utf-8');
     const isHtml = fileContentStr.includes('<html') || fileContentStr.includes('<table') || fileContentStr.includes('<!DOCTYPE') || req.file.originalname?.endsWith('.htm') || req.file.originalname?.endsWith('.html');
 
     let pendingTrades = [];
 
     if (isHtml) {
-      pendingTrades = parseMtHtml(fileContentStr, account.id);
+      pendingTrades = parseMtHtml(fileContentStr, account.id, userThresholdAmount);
     } else {
       const rows = await parseTradeCsv(req.file.buffer);
       pendingTrades = rows
-        .map((row) => mapCsvRowToTrade(row, account.id))
+        .map((row) => mapCsvRowToTrade(row, account.id, userThresholdAmount))
         .filter((t) => t !== null && !isNaN(t.entryTime?.getTime()));
     }
 
@@ -321,7 +442,19 @@ const importTrades = async (req, res) => {
             data: {
               ...(t.externalId && { externalId: t.externalId }),
               ...(t.exitPrice !== null && { exitPrice: t.exitPrice }),
-              ...(t.profitLossAmount !== null && { profitLossAmount: t.profitLossAmount, result: t.result, status: t.status }),
+              ...(t.profitLossAmount !== null && {
+                profitLossAmount: t.profitLossAmount,
+                grossProfit: t.grossProfit ?? match.grossProfit,
+                commission: t.commission ?? match.commission,
+                swap: t.swap ?? match.swap,
+                result: match.isManualResultOverride ? match.result : t.result,
+                breakEvenActivated: match.breakEvenActivated || t.breakEvenActivated,
+                breakEvenPrice: match.breakEvenPrice || t.breakEvenPrice,
+                breakEvenEvidenceSource: match.breakEvenEvidenceSource || t.breakEvenEvidenceSource,
+                breakEvenEvidenceStatus: match.breakEvenEvidenceStatus || t.breakEvenEvidenceStatus,
+                status: t.status,
+                resultCalculatedAt: new Date(),
+              }),
               ...(t.exitTime && { exitTime: t.exitTime }),
             },
             pnlDelta: (t.profitLossAmount || 0) - (match.profitLossAmount || 0),

@@ -255,46 +255,47 @@ model User {
   mentorAccountName    String?
   mentorBankCode       String?
   mentorSubaccountCode String?
-  mentorTier           String?               @default("PRIVATE_COHORT")
-  mentorMaxStudents    Int?                  @default(50)
-  mentorMaxCohorts     Int?                  @default(2)
-  hasUsedMentorTrial   Boolean               @default(false)
+  mentorTier           String?   @default("PRIVATE_COHORT")
+  mentorMaxStudents    Int?      @default(50)
+  mentorMaxCohorts     Int?      @default(2)
+  hasUsedMentorTrial   Boolean   @default(false)
   mentorTrialExpiresAt DateTime?
 
-  tradingAccounts    TradingAccount[]
-  tradeRules         TradeRule[]
-  importedTradeFiles ImportedTradeFile[]
-  weeklyReviews      WeeklyReview[]
-  tradingGoals       TradingGoal[]
-  reportExports      ReportExport[]
-  subscriptions      Subscription[]
-  payments           Payment[]
-  contactMessages         ContactMessage[] @relation("UserContactMessages")
-  assignedContactMessages ContactMessage[] @relation("AssignedContactMessages")
-  supportTickets          SupportTicket[]
-  bugReports         BugReport[]
-  featureRequests    FeatureRequest[]
-  internalNotes      InternalNote[]
-  mentorGroups       MentorStudent[]     @relation("StudentGroups")
-  ownedMentorGroups  MentorGroup[]       @relation("MentorGroups")
-  mentorFeedbacks    MentorFeedback[]    @relation("FeedbacksGiven")
-  mentorInvitationsSent MentorInvitation[]    @relation("MentorInvitationsSent")
-  mentorAssignmentsCreated MentorAssignment[] @relation("MentorAssignmentsCreated")
+  tradingAccounts             TradingAccount[]
+  tradeRules                  TradeRule[]
+  importedTradeFiles          ImportedTradeFile[]
+  weeklyReviews               WeeklyReview[]
+  tradingGoals                TradingGoal[]
+  reportExports               ReportExport[]
+  subscriptions               Subscription[]
+  payments                    Payment[]
+  contactMessages             ContactMessage[]             @relation("UserContactMessages")
+  assignedContactMessages     ContactMessage[]             @relation("AssignedContactMessages")
+  supportTickets              SupportTicket[]
+  bugReports                  BugReport[]
+  featureRequests             FeatureRequest[]
+  internalNotes               InternalNote[]
+  mentorGroups                MentorStudent[]              @relation("StudentGroups")
+  ownedMentorGroups           MentorGroup[]                @relation("MentorGroups")
+  mentorFeedbacks             MentorFeedback[]             @relation("FeedbacksGiven")
+  mentorInvitationsSent       MentorInvitation[]           @relation("MentorInvitationsSent")
+  mentorAssignmentsCreated    MentorAssignment[]           @relation("MentorAssignmentsCreated")
   mentorAssignmentSubmissions MentorAssignmentSubmission[] @relation("StudentAssignmentSubmissions")
-  mentorSummariesWritten MentorCoachingSummary[] @relation("MentorSummariesWritten")
-  studentSummariesReceived MentorCoachingSummary[] @relation("StudentSummariesReceived")
+  mentorSummariesWritten      MentorCoachingSummary[]      @relation("MentorSummariesWritten")
+  studentSummariesReceived    MentorCoachingSummary[]      @relation("StudentSummariesReceived")
   cohortTradeShares           CohortTradeShare[]           @relation("MentorTradeShares")
   cohortAnnouncements         CohortAnnouncement[]         @relation("MentorAnnouncements")
   cohortFeedReadStates        CohortFeedReadState[]        @relation("UserFeedReadStates")
   mentorDirectMessages        MentorDirectMessage[]        @relation("MentorDirectMessages")
   studentDirectMessages       MentorDirectMessage[]        @relation("StudentDirectMessages")
   sentMentorDirectMessages    MentorDirectMessage[]        @relation("SentMentorDirectMessages")
-  aiRequests         AiRequest[]
-  userSettings       UserSettings?
-  strategies         Strategy[]
-  notificationRecipients NotificationRecipient[]
-  pushSubscriptions     PushSubscription[]
-  authoredContactNotes   ContactInternalNote[] @relation("ContactNoteAuthor")
+  aiRequests                  AiRequest[]
+  userSettings                UserSettings?
+  strategies                  Strategy[]
+  notificationRecipients      NotificationRecipient[]
+  pushSubscriptions           PushSubscription[]
+  blogReads                   BlogPostRead[]
+  authoredContactNotes        ContactInternalNote[]        @relation("ContactNoteAuthor")
 
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
@@ -312,12 +313,13 @@ model UserSettings {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String @unique
 
-  theme                 ThemePreference @default(system)
-  dashboardDensity      String          @default("comfortable")
-  tradeTableDensity     String          @default("comfortable")
-  chartAnimations       Boolean         @default(true)
-  preferredDateFormat   String?         @default("DD/MM/YYYY")
-  preferredNumberFormat String?         @default("1,234.56")
+  theme                    ThemePreference @default(system)
+  dashboardDensity         String          @default("comfortable")
+  tradeTableDensity        String          @default("comfortable")
+  chartAnimations          Boolean         @default(true)
+  preferredDateFormat      String?         @default("DD/MM/YYYY")
+  preferredNumberFormat    String?         @default("1,234.56")
+  breakEvenThresholdAmount Float?          @default(2.50)
 
   defaultTradingAccountId String?
   defaultRiskPercent      Float?
@@ -437,7 +439,7 @@ model TradingAccount {
   cloudLastSyncedAt     DateTime?
   cloudError            String?
 
-  isSharedWithMentor    Boolean   @default(true)
+  isSharedWithMentor Boolean @default(true)
 
   trades          Trade[]
   weeklyReviews   WeeklyReview[]
@@ -633,6 +635,19 @@ model Trade {
   initialTakeProfit Float?
   slTpHistory       Json?
 
+  grossProfit             Float?
+  commission              Float?
+  swap                    Float?
+  fees                    Float?
+  breakEvenActivated      Boolean   @default(false)
+  breakEvenPrice          Float?
+  breakEvenActivatedAt    DateTime?
+  breakEvenEvidenceSource String?
+  breakEvenEvidenceStatus String?
+  isManualResultOverride  Boolean   @default(false)
+  classificationSource    String?
+  resultCalculatedAt      DateTime?
+
   screenshots          TradeScreenshot[]
   ruleViolations       TradeRuleViolation[]
   emotionLogs          EmotionLog[]
@@ -662,6 +677,7 @@ model Trade {
   @@index([followedPlan])
   @@index([isAPlusSetup])
   @@index([newsRelated])
+  @@index([breakEvenActivated])
 }
 
 model TradeScreenshot {
@@ -800,7 +816,6 @@ model WeeklyReview {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
 }
 
 enum DailyReviewStatus {
@@ -810,39 +825,39 @@ enum DailyReviewStatus {
 }
 
 model DailyReview {
-  id                    String            @id @default(uuid())
-  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId                String
-  tradingAccount        TradingAccount?   @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
-  tradingAccountId      String?
-  scopeKey              String            @default("all")
-  reviewDate            DateTime          @db.Date
-  status                DailyReviewStatus @default(DRAFT)
-  whatWentWell          String?
-  whatWentWrong         String?
-  lessonsLearned        String?
-  tomorrowFocus         String?
-  followedPlan          Boolean?
-  emotionalState        String?
-  marketConditions      String?
-  generalNotes          String?
+  id               String            @id @default(uuid())
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  tradingAccount   TradingAccount?   @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
+  tradingAccountId String?
+  scopeKey         String            @default("all")
+  reviewDate       DateTime          @db.Date
+  status           DailyReviewStatus @default(DRAFT)
+  whatWentWell     String?
+  whatWentWrong    String?
+  lessonsLearned   String?
+  tomorrowFocus    String?
+  followedPlan     Boolean?
+  emotionalState   String?
+  marketConditions String?
+  generalNotes     String?
 
-  totalTrades           Int               @default(0)
-  winRate               Float             @default(0)
-  netProfitLoss         Float             @default(0)
-  profitFactor          Float?
-  totalPips             Float?
-  averageRiskReward     Float?
+  totalTrades       Int    @default(0)
+  winRate           Float  @default(0)
+  netProfitLoss     Float  @default(0)
+  profitFactor      Float?
+  totalPips         Float?
+  averageRiskReward Float?
 
-  aiSummary             String?
-  aiStructuredOutput    Json?
-  aiGeneratedAt         DateTime?
-  aiRequestId           String?
+  aiSummary          String?
+  aiStructuredOutput Json?
+  aiGeneratedAt      DateTime?
+  aiRequestId        String?
 
-  sharedDailyReviews    SharedDailyReview[]
+  sharedDailyReviews SharedDailyReview[]
 
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, scopeKey, reviewDate])
   @@index([userId])
@@ -864,8 +879,8 @@ model SharedTrade {
   viewCount         Int       @default(0)
   lastViewedAt      DateTime?
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tradeId])
   @@index([userId])
@@ -887,8 +902,8 @@ model SharedDailyReview {
   viewCount          Int         @default(0)
   lastViewedAt       DateTime?
 
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([dailyReviewId])
   @@index([userId])
@@ -998,10 +1013,10 @@ model MentorGroup {
   allowedPairs           String[] @default([])
   requireStopLoss        Boolean  @default(true)
 
-  students          MentorStudent[]
-  invitations       MentorInvitation[]
-  assignments       MentorAssignment[]
-  coachingSummaries MentorCoachingSummary[]
+  students           MentorStudent[]
+  invitations        MentorInvitation[]
+  assignments        MentorAssignment[]
+  coachingSummaries  MentorCoachingSummary[]
   cohortTradeTargets CohortTradeShareTarget[]
   announcements      CohortAnnouncement[]
   directMessages     MentorDirectMessage[]
@@ -1034,17 +1049,17 @@ model MentorStudent {
 }
 
 model MentorFeedback {
-  id                 String   @id @default(uuid())
-  mentor             User     @relation("FeedbacksGiven", fields: [mentorId], references: [id], onDelete: Cascade)
+  id                 String    @id @default(uuid())
+  mentor             User      @relation("FeedbacksGiven", fields: [mentorId], references: [id], onDelete: Cascade)
   mentorId           String
-  trade              Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  trade              Trade     @relation(fields: [tradeId], references: [id], onDelete: Cascade)
   tradeId            String
   feedback           String
   grade              String?
   recommendation     String?
-  isViolationWarning Boolean  @default(false)
+  isViolationWarning Boolean   @default(false)
   violationDetails   Json?
-  status             String   @default("ACTIVE")
+  status             String    @default("ACTIVE")
   studentReply       String?
   studentRepliedAt   DateTime?
   resolvedAt         DateTime?
@@ -1057,18 +1072,18 @@ model MentorFeedback {
 }
 
 model MentorInvitation {
-  id            String       @id @default(uuid())
-  mentorGroup   MentorGroup  @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
+  id            String      @id @default(uuid())
+  mentorGroup   MentorGroup @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
   mentorGroupId String
-  mentor        User         @relation("MentorInvitationsSent", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentor        User        @relation("MentorInvitationsSent", fields: [mentorId], references: [id], onDelete: Cascade)
   mentorId      String
   email         String
-  token         String       @unique
-  status        String       @default("PENDING") // PENDING, ACCEPTED, REVOKED, EXPIRED
+  token         String      @unique
+  status        String      @default("PENDING") // PENDING, ACCEPTED, REVOKED, EXPIRED
   expiresAt     DateTime
   acceptedAt    DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([email])
   @@index([token])
@@ -1077,20 +1092,20 @@ model MentorInvitation {
 }
 
 model MentorAssignment {
-  id              String       @id @default(uuid())
-  mentorGroup     MentorGroup  @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
+  id              String      @id @default(uuid())
+  mentorGroup     MentorGroup @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
   mentorGroupId   String
-  mentor          User         @relation("MentorAssignmentsCreated", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentor          User        @relation("MentorAssignmentsCreated", fields: [mentorId], references: [id], onDelete: Cascade)
   mentorId        String
   title           String
   instructions    String
   targetStudentId String?
   dueDate         DateTime?
-  status          String       @default("ACTIVE") // ACTIVE, CLOSED, ARCHIVED
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  status          String      @default("ACTIVE") // ACTIVE, CLOSED, ARCHIVED
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  submissions     MentorAssignmentSubmission[]
+  submissions MentorAssignmentSubmission[]
 
   @@index([mentorGroupId])
   @@index([mentorId])
@@ -1139,31 +1154,31 @@ model MentorCoachingSummary {
 }
 
 model CohortTradeShare {
-  id                  String                    @id @default(uuid())
-  mentor              User                      @relation("MentorTradeShares", fields: [mentorId], references: [id], onDelete: Cascade)
+  id                  String    @id @default(uuid())
+  mentor              User      @relation("MentorTradeShares", fields: [mentorId], references: [id], onDelete: Cascade)
   mentorId            String
-  sourceTrade         Trade?                    @relation(fields: [sourceTradeId], references: [id], onDelete: SetNull)
+  sourceTrade         Trade?    @relation(fields: [sourceTradeId], references: [id], onDelete: SetNull)
   sourceTradeId       String?
-  status              String                    @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
+  status              String    @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
   title               String?
-  tradeSnapshot       Json                      // Audience-safe immutable snapshot: pair, direction, entryPrice, stopLoss, takeProfit, exitPrice, pips, riskRewardRatio, profitLossPercent, result, session, entryTime, exitTime, timeframe
+  tradeSnapshot       Json // Audience-safe immutable snapshot: pair, direction, entryPrice, stopLoss, takeProfit, exitPrice, pips, riskRewardRatio, profitLossPercent, result, session, entryTime, exitTime, timeframe
   setupThesis         String?
   entryReasoning      String?
   riskRationale       String?
   managementReasoning String?
   outcomeLessons      String?
   generalNotes        String?
-  attachments         Json?                     // [{ id, imageUrl, title, caption }]
-  isCaseStudy         Boolean                   @default(false)
-  pinned              Boolean                   @default(false)
-  publishedAt         DateTime?                 @default(now())
+  attachments         Json? // [{ id, imageUrl, title, caption }]
+  isCaseStudy         Boolean   @default(false)
+  pinned              Boolean   @default(false)
+  publishedAt         DateTime? @default(now())
   archivedAt          DateTime?
 
-  targets             CohortTradeShareTarget[]
-  readReceipts        CohortFeedReadState[]
+  targets      CohortTradeShareTarget[]
+  readReceipts CohortFeedReadState[]
 
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime                  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([mentorId])
   @@index([sourceTradeId])
@@ -1185,24 +1200,24 @@ model CohortTradeShareTarget {
 }
 
 model CohortAnnouncement {
-  id            String                @id @default(uuid())
-  mentor        User                  @relation("MentorAnnouncements", fields: [mentorId], references: [id], onDelete: Cascade)
+  id            String      @id @default(uuid())
+  mentor        User        @relation("MentorAnnouncements", fields: [mentorId], references: [id], onDelete: Cascade)
   mentorId      String
-  mentorGroup   MentorGroup           @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
+  mentorGroup   MentorGroup @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
   mentorGroupId String
   title         String
   content       String
-  category      String                @default("GENERAL") // GENERAL, MARKET_UPDATE, WEBINAR, TRADE_ALERT
-  isPinned      Boolean               @default(false)
-  status        String                @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
-  attachments   Json?                 // [{ title, url, type }]
-  publishedAt   DateTime?             @default(now())
+  category      String      @default("GENERAL") // GENERAL, MARKET_UPDATE, WEBINAR, TRADE_ALERT
+  isPinned      Boolean     @default(false)
+  status        String      @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
+  attachments   Json? // [{ title, url, type }]
+  publishedAt   DateTime?   @default(now())
   archivedAt    DateTime?
 
-  readReceipts  CohortFeedReadState[]
+  readReceipts CohortFeedReadState[]
 
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([mentorGroupId, status, publishedAt])
   @@index([mentorGroupId, status, isPinned, publishedAt])
@@ -1213,7 +1228,7 @@ model CohortFeedReadState {
   id             String              @id @default(uuid())
   user           User                @relation("UserFeedReadStates", fields: [userId], references: [id], onDelete: Cascade)
   userId         String
-  itemType       String              // "TRADE_SHARE" | "ANNOUNCEMENT"
+  itemType       String // "TRADE_SHARE" | "ANNOUNCEMENT"
   tradeShareId   String?
   tradeShare     CohortTradeShare?   @relation(fields: [tradeShareId], references: [id], onDelete: Cascade)
   announcementId String?
@@ -1228,24 +1243,24 @@ model CohortFeedReadState {
 }
 
 model MentorDirectMessage {
-  id            String            @id @default(uuid())
-  mentorGroup   MentorGroup       @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
+  id            String      @id @default(uuid())
+  mentorGroup   MentorGroup @relation(fields: [mentorGroupId], references: [id], onDelete: Cascade)
   mentorGroupId String
-  mentor        User              @relation("MentorDirectMessages", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentor        User        @relation("MentorDirectMessages", fields: [mentorId], references: [id], onDelete: Cascade)
   mentorId      String
-  student       User              @relation("StudentDirectMessages", fields: [studentId], references: [id], onDelete: Cascade)
+  student       User        @relation("StudentDirectMessages", fields: [studentId], references: [id], onDelete: Cascade)
   studentId     String
-  sender        User              @relation("SentMentorDirectMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  sender        User        @relation("SentMentorDirectMessages", fields: [senderId], references: [id], onDelete: Cascade)
   senderId      String
 
   content       String
   tradeShareId  String?
   attachmentUrl String?
-  isRead        Boolean           @default(false)
+  isRead        Boolean   @default(false)
   readAt        DateTime?
 
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([mentorGroupId, mentorId, studentId, createdAt])
   @@index([mentorId, isRead])
@@ -1372,29 +1387,29 @@ model TradeChecklistResponse {
 }
 
 model Promotion {
-  id              String           @id @default(uuid())
+  id              String             @id @default(uuid())
   name            String
-  slug            String           @unique
+  slug            String             @unique
   description     String?
   planGranted     SubscriptionPlan
   applicablePlans SubscriptionPlan[] @default([])
   discountPercent Int?
-  discountType    String?          @default("FULL_GRANT")
-  benefits        String[]         @default([])
+  discountType    String?            @default("FULL_GRANT")
+  benefits        String[]           @default([])
 
   badgeId String?
   badge   Badge?  @relation(fields: [badgeId], references: [id], onDelete: SetNull)
 
-  category           PromotionCategory @default(MARKETING)
-  isActive           Boolean   @default(true)
-  startsAt           DateTime?
-  endsAt             DateTime?
-  maxRedemptions     Int?
-  currentRedemptions Int       @default(0)
-  requiresInvite     Boolean   @default(false)
-  autoActivate       Boolean   @default(false)
-  autoExpire         Boolean   @default(false)
-  revokeBadgeOnExpiry Boolean  @default(false)
+  category            PromotionCategory @default(MARKETING)
+  isActive            Boolean           @default(true)
+  startsAt            DateTime?
+  endsAt              DateTime?
+  maxRedemptions      Int?
+  currentRedemptions  Int               @default(0)
+  requiresInvite      Boolean           @default(false)
+  autoActivate        Boolean           @default(false)
+  autoExpire          Boolean           @default(false)
+  revokeBadgeOnExpiry Boolean           @default(false)
 
   subscriptions Subscription[]
   histories     SubscriptionHistory[]
@@ -1466,21 +1481,21 @@ model AuditLog {
 }
 
 model SupportTicket {
-  id          String   @id @default(uuid())
+  id           String  @id @default(uuid())
   ticketNumber String  @unique @default(uuid())
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId      String?
-  subject     String
-  description String
-  category    String   @default("GENERAL")
-  status      String   @default("OPEN")
-  priority    String   @default("NORMAL")
-  assignedTo  String?
-  rating      Int?
-  feedback    String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  user         User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId       String?
+  subject      String
+  description  String
+  category     String  @default("GENERAL")
+  status       String  @default("OPEN")
+  priority     String  @default("NORMAL")
+  assignedTo   String?
+  rating       Int?
+  feedback     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -1495,48 +1510,48 @@ model SystemConfig {
 }
 
 model BugReport {
-  id            String   @id @default(uuid())
-  reporter      User?    @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+  id            String  @id @default(uuid())
+  reporter      User?   @relation(fields: [reporterId], references: [id], onDelete: SetNull)
   reporterId    String?
   browser       String?
   device        String?
   appVersion    String?
-  severity      String   @default("NORMAL")
-  status        String   @default("NEW")
+  severity      String  @default("NORMAL")
+  status        String  @default("NEW")
   assignedTo    String?
   relatedModule String?
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([reporterId])
   @@index([status])
 }
 
 model FeatureRequest {
-  id               String   @id @default(uuid())
-  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id               String  @id @default(uuid())
+  user             User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
   userId           String?
-  category         String   @default("GENERAL")
+  category         String  @default("GENERAL")
   description      String
-  votes            Int      @default(0)
-  status           String   @default("UNDER_REVIEW")
+  votes            Int     @default(0)
+  status           String  @default("UNDER_REVIEW")
   estimatedRelease String?
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
 }
 
 model InternalNote {
-  id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  content   String
-  authorId  String
-  
+  id       String @id @default(uuid())
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  content  String
+  authorId String
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1544,21 +1559,21 @@ model InternalNote {
 }
 
 model Notification {
-  id           String   @id @default(uuid())
-  type         String   @default("SYSTEM")
-  category     String   @default("INFO")
-  title        String
-  message      String
-  actionUrl    String?
-  targetUsers  String[]
-  targetRoles  String[]
-  isGlobal     Boolean  @default(false)
-  senderId     String?
-  expiresAt    DateTime?
-  
-  recipients   NotificationRecipient[]
+  id          String    @id @default(uuid())
+  type        String    @default("SYSTEM")
+  category    String    @default("INFO")
+  title       String
+  message     String
+  actionUrl   String?
+  targetUsers String[]
+  targetRoles String[]
+  isGlobal    Boolean   @default(false)
+  senderId    String?
+  expiresAt   DateTime?
 
-  createdAt    DateTime @default(now())
+  recipients NotificationRecipient[]
+
+  createdAt DateTime @default(now())
 }
 
 model NotificationRecipient {
@@ -1569,62 +1584,62 @@ model NotificationRecipient {
   userId         String
   status         String       @default("UNREAD")
   readAt         DateTime?
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([notificationId, userId])
   @@index([userId, status])
 }
 
 model Announcement {
-  id                String    @id @default(uuid())
-  title             String
-  content           String
-  targetAudiences   String[]  @default(["ALL"])
-  displayLocations  String[]  @default(["DASHBOARD"])
-  priority          String    @default("NORMAL")
-  status            String    @default("DRAFT")
-  startsAt          DateTime?
-  endsAt            DateTime?
-  createdBy         String?
-  views             Int       @default(0)
-  clicks            Int       @default(0)
-  
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  title            String
+  content          String
+  targetAudiences  String[]  @default(["ALL"])
+  displayLocations String[]  @default(["DASHBOARD"])
+  priority         String    @default("NORMAL")
+  status           String    @default("DRAFT")
+  startsAt         DateTime?
+  endsAt           DateTime?
+  createdBy        String?
+  views            Int       @default(0)
+  clicks           Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([startsAt, endsAt])
 }
 
 model ContactMessage {
-  id              String    @id @default(uuid())
-  user            User?     @relation("UserContactMessages", fields: [userId], references: [id], onDelete: SetNull)
-  userId          String?
-  assignedTo      User?     @relation("AssignedContactMessages", fields: [assignedToId], references: [id], onDelete: SetNull)
-  assignedToId    String?
-  
-  name            String
-  email           String
-  subject         String
-  message         String
-  category        String    @default("GENERAL")
-  status          String    @default("OPEN")
-  priority        String    @default("NORMAL")
-  tags            String[]  @default([])
-  
-  unreadForUser   Int       @default(0)
-  unreadForAdmin  Int       @default(1)
-  lastMessageAt   DateTime  @default(now())
-  closedAt        DateTime?
-  ipHash          String?
+  id           String  @id @default(uuid())
+  user         User?   @relation("UserContactMessages", fields: [userId], references: [id], onDelete: SetNull)
+  userId       String?
+  assignedTo   User?   @relation("AssignedContactMessages", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId String?
 
-  threads         ContactThread[]
-  internalNotes   ContactInternalNote[]
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  name     String
+  email    String
+  subject  String
+  message  String
+  category String   @default("GENERAL")
+  status   String   @default("OPEN")
+  priority String   @default("NORMAL")
+  tags     String[] @default([])
+
+  unreadForUser  Int       @default(0)
+  unreadForAdmin Int       @default(1)
+  lastMessageAt  DateTime  @default(now())
+  closedAt       DateTime?
+  ipHash         String?
+
+  threads       ContactThread[]
+  internalNotes ContactInternalNote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([status])
@@ -1645,9 +1660,9 @@ model ContactThread {
   message          String
   attachments      String[]       @default([])
   isInternal       Boolean        @default(false)
-  
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @default(now()) @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([contactMessageId])
   @@index([senderId])
@@ -1661,8 +1676,8 @@ model ContactInternalNote {
   authorId         String
   content          String
 
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([contactMessageId])
   @@index([authorId])
@@ -1722,38 +1737,59 @@ model PushSubscription {
   @@index([userId])
 }
 
-
-
-
-
 model BlogPost {
-  id              String    @id @default(uuid())
-  slug            String    @unique
-  title           String
-  summary         String    @db.Text
-  excerpt         String    @db.Text
-  content         String    @db.Text
-  category        String
-  tags            String[]  @default([])
-  readTime        String?
-  publishedAt     DateTime?
-  status          String    @default("DRAFT")
-  featured        Boolean   @default(false)
-  authorName      String    @default("Jahsmine Aninta")
-  authorTitle     String    @default("Founder & Senior Architect, JAHZJOURNALS")
-  authorAvatar    String    @default("/logo-mark.png")
-  coverImage      String?
-  altText         String?
-  keywords        String?
-  tableOfContents Json?
-  contextualCta   Json?
-  views           Int       @default(0)
-  
-  createdBy       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String         @id @default(uuid())
+  slug             String         @unique
+  title            String
+  summary          String         @db.Text
+  excerpt          String         @db.Text
+  content          String         @db.Text
+  category         String
+  tags             String[]       @default([])
+  readTime         String?
+  publishedAt      DateTime?
+  status           String         @default("DRAFT")
+  featured         Boolean        @default(false)
+  authorName       String         @default("Jahsmine Aninta")
+  authorTitle      String         @default("Founder & Senior Architect, JAHZJOURNALS")
+  authorAvatar     String         @default("/logo-mark.png")
+  coverImage       String?
+  altText          String?
+  keywords         String?
+  tableOfContents  Json?
+  contextualCta    Json?
+  views            Int            @default(0)
+  notificationSent Boolean        @default(false)
+  reads            BlogPostRead[]
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status, publishedAt])
   @@index([category])
   @@index([featured])
+}
+
+model BlogPostRead {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blogPostId String
+  blogPost   BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+  readAt     DateTime @default(now())
+
+  @@unique([userId, blogPostId])
+  @@index([userId])
+  @@index([blogPostId])
+}
+
+model BlogPostReminderLog {
+  id         String   @id @default(uuid())
+  userId     String
+  blogPostId String
+  sentAt     DateTime @default(now())
+
+  @@index([userId, blogPostId])
+  @@index([sentAt])
 }

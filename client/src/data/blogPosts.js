@@ -1,5 +1,132 @@
 export const BLOG_POSTS = [
   {
+    id: '14',
+    slug: 'log-trades-with-jahz-ai',
+    title: 'Log Trades with JAHZ AI: The Complete Guide to Instant Screenshot & Chat Trade Logging',
+    summary: 'Discover how to log trades in seconds with JAHZ AI. Describe your setup in natural language or upload MT4/MT5 screenshots. Learn how vision OCR, deterministic break-even detection, and automated emotional journaling eliminate manual friction.',
+    excerpt: 'Manual trade logging is the number one habit traders abandon due to fatigue. JAHZ AI combines multimodal vision OCR and conversational AI to log MT4/MT5 trades, detect break-even protection, and capture psychology in seconds.',
+    category: 'AI & Automation',
+    tags: ['JAHZ AI', 'Trade Logging', 'Screenshot OCR', 'MetaTrader 5', 'Break-Even', 'Trading Journal'],
+    readTime: '8 min read',
+    publishedAt: '2026-10-23',
+    updatedAt: '2026-10-23',
+    status: 'PUBLISHED',
+    featured: true,
+    author: {
+      name: 'Jahsmine Aninta',
+      title: 'Founder & Senior Architect, JAHZJOURNALS',
+      avatar: '/logo-mark.png'
+    },
+    coverImage: '/heroes/log-trades-with-jahz-ai.jpg',
+    altText: 'Log Trades with JAHZ AI - Instant screenshot extraction, MT4/MT5 OCR, and intelligent trade journaling interface',
+    keywords: 'Log Trades with JAHZ AI, AI Trading Journal, MT5 Screenshot Trade Journal, Automatic Trade Logging, Break Even Trailing Stop Journal, Forex AI Journal',
+    contextualCta: {
+      title: 'Ready to Log Trades with JAHZ AI?',
+      description: 'Stop typing numbers by hand. Describe your trade or upload MT4/MT5 receipts to auto-journal in seconds.',
+      buttonText: 'Log a Trade with JAHZ AI',
+      to: '/trades'
+    },
+    tableOfContents: [
+      { id: 'friction-of-logging', title: '1. The Friction of Traditional Trade Logging (Why Traders Stop)' },
+      { id: 'introducing-jahz-ai', title: '2. Introducing JAHZ AI Trade Capture: Multimodal & Conversational' },
+      { id: 'vision-ocr-deep-dive', title: '3. Multimodal Screenshot Extraction: MT4, MT5, & Broker Tickets' },
+      { id: 'break-even-engine', title: '4. The Break-Even (BE) Engine: Trailing Stops & Realized Protection' },
+      { id: 'conversational-journaling', title: '5. Conversational Follow-Ups, Psychology, & Trade Reflections' },
+      { id: 'step-by-step-guide', title: '6. Step-by-Step Tutorial: How to Log Your First Trade with JAHZ AI' }
+    ],
+    content: `
+      <p className="lead">Every trader knows the golden rule of profitability: <em>if you don't journal your trades, you cannot scale your edge</em>. Yet over 85% of retail traders stop journaling within their first three weeks. The culprit isn't a lack of discipline—it is the exhausting friction of manually copying dozens of numbers from MetaTrader into a blank form after a grueling trading session. <strong>JAHZ AI changes that forever.</strong></p>
+
+      <h2 id="friction-of-logging">1. The Friction of Traditional Trade Logging (Why Traders Stop)</h2>
+      <p>Consider what manual logging traditionally demands after you close a position:</p>
+      <ul>
+        <li>Switching between your broker terminal (MT4, MT5, cTrader, or mobile app) and your journal.</li>
+        <li>Manually typing in 12 to 18 individual data fields: currency pair, long or short direction, volume in lots, exact entry price with 5 decimals, exact exit price, stop loss, take profit, open timestamp, close timestamp, commission, swap, and net profit.</li>
+        <li>Calculating realized pips and risk-to-reward ratios manually or hoping your spreadsheet formula didn't break.</li>
+        <li>Repeating this tedious procedure for 4, 8, or 15 trades taken throughout the day.</li>
+      </ul>
+      <p>By the time your trading session finishes, cognitive fatigue sets in. You tell yourself, <em>"I'll just log these on the weekend."</em> But by Sunday, execution memories have faded, emotional triggers are forgotten, and you are left staring at a daunting backlog of unjournaled trades. The discipline crumbles.</p>
+
+      <h2 id="introducing-jahz-ai">2. Introducing JAHZ AI Trade Capture: Multimodal & Conversational</h2>
+      <p>JAHZ AI was engineered to eliminate logging friction entirely. Instead of forcing you to fill out a rigid 20-field form, JAHZ AI provides a unified, conversational assistant equipped with institutional Vision OCR.</p>
+      <p>The workflow embodies the four pillars of professional trading excellence:</p>
+      <div className="my-6 p-5 rounded-2xl bg-surface-muted/60 border border-border">
+        <h4 className="text-sm font-bold text-foreground mb-3">The JAHZJOURNALS Four-Stage Loop</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-center text-xs">
+          <div className="p-3 rounded-xl bg-surface border border-border">
+            <span className="block font-black text-emerald-400 mb-1">1. PLAN</span>
+            <span className="text-muted">Define your setup, invalidation zone, and planned risk.</span>
+          </div>
+          <div className="p-3 rounded-xl bg-surface border border-border">
+            <span className="block font-black text-indigo-400 mb-1">2. EXECUTE</span>
+            <span className="text-muted">Execute strictly on your broker terminal according to rules.</span>
+          </div>
+          <div className="p-3 rounded-xl bg-surface border border-border">
+            <span className="block font-black text-purple-400 mb-1">3. JOURNAL</span>
+            <span className="text-muted">Drop a screenshot or describe your trade to JAHZ AI.</span>
+          </div>
+          <div className="p-3 rounded-xl bg-surface border border-border">
+            <span className="block font-black text-amber-400 mb-1">4. IMPROVE</span>
+            <span className="text-muted">Review equity curves, win rates, and emotional triggers.</span>
+          </div>
+        </div>
+      </div>
+      <p>Whether you prefer typing a fast one-sentence message like <em>"Bought 0.22 BTCUSD at 82351.75 and closed at 82361.97"</em> or taking a 2-second screenshot of your MT5 trade ticket, JAHZ AI parses your execution instantly.</p>
+
+      <h2 id="vision-ocr-deep-dive">3. Multimodal Screenshot Extraction: MT4, MT5, & Broker Tickets</h2>
+      <p>The core breakthrough in JAHZ AI is its multimodal vision model. You don't have to retype numbers or export CSV files. Simply drag and drop, paste from your clipboard (<kbd>Ctrl+V</kbd>), or tap the attachment icon on mobile.</p>
+      <p>Take the real-world trade featured in our interface preview:</p>
+      <ul>
+        <li><strong>Instrument:</strong> BTCUSD</li>
+        <li><strong>Direction:</strong> Buy (0.22 lots)</li>
+        <li><strong>Fill Entry Price:</strong> 82,351.75</li>
+        <li><strong>Fill Exit Price:</strong> 82,361.97</li>
+        <li><strong>Stop Loss in Ticket:</strong> 82,370.08</li>
+        <li><strong>Take Profit in Ticket:</strong> 83,174.00</li>
+        <li><strong>Ticket Number:</strong> #43789391</li>
+        <li><strong>Execution Timestamps:</strong> Open 2026.10.19 11:40:16 &rarr; Close 2026.10.19 14:35:16</li>
+        <li><strong>Financials:</strong> Gross Profit +$2.25, Commission -$0.66, Swap $0.00, Net Result +$1.59</li>
+      </ul>
+      <p>In less than two seconds, JAHZ AI reads the receipt, extracts every single numeric field into a clean interactive review card, matches your active trading account currency, and verifies all price precision rules. You can review the details, make any quick adjustments, and save the trade straight to your permanent journal.</p>
+      <p><strong>Batch Processing:</strong> Finished a busy day with 5 or 10 scalps? Drop all screenshots into the chat simultaneously. JAHZ AI processes them concurrently, presenting a clean batch review tray where you can audit and save all trades with a single click.</p>
+
+      <h2 id="break-even-engine">4. The Break-Even (BE) Engine: Trailing Stops & Realized Protection</h2>
+      <p>One of the biggest flaws in existing trading journals is their crude binary categorization of trades into simple <em>WIN</em> or <em>LOSS</em>. This creates havoc when a trader manages risk properly by trailing a stop loss to protect capital.</p>
+      <p>Look again at the BTCUSD example above:</p>
+      <blockquote>
+        "The trade was a BUY at 82,351.75. The final stop loss was 82,370.08—above the entry price. Price retraced and triggered the stop loss at 82,361.97, yielding a tiny net profit of +$1.59 after commission."
+      </blockquote>
+      <p>In conventional software, this trade is either misclassified as a full winning strategy setup (distorting average win metrics) or treated as a failed trade. JAHZ AI solves this through its proprietary <strong>Canonical Break-Even Recognition Engine</strong>:</p>
+      <ol>
+        <li><strong>Stop-Loss Level Analysis:</strong> JAHZ AI inspects whether the recorded stop loss was trailed past entry into profit or right at entry. Because the stop was above entry on a BUY, the trade is verified as <code>BE Protected: Yes (Trailing Stop)</code>.</li>
+        <li><strong>Financial Outcome Separation:</strong> The trade's financial result is accurately stored as a <code>Win</code> with a dedicated badge showing <code>Small win · BE protected</code>.</li>
+        <li><strong>Zero Double-Deduction of Commissions:</strong> JAHZ AI checks whether the broker's reported profit is already net or gross, ensuring your account balance and commission analytics stay 100% mathematically truthful.</li>
+      </ol>
+      <p>Your analytics now clearly reflect that your risk management saved your capital without polluting your clean target-hit win-rate statistics.</p>
+
+      <h2 id="conversational-journaling">5. Conversational Follow-Ups, Psychology, & Trade Reflections</h2>
+      <p>A trading journal that only tracks numbers is just a spreadsheet. What builds legendary traders is tracking <strong>psychology, rules, and emotions</strong>.</p>
+      <p>With JAHZ AI, you can converse with your journal naturally:</p>
+      <ul>
+        <li><em>"I entered this because the 15-minute Fair Value Gap was respected, but I felt anxious and moved my stop to break-even too early."</em></li>
+        <li><em>"Tag this as CONFIDENT and assign it to my London Breakout strategy."</em></li>
+        <li><em>"I hesitated on the initial entry because of FOMO on the previous candle."</em></li>
+      </ul>
+      <p>JAHZ AI automatically maps your words to your journal's psychological state tags (<code>CONFIDENT</code>, <code>DISCIPLINED</code>, <code>CALM</code>, <code>FOMO</code>, <code>ANXIOUS</code>, <code>REVENGE</code>, <code>HESITANT</code>) and populates your journal reflection notes. You capture your raw emotional state while the memory is fresh—giving your weekly and monthly AI reviews rich qualitative data to coach you on discipline.</p>
+
+      <h2 id="step-by-step-guide">6. Step-by-Step Tutorial: How to Log Your First Trade with JAHZ AI</h2>
+      <p>Ready to try it? You can log your next trade in under 30 seconds:</p>
+      <ol>
+        <li><strong>Open the JAHZ AI Modal:</strong> Click the new <strong>Log with JAHZ AI</strong> button located directly below <em>Trades</em> in the left sidebar, or click the glowing purple AI button on your Trades page.</li>
+        <li><strong>Provide Your Trade Details:</strong> Either type a short natural language summary into the composer or drag and drop your MT4/MT5 screenshot directly into the window.</li>
+        <li><strong>Review the Extracted Card:</strong> JAHZ AI will display the extracted trade card with all prices, timestamps, lot sizes, net profit, and break-even detection badges.</li>
+        <li><strong>Add Emotional Tags & Strategy:</strong> Tap your psychological state or select your trading setup with one click.</li>
+        <li><strong>Click Save Trade:</strong> Your trade is immediately saved to your database, updating your equity curves, risk analytics, and dashboard in real time.</li>
+      </ol>
+      <p>Trading is challenging enough without the burden of clerical data entry. Let JAHZ AI handle the logging so you can focus on what truly matters: <strong>executing your edge with flawless discipline</strong>.</p>
+    `
+  },
+  {
     id: '1',
     slug: 'how-to-keep-a-forex-trading-journal',
     title: 'How to Keep a Forex Trading Journal: A Step-by-Step Guide for Consistent Profitability',

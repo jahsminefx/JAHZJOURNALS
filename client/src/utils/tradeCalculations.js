@@ -153,13 +153,14 @@ export const resolveTradePips = (trade) => {
   });
 };
 
-export const calculateTradeResult = (status, profitLossAmount) => {
-  if (status === 'PLANNED' || status === 'ACTIVE') return 'OPEN';
+export const calculateTradeResult = (status, profitLossAmount, tolerance = 2.50) => {
+  if (status === 'PLANNED' || status === 'ACTIVE' || status === 'CANCELLED') return 'OPEN';
   if (profitLossAmount === undefined || profitLossAmount === null || profitLossAmount === '') return 'OPEN';
 
   const pl = Number.parseFloat(profitLossAmount);
   if (Number.isNaN(pl)) return 'OPEN';
-  if (pl > 0) return 'WIN';
-  if (pl < 0) return 'LOSS';
+  const tol = Number(tolerance) >= 0 ? Number(tolerance) : 2.50;
+  if (pl > tol) return 'WIN';
+  if (pl < -tol) return 'LOSS';
   return 'BREAKEVEN';
 };

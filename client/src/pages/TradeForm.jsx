@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Sparkles } from 'lucide-react';
+import AiTradeCaptureModal from '../components/trades/AiTradeCaptureModal';
 import api from '../utils/api';
 import { loadSettings } from '../utils/settings';
 import AiDraftHelper from '../components/trades/review/AiDraftHelper';
@@ -22,6 +23,12 @@ const defaultValues = {
   followedPlan: '',
   isAPlusSetup: '',
   newsRelated: '',
+  breakEvenActivated: false,
+  breakEvenPrice: '',
+  grossProfit: '',
+  commission: '',
+  swap: '',
+  fees: '',
 };
 
 const toDateTimeLocal = (value) => {
@@ -81,6 +88,7 @@ const TradeForm = () => {
   const [ruleViolations, setRuleViolations] = useState([]);
   const [emotionLogs, setEmotionLogs] = useState([]);
   const [deletingScreenshotId, setDeletingScreenshotId] = useState(null);
+  const [showAiCapture, setShowAiCapture] = useState(false);
   const navigate = useNavigate();
   const appSettings = useMemo(() => loadSettings(), []);
   const { register, handleSubmit, reset, getValues, setValue, control, watch } = useForm({ defaultValues });
@@ -137,6 +145,12 @@ const TradeForm = () => {
             followedPlan: booleanOrEmpty(trade.followedPlan),
             isAPlusSetup: booleanOrEmpty(trade.isAPlusSetup),
             newsRelated: booleanOrEmpty(trade.newsRelated),
+            breakEvenActivated: Boolean(trade.breakEvenActivated),
+            breakEvenPrice: trade.breakEvenPrice ?? '',
+            grossProfit: trade.grossProfit ?? '',
+            commission: trade.commission ?? '',
+            swap: trade.swap ?? '',
+            fees: trade.fees ?? '',
           });
           setExistingScreenshots(trade.screenshots || []);
           setRuleViolations((trade.ruleViolations || []).map((violation) => ({
@@ -314,6 +328,28 @@ const TradeForm = () => {
         )}
       </div>
 
+      {!isEditMode && (
+        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground">Want to log faster with natural language or screenshots?</p>
+              <p className="text-xs text-muted">JAHZ AI can extract your trades from broker screenshots, chats, or open positions automatically.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAiCapture(true)}
+            className="whitespace-nowrap px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-xs rounded-lg transition-all shadow-md shadow-indigo-500/20 flex items-center gap-1.5 shrink-0"
+          >
+            <Sparkles size={14} className="text-amber-300" />
+            Log Trade with JAHZ AI
+          </button>
+        </div>
+      )}
+
       <div className="bg-surface-muted p-6 sm:p-8 rounded-xl shadow-lg border border-border">
         {accounts.length === 0 ? (
           <div className="text-center py-12">
@@ -464,6 +500,70 @@ const TradeForm = () => {
                   Exit Time
                   <input type="datetime-local" {...register('exitTime')} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500" />
                 </label>
+
+                {/* Break-Even Management Card */}
+                <div className="md:col-span-3 rounded-xl border border-border bg-surface/50 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Break-Even Protection</h4>
+                      <p className="text-xs text-muted">Did you move your stop loss to protect this trade at or around entry?</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        {...register('breakEvenActivated')} 
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                      <span className="ml-2 text-xs font-semibold text-foreground">Protected at BE</span>
+                    </label>
+                  </div>
+
+                  {watch('breakEvenActivated') && (
+                    <div className="pt-2 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs text-muted block mb-1">Break-Even Stop Price (Optional)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          {...register('breakEvenPrice')}
+                          placeholder={watch('entryPrice') || 'e.g. Entry price'}
+                          className="w-full bg-surface border border-border rounded-md py-2 px-3 text-sm focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div className="flex items-center text-xs text-amber-400 bg-amber-500/10 rounded-lg p-2.5 border border-amber-500/20">
+                        <span>BE-managed trades are tracked separately so small gains/losses won't distort your true win rate.</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Optional Broker Cost Breakdown */}
+                <div className="md:col-span-3">
+                  <details className="text-xs text-muted group">
+                    <summary className="cursor-pointer font-semibold text-foreground hover:text-emerald-400 transition-colors">
+                      Broker Costs & Fee Breakdown (Optional)
+                    </summary>
+                    <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-4 gap-3 bg-surface/30 p-3 rounded-lg border border-border">
+                      <div>
+                        <label className="block text-[11px] text-muted mb-1">Gross Profit</label>
+                        <input type="number" step="0.01" {...register('grossProfit')} placeholder="0.00" className="w-full bg-surface border border-border rounded-md py-1.5 px-2.5 text-xs" />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-muted mb-1">Commission</label>
+                        <input type="number" step="0.01" {...register('commission')} placeholder="-0.00" className="w-full bg-surface border border-border rounded-md py-1.5 px-2.5 text-xs" />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-muted mb-1">Swap</label>
+                        <input type="number" step="0.01" {...register('swap')} placeholder="0.00" className="w-full bg-surface border border-border rounded-md py-1.5 px-2.5 text-xs" />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-muted mb-1">Fees</label>
+                        <input type="number" step="0.01" {...register('fees')} placeholder="0.00" className="w-full bg-surface border border-border rounded-md py-1.5 px-2.5 text-xs" />
+                      </div>
+                    </div>
+                  </details>
+                </div>
               </div>
             </section>
 
@@ -633,6 +733,16 @@ const TradeForm = () => {
           </form>
         )}
       </div>
+
+      <AiTradeCaptureModal
+        isOpen={showAiCapture}
+        onClose={() => setShowAiCapture(false)}
+        onTradeSaved={(savedTrade) => {
+          if (savedTrade?.id) {
+            navigate(`/trades/${savedTrade.id}`);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -11,6 +11,35 @@ const cleanJsonContent = (raw) => {
       cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
     }
   }
+
+  // If not directly parseable, try to find the outermost JSON structure
+  try {
+    JSON.parse(cleaned);
+    return cleaned;
+  } catch (e) {
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      const candidate = cleaned.slice(firstBrace, lastBrace + 1).trim();
+      try {
+        JSON.parse(candidate);
+        return candidate;
+      } catch (innerErr) {
+        // Fall back
+      }
+    }
+    const firstBracket = cleaned.indexOf('[');
+    const lastBracket = cleaned.lastIndexOf(']');
+    if (firstBracket !== -1 && lastBracket > firstBracket) {
+      const candidate = cleaned.slice(firstBracket, lastBracket + 1).trim();
+      try {
+        JSON.parse(candidate);
+        return candidate;
+      } catch (innerErr) {
+        // Fall back
+      }
+    }
+  }
   return cleaned;
 };
 
@@ -50,10 +79,18 @@ const validateStructuredOutput = async (provider, systemPrompt, userPrompt, sche
       attempt++;
 
       if (attempt <= repairAttempts) {
-        // Formulate a repair prompt
-        userPrompt = typeof userPrompt === 'string'
-          ? userPrompt + `\n\nThere was an error validating your previous JSON response against the required schema. Error details: ${error.message}. Please correct your response and provide valid JSON ONLY.`
-          : userPrompt;
+        // Formulate a repair prompt (support both string prompts and multimodal array prompts)
+        const repairMsg = `\n\nThere was an error validating your previous JSON response against the required schema. Error details: ${error.message}. Please correct your response and provide valid JSON ONLY matching the requested structure.`;
+        if (typeof userPrompt === 'string') {
+          userPrompt += repairMsg;
+        } else if (Array.isArray(userPrompt)) {
+          const textItem = userPrompt.find((item) => item && item.type === 'text');
+          if (textItem) {
+            textItem.text += repairMsg;
+          } else {
+            userPrompt.push({ type: 'text', text: repairMsg });
+          }
+        }
       }
     }
   }

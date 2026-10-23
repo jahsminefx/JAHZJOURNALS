@@ -1,5 +1,6 @@
 const hasValue = (value) => value !== undefined && value !== null && value !== '' && !Number.isNaN(Number(value));
 const closedTradeResults = new Set(['WIN', 'LOSS', 'BREAKEVEN']);
+const { classifyTrade } = require('../services/tradeClassificationService');
 
 const calculateRiskReward = (direction, entryPrice, stopLoss, takeProfit) => {
   if (!hasValue(entryPrice)) return { riskDistance: null, rewardDistance: null, riskRewardRatio: null };
@@ -31,28 +32,59 @@ const calculateRiskReward = (direction, entryPrice, stopLoss, takeProfit) => {
   };
 };
 
-const calculateTradeResult = (status, profitLossAmount, fallbackResult = null) => {
+const calculateTradeResult = (status, profitLossAmount, fallbackResult = null, options = {}) => {
   if (status === 'PLANNED' || status === 'ACTIVE' || status === 'CANCELLED') return 'OPEN';
   if (status !== 'CLOSED') {
     return closedTradeResults.has(fallbackResult) ? fallbackResult : 'OPEN';
   }
 
-  if (hasValue(profitLossAmount)) {
-    const pl = Number.parseFloat(profitLossAmount);
-    if (pl > 0) return 'WIN';
-    if (pl < 0) return 'LOSS';
-    return 'BREAKEVEN';
+  // Preserve explicit user outcome if provided as fallbackResult and no profitLossAmount
+  if (!hasValue(profitLossAmount) && closedTradeResults.has(fallbackResult)) {
+    return fallbackResult;
   }
 
-  if (closedTradeResults.has(fallbackResult)) return fallbackResult;
-  return 'OPEN';
+  const classification = classifyTrade({
+    status: 'CLOSED',
+    profitLossAmount,
+    manualResultOverride: options.isManualResultOverride ? fallbackResult : null,
+    ...options,
+  });
+
+  return classification.result;
 };
 
-const normalizeTradeResult = (trade = {}) => calculateTradeResult(
-  trade.status,
-  trade.profitLossAmount,
-  trade.result,
-);
+const normalizeTradeResult = (trade = {}) => {
+  if (!trade) return 'OPEN';
+  if (trade.status === 'PLANNED' || trade.status === 'ACTIVE' || trade.status === 'CANCELLED') return 'OPEN';
+
+  // If trade already has an explicit stored result like 'BREAKEVEN', honor it
+  if (trade.result === 'BREAKEVEN') return 'BREAKEVEN';
+
+  return calculateTradeResult(
+    trade.status,
+    trade.profitLossAmount,
+    trade.result,
+    {
+      direction: trade.direction,
+      pair: trade.pair,
+      entryPrice: trade.entryPrice,
+      exitPrice: trade.exitPrice,
+      stopLoss: trade.stopLoss,
+      initialStopLoss: trade.initialStopLoss,
+      lotSize: trade.lotSize,
+      grossProfit: trade.grossProfit,
+      commission: trade.commission,
+      swap: trade.swap,
+      fees: trade.fees,
+      breakEvenActivated: trade.breakEvenActivated,
+      breakEvenPrice: trade.breakEvenPrice,
+      breakEvenEvidenceSource: trade.breakEvenEvidenceSource,
+      breakEvenEvidenceStatus: trade.breakEvenEvidenceStatus,
+      slTpHistory: trade.slTpHistory,
+      isManualResultOverride: trade.isManualResultOverride,
+    }
+  );
+};
 
 const calculateTradeDurationMinutes = (entryTime, exitTime) => {
   if (!entryTime || !exitTime) return null;
@@ -79,11 +111,32 @@ const normalizeTradeState = (trade) => {
     normalized.profitLossAmount = null;
     normalized.result = 'OPEN';
   } else if (normalized.status === 'CLOSED') {
-    if (hasValue(normalized.profitLossAmount)) {
-      normalized.result = calculateTradeResult('CLOSED', normalized.profitLossAmount, normalized.result);
-    } else {
-      normalized.result = closedTradeResults.has(normalized.result) ? normalized.result : 'OPEN';
-    }
+    const classification = classifyTrade({
+      status: 'CLOSED',
+      profitLossAmount: normalized.profitLossAmount,
+      grossProfit: normalized.grossProfit,
+      commission: normalized.commission,
+      swap: normalized.swap,
+      fees: normalized.fees,
+      direction: normalized.direction,
+      pair: normalized.pair,
+      entryPrice: normalized.entryPrice,
+      exitPrice: normalized.exitPrice,
+      stopLoss: normalized.stopLoss,
+      initialStopLoss: normalized.initialStopLoss,
+      lotSize: normalized.lotSize,
+      breakEvenActivated: normalized.breakEvenActivated,
+      breakEvenPrice: normalized.breakEvenPrice,
+      breakEvenEvidenceSource: normalized.breakEvenEvidenceSource,
+      breakEvenEvidenceStatus: normalized.breakEvenEvidenceStatus,
+      slTpHistory: normalized.slTpHistory,
+      manualResultOverride: normalized.isManualResultOverride ? normalized.result : null,
+    });
+    normalized.result = classification.result;
+    normalized.breakEvenActivated = classification.breakEvenActivated;
+    normalized.breakEvenPrice = classification.breakEvenPrice;
+    normalized.breakEvenEvidenceSource = classification.breakEvenEvidenceSource;
+    normalized.breakEvenEvidenceStatus = classification.breakEvenEvidenceStatus;
   } else if (normalized.status === 'CANCELLED') {
     normalized.result = 'OPEN';
   }

@@ -46,6 +46,7 @@ const {
   submitBlogFeedback,
   getPublicBlogPosts,
   getPublicBlogPostBySlug,
+  markBlogPostAsRead,
 } = require('../controllers/blogController');
 
 const contactLimiter = rateLimit({
@@ -115,7 +116,8 @@ router.get('/ai/trades/:tradeId/review', protect, getAiTradeReview);
 
 // Public Blog Content & Reader Engagement Endpoints
 router.get('/blog/posts', getPublicBlogPosts);
-router.get('/blog/posts/:slug', getPublicBlogPostBySlug);
+router.get('/blog/posts/:slug', optionalProtect, getPublicBlogPostBySlug);
+router.post('/blog/posts/:slug/read', optionalProtect, markBlogPostAsRead);
 router.post('/newsletter/subscribe', newsletterLimiter, subscribeNewsletter);
 router.post('/blog/feedback', blogFeedbackLimiter, submitBlogFeedback);
 

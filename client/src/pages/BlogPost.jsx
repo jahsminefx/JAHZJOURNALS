@@ -48,6 +48,9 @@ const BlogPost = () => {
               },
             })));
           }
+
+          // Mark article as read to dismiss unread push/in-app reminders
+          api.post(`/blog/posts/${slug}/read`).catch(() => {});
         }
       })
       .catch(() => {

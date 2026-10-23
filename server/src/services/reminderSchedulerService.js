@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const { sendPushToAll } = require('./pushNotificationService');
+const { dispatchUnreadBlogPostReminders } = require('./blogNotificationService');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -82,8 +83,26 @@ function initDailyReminderScheduler() {
     });
 }
 
+/**
+ * Initializes the automated unread blog post reminder scheduler.
+ * Runs daily at 14:00 UTC (2 PM UTC) to remind traders who haven't read published blog posts.
+ */
+function initBlogReminderScheduler() {
+    console.log('Initializing Unread Blog Post Reminder Scheduler (Cron: 0 14 * * * - Daily at 02:00 PM UTC)...');
+
+    cron.schedule('0 14 * * *', async () => {
+        try {
+            console.log('[Blog Reminder Scheduler] Running automated daily unread blog post check...');
+            await dispatchUnreadBlogPostReminders();
+        } catch (e) {
+            console.error('[Blog Reminder Scheduler Error]:', e);
+        }
+    });
+}
+
 module.exports = {
     triggerDailyRemindersNow,
-    initDailyReminderScheduler
+    initDailyReminderScheduler,
+    initBlogReminderScheduler,
+    dispatchUnreadBlogPostReminders
 };
-

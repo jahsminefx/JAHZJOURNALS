@@ -42,6 +42,8 @@ const calculateMetrics = (trades) => {
   });
 
   result.winRate = result.total > 0 ? result.wins / result.total : 0;
+  result.lossRate = result.total > 0 ? result.losses / result.total : 0;
+  result.breakEvenRate = result.total > 0 ? result.breakevens / result.total : 0;
   result.profitFactor = result.grossLoss > 0 ? result.grossProfit / result.grossLoss : (result.grossProfit > 0 ? 999 : 0);
   result.expectancyR = result.total > 0 ? result.totalR / result.total : 0;
   result.avgWin = result.wins > 0 ? result.grossProfit / result.wins : 0;

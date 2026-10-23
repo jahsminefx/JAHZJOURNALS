@@ -37,5 +37,6 @@ router.get('/journal-draft/:requestId', protect, getJournalDraft);
 router.post('/chat', protect, aiFeaturesLimiter, sendMessage);
 router.get('/usage', protect, getAiUsage);
 router.delete('/usage', protect, clearAiHistory);
+router.use('/trade-capture', require('./aiTradeCaptureRoutes'));
 
 module.exports = router;

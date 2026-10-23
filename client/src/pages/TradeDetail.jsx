@@ -11,6 +11,8 @@ import DeleteTradeDialog from '../components/trades/DeleteTradeDialog';
 import ImageModal from '../components/common/ImageModal';
 import ShareTradeModal from '../components/share/ShareTradeModal';
 import ShareTradeToCohortModal from '../components/share/ShareTradeToCohortModal';
+import TradeOutcomeBadge from '../components/trades/TradeOutcomeBadge';
+import { ShieldCheck } from 'lucide-react';
 
 const TradeDetail = () => {
   const { id } = useParams();
@@ -550,7 +552,20 @@ const TradeDetail = () => {
             <h3 className="text-lg font-bold text-green-400 border-b border-border pb-2 mb-4">Outcome & Execution</h3>
             <div className="space-y-3">
               <div className="flex justify-between"><span className="text-muted">Status</span><span className="font-medium text-foreground">{trade.status}</span></div>
-              <div className="flex justify-between"><span className="text-muted">Result</span><span className={`font-bold ${trade.result === 'WIN' ? 'text-green-400' : trade.result === 'LOSS' ? 'text-red-400' : 'text-muted'}`}>{trade.result}</span></div>
+              <div className="flex justify-between items-center"><span className="text-muted">Result</span><TradeOutcomeBadge trade={trade} /></div>
+              {trade.breakEvenActivated && (
+                <div className="flex justify-between items-center text-xs bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 text-amber-400">
+                  <span className="flex items-center gap-1 font-semibold"><ShieldCheck size={14} /> Protected at Break-Even</span>
+                  <span className="font-mono text-muted-foreground">{trade.breakEvenPrice ? `@ ${trade.breakEvenPrice}` : (trade.breakEvenEvidenceSource || 'User Confirmed')}</span>
+                </div>
+              )}
+              {(trade.grossProfit !== null && trade.grossProfit !== undefined || trade.commission !== null && trade.commission !== undefined) && (
+                <div className="pt-2 border-t border-border/60 text-xs space-y-1">
+                  {trade.grossProfit !== null && trade.grossProfit !== undefined && <div className="flex justify-between"><span className="text-muted">Gross P/L:</span><span className="font-mono text-foreground">${trade.grossProfit}</span></div>}
+                  {trade.commission !== null && trade.commission !== undefined && <div className="flex justify-between"><span className="text-muted">Commission:</span><span className="font-mono text-rose-400">${trade.commission}</span></div>}
+                  {trade.swap !== null && trade.swap !== undefined && <div className="flex justify-between"><span className="text-muted">Swap:</span><span className="font-mono text-muted-foreground">${trade.swap}</span></div>}
+                </div>
+              )}
               <div className="flex justify-between"><span className="text-muted">P/L</span><span className={`font-bold ${trade.profitLossAmount > 0 ? 'text-green-400' : trade.profitLossAmount < 0 ? 'text-red-400' : 'text-muted'}`}>{trade.profitLossAmount > 0 ? '+$' : '$'}{trade.profitLossAmount || 0}</span></div>
               <div className="flex justify-between"><span className="text-muted">Risk/Reward</span><span className="font-medium text-foreground">{trade.riskRewardRatio || 'N/A'}</span></div>
               <div className="flex justify-between"><span className="text-muted">Risk Amount</span><span className="font-medium text-foreground">{trade.riskAmount || 'N/A'}</span></div>

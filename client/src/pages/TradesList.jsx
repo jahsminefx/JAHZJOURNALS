@@ -1,10 +1,12 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { PlusCircle, Search, Trash2, Download, LayoutList, LayoutGrid, List } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Download, LayoutList, LayoutGrid, List, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import DeleteTradeDialog from '../components/trades/DeleteTradeDialog';
 import ImportTradesModal from '../components/trades/ImportTradesModal';
+import TradeOutcomeBadge from '../components/trades/TradeOutcomeBadge';
+import AiTradeCaptureModal from '../components/trades/AiTradeCaptureModal';
 import { SkeletonTable, SkeletonCard } from '../components/SkeletonLoader';
 import { loadSettings, fetchAndSyncSettings } from '../utils/settings';
 import { formatCurrency } from '../utils/dashboard';
@@ -35,6 +37,7 @@ const TradesList = () => {
   const [deletingTradeId, setDeletingTradeId] = useState(null);
   const [tradePendingDelete, setTradePendingDelete] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  const [showAiCapture, setShowAiCapture] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState(() => (loadSettings().journal?.defaultTradeListView || 'table').toLowerCase());
 
@@ -79,6 +82,15 @@ const TradesList = () => {
       })
       .catch((err) => console.error('Failed to load traded pairs:', err));
   }, [accountIdFilter]);
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'ai-capture') {
+      setShowAiCapture(true);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('action');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleAccountFilterChange = (newAccountId) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -138,6 +150,15 @@ const TradesList = () => {
 
   useEffect(() => {
     fetchTrades();
+  }, [fetchTrades]);
+
+  // Listen for global trade-saved events (e.g. from Sidebar JAHZ AI modal)
+  useEffect(() => {
+    const handleGlobalTradeSaved = () => {
+      fetchTrades();
+    };
+    window.addEventListener('trade-saved', handleGlobalTradeSaved);
+    return () => window.removeEventListener('trade-saved', handleGlobalTradeSaved);
   }, [fetchTrades]);
 
   const deleteTrade = async () => {
@@ -410,6 +431,15 @@ const getPnlColor = (pnl) => {
             <Download size={14} className="mr-1.5" /> Export
           </button>
 
+          <button
+            type="button"
+            onClick={() => setShowAiCapture(true)}
+            className="whitespace-nowrap flex items-center px-4 py-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-500/20 text-xs border border-indigo-400/30"
+          >
+            <Sparkles size={15} className="mr-1.5 text-amber-300" />
+            Log Trade with JAHZ AI
+          </button>
+
           <Link 
             to="/trades/new" 
             className="whitespace-nowrap flex items-center px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all shadow-sm text-xs"
@@ -563,13 +593,7 @@ const getPnlColor = (pnl) => {
                           {trade.direction}
                         </span>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-black uppercase ${
-                        trade.result === 'WIN' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 
-                        trade.result === 'LOSS' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 
-                        'bg-surface-muted text-muted'
-                      }`}>
-                        {trade.result}
-                      </span>
+                      <TradeOutcomeBadge trade={trade} size="sm" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5 text-xs text-muted bg-surface-muted/50 p-3 rounded-xl">
@@ -637,13 +661,7 @@ const getPnlColor = (pnl) => {
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      trade.result === 'WIN' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 
-                      trade.result === 'LOSS' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 
-                      'bg-surface-muted text-muted'
-                    }`}>
-                      {trade.result}
-                    </span>
+                    <TradeOutcomeBadge trade={trade} size="sm" />
                     <span className={`font-mono font-bold text-sm ${
                       trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
                     }`}>
@@ -687,13 +705,7 @@ const getPnlColor = (pnl) => {
                           {trade.direction}
                         </span>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-black uppercase ${
-                        trade.result === 'WIN' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 
-                        trade.result === 'LOSS' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 
-                        'bg-surface-muted text-muted'
-                      }`}>
-                        {trade.result}
-                      </span>
+                      <TradeOutcomeBadge trade={trade} size="sm" />
                     </div>
 
                     <div className="flex justify-between items-center text-xs text-muted border-t border-border/50 pt-2.5">
@@ -763,13 +775,7 @@ const getPnlColor = (pnl) => {
                             {new Date(trade.entryTime || trade.createdAt).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              trade.result === 'WIN' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 
-                              trade.result === 'LOSS' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 
-                              'bg-surface-muted text-muted'
-                            }`}>
-                              {trade.result}
-                            </span>
+                            <TradeOutcomeBadge trade={trade} size="sm" />
                           </td>
                           <td className={`px-6 py-4 font-mono font-bold text-sm ${
                             trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
@@ -813,6 +819,13 @@ const getPnlColor = (pnl) => {
         isDeleting={Boolean(deletingTradeId)}
         onCancel={() => setTradePendingDelete(null)}
         onConfirm={deleteTrade}
+      />
+
+      <AiTradeCaptureModal
+        isOpen={showAiCapture}
+        onClose={() => setShowAiCapture(false)}
+        onTradeSaved={() => fetchTrades()}
+        initialAccountId={accountIdFilter || searchParams.get('accountId') || ''}
       />
 
       <ImportTradesModal

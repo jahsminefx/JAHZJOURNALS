@@ -4,6 +4,7 @@ import { Camera, Compass, LineChart, MessageSquare, Target, BrainCircuit, Sparkl
 
 const AiQuickActions = () => {
   const actions = [
+    { title: 'Log Trade with AI', desc: 'Capture from chat or broker screenshots', path: '/trades?action=ai-capture', icon: <Sparkles size={22} />, color: 'bg-indigo-500/10 text-indigo-400' },
     { title: 'Ask JAHZ', desc: 'Chat with your AI trading mentor', path: '/ai/ask-jahz', icon: <MessageSquare size={22} />, color: 'bg-blue-500/10 text-blue-500' },
     { title: 'Edge Finder', desc: 'Discover candidate edges in your data', path: '/ai/edge-finder', icon: <Target size={22} />, color: 'bg-purple-500/10 text-purple-500', premium: true },
     { title: 'Weekly Coach', desc: 'Generate your weekly performance plan', path: '/ai/weekly-coach', icon: <Compass size={22} />, color: 'bg-emerald-500/10 text-emerald-500' },

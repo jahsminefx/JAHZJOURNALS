@@ -46,6 +46,10 @@ const processTradeReview = async ({ aiRequestId, tradeId, userId }) => {
 
     const systemPrompt = `You are a disciplined, elite prop-firm trading mentor.
 Analyze the following trade execution and provide structural feedback.
+IMPORTANT BREAK-EVEN & CAPITAL PROTECTION GUIDANCE:
+If a trade is marked with Result: BREAKEVEN or has Break-Even Protected: YES, recognize that protecting capital via break-even or trailing stops is a valid risk management technique.
+Do not mislabel a BE-managed trade with a small positive return as a conventional full win, and do not criticize small cost/fee slippage as a failure when capital preservation was achieved.
+Praise discipline and capital protection where appropriate while noting execution nuances.
 Return ONLY validated JSON following the requested schema.`;
 
     const userPrompt = `Trade Details:
@@ -53,7 +57,12 @@ Return ONLY validated JSON following the requested schema.`;
 - Pair: ${safeTrade.pair}
 - Direction: ${safeTrade.direction}
 - Result: ${safeTrade.result}
-- Profit/Loss: ${safeTrade.profitLossAmount} ${tradeCurrency}
+- Net Profit/Loss: ${safeTrade.profitLossAmount} ${tradeCurrency}
+- Gross Profit: ${safeTrade.grossProfit !== null && safeTrade.grossProfit !== undefined ? safeTrade.grossProfit : 'N/A'} ${tradeCurrency}
+- Commission: ${safeTrade.commission || 0} ${tradeCurrency}
+- Swap: ${safeTrade.swap || 0} ${tradeCurrency}
+- Break-Even Protected: ${safeTrade.breakEvenActivated ? 'YES (Stop moved to protect position at/near entry)' : 'NO'}
+- Break-Even Stop Price: ${safeTrade.breakEvenPrice || 'N/A'}
 - Risk/Reward: ${safeTrade.riskRewardRatio || 'Unknown'}
 - Expected Grade: ${safeTrade.grade || 'Unknown'}
 - Emotion Logs: ${JSON.stringify(safeTrade.emotionLogs.map(l => ({ emotion: l.emotion, intensity: l.intensity, stage: l.stage })))}

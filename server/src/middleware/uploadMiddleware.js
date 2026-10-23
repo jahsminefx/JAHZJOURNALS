@@ -5,7 +5,7 @@ const path = require('path');
 const storage = multer.memoryStorage();
 const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const allowedExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
-const maxImageSizeMb = Number.parseInt(process.env.MAX_IMAGE_UPLOAD_MB || '5', 10);
+const maxImageSizeMb = Number.parseInt(process.env.MAX_IMAGE_UPLOAD_MB || '10', 10);
 
 const upload = multer({
   storage,
