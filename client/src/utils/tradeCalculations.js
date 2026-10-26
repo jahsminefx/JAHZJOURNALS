@@ -94,14 +94,15 @@ export const detectTradingSession = (entryTime) => {
   return 'ASIAN';
 };
 
-export const getTradingSessionLabel = (session) => {
+export const getTradingSessionLabel = (session, fallback = 'N/A') => {
+  if (!session) return fallback;
   switch (session) {
     case 'LONDON': return 'London';
     case 'NEW_YORK': return 'New York';
     case 'ASIAN': return 'Asian';
     case 'LONDON_NEW_YORK_OVERLAP': return 'London/NY Overlap';
     case 'OTHER': return 'Other';
-    default: return session || '—';
+    default: return String(session).replace(/_/g, ' ');
   }
 };
 

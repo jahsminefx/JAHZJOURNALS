@@ -7,6 +7,7 @@ import useDraggable from '../hooks/useDraggable';
 const UnifiedAssistantWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('AI'); // 'AI' | 'FEEDBACK'
+  const [isCoveredByModal, setIsCoveredByModal] = useState(false);
 
   // AI Chat State
   const [chatMessages, setChatMessages] = useState([
@@ -44,6 +45,15 @@ const UnifiedAssistantWidget = () => {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, isOpen, activeTab]);
+
+  // Hide widget completely when full-screen modal overlays (like Log Trade with JAHZ AI) are open
+  useEffect(() => {
+    const handleModalVisibility = (e) => {
+      setIsCoveredByModal(!!e.detail?.open);
+    };
+    window.addEventListener('jahz-modal-visibility', handleModalVisibility);
+    return () => window.removeEventListener('jahz-modal-visibility', handleModalVisibility);
+  }, []);
 
   const handleSendAiMessage = async () => {
     if (!chatInput.trim() || chatLoading) return;
@@ -91,9 +101,9 @@ const UnifiedAssistantWidget = () => {
     <div 
       ref={containerRef}
       style={style}
-      className={`fixed bottom-6 right-6 z-[9999] flex flex-col items-end transition-transform duration-75 select-none ${
+      className={`fixed bottom-6 right-6 z-40 flex flex-col items-end transition-transform duration-75 select-none ${
         isDragging ? 'scale-105 cursor-grabbing' : 'cursor-grab'
-      }`}
+      } ${isCoveredByModal ? 'hidden' : ''}`}
     >
       {/* Unified Widget Modal Window */}
       {isOpen && (

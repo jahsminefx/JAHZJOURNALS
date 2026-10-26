@@ -91,15 +91,52 @@ const getInstrumentPriceTolerance = (pair, entryPrice = 0) => {
  * For SELL: stopLoss is at or below entry price (in profit or exact entry).
  * A stop-loss on the loss side of entry is strictly NOT break-even protected.
  */
-const isStopAtOrPastEntry = ({ direction, entryPrice, stopLoss, pair }) => {
+const isStopAtOrPastEntry = ({
+  direction,
+  entryPrice,
+  stopLoss,
+  pair,
+  exitPrice = null,
+  profitLossAmount = null,
+  grossProfit = null,
+  status = null,
+}) => {
   const dir = String(direction || '').toUpperCase().trim();
   const entry = parseNum(entryPrice);
   const sl = parseNum(stopLoss);
+  const exit = parseNum(exitPrice);
+  const netPnl = parseNum(profitLossAmount) ?? parseNum(grossProfit);
 
   if (entry === null || sl === null || !dir) return false;
 
   // Numerical precision epsilon for floating point representation
   const epsilon = 1e-6;
+  const tol = getInstrumentPriceTolerance(pair, entry);
+  const isClosed = String(status || '').toUpperCase() === 'CLOSED' || exit !== null;
+
+  // Direction & Loss Consistency:
+  // If a closed trade exited on the loss side of entry and suffered a realized financial loss,
+  // it was NOT protected at break-even (any stop loss on the profit side is an OCR/input anomaly).
+  if (isClosed) {
+    if (dir === 'BUY') {
+      if (exit !== null && exit < (entry - tol) && netPnl !== null && netPnl < 0) {
+        return false;
+      }
+      if (netPnl !== null && netPnl < -Math.max(3.0, tol * 10)) {
+        return false;
+      }
+      return sl >= (entry - epsilon);
+    }
+    if (dir === 'SELL') {
+      if (exit !== null && exit > (entry + tol) && netPnl !== null && netPnl < 0) {
+        return false;
+      }
+      if (netPnl !== null && netPnl < -Math.max(3.0, tol * 10)) {
+        return false;
+      }
+      return sl <= (entry + epsilon);
+    }
+  }
 
   if (dir === 'BUY') {
     // Stop loss must be at or above entry price (in profit or exact entry)
@@ -238,7 +275,19 @@ const classifyTrade = (input = {}) => {
     calculatedNetProfit = roundFinancial(parsedGross + parsedComm + parsedSwap + parsedFees);
   }
 
-  // 3. BREAK-EVEN MANAGEMENT EVALUATION
+  // 3. FINANCIAL TOLERANCE EVALUATION
+  // Determine effective dollar tolerance threshold for Break-Even classification.
+  // By default, financial tolerance is strictly 0.00 across all workflows.
+  // Any non-zero financial tolerance REQUIRES explicit user configuration via userThresholdAmount.
+  // initialRisk does NOT automatically scale financial tolerance.
+  const userThreshold = parseNum(userThresholdAmount);
+  let effectiveTolerance = 0.00;
+
+  if (userThreshold !== null && userThreshold >= 0) {
+    effectiveTolerance = userThreshold;
+  }
+
+  // 4. BREAK-EVEN MANAGEMENT EVALUATION
   let beActivated = Boolean(breakEvenActivated || userConfirmedBe);
   let bePrice = parseNum(breakEvenPrice);
   let beSource = breakEvenEvidenceSource || null;
@@ -254,8 +303,16 @@ const classifyTrade = (input = {}) => {
     if (bePrice === null && entry !== null) bePrice = entry;
   }
 
+  // Check if this closed trade is an undeniable loss on the loss side of entry.
+  // For a closed loss trade, automatic BE cannot be inferred from a contradictory stopLoss price.
+  const isUndeniableLoss = finalStatus === 'CLOSED' && (
+    (calculatedNetProfit !== null && calculatedNetProfit < -Math.max(3.00, (effectiveTolerance || 1.00) * 2.5)) ||
+    (dir === 'BUY' && exit !== null && entry !== null && exit < (entry - getInstrumentPriceTolerance(p, entry)) && (calculatedNetProfit !== null ? calculatedNetProfit < 0 : true)) ||
+    (dir === 'SELL' && exit !== null && entry !== null && exit > (entry + getInstrumentPriceTolerance(p, entry)) && (calculatedNetProfit !== null ? calculatedNetProfit < 0 : true))
+  );
+
   // Check SL/TP modification history
-  if (!beActivated && Array.isArray(slTpHistory) && slTpHistory.length > 0) {
+  if (!beActivated && !isUndeniableLoss && Array.isArray(slTpHistory) && slTpHistory.length > 0) {
     const historyEvidence = checkSlHistoryForBe(slTpHistory, entry, dir, p);
     if (historyEvidence) {
       beActivated = true;
@@ -267,8 +324,17 @@ const classifyTrade = (input = {}) => {
   }
 
   // Check final stop loss placement relative to entry
-  if (!beActivated && sl !== null && entry !== null && dir) {
-    if (isStopAtOrPastEntry({ direction: dir, entryPrice: entry, stopLoss: sl, pair: p })) {
+  if (!beActivated && !isUndeniableLoss && sl !== null && entry !== null && dir) {
+    if (isStopAtOrPastEntry({
+      direction: dir,
+      entryPrice: entry,
+      stopLoss: sl,
+      pair: p,
+      exitPrice: exit,
+      profitLossAmount: calculatedNetProfit,
+      grossProfit: parsedGross,
+      status: finalStatus,
+    })) {
       beActivated = true;
       beStatus = EVIDENCE_STATUS.INFERRED;
       beSource = EVIDENCE_SOURCES.MT_TRAILING_STOP;
@@ -276,16 +342,13 @@ const classifyTrade = (input = {}) => {
     }
   }
 
-  // 4. FINANCIAL TOLERANCE EVALUATION
-  // Determine effective dollar tolerance threshold for Break-Even classification.
-  // By default, financial tolerance is strictly 0.00 across all workflows.
-  // Any non-zero financial tolerance REQUIRES explicit user configuration via userThresholdAmount.
-  // initialRisk does NOT automatically scale financial tolerance.
-  const userThreshold = parseNum(userThresholdAmount);
-  let effectiveTolerance = 0.00;
-
-  if (userThreshold !== null && userThreshold >= 0) {
-    effectiveTolerance = userThreshold;
+  // If a closed trade suffered a genuine loss and user did NOT explicitly confirm BE,
+  // ensure automatic/inferred breakEvenActivated is never left active.
+  if (isUndeniableLoss && userConfirmedBe !== true) {
+    beActivated = false;
+    beStatus = EVIDENCE_STATUS.UNKNOWN;
+    beSource = null;
+    bePrice = null;
   }
 
   // 5. CLASSIFY FINANCIAL OUTCOME
@@ -330,7 +393,7 @@ const classifyTrade = (input = {}) => {
     badgeLabel = (beActivated && isSmallWin) ? 'Small win · BE protected' : (beActivated ? 'Win · BE protected' : 'Win');
   } else if (finalOutcome === OUTCOMES.LOSS) {
     const isSmallLoss = calculatedNetProfit !== null && Math.abs(calculatedNetProfit) <= Math.max(5.00, (effectiveTolerance || 1.00) * 2.5);
-    badgeLabel = (beActivated && isSmallLoss) ? 'Small loss · BE protected' : (beActivated ? 'Loss · BE protected' : 'Loss');
+    badgeLabel = (beActivated && isSmallLoss) ? 'Small loss · BE protected' : 'Loss';
   }
 
   return {

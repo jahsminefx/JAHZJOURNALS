@@ -18,6 +18,12 @@ const {
   classifyTrade,
 } = require('../services/tradeClassificationService');
 const { calculatePips } = require('../utils/pipCalculator');
+const {
+  detectTradingSession,
+  resolveTradeRiskReward,
+  calculateRiskReward,
+  calculateProfitLossPercentage,
+} = require('../utils/tradeCalculations');
 const currencyService = require('../services/fx/currencyService');
 const {
   saveLocalScreenshot,
@@ -146,6 +152,32 @@ const handleChatTradeCapture = async (req, res) => {
           currentDraft,
           mockExtraction: single.mockExtraction || mockExtraction || null,
         });
+
+        // If multiple trades were identified in the single screenshot (e.g. MT history list)
+        if (result.isMultiTrade && Array.isArray(result.candidateTrades) && result.candidateTrades.length > 1) {
+          const { detectBatchDuplicates } = require('../services/tradeDuplicateDetectionService');
+          const batchList = result.candidateTrades.map((item, idx) => ({
+            batchId: `batch_${Date.now()}_${idx}`,
+            originalFilename: single.originalname || `Trade_${idx + 1}.png`,
+            ...item,
+          }));
+
+          const validCandidates = batchList.filter((b) => b.candidateTrade !== null);
+          const batchCrossChecked = detectBatchDuplicates(validCandidates.map((b) => b.candidateTrade));
+          batchCrossChecked.forEach((crossCheck, idx) => {
+            validCandidates[idx].isDuplicateInBatch = crossCheck.isDuplicateInBatch;
+            validCandidates[idx].duplicateReasonInBatch = crossCheck.duplicateReason;
+          });
+
+          return res.json({
+            success: true,
+            isBatch: true,
+            totalUploaded: 1,
+            extractedCount: validCandidates.length,
+            batch: batchList,
+            assistantReply: `I found ${validCandidates.length} trades in your screenshot. Review each card below before saving.`,
+          });
+        }
 
         return res.json({
           success: true,
@@ -351,7 +383,15 @@ const handleConfirmSave = async (req, res) => {
         const fees = parseNum(item.fees) ?? 0;
 
         let status = item.status ? String(item.status).toUpperCase() : (exitPrice !== null ? 'CLOSED' : (entryPrice !== null ? 'ACTIVE' : 'PLANNED'));
+        if ((grossProfit !== null || item.exitTime) && status === 'ACTIVE') {
+          status = 'CLOSED';
+        }
         const isClosed = status === 'CLOSED';
+
+        let effectiveProfitLoss = isClosed ? parseNum(item.profitLossAmount) : null;
+        if (isClosed && effectiveProfitLoss === null && grossProfit !== null) {
+          effectiveProfitLoss = Math.round((grossProfit + commission + swap + fees) * 100) / 100;
+        }
 
         const computedPips = item.pips !== null && item.pips !== undefined
           ? parseNum(item.pips)
@@ -371,7 +411,7 @@ const handleConfirmSave = async (req, res) => {
           commission,
           swap,
           fees,
-          profitLossAmount: isClosed ? parseNum(item.profitLossAmount) : null,
+          profitLossAmount: effectiveProfitLoss,
           breakEvenActivated: Boolean(item.breakEvenActivated),
           breakEvenPrice: parseNum(item.breakEvenPrice),
           breakEvenEvidenceSource: item.breakEvenEvidenceSource || (item.breakEvenActivated ? 'USER_MANUAL' : null),
@@ -393,7 +433,28 @@ const handleConfirmSave = async (req, res) => {
           fxRateTimestamp = new Date();
         }
 
-        const effectiveNetPnl = isClosed ? (classification.netProfit ?? parseNum(item.profitLossAmount)) : null;
+        const effectiveNetPnl = isClosed ? (classification.netProfit ?? effectiveProfitLoss) : null;
+
+        const entryTimeDate = item.entryTime ? new Date(item.entryTime) : new Date();
+        const detectedSession = detectTradingSession(entryTimeDate);
+        const resolvedSession = item.session || detectedSession || null;
+
+        // Calculate Risk/Reward ratio
+        const { riskRewardRatio: plannedRR } = calculateRiskReward(direction, entryPrice, stopLoss, takeProfit);
+        const computedRR = item.riskRewardRatio !== null && item.riskRewardRatio !== undefined && !isNaN(Number(item.riskRewardRatio))
+          ? parseNum(item.riskRewardRatio)
+          : (plannedRR ?? resolveTradeRiskReward({
+              direction,
+              entryPrice,
+              stopLoss,
+              takeProfit,
+              exitPrice,
+              profitLossAmount: effectiveNetPnl,
+            }));
+
+        const plPercent = account.currentBalance
+          ? calculateProfitLossPercentage(effectiveNetPnl, account.currentBalance)
+          : null;
 
         // Atomically persist trade + screenshot + emotion logs in a single transaction
         const savedTrade = await prisma.$transaction(async (tx) => {
@@ -425,7 +486,9 @@ const handleConfirmSave = async (req, res) => {
               classificationSource: 'AI_SUGGESTION',
               resultCalculatedAt: new Date(),
               isManualResultOverride: Boolean(item.isManualResultOverride),
-              session: item.session || null,
+              riskRewardRatio: computedRR,
+              profitLossPercent: plPercent,
+              session: resolvedSession,
               strategyId: item.strategyId || null,
               setupId: item.setupId || null,
               higherTimeframe: item.higherTimeframe || null,

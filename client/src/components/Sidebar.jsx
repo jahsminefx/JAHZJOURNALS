@@ -51,10 +51,13 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     }
   }, [location.pathname]);
 
-  // ESC key handler & body scroll lock when mobile drawer is open
+  // ESC key handler, modal visibility signal & body scroll lock when mobile drawer is open
   useEffect(() => {
     if (isMobileOpen) {
       document.body.style.overflow = 'hidden';
+      window.dispatchEvent(
+        new CustomEvent('jahz-modal-visibility', { detail: { open: true, modal: 'mobile-drawer' } })
+      );
       const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
           onCloseMobile?.();
@@ -64,6 +67,9 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
       return () => {
         document.body.style.overflow = '';
         window.removeEventListener('keydown', handleKeyDown);
+        window.dispatchEvent(
+          new CustomEvent('jahz-modal-visibility', { detail: { open: false, modal: 'mobile-drawer' } })
+        );
       };
     } else {
       document.body.style.overflow = '';

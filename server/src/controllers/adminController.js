@@ -304,7 +304,7 @@ const getAuditLogs = async (req, res) => {
 const testAdminEmail = async (req, res) => {
   try {
     const { to } = req.body;
-    const recipient = to || req.user.email;
+    const recipient = to || process.env.ADMIN_EMAIL || 'jahzjournals@gmail.com';
     const { sendEmail } = require('../services/emailService');
 
     const result = await sendEmail({
@@ -334,6 +334,51 @@ const testAdminEmail = async (req, res) => {
   }
 };
 
+const getExecutiveDigestPreview = async (req, res) => {
+  try {
+    const { getExecutiveDigestMetrics } = require('../services/executiveDigestService');
+    const metrics = await getExecutiveDigestMetrics();
+    const recipient = process.env.ADMIN_EMAIL || 'jahzjournals@gmail.com';
+    res.json({ success: true, recipient, metrics });
+  } catch (err) {
+    console.error('[Admin Executive Digest Preview Error]', err);
+    res.status(500).json({ success: false, message: 'Failed to generate digest metrics.' });
+  }
+};
+
+const sendExecutiveDigestNow = async (req, res) => {
+  try {
+    const { to } = req.body || {};
+    const recipient = to || process.env.ADMIN_EMAIL || 'jahzjournals@gmail.com';
+    const { sendWeeklyExecutiveDigest } = require('../services/executiveDigestService');
+    const result = await sendWeeklyExecutiveDigest({ targetEmail: recipient, isManual: true });
+
+    if (req.user?.id) {
+      await logAudit({
+        userId: req.user.id,
+        action: 'DISPATCH_EXECUTIVE_DIGEST',
+        resourceType: 'COMMUNICATIONS',
+        resourceId: recipient,
+        metadata: { success: result.success, recipient },
+      });
+    }
+
+    res.json({
+      success: result.success,
+      recipient,
+      period: result.period,
+      metrics: result.metrics,
+      message: result.success
+        ? `Executive digest dispatched successfully to ${recipient}`
+        : `Executive digest failed: ${result.error || 'Check server logs'}`,
+      error: result.error || null,
+    });
+  } catch (err) {
+    console.error('[Admin Executive Digest Send Error]', err);
+    res.status(500).json({ success: false, message: 'Failed to dispatch executive digest.' });
+  }
+};
+
 module.exports = {
   getDashboardMetrics,
   getUsers,
@@ -341,4 +386,6 @@ module.exports = {
   getSystemHealth,
   getAuditLogs,
   testAdminEmail,
+  getExecutiveDigestPreview,
+  sendExecutiveDigestNow,
 };

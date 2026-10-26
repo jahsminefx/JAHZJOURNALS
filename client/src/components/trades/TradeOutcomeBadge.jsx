@@ -36,8 +36,6 @@ const TradeOutcomeBadge = ({ trade = {}, size = 'md', showManagementHint = true,
     badgeColor = 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
     if (isBeProtected && Math.abs(pnl) <= 5.00) {
       label = 'Small Loss · BE';
-    } else if (isBeProtected) {
-      label = 'Loss · BE';
     } else {
       label = 'Loss';
     }

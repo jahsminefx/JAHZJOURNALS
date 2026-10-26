@@ -5,6 +5,7 @@ const { sendWeeklyReviewReminderEmail } = require('../services/emailService');
 const { cleanupStalledAiRequests } = require('../controllers/aiController');
 const { syncAllCloudAccounts } = require('../controllers/mtCloudSyncController');
 const { startSubscriptionCron } = require('../services/subscriptionCron');
+const { sendWeeklyExecutiveDigest } = require('../services/executiveDigestService');
 
 // Schedulers & Background Sweepers
 const startSchedulers = () => {
@@ -60,6 +61,18 @@ const startSchedulers = () => {
       console.log(`[CRON] Dispatched reminders to ${activeUsers.length} traders.`);
     } catch (error) {
       console.error('[CRON] Error during weekly review dispatch:', error);
+    }
+  });
+
+  // ── Weekly Automated Executive Digest ── Monday 08:00 AM UTC ──
+  // Dispatches platform briefing (signups, trade volume, revenue, health) to Super Admin
+  cron.schedule('0 8 * * 1', async () => {
+    console.log('[CRON] Executing Weekly Automated Executive Digest Dispatcher');
+    try {
+      const result = await sendWeeklyExecutiveDigest();
+      console.log(`[CRON] Weekly Executive Digest completed. Recipient: ${result.recipient}, Success: ${result.success}`);
+    } catch (error) {
+      console.error('[CRON] Error during weekly executive digest dispatch:', error);
     }
   });
 };

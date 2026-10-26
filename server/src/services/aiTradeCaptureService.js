@@ -18,11 +18,30 @@ const {
   detectCurrencyConflict,
   disambiguateMonetaryValue,
 } = require('./accountResolutionService');
+const {
+  detectTradingSession,
+  resolveTradeRiskReward,
+  calculateRiskReward,
+  calculateTradeDurationMinutes,
+} = require('../utils/tradeCalculations');
+const { calculatePips } = require('../utils/pipCalculator');
 
 const parseNum = (v) => {
   if (v === null || v === undefined || v === '' || v === 'null') return null;
   const n = Number(String(v).replace(/[^0-9.-]+/g, ''));
   return isNaN(n) ? null : n;
+};
+
+const parseIsoDateTime = (val, fallback = null) => {
+  if (!val) return fallback;
+  let str = String(val).trim();
+  if (/^\d{4}\.\d{2}\.\d{2}\s+\d{2}:\d{2}:\d{2}/.test(str)) {
+    str = str.replace(/^(\d{4})\.(\d{2})\.(\d{2})\s+(\d{2}:\d{2}:\d{2})/, '$1-$2-$3T$4Z');
+  } else if (/^\d{4}\.\d{2}\.\d{2}/.test(str)) {
+    str = str.replace(/^(\d{4})\.(\d{2})\.(\d{2})/, '$1-$2-$3');
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? fallback : d.toISOString();
 };
 
 // ==========================================
@@ -227,7 +246,7 @@ const normalizeVisionTradeResponse = (rawObj) => {
   return normalized;
 };
 
-const ImageTradeCaptureSchema = z.preprocess(
+const SingleTradeCaptureSchema = z.preprocess(
   normalizeVisionTradeResponse,
   z.object({
     screenshotType: z.preprocess(
@@ -264,7 +283,7 @@ const ImageTradeCaptureSchema = z.preprocess(
     breakEvenCandidate: BreakEvenCandidateSchema.default({
       isBreakEvenCandidate: false,
       rationale: '',
-      requiresUserConfirmation: true,
+      requiresUserConfirmation: false,
       candidateEvidenceSource: 'UNKNOWN',
     }),
     detectedTradeCount: z.preprocess(
@@ -280,6 +299,46 @@ const ImageTradeCaptureSchema = z.preprocess(
       z.string().default('')
     ),
   })
+);
+
+const VisionMultiTradeExtractionSchema = z.preprocess(
+  (input) => {
+    if (!input || typeof input !== 'object') return { trades: [] };
+    if (Array.isArray(input)) {
+      return { trades: input };
+    }
+    if (Array.isArray(input.trades) && input.trades.length > 0) {
+      return input;
+    }
+    if (Array.isArray(input.items) && input.items.length > 0) {
+      return { ...input, trades: input.items };
+    }
+    // Single trade object: wrap in trades array
+    return {
+      trades: [input],
+      confidenceScore: input.confidenceScore,
+      rawSummary: input.rawSummary,
+    };
+  },
+  z.object({
+    trades: z.array(SingleTradeCaptureSchema).default([]),
+    confidenceScore: z.preprocess(
+      (v) => (typeof v === 'number' && !isNaN(v) ? v : 0.85),
+      z.number().default(0.85)
+    ),
+    rawSummary: z.preprocess((v) => (typeof v === 'string' ? v : ''), z.string().default('')),
+  })
+);
+
+// Backwards-compatible single-trade schema
+const ImageTradeCaptureSchema = z.preprocess(
+  (raw) => {
+    if (raw && typeof raw === 'object' && Array.isArray(raw.trades) && raw.trades.length > 0) {
+      return { ...raw.trades[0], detectedTradeCount: raw.trades.length };
+    }
+    return raw;
+  },
+  SingleTradeCaptureSchema
 );
 
 const JournalEnrichmentSchema = z.object({
@@ -307,53 +366,87 @@ MANDATORY RULES:
 5. In 'assistantReply', warmly acknowledge the values understood, summarize the pending trade draft in 1-2 bullet points, and politely ask for any missing key fields (such as account, lot size, or entry/exit prices).
 6. Return strictly valid JSON matching the schema.`;
 
-const IMAGE_CAPTURE_SYSTEM_PROMPT = `You are a financial OCR and visual data extraction engine for trading journal records.
-You extract exact visual text and numbers from MetaTrader receipts, broker deal confirmations, open position tickets, or marked chart screenshots.
+const IMAGE_CAPTURE_SYSTEM_PROMPT = `You are an expert financial OCR and visual data extraction engine for trading journals.
+Your job is to accurately extract trade records from MetaTrader (MT4/MT5) screenshots, broker receipts, or chart setups.
 
-MANDATORY RULES:
-1. NEVER calculate, invent, or project financial figures. AI must never authoritatively compute profit/loss.
-2. Distinguish screenshot nature in 'screenshotType':
-   - 'BROKER_RECEIPT': Closed trade ticket with executed entry, exit price, and pnl.
-   - 'OPEN_POSITION': Active/running position ticket (floating pnl, exit price missing).
-   - 'CHART_SETUP': Candlestick chart with technical analysis/lines, not an executed broker deal.
-3. For each extracted field, output an object with 'value' and 'status':
-   - 'CONFIRMED': If the number or text is sharp and clearly visible on the image.
-   - 'UNCERTAIN': If partially obscured, fuzzy, or ambiguous.
-   - 'MISSING': If absent or not shown on the image, with value null.
-4. Check if stop loss was moved to/past entry or if trailing stop is visible in comments, setting 'breakEvenCandidate.isBreakEvenCandidate = true'.
-5. Always set 'requiresUserConfirmation' to true for any inferred break-even management.
-6. Return strictly valid JSON adhering to this exact schema structure:
+CRITICAL EXTRACTION GUIDELINES:
+1. MULTIPLE TRADES IN A SCREENSHOT:
+   Screenshots often display multiple closed trades (such as a MetaTrader "History" tab list).
+   You MUST extract EVERY distinct trade row visible in the screenshot into the "trades" array.
+   - If the image contains 3 trades, return an array of 3 trade objects.
+   - If the image contains 1 trade, return an array with 1 trade object.
 
+2. METATRADER HISTORY ROW FORMAT:
+   In MetaTrader mobile & desktop history lists, each trade block has the following layout:
+   - Line 1: Instrument symbol, direction (buy/sell), lot volume, and the CLOSE timestamp on the far right.
+     Example: "BTCUSD, buy 0.20" with "2026.10.14 06:52:39" on the right.
+     -> instrument = "BTCUSD", direction = "BUY", volume = 0.20, exitTime = "2026-10-14T06:52:39Z"
+   - Line 2: Executed entry and exit prices separated by an arrow "->", and the realized Profit/Loss on the far right.
+     Example: "83 529.61 -> 83 455.91" with "-14.74" on the right.
+     -> entryPrice = 83529.61 (the price BEFORE "->")
+     -> exitPrice = 83455.91 (the price AFTER "->")
+     -> grossProfit = -14.74 (red numbers or minus sign indicate a LOSS; parse as a negative float)
+     IMPORTANT: MetaTrader formats numbers with spaces as thousands separators (e.g. "83 529.61" = 83529.61). ALWAYS strip inner spaces when parsing numbers!
+   - Line 3: Ticket ID "#[number]" and Open timestamp "Open: [timestamp]".
+     Example: "#43037693   Open: 2026.10.14 06:34:53"
+     -> ticket = "43037693", entryTime = "2026-10-14T06:34:53Z"
+   - Line 4: Stop loss and Swap.
+     Example: "S / L: 83 466.13   Swap: 0.00"
+     -> stopLoss = 83466.13, swap = 0.00
+   - Line 5: Take profit and Commission.
+     Example: "T / P: 83 930.81   Commission: -0.60"
+     -> takeProfit = 83930.81, commission = -0.60
+
+3. SCREENSHOT TYPE & STATUS:
+   - If a trade shows an exit price, close time, or realized profit/loss, it is a CLOSED trade:
+     "screenshotType": "BROKER_RECEIPT".
+   - Only classify as "OPEN_POSITION" if it is from the active "Trade" tab with no exit price, no close time, and only a floating profit/loss.
+   - Only classify as "CHART_SETUP" if it is an annotated chart without an executed trade ticket.
+
+4. DIRECTION & BREAK-EVEN RULES (STRICT SANITY CHECKS):
+   - For a BUY trade: If exitPrice < entryPrice or grossProfit < 0, the trade closed in a LOSS on the loss side. The stop loss S/L is always on the loss side (<= entryPrice). Pay extreme visual attention to the digits of S/L: do NOT misread digits (for example, "83 384.18" must NEVER be misread as "83 484.18" when entry is 83 469.67). If S/L was hit, exitPrice is right next to S/L!
+   - For a SELL trade: If exitPrice > entryPrice or grossProfit < 0, the trade closed in a LOSS on the loss side. The stop loss S/L is always on the loss side (>= entryPrice).
+   - If a trade closed with negative profit, IT IS A NORMAL LOSS! Set "isBreakEvenCandidate": false. A trade that lost money was NOT break-even protected.
+   - isBreakEvenCandidate is true ONLY IF:
+     * BUY: stop was trailed into profit or at entry (stopLoss >= entryPrice) AND trade exited near/at entry or in profit.
+     * SELL: stop was trailed into profit or at entry (stopLoss <= entryPrice) AND trade exited near/at entry or in profit.
+   - If no stop loss was set or stop was never trailed, set "isBreakEvenCandidate": false.
+
+5. OUTPUT SCHEMA:
+Always return strictly valid JSON matching this structure:
 {
-  "screenshotType": "BROKER_RECEIPT",
-  "instrument": { "value": "BTCUSD", "status": "CONFIRMED" },
-  "direction": { "value": "BUY", "status": "CONFIRMED" },
-  "volume": { "value": 0.22, "status": "CONFIRMED" },
-  "entryPrice": { "value": 82351.75, "status": "CONFIRMED" },
-  "exitPrice": { "value": 82361.97, "status": "CONFIRMED" },
-  "stopLoss": { "value": 82370.08, "status": "CONFIRMED" },
-  "takeProfit": { "value": 83174.00, "status": "CONFIRMED" },
-  "grossProfit": { "value": 2.25, "status": "CONFIRMED" },
-  "commission": { "value": -0.66, "status": "CONFIRMED" },
-  "swap": { "value": 0.00, "status": "CONFIRMED" },
-  "fees": { "value": 0.00, "status": "CONFIRMED" },
-  "ticket": { "value": "43789391", "status": "CONFIRMED" },
-  "entryTime": { "value": "2026-10-19T08:30:00Z", "status": "CONFIRMED" },
-  "exitTime": { "value": "2026-10-19T14:45:00Z", "status": "CONFIRMED" },
-  "accountCurrency": { "value": "USD", "status": "CONFIRMED" },
-  "accountIdentifier": { "value": null, "status": "MISSING" },
-  "brokerName": { "value": null, "status": "MISSING" },
-  "timeframe": { "value": null, "status": "MISSING" },
-  "setupDescription": { "value": null, "status": "MISSING" },
-  "breakEvenCandidate": {
-    "isBreakEvenCandidate": true,
-    "rationale": "Stop loss was trailed above entry price",
-    "requiresUserConfirmation": true,
-    "candidateEvidenceSource": "MT_TRAILING_STOP"
-  },
-  "detectedTradeCount": 1,
+  "trades": [
+    {
+      "screenshotType": "BROKER_RECEIPT",
+      "instrument": { "value": "BTCUSD", "status": "CONFIRMED" },
+      "direction": { "value": "BUY", "status": "CONFIRMED" },
+      "volume": { "value": 0.20, "status": "CONFIRMED" },
+      "entryPrice": { "value": 83529.61, "status": "CONFIRMED" },
+      "exitPrice": { "value": 83455.91, "status": "CONFIRMED" },
+      "stopLoss": { "value": 83466.13, "status": "CONFIRMED" },
+      "takeProfit": { "value": 83930.81, "status": "CONFIRMED" },
+      "grossProfit": { "value": -14.74, "status": "CONFIRMED" },
+      "commission": { "value": -0.60, "status": "CONFIRMED" },
+      "swap": { "value": 0.00, "status": "CONFIRMED" },
+      "fees": { "value": 0.00, "status": "CONFIRMED" },
+      "ticket": { "value": "43037693", "status": "CONFIRMED" },
+      "entryTime": { "value": "2026-10-14T06:34:53Z", "status": "CONFIRMED" },
+      "exitTime": { "value": "2026-10-14T06:52:39Z", "status": "CONFIRMED" },
+      "accountCurrency": { "value": "USD", "status": "CONFIRMED" },
+      "accountIdentifier": { "value": null, "status": "MISSING" },
+      "brokerName": { "value": null, "status": "MISSING" },
+      "timeframe": { "value": null, "status": "MISSING" },
+      "setupDescription": { "value": null, "status": "MISSING" },
+      "breakEvenCandidate": {
+        "isBreakEvenCandidate": false,
+        "rationale": "Stop loss 83466.13 is below entry price 83529.61 on BUY; trade closed in loss",
+        "requiresUserConfirmation": false,
+        "candidateEvidenceSource": "UNKNOWN"
+      }
+    }
+  ],
   "confidenceScore": 0.95,
-  "rawSummary": "BTCUSD BUY 0.22 lots closed at 82361.97 with profit 2.25"
+  "rawSummary": "Extracted trades from MT history"
 }`;
 
 // ==========================================
@@ -508,6 +601,21 @@ Extract any new or modified trade information and provide an assistant reply ask
     badgeLabel: classification.badgeLabel,
     entryTime: currentDraft.entryTime || new Date().toISOString(),
     exitTime: status === 'CLOSED' ? (currentDraft.exitTime || new Date().toISOString()) : null,
+    session: detectTradingSession(currentDraft.entryTime || new Date().toISOString()) || currentDraft.session || null,
+    riskRewardRatio: (calculateRiskReward(direction, entryPrice, stopLoss, takeProfit).riskRewardRatio ?? resolveTradeRiskReward({
+      entryPrice,
+      stopLoss,
+      takeProfit,
+      exitPrice,
+      direction,
+      profitLossAmount: status === 'CLOSED' ? (netProfit ?? classification.netProfit) : null,
+    })) ?? parseNum(currentDraft.riskRewardRatio),
+    pips: calculatePips({
+      pair,
+      direction,
+      entryPrice,
+      exitPrice: status === 'CLOSED' ? exitPrice : null,
+    }) ?? parseNum(currentDraft.pips),
   };
 
   // Determine missing fields required to save
@@ -538,68 +646,18 @@ Extract any new or modified trade information and provide an assistant reply ask
 };
 
 /**
- * Method B & C: Screenshot-to-Trade Extraction (Broker receipts, open positions, chart setups)
+ * Helper to process a single extracted trade item into a canonical candidate trade
  */
-const parseTradeFromImage = async ({
-  imageBuffer,
-  mimeType = 'image/png',
-  imageUrl = null,
+const processSingleExtractedTrade = async ({
+  extraction,
   userAccounts = [],
   userThresholdAmount = null,
   existingTrades = null,
   userId = null,
   userMessage = null,
   currentDraft = {},
-  mockExtraction = null,
-} = {}) => {
-  let extraction = mockExtraction;
-
-  if (!extraction) {
-    let base64ImageUrl;
-    if (typeof imageBuffer === 'string' && imageBuffer.startsWith('data:')) {
-      base64ImageUrl = imageBuffer;
-    } else if (Buffer.isBuffer(imageBuffer)) {
-      base64ImageUrl = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
-    } else if (imageUrl) {
-      base64ImageUrl = imageUrl;
-    } else {
-      throw new Error('Valid image buffer or URL is required for trade extraction');
-    }
-
-    const provider = getProvider();
-    const promptText = userMessage && typeof userMessage === 'string' && userMessage.trim()
-      ? `Examine this screenshot alongside user's description: "${userMessage.trim()}". Determine if it is a broker trade receipt, an open position, or an annotated chart setup. Extract all visible prices, volume, ticket, broker costs, timestamps, and stop management details adhering strictly to the schema.`
-      : 'Examine this screenshot. Determine if it is a broker trade receipt, an open position, or an annotated chart setup. Extract all visible prices, volume, ticket, broker costs, timestamps, and stop management details adhering strictly to the schema.';
-
-    const userPrompt = [
-      {
-        type: 'text',
-        text: promptText,
-      },
-      {
-        type: 'image_url',
-        image_url: { url: base64ImageUrl, detail: 'high' },
-      },
-    ];
-
-    const result = await validateStructuredOutput(
-      provider,
-      IMAGE_CAPTURE_SYSTEM_PROMPT,
-      userPrompt,
-      ImageTradeCaptureSchema,
-      1,
-      true // useVision
-    );
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to extract trade data from screenshot');
-    }
-
-    extraction = result.data;
-  } else {
-    extraction = ImageTradeCaptureSchema.parse(mockExtraction);
-  }
-
+  imageUrl = null,
+}) => {
   // Parse extracted raw numbers deterministically
   const rawPair = extraction.instrument?.value ? String(extraction.instrument.value).toUpperCase().trim() : null;
   const rawDirection = extraction.direction?.value ? String(extraction.direction.value).toUpperCase().trim() : null;
@@ -617,11 +675,13 @@ const parseTradeFromImage = async ({
   const swap = parseNum(extraction.swap?.value) ?? 0;
   const fees = parseNum(extraction.fees?.value) ?? 0;
 
-  // Determine status based on screenshot type
+  // Determine status deterministically based on financial data and screenshot type
   let status = 'CLOSED';
   if (extraction.screenshotType === 'CHART_SETUP') {
     status = 'PLANNED'; // Never mark an unexecuted chart as a closed trade!
-  } else if (extraction.screenshotType === 'OPEN_POSITION' || exitPrice === null) {
+  } else if (extraction.screenshotType === 'OPEN_POSITION' && exitPrice === null && !extraction.exitTime?.value) {
+    status = 'ACTIVE';
+  } else if (exitPrice === null && grossProfit === null && !extraction.exitTime?.value) {
     status = 'ACTIVE';
   }
 
@@ -635,28 +695,60 @@ const parseTradeFromImage = async ({
     userMessage && /break[\s-]?even|trailing\s+stop|\bbe\b/i.test(userMessage)
   );
 
-  // Check if stop loss is at or past entry
-  const isStopBe = (stopLoss !== null && entryPrice !== null && direction)
-    ? isStopAtOrPastEntry({ direction, entryPrice, stopLoss, pair: rawPair })
+  // Check if stop loss is mathematically at or past entry
+  const hasStopLossAndEntry = stopLoss !== null && entryPrice !== null && direction;
+  const isStopActuallyBe = hasStopLossAndEntry
+    ? isStopAtOrPastEntry({
+        direction,
+        entryPrice,
+        stopLoss,
+        pair: rawPair,
+        exitPrice,
+        profitLossAmount: netProfit,
+        grossProfit,
+        status,
+      })
     : false;
 
   const beCandidate = extraction.breakEvenCandidate || {};
-  const isCandidateBe = Boolean(
-    userBeMention ||
-    currentDraft?.breakEvenActivated ||
-    beCandidate.isBreakEvenCandidate ||
-    isStopBe
+  let isCandidateBe = false;
+  let beEvidenceSource = EVIDENCE_SOURCES.UNKNOWN;
+
+  // Determine if this is an obvious losing trade where automatic BE inference is contradictory
+  const isLosingTrade = isClosed && (
+    (netProfit !== null && netProfit < -3.00) ||
+    (grossProfit !== null && grossProfit < -3.00) ||
+    (direction === 'BUY' && exitPrice !== null && entryPrice !== null && exitPrice < entryPrice - 1e-4 && (grossProfit !== null ? grossProfit < 0 : true)) ||
+    (direction === 'SELL' && exitPrice !== null && entryPrice !== null && exitPrice > entryPrice + 1e-4 && (grossProfit !== null ? grossProfit < 0 : true))
   );
 
-  const beEvidenceSource = userBeMention
-    ? EVIDENCE_SOURCES.USER_MANUAL
-    : (beCandidate.candidateEvidenceSource === 'MT_TRAILING_STOP'
-      ? EVIDENCE_SOURCES.MT_TRAILING_STOP
-      : (isStopBe ? EVIDENCE_SOURCES.PRICE_ACTION_INFERRED : EVIDENCE_SOURCES.AI_VISION_SUGGESTION));
+  if (userBeMention) {
+    isCandidateBe = true;
+    beEvidenceSource = EVIDENCE_SOURCES.USER_MANUAL;
+  } else if (currentDraft?.breakEvenActivated && currentDraft?.userConfirmedBe) {
+    isCandidateBe = true;
+    beEvidenceSource = currentDraft.breakEvenEvidenceSource || EVIDENCE_SOURCES.USER_MANUAL;
+  } else if (isLosingTrade) {
+    // A losing trade that closed on the loss side can NEVER be automatically inferred as BE protected
+    isCandidateBe = false;
+    beEvidenceSource = EVIDENCE_SOURCES.UNKNOWN;
+  } else if (hasStopLossAndEntry) {
+    // If we have actual entry and stop loss numbers, use mathematical reality!
+    // Never let an AI boolean hallucinate BE if stop loss is in loss territory.
+    if (isStopActuallyBe) {
+      isCandidateBe = true;
+      beEvidenceSource = EVIDENCE_SOURCES.PRICE_ACTION_INFERRED;
+    } else {
+      isCandidateBe = false;
+    }
+  } else if (beCandidate.isBreakEvenCandidate && beCandidate.candidateEvidenceSource === 'MT_TRAILING_STOP') {
+    isCandidateBe = true;
+    beEvidenceSource = EVIDENCE_SOURCES.MT_TRAILING_STOP;
+  }
 
   const beEvidenceStatus = (userBeMention || currentDraft?.userConfirmedBe)
     ? EVIDENCE_STATUS.USER_CONFIRMED
-    : EVIDENCE_STATUS.INFERRED;
+    : (isCandidateBe ? EVIDENCE_STATUS.INFERRED : EVIDENCE_STATUS.UNKNOWN);
 
   // Deterministically classify outcome using canonical service
   const classification = classifyTrade({
@@ -704,6 +796,37 @@ const parseTradeFromImage = async ({
     screenshotCurrency: extractedCurrency,
   });
 
+  const nowIso = new Date().toISOString();
+  const entryTimeIso = parseIsoDateTime(extraction.entryTime?.value, nowIso);
+  const exitTimeIso = isClosed ? parseIsoDateTime(extraction.exitTime?.value, nowIso) : null;
+
+  // Calculate trading session from entry timestamp
+  const session = detectTradingSession(entryTimeIso);
+
+  // Calculate pips
+  const pips = calculatePips({
+    pair: rawPair,
+    direction,
+    entryPrice,
+    exitPrice: isClosed ? exitPrice : null,
+  });
+
+  // Calculate Risk/Reward ratio (Planned target R:R or Realized R:R)
+  const { riskRewardRatio: plannedRR } = calculateRiskReward(direction, entryPrice, stopLoss, takeProfit);
+  const resolvedRR = plannedRR ?? resolveTradeRiskReward({
+    entryPrice,
+    stopLoss,
+    takeProfit,
+    exitPrice,
+    direction,
+    profitLossAmount: isClosed ? netProfit : null,
+  });
+
+  // Calculate trade hold duration in minutes if closed
+  const durationMinutes = (entryTimeIso && exitTimeIso)
+    ? calculateTradeDurationMinutes(entryTimeIso, exitTimeIso)
+    : null;
+
   const candidateTrade = {
     pair: rawPair,
     direction,
@@ -726,8 +849,12 @@ const parseTradeFromImage = async ({
     hasCurrencyConflict: currencyConflict.hasCurrencyConflict,
     currencyConflictWarning: currencyConflict.warning,
     externalId: extraction.ticket?.value ? String(extraction.ticket.value).trim() : null,
-    entryTime: extraction.entryTime?.value ? new Date(extraction.entryTime.value).toISOString() : new Date().toISOString(),
-    exitTime: isClosed && extraction.exitTime?.value ? new Date(extraction.exitTime.value).toISOString() : (isClosed ? new Date().toISOString() : null),
+    entryTime: entryTimeIso,
+    exitTime: exitTimeIso,
+    session,
+    riskRewardRatio: resolvedRR,
+    pips,
+    durationMinutes,
     breakEvenActivated: classification.breakEvenActivated,
     breakEvenPrice: classification.breakEvenPrice,
     breakEvenEvidenceSource: classification.breakEvenEvidenceSource,
@@ -783,14 +910,114 @@ const parseTradeFromImage = async ({
       timeframe: extraction.timeframe?.status || 'MISSING',
       account: matchedAccountId ? 'CONFIRMED' : (accountResolution.status === 'AMBIGUOUS' ? 'UNCERTAIN' : 'MISSING'),
       currency: currencyConflict.hasCurrencyConflict ? 'UNCERTAIN' : 'CONFIRMED',
+      session: session ? 'CONFIRMED' : 'UNCERTAIN',
+      riskRewardRatio: resolvedRR !== null ? 'CONFIRMED' : 'UNCERTAIN',
+      pips: pips !== null ? 'CONFIRMED' : 'UNCERTAIN',
     },
     requiresUserConfirmation: true,
     duplicateInfo,
-    confidenceScore: extraction.confidenceScore || 0.5,
+    confidenceScore: extraction.confidenceScore || 0.85,
     rationale: beCandidate.rationale || extraction.rawSummary || 'Extracted via JAHZ Vision AI; review before saving.',
     accountResolution,
     currencyConflict,
     assistantReply,
+  };
+};
+
+/**
+ * Method B & C: Screenshot-to-Trade Extraction (Broker receipts, open positions, chart setups)
+ * Supports both single-trade screenshots and multi-trade receipts/history views.
+ */
+const parseTradeFromImage = async ({
+  imageBuffer,
+  mimeType = 'image/png',
+  imageUrl = null,
+  userAccounts = [],
+  userThresholdAmount = null,
+  existingTrades = null,
+  userId = null,
+  userMessage = null,
+  currentDraft = {},
+  mockExtraction = null,
+} = {}) => {
+  let multiExtraction = null;
+
+  if (!mockExtraction) {
+    let base64ImageUrl;
+    if (typeof imageBuffer === 'string' && imageBuffer.startsWith('data:')) {
+      base64ImageUrl = imageBuffer;
+    } else if (Buffer.isBuffer(imageBuffer)) {
+      base64ImageUrl = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
+    } else if (imageUrl) {
+      base64ImageUrl = imageUrl;
+    } else {
+      throw new Error('Valid image buffer or URL is required for trade extraction');
+    }
+
+    const provider = getProvider();
+    const promptText = userMessage && typeof userMessage === 'string' && userMessage.trim()
+      ? `Examine this screenshot alongside user's description: "${userMessage.trim()}". Determine if it is a broker trade receipt, an open position, or an annotated chart setup. Extract ALL visible trades into the 'trades' array with exact prices, volume, ticket, broker costs, timestamps, and stop management details adhering strictly to the schema.`
+      : 'Examine this screenshot. Determine if it is a broker trade receipt, an open position, or an annotated chart setup. Extract ALL visible trades into the \'trades\' array with exact prices, volume, ticket, broker costs, timestamps, and stop management details adhering strictly to the schema.';
+
+    const userPrompt = [
+      {
+        type: 'text',
+        text: promptText,
+      },
+      {
+        type: 'image_url',
+        image_url: { url: base64ImageUrl, detail: 'high' },
+      },
+    ];
+
+    const result = await validateStructuredOutput(
+      provider,
+      IMAGE_CAPTURE_SYSTEM_PROMPT,
+      userPrompt,
+      VisionMultiTradeExtractionSchema,
+      1,
+      true // useVision
+    );
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to extract trade data from screenshot');
+    }
+
+    multiExtraction = result.data;
+  } else {
+    multiExtraction = VisionMultiTradeExtractionSchema.parse(mockExtraction);
+  }
+
+  const rawTrades = Array.isArray(multiExtraction.trades) && multiExtraction.trades.length > 0
+    ? multiExtraction.trades
+    : [];
+
+  if (rawTrades.length === 0) {
+    throw new Error('No trade data could be identified in the provided image');
+  }
+
+  const candidateTrades = [];
+  for (const singleExt of rawTrades) {
+    const candidate = await processSingleExtractedTrade({
+      extraction: singleExt,
+      userAccounts,
+      userThresholdAmount,
+      existingTrades,
+      userId,
+      userMessage,
+      currentDraft,
+      imageUrl,
+    });
+    candidateTrades.push(candidate);
+  }
+
+  const primaryResult = candidateTrades[0];
+
+  return {
+    ...primaryResult,
+    candidateTrades,
+    isMultiTrade: candidateTrades.length > 1,
+    detectedTradeCount: candidateTrades.length,
   };
 };
 
@@ -825,11 +1052,21 @@ const parseBatchImages = async ({
         mockExtraction: img.mockExtraction || mockExtraction || null,
       });
 
-      extractedList.push({
-        batchId: `batch_${Date.now()}_${i}`,
-        originalFilename: img.originalname || `Screenshot_${i + 1}.png`,
-        ...parsed,
-      });
+      if (parsed.isMultiTrade && Array.isArray(parsed.candidateTrades) && parsed.candidateTrades.length > 1) {
+        parsed.candidateTrades.forEach((subTrade, subIdx) => {
+          extractedList.push({
+            batchId: `batch_${Date.now()}_${i}_${subIdx}`,
+            originalFilename: `${img.originalname || 'Screenshot'}_trade_${subIdx + 1}`,
+            ...subTrade,
+          });
+        });
+      } else {
+        extractedList.push({
+          batchId: `batch_${Date.now()}_${i}`,
+          originalFilename: img.originalname || `Screenshot_${i + 1}.png`,
+          ...parsed,
+        });
+      }
     } catch (err) {
       extractedList.push({
         batchId: `batch_${Date.now()}_${i}`,
@@ -894,8 +1131,11 @@ module.exports = {
   parseTradeFromText,
   parseTradeFromImage,
   parseBatchImages,
+  processSingleExtractedTrade,
   generateJournalEnrichment,
   TextTradeCaptureSchema,
+  SingleTradeCaptureSchema,
+  VisionMultiTradeExtractionSchema,
   ImageTradeCaptureSchema,
   ExtractedFieldSchema,
   BreakEvenCandidateSchema,

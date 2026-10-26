@@ -19,6 +19,7 @@ const adminCommunicationSettingsService = {
 
     return {
       settings,
+      adminEmail: process.env.ADMIN_EMAIL || 'jahzjournals@gmail.com',
       brevo: {
         isConfigured: isBrevoConfigured,
         status: isBrevoConfigured ? 'Brevo API Connected' : 'Brevo API Not Configured',

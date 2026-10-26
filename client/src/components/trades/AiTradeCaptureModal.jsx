@@ -34,6 +34,13 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
 import TradeOutcomeBadge from './TradeOutcomeBadge';
+import {
+  calculateRiskReward,
+  calculatePips,
+  detectTradingSession,
+  getTradingSessionLabel,
+  resolveTradeRiskReward,
+} from '../../utils/tradeCalculations';
 
 const PROMPT_SUGGESTIONS = [
   'I bought 0.22 BTCUSD at 82351.75 and closed at 82361.97.',
@@ -143,6 +150,24 @@ const AiTradeCaptureModal = ({
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const composerInputRef = useRef(null);
+
+  // ----------------------------------------------------
+  // Prevent background scroll and signal modal visibility to hide floating widgets
+  // ----------------------------------------------------
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.style.overflow = 'hidden';
+    window.dispatchEvent(
+      new CustomEvent('jahz-modal-visibility', { detail: { open: true, modal: 'ai-trade-capture' } })
+    );
+
+    return () => {
+      document.body.style.overflow = '';
+      window.dispatchEvent(
+        new CustomEvent('jahz-modal-visibility', { detail: { open: false, modal: 'ai-trade-capture' } })
+      );
+    };
+  }, [isOpen]);
 
   // ----------------------------------------------------
   // Initial Data Fetching (Accounts & Strategies)
@@ -476,6 +501,11 @@ const AiTradeCaptureModal = ({
               if (calcNet > 0) updatedTrade.result = 'WIN';
               else if (calcNet < 0) updatedTrade.result = 'LOSS';
               else updatedTrade.result = 'BREAKEVEN';
+
+              // If closed trade is a realized loss, ensure inferred BE protection is turned off
+              if (calcNet < -3.0 && updatedTrade.breakEvenEvidenceStatus !== 'USER_CONFIRMED') {
+                updatedTrade.breakEvenActivated = false;
+              }
             }
           }
 
@@ -485,7 +515,63 @@ const AiTradeCaptureModal = ({
               if (net > 0) updatedTrade.result = 'WIN';
               else if (net < 0) updatedTrade.result = 'LOSS';
               else updatedTrade.result = 'BREAKEVEN';
+
+              if (net < -3.0 && updatedTrade.breakEvenEvidenceStatus !== 'USER_CONFIRMED') {
+                updatedTrade.breakEvenActivated = false;
+              }
             }
+          }
+
+          // If entry/exit/stopLoss changes on a closed trade, re-verify BE sanity
+          if (['entryPrice', 'exitPrice', 'stopLoss', 'direction'].includes(fieldKey)) {
+            const entry = Number(updatedTrade.entryPrice);
+            const exit = Number(updatedTrade.exitPrice);
+            const pnl = Number(updatedTrade.profitLossAmount);
+            const dir = updatedTrade.direction;
+            const isClosed = updatedTrade.status === 'CLOSED' || !Number.isNaN(exit);
+            const isLossExit = (dir === 'BUY' && !Number.isNaN(exit) && !Number.isNaN(entry) && exit < entry - 1e-4) ||
+              (dir === 'SELL' && !Number.isNaN(exit) && !Number.isNaN(entry) && exit > entry + 1e-4);
+            const isNetLoss = !Number.isNaN(pnl) && pnl < -3.0;
+
+            if (isClosed && (isLossExit || isNetLoss) && updatedTrade.breakEvenEvidenceStatus !== 'USER_CONFIRMED') {
+              updatedTrade.breakEvenActivated = false;
+            }
+          }
+
+          // Dynamically recalculate Pips
+          if (['entryPrice', 'exitPrice', 'direction', 'pair'].includes(fieldKey)) {
+            const p = calculatePips({
+              pair: updatedTrade.pair,
+              direction: updatedTrade.direction,
+              entryPrice: updatedTrade.entryPrice,
+              exitPrice: updatedTrade.exitPrice,
+            });
+            if (p !== null) updatedTrade.pips = p;
+          }
+
+          // Dynamically recalculate Risk/Reward Ratio
+          if (['entryPrice', 'stopLoss', 'takeProfit', 'direction', 'exitPrice'].includes(fieldKey)) {
+            const { riskRewardRatio: plannedRR } = calculateRiskReward(
+              updatedTrade.direction,
+              updatedTrade.entryPrice,
+              updatedTrade.stopLoss,
+              updatedTrade.takeProfit
+            );
+            const resolvedRR = plannedRR ?? resolveTradeRiskReward({
+              entryPrice: updatedTrade.entryPrice,
+              stopLoss: updatedTrade.stopLoss,
+              takeProfit: updatedTrade.takeProfit,
+              exitPrice: updatedTrade.exitPrice,
+              direction: updatedTrade.direction,
+              profitLossAmount: updatedTrade.profitLossAmount,
+            });
+            if (resolvedRR !== null) updatedTrade.riskRewardRatio = resolvedRR;
+          }
+
+          // Dynamically recalculate Session when entryTime changes
+          if (fieldKey === 'entryTime' && value) {
+            const sess = detectTradingSession(value);
+            if (sess) updatedTrade.session = sess;
           }
 
           setActiveDraft(updatedTrade);
@@ -845,7 +931,22 @@ const AiTradeCaptureModal = ({
   const getBeHelper = (trade) => {
     const entry = Number(trade.entryPrice);
     const sl = Number(trade.stopLoss);
+    const exit = Number(trade.exitPrice);
+    const pnl = Number(trade.profitLossAmount);
+    const gross = Number(trade.grossProfit);
     if (Number.isNaN(entry) || Number.isNaN(sl) || !entry || !sl) return null;
+
+    const isClosed = trade.status === 'CLOSED' || !Number.isNaN(exit);
+    const netLoss = (!Number.isNaN(pnl) && pnl < -3.0) || (!Number.isNaN(gross) && gross < -3.0);
+    const isLossExit = (trade.direction === 'BUY' && !Number.isNaN(exit) && exit < entry - 1e-4) ||
+      (trade.direction === 'SELL' && !Number.isNaN(exit) && exit > entry + 1e-4);
+
+    if (isClosed && (netLoss || isLossExit)) {
+      return {
+        type: 'warning',
+        text: `Trade closed at a loss on the loss side of entry (${exit || 'exit'} vs ${entry}) — break-even was not achieved.`,
+      };
+    }
 
     if (trade.direction === 'BUY') {
       if (sl >= entry - 1e-6) {
@@ -897,7 +998,7 @@ const AiTradeCaptureModal = ({
         setIsDragging(false);
         handleFilesAdded(e.dataTransfer.files);
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 sm:p-4 md:p-6 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-2 sm:p-4 md:p-6 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div className="flex flex-col h-[92vh] max-h-[920px] w-full max-w-4xl rounded-3xl bg-surface border border-border shadow-2xl overflow-hidden relative">
         
@@ -1530,6 +1631,55 @@ const AiTradeCaptureModal = ({
                                     <span>{beHelper.text}</span>
                                   </div>
                                 )}
+                              </div>
+
+                              {/* Trade Intelligence Bar: Session, Target R:R, Pips */}
+                              <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-surface-muted/50 border border-border">
+                                <div>
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <label className="text-[10px] font-bold text-muted">Session</label>
+                                    {renderCertaintyBadge(fieldStatuses.session)}
+                                  </div>
+                                  <select
+                                    value={trade.session || ''}
+                                    onChange={(e) => handleUpdateCardField(msg.id, draftId, 'session', e.target.value)}
+                                    disabled={isSaved}
+                                    className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-xs font-bold text-indigo-400 focus:outline-none"
+                                  >
+                                    <option value="">Auto-Detect</option>
+                                    <option value="LONDON">London</option>
+                                    <option value="NEW_YORK">New York</option>
+                                    <option value="ASIAN">Asian</option>
+                                    <option value="LONDON_NEW_YORK_OVERLAP">London/NY Overlap</option>
+                                    <option value="OTHER">Other</option>
+                                  </select>
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <label className="text-[10px] font-bold text-muted">Target R:R</label>
+                                    {renderCertaintyBadge(fieldStatuses.riskRewardRatio)}
+                                  </div>
+                                  <div className="bg-surface border border-border rounded-lg px-2 py-1 text-xs font-black text-emerald-400">
+                                    {trade.riskRewardRatio !== null && trade.riskRewardRatio !== undefined && trade.riskRewardRatio !== ''
+                                      ? `1 : ${trade.riskRewardRatio}`
+                                      : '—'}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <label className="text-[10px] font-bold text-muted">Pips</label>
+                                    {renderCertaintyBadge(fieldStatuses.pips)}
+                                  </div>
+                                  <div className="bg-surface border border-border rounded-lg px-2 py-1 text-xs font-black">
+                                    <span className={Number(trade.pips) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                                      {trade.pips !== null && trade.pips !== undefined && trade.pips !== ''
+                                        ? `${Number(trade.pips) > 0 ? '+' : ''}${trade.pips} pips`
+                                        : '—'}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
 
                               {/* Deterministic Net Realized P&L Summary */}

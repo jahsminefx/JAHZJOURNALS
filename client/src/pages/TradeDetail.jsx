@@ -12,6 +12,7 @@ import ImageModal from '../components/common/ImageModal';
 import ShareTradeModal from '../components/share/ShareTradeModal';
 import ShareTradeToCohortModal from '../components/share/ShareTradeToCohortModal';
 import TradeOutcomeBadge from '../components/trades/TradeOutcomeBadge';
+import { getTradingSessionLabel } from '../utils/tradeCalculations';
 import { ShieldCheck } from 'lucide-react';
 
 const TradeDetail = () => {
@@ -428,7 +429,7 @@ const TradeDetail = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div><span className="block text-muted">Setup</span><span className="font-medium text-foreground">{trade.setup?.name || 'N/A'}</span></div>
               <div><span className="block text-muted">Strategy</span><span className="font-medium text-foreground">{trade.strategy?.name || 'N/A'}</span></div>
-              <div><span className="block text-muted">Session</span><span className="font-medium text-foreground">{trade.session || 'N/A'}</span></div>
+              <div className="min-w-0"><span className="block text-muted">Session</span><span className="font-medium text-foreground truncate block" title={getTradingSessionLabel(trade.session)}>{getTradingSessionLabel(trade.session)}</span></div>
               <div><span className="block text-muted">Timeframe</span><span className="font-medium text-foreground">{trade.entryTimeframe || 'N/A'}</span></div>
               <div><span className="block text-muted">Followed Plan</span><span className="font-medium text-foreground">{trade.followedPlan === null ? 'N/A' : trade.followedPlan ? 'Yes' : 'No'}</span></div>
               <div><span className="block text-muted">A+ Setup</span><span className="font-medium text-foreground">{trade.isAPlusSetup === null ? 'N/A' : trade.isAPlusSetup ? 'Yes' : 'No'}</span></div>

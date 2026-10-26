@@ -8,7 +8,9 @@ const {
   updateUserRole,
   getSystemHealth,
   getAuditLogs,
-  testAdminEmail
+  testAdminEmail,
+  getExecutiveDigestPreview,
+  sendExecutiveDigestNow
 } = require('../controllers/adminController');
 
 const {
@@ -273,5 +275,9 @@ router.post('/communications/notifications', authorize('SUPER_ADMIN', 'ADMIN'), 
 // Abstraction & Security Gates
 const { impersonateUser } = require('../controllers/adminImpersonationController');
 router.post('/impersonate/:id', authorize('SUPER_ADMIN'), impersonateUser);
+
+// Executive Digest Briefings
+router.get('/executive-digest/preview', authorize('SUPER_ADMIN'), getExecutiveDigestPreview);
+router.post('/executive-digest/send-now', authorize('SUPER_ADMIN'), sendExecutiveDigestNow);
 
 module.exports = router;

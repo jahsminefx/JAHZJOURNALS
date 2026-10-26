@@ -349,6 +349,7 @@ const updateTrade = async (req, res) => {
     }
 
     const {
+      tradingAccountId,
       pair,
       direction,
       entryPrice,
@@ -392,6 +393,22 @@ const updateTrade = async (req, res) => {
     } = req.body;
 
     const parseNum = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
+    const parseDate = (v) => {
+      if (v === undefined) return undefined;
+      if (!v) return null;
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    let targetAccountId = trade.tradingAccountId;
+    if (tradingAccountId && String(tradingAccountId).trim() && tradingAccountId !== trade.tradingAccountId) {
+      const targetAccount = await prisma.tradingAccount.findFirst({
+        where: { id: tradingAccountId, userId: req.user.id }
+      });
+      if (targetAccount) {
+        targetAccountId = targetAccount.id;
+      }
+    }
 
     const finalEntryPrice = entryPrice !== undefined ? parseNum(entryPrice) : trade.entryPrice;
     const finalExitPrice = exitPrice !== undefined ? parseNum(exitPrice) : trade.exitPrice;
@@ -444,30 +461,44 @@ const updateTrade = async (req, res) => {
     });
 
     let computedPips = pips !== undefined ? parseNum(pips) : null;
-    if (computedPips === null && finalEntryPrice !== null && finalExitPrice !== null && finalPair) {
-      computedPips = calculatePips(finalPair, finalEntryPrice, finalExitPrice, finalDirection);
+    if (computedPips === null && finalEntryPrice !== null && finalExitPrice !== null && finalPair && finalDirection) {
+      computedPips = calculatePips({
+        pair: finalPair,
+        direction: finalDirection,
+        entryPrice: finalEntryPrice,
+        exitPrice: finalExitPrice,
+      });
     }
+
+    const isClosed = finalStatus === 'CLOSED' || ['WIN', 'LOSS', 'BREAKEVEN'].includes(classification.result);
 
     let fxRateToReporting = undefined;
     let fxRateSource = undefined;
     let fxRateTimestamp = undefined;
 
-    if (finalPair) {
-      const account = await prisma.tradingAccount.findUnique({
-        where: { id: trade.tradingAccountId },
-        select: { currency: true },
-      });
-      if (account) {
-        const fxInfo = await currencyService.getConversionRateForTrade(finalPair, account.currency || 'USD');
-        fxRateToReporting = fxInfo.rate;
-        fxRateSource = fxInfo.source;
-        fxRateTimestamp = fxInfo.timestamp;
+    if (isClosed) {
+      if (!trade.fxRateToReporting || trade.status !== 'CLOSED' || targetAccountId !== trade.tradingAccountId) {
+        const account = await prisma.tradingAccount.findUnique({
+          where: { id: targetAccountId },
+          select: { currency: true },
+        });
+        if (account) {
+          const fxDetails = await currencyService.getExchangeRateDetails(account.currency || 'USD', 'USD');
+          fxRateToReporting = fxDetails.rate;
+          fxRateSource = fxDetails.source;
+          fxRateTimestamp = new Date();
+        }
       }
+    } else if (trade.status === 'CLOSED') {
+      fxRateToReporting = null;
+      fxRateSource = null;
+      fxRateTimestamp = null;
     }
 
     const updatedTrade = await prisma.trade.update({
       where: { id: req.params.id },
       data: {
+        tradingAccountId: targetAccountId,
         pair: finalPair,
         direction: finalDirection,
         entryPrice: finalEntryPrice,
@@ -495,28 +526,31 @@ const updateTrade = async (req, res) => {
         isManualResultOverride: classification.isManualResultOverride,
         classificationSource: classification.classificationSource,
         resultCalculatedAt: classification.resultCalculatedAt,
-        session: session !== undefined ? session : undefined,
-        strategyId: strategyId !== undefined ? strategyId : undefined,
-        setupId: setupId !== undefined ? setupId : undefined,
-        higherTimeframe: higherTimeframe !== undefined ? higherTimeframe : undefined,
-        entryTimeframe: entryTimeframe !== undefined ? entryTimeframe : undefined,
-        htfBias: htfBias !== undefined ? htfBias : undefined,
-        entryReason: entryReason !== undefined ? entryReason : undefined,
-        exitReason: exitReason !== undefined ? exitReason : undefined,
-        notesBefore: notesBefore !== undefined ? notesBefore : undefined,
-        notesAfter: notesAfter !== undefined ? notesAfter : undefined,
+        session: session !== undefined ? (session || null) : undefined,
+        strategyId: strategyId !== undefined ? (strategyId || null) : undefined,
+        setupId: setupId !== undefined ? (setupId || null) : undefined,
+        higherTimeframe: higherTimeframe !== undefined ? (higherTimeframe || null) : undefined,
+        entryTimeframe: entryTimeframe !== undefined ? (entryTimeframe || null) : undefined,
+        htfBias: htfBias !== undefined ? (htfBias || null) : undefined,
+        entryReason: entryReason !== undefined ? (entryReason || null) : undefined,
+        exitReason: exitReason !== undefined ? (exitReason || null) : undefined,
+        notesBefore: notesBefore !== undefined ? (notesBefore || null) : undefined,
+        notesAfter: notesAfter !== undefined ? (notesAfter || null) : undefined,
         followedPlan: followedPlan !== undefined ? Boolean(followedPlan) : undefined,
         isAPlusSetup: isAPlusSetup !== undefined ? Boolean(isAPlusSetup) : undefined,
         newsRelated: newsRelated !== undefined ? Boolean(newsRelated) : undefined,
-        grade: grade !== undefined ? grade : undefined,
-        entryTime: entryTime !== undefined ? (entryTime ? new Date(entryTime) : null) : undefined,
-        exitTime: exitTime !== undefined ? (exitTime ? new Date(exitTime) : null) : undefined,
+        grade: grade !== undefined ? (grade || null) : undefined,
+        entryTime: entryTime !== undefined ? parseDate(entryTime) : undefined,
+        exitTime: exitTime !== undefined ? parseDate(exitTime) : undefined,
         ...(fxRateToReporting !== undefined && { fxRateToReporting, fxRateSource, fxRateTimestamp }),
       }
     });
 
     const { reconcileAccountBalance } = require('../services/accountBalanceService');
     await reconcileAccountBalance(trade.tradingAccountId);
+    if (targetAccountId !== trade.tradingAccountId) {
+      await reconcileAccountBalance(targetAccountId);
+    }
     await syncMentorCohortTradeSharesForTrade(updatedTrade, req.user.id);
 
     res.json(updatedTrade);

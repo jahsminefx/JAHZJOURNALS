@@ -32,7 +32,7 @@ const createOpenRouterProvider = () => {
               { role: 'user', content: userPrompt }
             ],
             response_format: { type: 'json_object' },
-            max_tokens: 1500,
+            max_tokens: 4000,
             temperature: 0.2
           });
         } catch (rfError) {
@@ -43,7 +43,7 @@ const createOpenRouterProvider = () => {
               { role: 'system', content: systemPrompt + '\n\nIMPORTANT: You MUST reply ONLY with valid JSON matching the requested structure.' },
               { role: 'user', content: userPrompt }
             ],
-            max_tokens: 1500,
+            max_tokens: 4000,
             temperature: 0.2
           });
         }

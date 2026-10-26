@@ -11,6 +11,7 @@ import { SkeletonTable, SkeletonCard } from '../components/SkeletonLoader';
 import { loadSettings, fetchAndSyncSettings } from '../utils/settings';
 import { formatCurrency } from '../utils/dashboard';
 import { getCurrencySymbol } from '../services/currencyConversionService';
+import { getTradingSessionLabel } from '../utils/tradeCalculations';
 
 import { createCacheKey, getCachedData, setCachedData } from '../utils/apiCache';
 
@@ -597,25 +598,27 @@ const getPnlColor = (pnl) => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5 text-xs text-muted bg-surface-muted/50 p-3 rounded-xl">
-                      <div>
+                      <div className="min-w-0">
                         <span className="block text-[10px] uppercase font-bold text-muted">Date</span>
-                        <span className="font-semibold text-foreground">{new Date(trade.entryTime || trade.createdAt).toLocaleDateString()}</span>
+                        <span className="font-semibold text-foreground truncate block">{new Date(trade.entryTime || trade.createdAt).toLocaleDateString()}</span>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="block text-[10px] uppercase font-bold text-muted">P/L</span>
-                        <span className={`font-mono font-bold ${
+                        <span className={`font-mono font-bold truncate block ${
                           trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
                         }`}>
                           {formatCurrency(trade.profitLossAmount, trade.tradingAccount?.currency || 'USD', { signDisplay: 'always' })}
                         </span>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="block text-[10px] uppercase font-bold text-muted">R:R</span>
-                        <span className="font-medium text-foreground">{trade.riskRewardRatio || 'N/A'}</span>
+                        <span className="font-medium text-foreground truncate block">{trade.riskRewardRatio || 'N/A'}</span>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="block text-[10px] uppercase font-bold text-muted">Session</span>
-                        <span className="font-medium text-foreground">{trade.session || 'N/A'}</span>
+                        <span className="font-medium text-foreground truncate block" title={getTradingSessionLabel(trade.session)}>
+                          {getTradingSessionLabel(trade.session)}
+                        </span>
                       </div>
                     </div>
 
