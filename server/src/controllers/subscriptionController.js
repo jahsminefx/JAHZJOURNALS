@@ -25,8 +25,11 @@ const getPaystackSecret = () => (process.env.PAYSTACK_SECRET_KEY || '').trim();
 const getPlanMappings = () => ({
   STARTER: { amountInKobo: 400000, planCode: process.env.PAYSTACK_STARTER_PLAN },
   PRO: { amountInKobo: 850000, planCode: process.env.PAYSTACK_PRO_PLAN },
-  PRO_SYNC: { amountInKobo: 3800000, planCode: process.env.PAYSTACK_SYNC_PLUS_PLAN },
-  MENTOR: { amountInKobo: 2500000, planCode: process.env.PAYSTACK_MENTOR_PLAN },
+  PRO_SYNC: { amountInKobo: 3800000, planCode: process.env.PAYSTACK_PRO_SYNC_PLAN || process.env.PAYSTACK_SYNC_PLUS_PLAN },
+  MENTOR_PRIVATE_COHORT: { amountInKobo: 1450000, planCode: process.env.PAYSTACK_MENTOR_PRIVATE_COHORT_PLAN },
+  MENTOR_GROWTH: { amountInKobo: 2500000, planCode: process.env.PAYSTACK_MENTOR_GROWTH_PLAN || process.env.PAYSTACK_MENTOR_PLAN },
+  MENTOR_MEGA: { amountInKobo: 8500000, planCode: process.env.PAYSTACK_MENTOR_MEGA_PLAN },
+  MENTOR: { amountInKobo: 2500000, planCode: process.env.PAYSTACK_MENTOR_PLAN || process.env.PAYSTACK_MENTOR_GROWTH_PLAN },
 });
 
 const PLAN_RANK = {

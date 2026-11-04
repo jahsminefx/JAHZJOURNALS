@@ -44,6 +44,10 @@ class PaystackAdapter {
       },
     };
 
+    if (priceRecord.providerPlanCode && (!promo || !promo.discountPercent)) {
+      payload.plan = priceRecord.providerPlanCode;
+    }
+
     if (this.isConfigured()) {
       const response = await fetch('https://api.paystack.co/transaction/initialize', {
         method: 'POST',
