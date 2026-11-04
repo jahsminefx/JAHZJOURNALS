@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { canCreateTrades } = require('../services/entitlementService');
 const { sendPushToUser } = require('../services/pushNotificationService');
 const {
   classifyTrade,
@@ -26,10 +27,10 @@ const getNum = (val) => {
  */
 const handleMtSyncWebhook = async (req, res) => {
   try {
+    // Extract sync token exclusively from secure headers or request body (never from query parameters to prevent log leakage)
     const syncToken = 
       req.headers['x-sync-token'] || 
-      req.headers['authorization']?.replace('Bearer ', '') || 
-      req.query.token || 
+      (req.headers['authorization']?.startsWith('Bearer ') ? req.headers['authorization'].slice(7).trim() : null) || 
       req.body.syncToken;
 
     if (!syncToken) {
@@ -104,6 +105,11 @@ const handleMtSyncWebhook = async (req, res) => {
       const now = new Date();
 
       if (!existingTrade) {
+        const quotaCheck = await canCreateTrades(account.userId, 1);
+        if (!quotaCheck.allowed) {
+          continue;
+        }
+
         // Detect if initial stop is already at or past entry (break-even protected)
         const isInitialStopBe = isStopAtOrPastEntry({
           direction,
@@ -408,7 +414,7 @@ const generateSyncToken = async (req, res) => {
       return res.status(404).json({ message: 'Trading account not found.' });
     }
 
-    const token = 'jj_mt_' + crypto.randomBytes(16).toString('hex');
+    const token = 'jj_mt_' + crypto.randomBytes(32).toString('hex');
 
     const updatedAccount = await prisma.tradingAccount.update({
       where: { id: accountId },

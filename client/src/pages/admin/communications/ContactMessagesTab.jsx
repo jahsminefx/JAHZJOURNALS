@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Search, 
   Filter, 
@@ -20,7 +20,8 @@ import {
   ChevronRight,
   MoreVertical,
   X,
-  FileText
+  FileText,
+  Ticket
 } from 'lucide-react';
 import api from '../../../utils/api';
 import toast from 'react-hot-toast';
@@ -137,6 +138,96 @@ const ContactMessagesTab = () => {
     }
   };
 
+  // Real-time auto-polling every 2.5s so replies appear immediately without refresh
+  useEffect(() => {
+    let isCancelled = false;
+
+    const syncSilently = async () => {
+      // 1. Silent thread refresh if one is selected
+      if (selectedThread?.id) {
+        try {
+          const res = await api.get(`/admin/communications/contact/${selectedThread.id}`);
+          if (!isCancelled && res.data) {
+            setSelectedThread(prev => {
+              if (!prev || prev.id !== res.data.id) return prev;
+              const prevThreadCount = (prev.threads || []).length;
+              const newThreadCount = (res.data.threads || []).length;
+              const prevNotesCount = (prev.internalNotes || []).length;
+              const newNotesCount = (res.data.internalNotes || []).length;
+
+              if (
+                prevThreadCount !== newThreadCount ||
+                prevNotesCount !== newNotesCount ||
+                prev.status !== res.data.status ||
+                prev.priority !== res.data.priority ||
+                prev.assignedToId !== res.data.assignedToId
+              ) {
+                return res.data;
+              }
+              return prev;
+            });
+          }
+        } catch (_) {}
+      }
+
+      // 2. Silent thread list refresh
+      try {
+        const params = {};
+        if (statusTab !== 'ALL' && statusTab !== 'ASSIGNED_TO_ME') params.status = statusTab;
+        if (priorityFilter) params.priority = priorityFilter;
+        if (categoryFilter) params.category = categoryFilter;
+        if (search) params.search = search;
+
+        const res = await api.get('/admin/communications/contact', { params });
+        let list = Array.isArray(res.data) ? res.data : (res.data?.messages || []);
+
+        if (statusTab === 'ASSIGNED_TO_ME') {
+          let currentUserId = null;
+          try {
+            const rawUser = localStorage.getItem('user');
+            if (rawUser && rawUser !== 'undefined') {
+              const parsed = JSON.parse(rawUser);
+              currentUserId = parsed?.id || null;
+            }
+          } catch (_) {}
+
+          if (currentUserId) {
+            list = list.filter(m => m.assignedToId === currentUserId);
+          }
+        }
+
+        if (!isCancelled) {
+          setMessages(prev => {
+            const prevHash = prev.map(m => `${m.id}-${m.status}-${m.unreadForAdmin}-${m.lastMessageAt}`).join('|');
+            const newHash = list.map(m => `${m.id}-${m.status}-${m.unreadForAdmin}-${m.lastMessageAt}`).join('|');
+            if (prevHash !== newHash) {
+              return list;
+            }
+            return prev;
+          });
+        }
+      } catch (_) {}
+    };
+
+    const interval = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        syncSilently();
+      }
+    }, 2500);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [selectedThread?.id, statusTab, priorityFilter, categoryFilter, search]);
+
+  const totalThreadItems = ((selectedThread?.threads || []).length) + ((selectedThread?.internalNotes || []).length);
+  useEffect(() => {
+    if (totalThreadItems > 0) {
+      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [totalThreadItems]);
+
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       await api.patch(`/admin/communications/contact/${id}/status`, { status: newStatus });
@@ -187,6 +278,37 @@ const ContactMessagesTab = () => {
       }
     } catch (error) {
       toast.error('Failed to update assignment');
+    }
+  };
+
+  
+  const [convertingTicket, setConvertingTicket] = useState(false);
+
+  const handleConvertToTicket = async (thread) => {
+    if (!thread) return;
+    const confirmConvert = window.confirm(
+      `Escalate conversation "${thread.subject}" to an official tracked Support Ticket (#TK-xxxx)?\n\nThis will link this conversation to the Engineering/Support queue and post an official status update in the chat.`
+    );
+    if (!confirmConvert) return;
+
+    setConvertingTicket(true);
+    try {
+      const res = await api.post(`/admin/communications/contact/${thread.id}/convert-to-ticket`, {
+        category: thread.category,
+        priority: thread.priority,
+        subject: thread.subject,
+        description: thread.message,
+      });
+
+      const ticketNum = res.data?.ticketNumber || 'TK-XXXX';
+      toast.success(`Escalated to Support Ticket #${ticketNum}!`);
+
+      openThread(thread.id, { silent: true });
+      fetchMessages({ silent: true });
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to convert to ticket');
+    } finally {
+      setConvertingTicket(false);
     }
   };
 
@@ -461,6 +583,17 @@ const ContactMessagesTab = () => {
                       <option key={s.id} value={s.id}>Assign: {s.name} ({s.role})</option>
                     ))}
                   </select>
+
+                  {/* Convert to Formal Ticket */}
+                  <button
+                    onClick={() => handleConvertToTicket(selectedThread)}
+                    disabled={convertingTicket}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition shadow-2xs whitespace-nowrap cursor-pointer disabled:opacity-50"
+                    title="Escalate conversation to official Support Ticket (#TK-xxxx)"
+                  >
+                    <Ticket size={13} className="text-amber-400" />
+                    <span>{convertingTicket ? 'Escalating...' : 'Convert to Ticket'}</span>
+                  </button>
                 </div>
               </div>
 

@@ -67,7 +67,8 @@ const {
   updateMessagePriority,
   updateMessageCategory,
   assignMessage,
-  bulkAction
+  bulkAction,
+  convertToTicket
 } = require('../controllers/communications/adminContactController');
 
 const {
@@ -92,7 +93,8 @@ const {
 
 const {
   getSystemMetrics,
-  getErrorLogs
+  getErrorLogs,
+  dismissErrorLog
 } = require('../controllers/adminInfrastructureController');
 
 const {
@@ -201,6 +203,7 @@ router.get('/platform/config/history', authorize('SUPER_ADMIN'), getConfigHistor
 // Infrastructure Operations Hub (SUPER ADMIN ONLY)
 router.get('/infrastructure/metrics', authorize('SUPER_ADMIN'), getSystemMetrics);
 router.get('/infrastructure/logs', authorize('SUPER_ADMIN'), getErrorLogs);
+router.delete('/infrastructure/logs/:id', authorize('SUPER_ADMIN'), dismissErrorLog);
 
 // Business Intelligence & Executive Analytics (CEO Dashboard)
 router.get('/business/executive', authorize('SUPER_ADMIN', 'ADMIN'), getExecutiveSummary);
@@ -241,6 +244,7 @@ router.patch('/communications/contact/:id/priority', authorize('SUPER_ADMIN', 'A
 router.patch('/communications/contact/:id/category', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), updateMessageCategory);
 router.patch('/communications/contact/:id/assign', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), assignMessage);
 router.post('/communications/contact/bulk', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), bulkAction);
+router.post('/communications/contact/:id/convert-to-ticket', authorize('SUPER_ADMIN', 'ADMIN', 'SUPPORT'), convertToTicket);
 
 // Email Campaigns
 router.get('/communications/emails', authorize('SUPER_ADMIN', 'ADMIN'), getCampaigns);

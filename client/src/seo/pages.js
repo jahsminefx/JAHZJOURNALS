@@ -120,8 +120,8 @@ export const PAGE_SEO = {
     ]
   },
   '/contact': {
-    title: 'Contact Support & Inquiries | JAHZJOURNALS',
-    description: 'Get in touch with the JAHZJOURNALS support team for technical assistance, partnership opportunities, or mentor onboarding.',
+    title: 'Contact | JAHZJOURNALS',
+    description: 'Get in touch with the JAHZJOURNALS team for technical assistance, partnership opportunities, or mentor onboarding.',
     keywords: 'Contact JAHZJOURNALS, Support Inquiry, Trading Journal Help, Customer Success',
     breadcrumbs: [
       { name: 'Home', path: '/' },

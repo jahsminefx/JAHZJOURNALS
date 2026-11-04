@@ -256,11 +256,12 @@ const ConfigTab = () => {
                      className="w-full bg-surface border border-border rounded-lg outline-none focus:border-purple-500 px-3 py-1.5 font-bold text-xs text-muted-foreground transition"
                    >
                      <option value="EVERYONE">Enabled for Everyone</option>
-                     <option value="STARTER_AND_PRO">Starter & Pro Plans</option>
-                     <option value="PRO_ONLY">Pro Plan Only</option>
+                     <option value="STARTER_AND_ABOVE">Starter & Above</option>
+                     <option value="PRO_AND_ABOVE">Pro & Above (Pro, Pro Sync)</option>
+                     <option value="PRO_SYNC_ONLY">Pro Sync Only</option>
+                     <option value="MENTORS_ONLY">Mentors Only (All 3 Tiers)</option>
+                     <option value="MEGA_MENTORS_ONLY">Mega Academy Mentors Only</option>
                      <option value="FOUNDING_TRADERS_ONLY">Founding Traders Only</option>
-                     <option value="BETA_TESTERS_ONLY">Beta Testers Only</option>
-                     <option value="SELECTED_USERS">Selected Users Only</option>
                      <option value="DISABLED">Disabled Globally</option>
                    </select>
                 </div>

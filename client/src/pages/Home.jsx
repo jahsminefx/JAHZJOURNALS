@@ -61,9 +61,9 @@ const faqs = [
 ];
 
 const pricing = [
-  ['Free', '₦0', 'Start journaling without pressure.', ['20 trades per month', '1 trading account', 'Basic trade journal & analytics', '1 screenshot per trade', 'Risk calculator']],
-  ['Starter', '₦4,000/mo', 'Build disciplined habits & auto-sync.', ['100 trades / month', 'Automated MT4/MT5 Cloud Sync', 'Emotion & rule tracking', 'Session analysis', '3 screenshots / trade']],
-  ['Pro', '₦8,000/mo', 'For traders serious about finding their edge.', ['Unlimited trades & accounts', 'MT4/MT5 Multi-Account Sync', 'Prop firm tracker & guards', 'AI reviews & PDF reports', '10 screenshots / trade'], true],
+  ['Free', '₦0', 'Start journaling without pressure.', ['20 trades per month', '1 trading account', 'Basic trade journal & analytics', '1 screenshot per trade', 'Position-size risk calculator']],
+  ['Starter', '₦4,000/mo', 'Build disciplined execution & habits.', ['100 trades / month', '3 trading accounts', 'Weekly AI coaching summaries', 'Emotion & rule tracking', 'Session analysis', '3 screenshots / trade']],
+  ['Pro', '₦8,500/mo', 'For serious traders & prop firm candidates.', ['Unlimited trades & accounts', 'Prop firm challenge tracker & guards', 'AI Trade Review & Edge Finder', 'PDF performance reports', '10 screenshots / trade'], true],
 ];
 
 const disciplineData = {

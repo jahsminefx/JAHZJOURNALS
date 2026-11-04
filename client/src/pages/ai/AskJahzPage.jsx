@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bot, Send, User, AlertCircle, MessageSquare, Sparkles } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useAuth } from '../../context/useAuth';
+import { canLogTradesWithAi } from '../../utils/planHelpers';
 import AiTradeCaptureModal from '../../components/trades/AiTradeCaptureModal';
 import api from '../../utils/api';
 
@@ -10,7 +14,10 @@ const AskJahzPage = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [chatMode, setChatMode] = useState('ANALYTICS');
-  const [showAiCapture, setShowAiCapture] = useState(false);
+  const [showAiCapture, setShowAiCapture] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const canUseAi = canLogTradesWithAi(user);
   const endRef = useRef(null);
 
   useEffect(() => {

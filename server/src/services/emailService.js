@@ -22,7 +22,8 @@ const sendEmail = async ({ to, subject, html, text, templateId, params }) => {
   const provider = (process.env.EMAIL_PROVIDER || 'brevo').toLowerCase();
 
   if (provider === 'mock') {
-    console.log(`[Email Mock Log] To: ${hashRecipient(to)} | Subject: "${subject}"`);
+    const sanitizeSubject = (subj) => (typeof subj === 'string' ? subj.replace(/\b\d{6}\b/g, '[REDACTED_CODE]') : subj);
+    console.log(`[Email Mock Log] To: ${hashRecipient(to)} | Subject: "${sanitizeSubject(subject)}"`);
     return { success: true, provider: 'mock', messageId: `mock-${Date.now()}`, errorCode: null };
   }
 
@@ -67,7 +68,7 @@ const sendPasswordResetEmail = async (user, resetUrl, otpCode) => {
   const template = passwordResetTemplate({ name: user.name, resetUrl, otpCode });
   return await sendEmail({
     to: user.email,
-    subject: `Your JAHZJOURNALS Password Reset Code: ${otpCode || ''}`,
+    subject: 'Your JAHZJOURNALS Password Reset Code',
     html: template.html,
     text: template.text,
   });

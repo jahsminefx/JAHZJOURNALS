@@ -19,7 +19,7 @@ const Contact = () => {
   };
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText('support@jahzjournals.com');
+    navigator.clipboard.writeText('jahzjournals@gmail.com');
     setCopiedEmail(true);
     toast.success('Email copied to clipboard!');
     setTimeout(() => setCopiedEmail(false), 2500);
@@ -42,8 +42,8 @@ const Contact = () => {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">
       <SEO 
-        title="Contact JAHZJOURNALS | Forex Journal & Academy Support"
-        description="Get in touch with the JAHZJOURNALS team for questions regarding early access, mentor academies, prop-firm tracking, or technical support."
+        title="Contact JAHZJOURNALS | Forex Journal & Inquiries"
+        description="Get in touch with the JAHZJOURNALS team for questions regarding early access, mentor academies, prop-firm tracking, or direct inquiries."
       />
       <Navbar />
 
@@ -53,7 +53,7 @@ const Contact = () => {
         {/* Hero Section */}
         <div className="py-8 sm:py-12 text-center max-w-2xl mx-auto space-y-3">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-400">
-            Contact & Support
+            Contact
           </p>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground">
             Talk to the JAHZJOURNALS team.
@@ -83,12 +83,12 @@ const Contact = () => {
               {/* Clickable Email Card */}
               <div className="rounded-xl border border-border/80 bg-surface-muted/60 p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted block">Support Email</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted block">Direct Contact Email</span>
                   <a 
-                    href="mailto:support@jahzjournals.com" 
+                    href="mailto:jahzjournals@gmail.com" 
                     className="text-sm font-medium text-emerald-400 hover:underline truncate block"
                   >
-                    support@jahzjournals.com
+                    jahzjournals@gmail.com
                   </a>
                 </div>
                 <button

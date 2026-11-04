@@ -2,127 +2,12 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { enqueueAiJob } = require('../jobs/queues/aiQueue');
 const { buildLimitReachedPayload, getEffectivePlanKey } = require('../config/plans');
+const { checkAiAllowance } = require('../services/entitlementService');
 
 const checkAiLimit = async (userId, userOrPlan, featureType) => {
-  const plan = typeof userOrPlan === 'string' ? userOrPlan : getEffectivePlanKey(userOrPlan);
-  const userSettings = await prisma.userSettings.findUnique({ where: { userId } });
-  
-  if (userSettings && userSettings.enableJahzAi === false) {
-    return { allowed: false, payload: { message: 'JAHZ AI is disabled in your settings.' } };
-  }
-
-  if (featureType === 'TRADE_REVIEW' || featureType === 'EDGE_FINDER' || featureType === 'WEEKLY_COACH') {
-     if (userSettings && userSettings.allowTradeDataAnalysis === false) {
-       return { allowed: false, payload: { message: 'Trade data analysis is disabled in your privacy settings.' } };
-     }
-  }
-  if (featureType === 'SCREENSHOT_REVIEW') {
-     const isAllowed = userSettings ? (userSettings.allowScreenshotAnalysis === true || userSettings.includeScreenshots === true) : true;
-     if (!isAllowed) {
-       return { allowed: false, payload: { message: 'Screenshot analysis is disabled in your privacy settings. Enable "Include screenshots" or "Allow screenshot analysis" in Settings to use this feature.' } };
-     }
-  }
-
-  if (plan === 'FREE') {
-     if (featureType === 'TRADE_REVIEW' || featureType === 'CHAT_SUPPORT') {
-         const limit = 2;
-         const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
-         const usageCount = await prisma.aiRequest.count({ where: { userId, featureType, createdAt: { gte: startOfMonth } } });
-         if (usageCount >= limit) {
-           return {
-             allowed: false,
-             payload: buildLimitReachedPayload({
-               feature: 'ai',
-               current: usageCount,
-               limit,
-               userPlan: 'FREE',
-               requiredPlan: 'STARTER',
-             })
-           };
-         }
-         return { allowed: true };
-     }
-     return {
-       allowed: false,
-       payload: buildLimitReachedPayload({
-         feature: 'ai',
-         current: 0,
-         limit: 0,
-         userPlan: 'FREE',
-         requiredPlan: 'PRO',
-       })
-     };
-  }
-
-  const featureLimits = {
-      'STARTER': {
-         'TRADE_REVIEW': 10,
-         'WEEKLY_COACH': 5,
-         'CHAT_SUPPORT': 10,
-         'JOURNAL_ASSISTANT': 20,
-      },
-      'PRO': {
-         'TRADE_REVIEW': 50,
-         'WEEKLY_COACH': 20,
-         'CHAT_SUPPORT': 50,
-         'EDGE_FINDER': 10,
-         'TRADING_PLAN': 5,
-         'SCREENSHOT_REVIEW': 20,
-         'JOURNAL_ASSISTANT': 100,
-         'PSYCHOLOGY_INSIGHTS': 10
-      },
-      'MENTOR': {
-         'TRADE_REVIEW': Infinity,
-         'WEEKLY_COACH': Infinity,
-         'CHAT_SUPPORT': Infinity,
-         'EDGE_FINDER': Infinity,
-         'TRADING_PLAN': Infinity,
-         'SCREENSHOT_REVIEW': Infinity,
-         'JOURNAL_ASSISTANT': Infinity,
-         'PSYCHOLOGY_INSIGHTS': Infinity,
-         'MENTOR_SUMMARY': Infinity
-      }
-  };
-
-  const planLimits = featureLimits[plan] || {};
-  const limit = planLimits[featureType];
-
-  if (limit === undefined) {
-      return {
-        allowed: false,
-        payload: buildLimitReachedPayload({
-          feature: 'ai',
-          current: 0,
-          limit: 0,
-          userPlan: plan,
-          requiredPlan: 'PRO',
-        })
-      };
-  }
-  if (limit === Infinity) return { allowed: true };
-
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
-
-  const usageCount = await prisma.aiRequest.count({
-    where: { userId, featureType, createdAt: { gte: startOfMonth } }
-  });
-
-  if (usageCount >= limit) {
-    return {
-      allowed: false,
-      payload: buildLimitReachedPayload({
-        feature: 'ai',
-        current: usageCount,
-        limit,
-        userPlan: plan,
-        requiredPlan: plan === 'STARTER' ? 'PRO' : 'MENTOR',
-      })
-    };
-  }
-
-  return { allowed: true };
+  return checkAiAllowance(userOrPlan || userId, featureType);
 };
+
 
 const cleanupStalledAiRequests = async (userId = null, maxAgeMs = 60000) => {
   try {
@@ -831,5 +716,6 @@ module.exports = {
   getAiOverview,
   getJournalDraft,
   getAiUsage,
-  clearAiHistory
+  clearAiHistory,
+  checkAiLimit
 };

@@ -17,7 +17,7 @@ const InfrastructureHub = () => {
                 api.get('/admin/infrastructure/logs')
             ]);
             setMetrics(metRes.data);
-            setLogs(logRes.data.logs);
+            setLogs(Array.isArray(logRes.data?.logs) ? logRes.data.logs : []);
             setLastPing(new Date());
         } catch (e) {
             if (!silent) toast.error('Failed to fetch server metrics.');
@@ -147,7 +147,14 @@ const InfrastructureHub = () => {
 
            {/* Error Center Logs */}
            <div className="space-y-4">
-               <h2 className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><AlertTriangle size={16}/> Recent System Errors & Logs</h2>
+               <div className="flex items-center justify-between">
+                   <h2 className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2"><AlertTriangle size={16}/> Recent System Errors & Logs</h2>
+                   {logs.length > 0 && (
+                     <button onClick={() => handleDismissLog('all')} className="text-xs font-bold text-muted-foreground hover:text-foreground px-2.5 py-1 border border-border rounded-lg transition">
+                       Clear All
+                     </button>
+                   )}
+                </div>
                <div className="bg-surface border border-border rounded-xl max-h-[400px] overflow-y-auto">
                   {logs.length === 0 ? (
                       <div className="p-8 text-center text-muted-foreground font-bold">No system errors detected. All services operating normally.</div>
@@ -163,7 +170,7 @@ const InfrastructureHub = () => {
                                       <p className="text-sm font-bold text-foreground mt-1">{log.message}</p>
                                       <p className="text-xs text-muted-foreground font-mono mt-1">Source: {log.source}</p>
                                   </div>
-                                  <button className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground px-3 py-1 border border-border rounded-lg">Dismiss</button>
+                                  <button onClick={() => handleDismissLog(log.id)} className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-red-400 px-3 py-1 border border-border hover:border-red-500/30 rounded-lg transition">Dismiss</button>
                               </div>
                           ))}
                       </div>

@@ -3,6 +3,8 @@
  * Premium dark design consistent with JAHZJOURNALS design system.
  */
 
+const BRAND_LOGO_LOCKUP_URL = 'https://res.cloudinary.com/p2489c0i/image/upload/v1793181706/jahzjournals/brand/logo-lockup.png';
+
 const baseHeader = `
 <!DOCTYPE html>
 <html lang="en">
@@ -11,6 +13,13 @@ const baseHeader = `
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JAHZJOURNALS</title>
   <style>
+    @import url('https://fonts.cdnfonts.com/css/ethnocentric');
+    @font-face {
+      font-family: 'Ethnocentric';
+      font-style: normal;
+      font-weight: 400 900;
+      src: local('Ethnocentric Rg'), local('Ethnocentric'), url('https://fonts.cdnfonts.com/s/6220/ethnocentric%20rg.woff') format('woff');
+    }
     body {
       margin: 0;
       padding: 0;
@@ -34,21 +43,23 @@ const baseHeader = `
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     }
     .header {
-      padding: 32px 32px 24px 32px;
+      padding: 28px 32px 24px 32px;
       text-align: center;
       border-bottom: 1px solid #1e293b;
-      background: linear-gradient(180deg, #182235 0%, #131926 100%);
+      background-color: #060911;
     }
     .logo {
-      font-size: 22px;
+      display: inline-block;
+      font-family: 'Ethnocentric', 'Ethnocentric Rg', 'Orbitron', 'Arial Black', sans-serif;
+      font-size: 20px;
       font-weight: 900;
-      letter-spacing: 2px;
-      color: #ffffff;
+      letter-spacing: 1px;
+      color: #fb7185 !important;
       text-transform: uppercase;
       text-decoration: none;
     }
     .logo span {
-      color: #10b981;
+      color: #34d399 !important;
     }
     .content {
       padding: 32px;
@@ -127,7 +138,9 @@ const baseHeader = `
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <a href="https://jahzjournal.com" class="logo">JAHZ<span>JOURNALS</span></a>
+        <a href="https://jahzjournal.com" class="logo" style="display: inline-block; text-decoration: none;">
+          <img src="${BRAND_LOGO_LOCKUP_URL}" alt="JAHZJOURNALS" width="260" style="display: block; margin: 0 auto; max-width: 260px; width: 100%; height: auto; border: 0; font-family: 'Ethnocentric', 'Arial Black', sans-serif; font-size: 20px; font-weight: 900; color: #fb7185;" />
+        </a>
       </div>
       <div class="content">
 `;
@@ -377,8 +390,10 @@ const executiveDigestTemplate = (data = {}) => {
 <body>
   <div class="wrapper">
     <div class="container">
-      <div class="header">
-        <a href="https://jahzjournal.com" class="logo">JAHZ<span>JOURNALS</span></a><br>
+      <div class="header" style="background-color: #060911;">
+        <a href="https://jahzjournal.com" class="logo" style="display: inline-block; text-decoration: none;">
+          <img src="${BRAND_LOGO_LOCKUP_URL}" alt="JAHZJOURNALS" width="260" style="display: block; margin: 0 auto; max-width: 260px; width: 100%; height: auto; border: 0; font-family: 'Ethnocentric', 'Arial Black', sans-serif; font-size: 20px; font-weight: 900; color: #fb7185;" />
+        </a><br>
         <span class="badge">Weekly Executive Briefing</span>
       </div>
       <div class="content">

@@ -5,23 +5,19 @@ const logo = '/logo-mark.png';
 
 const sizes = {
   xs: {
-    mark: 'h-6 w-6',
-    image: 'h-9 w-9',
+    image: 'h-6 w-auto',
     text: 'text-[10px]',
   },
   sm: {
-    mark: 'h-8 w-8',
-    image: 'h-12 w-12',
+    image: 'h-8 w-auto',
     text: 'text-[11px] sm:text-xs lg:text-[13px]',
   },
   md: {
-    mark: 'h-9 w-9',
-    image: 'h-14 w-14',
+    image: 'h-9 w-auto',
     text: 'text-xs sm:text-sm',
   },
   lg: {
-    mark: 'h-10 w-10',
-    image: 'h-16 w-16',
+    image: 'h-11 w-auto',
     text: 'text-sm sm:text-base',
   },
 };
@@ -30,13 +26,11 @@ const BrandLogo = ({ to = '/', size = 'sm', showText = true, forceDark = false, 
   const selected = sizes[size] || sizes.sm;
   const content = (
     <>
-      <span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black ${selected.mark}`}>
-        <img
-          src={logo}
-          alt="JAHZJOURNALS logo"
-          className={`${selected.image} max-w-none object-contain`}
-        />
-      </span>
+      <img
+        src={logo}
+        alt="JAHZJOURNALS logo"
+        className={`${selected.image} shrink-0 object-contain select-none transition-transform duration-200 group-hover:scale-105`}
+      />
       {showText && (
         <span className={`${selected.text} font-ethnocentric font-black tracking-tighter inline-flex items-center uppercase select-none whitespace-nowrap shrink-0`}>
           <span className={forceDark ? "text-rose-400" : "text-rose-600 dark:text-rose-400"}>JAHZ</span>
@@ -48,14 +42,14 @@ const BrandLogo = ({ to = '/', size = 'sm', showText = true, forceDark = false, 
 
   if (to) {
     return (
-      <Link to={to} className={`flex items-center gap-3 ${className}`}>
+      <Link to={to} className={`group flex items-center gap-2.5 ${className}`}>
         {content}
       </Link>
     );
   }
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-center gap-2.5 ${className}`}>
       {content}
     </div>
   );

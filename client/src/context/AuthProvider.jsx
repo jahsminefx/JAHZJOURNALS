@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }) => {
   const value = useMemo(() => ({
     user,
     isAuthLoading,
+    isLoading: isAuthLoading,
     login,
     logout,
     registerUser,

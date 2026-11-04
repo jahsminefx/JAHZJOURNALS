@@ -16,32 +16,49 @@ validateProductionEnv();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const isProduction = process.env.NODE_ENV === 'production';
+
 const configuredClientOrigins = (process.env.CLIENT_URL || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
-const allowedClientOrigins = new Set([
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5174',
-  'https://jahzjournal.com',
-  'https://www.jahzjournal.com',
-  'http://jahzjournal.com',
-  'http://www.jahzjournal.com',
-  'http://169.58.9.55',
-  'https://169.58.9.55',
-  'http://jahzjournals.vmi3432347.contaboserver.net',
-  'https://jahzjournals.vmi3432347.contaboserver.net',
-  ...configuredClientOrigins,
-]);
+
+const defaultAllowedOrigins = isProduction
+  ? [
+      'https://jahzjournal.com',
+      'https://www.jahzjournal.com',
+      ...configuredClientOrigins.filter((origin) => origin.startsWith('https://')),
+    ]
+  : [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'https://jahzjournal.com',
+      'https://www.jahzjournal.com',
+      ...configuredClientOrigins,
+    ];
+
+const allowedClientOrigins = new Set(defaultAllowedOrigins);
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // Middleware
 app.set('trust proxy', 1);
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: isProduction ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://js.paystack.co", "https://js.stripe.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.paystack.co", "https://*.paystack.com", "https://images.unsplash.com"],
+      connectSrc: ["'self'", "https://api.paystack.co", "https://api.stripe.com", "https://checkout.paystack.com"],
+      frameSrc: ["'self'", "https://checkout.paystack.com", "https://js.stripe.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  } : false,
 }));
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -90,6 +107,7 @@ app.use((req, res, next) => {
   if (
     req.path.startsWith('/api/subscriptions/webhook') ||
     req.path.startsWith('/api/subscriptions/paystack-webhook') ||
+    req.path.startsWith('/api/subscriptions/stripe-webhook') ||
     req.path.startsWith('/api/webhooks')
   ) {
     next();
@@ -140,6 +158,7 @@ app.use('/api/strategies', require('./routes/strategyRoutes'));
 app.use('/api/setups', require('./routes/setupRoutes'));
 app.use('/api/notifications', require('./routes/userNotificationRoutes'));
 app.use('/api/push-notifications', require('./routes/pushNotificationRoutes'));
+app.use('/api/calendar', require('./routes/calendarRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
 app.use('/api', require('./routes/miscRoutes'));
 
@@ -242,6 +261,10 @@ app.use(errorHandler);
 
 startSchedulers();
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`, server.address());
+});
+
+server.on('error', (err) => {
+  console.error('[Server Listen Error]:', err);
 });

@@ -1,129 +1,466 @@
-import React from 'react';
-import { Check, Minus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Check, Minus, Globe, Shield, Sparkles, Brain, Eye, TrendingUp, Bot, FileText, ArrowRight, Lock, ExternalLink } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import PageHeader from '../components/PageHeader';
 import PricingCard from '../components/PricingCard';
 import FAQItem from '../components/FAQItem';
 import CTASection from '../components/CTASection';
 import FoundingTraderBadge from '../components/FoundingTraderBadge';
+import Button from '../components/Button';
 import { useAuth } from '../context/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 
-const plans = [
-  {
-    name: 'Free',
-    tagline: 'Build the habit.',
-    price: '₦0',
-    description: 'Designed for beginner traders who want to start journaling and understand their performance.',
-    limits: ['20 trades / month', '1 trading account', '1 screenshot per trade'],
-    features: [
-      'Basic trade entry & journal',
-      'Basic analytics & equity curve',
-      'Overall profit / loss summary',
-      'Position-size risk calculator',
-      'Basic trade filtering & weekly review',
-      'Full Mobile / PWA access',
+const REGIONAL_CONFIG = {
+  NG: {
+    region: 'NG',
+    label: 'Nigeria & Regional Corridors',
+    badge: '🇳🇬 NGN (Paystack)',
+    currencySymbol: '₦',
+    gatewayNote: 'Billed in Nigerian Naira (NGN) via Paystack. Supports local debit cards (Mastercard, Visa, Verve), instant bank transfers, and USSD.',
+    plans: [
+      {
+        id: 'price_ngn_free',
+        planKey: 'FREE',
+        name: 'Free',
+        tagline: 'Build the habit.',
+        price: '₦0',
+        numericPrice: 0,
+        description: 'Designed for beginner traders starting out with basic trade logging and habit formation.',
+        targetAudience: 'Start journaling and understand basic performance.',
+        limits: ['20 trades / month', '1 trading account', '1 screenshot per trade', '2 AI trial reviews'],
+        features: [
+          'Manual trade entry & execution notes',
+          'Basic equity curve & P&L stats',
+          'Position-size risk calculator',
+          'Weekly review template',
+          'Multi-currency account display (USD/NGN)',
+          'Full mobile & PWA responsive access',
+        ],
+      },
+      {
+        id: 'price_ngn_starter_monthly',
+        planKey: 'STARTER',
+        name: 'Starter',
+        tagline: 'Build discipline.',
+        price: '₦4,000',
+        numericPrice: 4000,
+        description: 'Designed for active retail traders tracking emotions, session execution, and rule discipline.',
+        targetAudience: 'Record more trades and identify recurring mistakes.',
+        limits: ['100 trades / month', '3 trading accounts', '3 screenshots per trade'],
+        features: [
+          'All Free plan capabilities',
+          'Weekly AI coaching summaries',
+          'Trading psychology & emotion tracking',
+          'Rule violation & mistake tagging',
+          'Session analysis (London, NY, Asian)',
+          'Strategy & setup performance tracking',
+          'Detailed trade filtering & export',
+        ],
+      },
+      {
+        id: 'price_ngn_pro_monthly',
+        planKey: 'PRO',
+        name: 'Pro',
+        tagline: 'Find your edge.',
+        price: '₦8,500',
+        numericPrice: 8500,
+        highlighted: true,
+        badgeText: 'Best for Serious Traders',
+        badgeVariant: 'emerald',
+        description: 'The comprehensive journal for serious traders and prop-firm candidates preparing for funded evaluations.',
+        targetAudience: 'Analyse performance in greater depth and manage prop-firm risk.',
+        limits: ['Unlimited trades / month', 'Unlimited trading accounts', '10 screenshots per trade'],
+        features: [
+          'All Starter plan capabilities',
+          'Log Trades with JAHZ AI (300 trades/month)',
+          'Prop-firm challenge tracker & drawdown guards',
+          'AI Trade Review (150 reviews/month)',
+          'Weekly AI coaching summaries',
+          'Screenshot Vision setup extraction',
+          'JAHZ Edge Finder statistical analytics',
+          'PDF performance report exports',
+        ],
+      },
+      {
+        id: 'price_ngn_pro_sync_monthly',
+        planKey: 'PRO_SYNC',
+        name: 'Pro Sync',
+        tagline: 'Automate your journal.',
+        price: '₦38,000',
+        numericPrice: 38000,
+        highlighted: false,
+        badgeText: 'Early Access • Jan 2027',
+        badgeVariant: 'sky',
+        description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for your live and funded broker accounts.',
+        targetAudience: 'Reduce manual trade entry using supported MetaTrader synchronization.',
+        limits: ['Automated 24/7 Cloud Sync', 'Unlimited trades / accounts', '10 screenshots per trade'],
+        features: [
+          'All Pro plan capabilities',
+          'Automated MetaTrader (MT4/MT5) Cloud Sync',
+          'Log Trades with JAHZ AI (Unlimited)',
+          'Instant trade ingestion on broker close',
+          'Multi-account live broker synchronization',
+          'Prop-firm real-time drawdown monitoring',
+          'Priority trade processing',
+        ],
+        isWaitlist: true,
+      },
     ],
   },
-  {
-    name: 'Starter',
-    tagline: 'Build discipline.',
-    price: '₦4,000',
-    description: 'Designed for active traders who want to understand their emotions, mistakes, and execution patterns.',
-    limits: ['100 trades / month', '3 trading accounts', '3 screenshots per trade'],
-    features: [
-      'All Free plan capabilities',
-      'Automated MetaTrader (MT4/MT5) Cloud Sync (Coming Soon)',
-      'Trading psychology & emotion tracking',
-      'Rule violation & mistake tracking',
-      'Strategy & setup performance tracking',
-      'Session analysis (London, NY, Asian)',
-      'Detailed trade analytics & filters',
+  GLOBAL: {
+    region: 'GLOBAL',
+    label: 'International & Global Markets',
+    badge: '🌍 USD Reference Pricing (Coming Soon)',
+    currencySymbol: '$',
+    gatewayNote: 'Listed prices ($12, $27, $32) represent our approved international reference pricing. Active international payment rails are currently in preparation. Select Nigeria & Africa (NGN) to subscribe immediately via Paystack.',
+    plans: [
+      {
+        id: 'price_usd_free',
+        planKey: 'FREE',
+        name: 'Free',
+        tagline: 'Build the habit.',
+        price: '$0',
+        numericPrice: 0,
+        description: 'Designed for beginner traders starting out with basic trade logging and habit formation.',
+        targetAudience: 'Start journaling and understand basic performance.',
+        limits: ['20 trades / month', '1 trading account', '1 screenshot per trade', '2 AI trial reviews'],
+        features: [
+          'Manual trade entry & execution notes',
+          'Basic equity curve & P&L stats',
+          'Position-size risk calculator',
+          'Weekly review template',
+          'Multi-currency account display',
+          'Full mobile & PWA access',
+        ],
+      },
+      {
+        id: 'price_usd_starter_monthly',
+        planKey: 'STARTER',
+        name: 'Starter',
+        tagline: 'Reference Pricing',
+        price: '$12',
+        numericPrice: 12,
+        description: 'Entry-level paid plan designed for active traders tracking emotions, mistakes, and execution.',
+        targetAudience: 'Best for active traders logging multiple trades weekly seeking to eliminate repeat mistakes.',
+        limits: ['100 trades / month', '3 trading accounts', '3 screenshots per trade'],
+        features: [
+          'All Free plan capabilities',
+          'Weekly AI coaching summaries',
+          'Trading psychology & emotion tracking',
+          'Rule violation & mistake tracking',
+          'Strategy & setup performance tracking',
+          'Session analysis (London, NY, Asian)',
+          'Detailed trade analytics & filters',
+        ],
+      },
+      {
+        id: 'price_usd_pro_sync_monthly',
+        planKey: 'PRO_SYNC',
+        name: 'Pro Sync',
+        tagline: 'Reference Pricing • Recommended',
+        price: '$27',
+        numericPrice: 27,
+        highlighted: true,
+        badgeText: 'Reference Pricing',
+        badgeVariant: 'sky',
+        description: 'Paid plan with automated MT4/MT5 live sync, prop-firm challenge tracking, and AI reviews.',
+        targetAudience: 'Best for serious traders wanting automated MetaTrader cloud sync and prop-firm risk monitoring.',
+        limits: ['Automated 24/7 Cloud Sync', 'Unlimited trades / accounts', '10 screenshots per trade'],
+        features: [
+          'All Starter plan capabilities',
+          'Automated MetaTrader (MT4/MT5) Cloud Sync',
+          'Log Trades with JAHZ AI (Unlimited)',
+          'AI Trade Review & AI Coach',
+          'Prop-firm challenge tracker & drawdown guards',
+          'Expectancy, profit factor & drawdown metrics',
+          'Emotion vs profitability analysis',
+          'PDF performance report exports',
+        ],
+      },
+      {
+        id: 'price_usd_elite_monthly',
+        planKey: 'ELITE',
+        name: 'Elite',
+        tagline: 'Reference Pricing • Highest Tier',
+        price: '$32',
+        numericPrice: 32,
+        badgeText: 'Highest Tier',
+        badgeVariant: 'muted',
+        description: 'Highest individual tier with priority cloud sync, expanded AI quota, unlimited screenshots, and dedicated support.',
+        targetAudience: 'Best for institutional and high-volume individual traders requiring priority sync and unlimited visual storage.',
+        limits: ['Priority 24/7 Cloud Sync', 'Unlimited trades / accounts', 'Unlimited screenshots'],
+        features: [
+          'All Pro Sync plan capabilities',
+          'Priority MT4/MT5 sync frequency',
+          'Expanded AI monthly allowance (500 reviews/mo)',
+          'JAHZ Edge Finder quantitative analytics',
+          'Unlimited screenshots per trade',
+          'Multi-device priority session sync',
+          'VIP priority support desk',
+        ],
+      },
     ],
   },
-  {
-    name: 'Pro',
-    tagline: 'Find your edge.',
-    price: '₦8,000',
-    description: 'The flagship individual trader plan for finding your edge and passing prop-firm challenges.',
-    highlighted: true,
-    limits: ['Unlimited trades / month', 'Unlimited trading accounts', '10 screenshots per trade'],
-    features: [
-      'All Starter plan capabilities',
-      'Automated MT4/MT5 Multi-Account Cloud Sync (Coming Soon)',
-      'AI Trade Review & AI Coach',
-      'JAHZ Edge Finder analytics',
-      'Prop-firm challenge tracker & drawdown guards',
-      'Expectancy, profit factor & drawdown metrics',
-      'Emotion vs profitability analysis',
-      'PDF performance report exports',
-      'Priority access to new features',
-    ],
-  },
-  {
-    name: 'Mentor / Academy',
-    tagline: 'Build better traders.',
-    price: 'From ₦8,000',
-    description: 'Designed for mentors, trading coaches, and academies managing student performance.',
-    planHeader: {
-      title: 'Plans Built Around Your Student Capacity',
-      description: 'Mentor and Academy pricing scales based on the number of active students each plan handles.',
-    },
-    limits: ['Starting at 25 – 50 student capacity', 'Dedicated mentor workspace', 'Telegram discipline layer'],
-    features: [
-      'MetaTrader (MT4/MT5) Cloud Sync (Coming Soon)',
-      'Student portfolio management',
-      'Student group invitations & access',
-      'Direct mentor feedback & trade comments',
-      'Feedback badges & rule warnings',
-      'Group analytics & student discipline trends',
-      'Academy reporting & aggregated summaries',
-      'Privacy controls & feedback workflows',
-    ],
-  },
-];
+};
 
-const featureMatrix = [
-  { feature: 'Monthly Trade Log Limit', free: '20', starter: '100', pro: 'Unlimited', mentor: 'Custom' },
-  { feature: 'Trading Accounts', free: '1', starter: '3', pro: 'Unlimited', mentor: 'Custom' },
-  { feature: 'Screenshots per Trade', free: '1', starter: '3', pro: '10', mentor: 'Custom' },
-  { feature: 'MetaTrader 4 / 5 Cloud Sync', free: false, starter: 'Coming Soon', pro: 'Coming Soon', mentor: 'Coming Soon' },
-  { feature: 'Basic Analytics & Equity Curve', free: true, starter: true, pro: true, mentor: true },
-  { feature: 'Detailed Analytics & Sessions', free: false, starter: true, pro: true, mentor: true },
-  { feature: 'Emotion & Psychology Tracking', free: false, starter: true, pro: true, mentor: true },
-  { feature: 'Rule Violation Tracking', free: false, starter: true, pro: true, mentor: true },
-  { feature: 'Position Size Risk Calculator', free: true, starter: true, pro: true, mentor: true },
-  { feature: 'Weekly Review System', free: true, starter: true, pro: true, mentor: true },
-  { feature: 'Prop-Firm Challenge Tracker', free: false, starter: false, pro: true, mentor: false },
-  { feature: 'AI Trade Review & AI Coach', free: false, starter: false, pro: true, mentor: false },
-  { feature: 'JAHZ Edge Finder Analytics', free: false, starter: false, pro: true, mentor: false },
-  { feature: 'PDF Report Generation', free: false, starter: false, pro: true, mentor: true },
-  { feature: 'Mentor Student Workspace', free: false, starter: false, pro: false, mentor: true },
-  { feature: 'Trade Comments & Feedback Badges', free: false, starter: false, pro: false, mentor: true },
+const featureMatrixCategories = [
+  {
+    category: 'Core Journaling Limits',
+    rows: [
+      { feature: 'Monthly Trade Log Quota', free: '20 trades / mo', starter: '100 trades / mo', pro: 'Unlimited', sync: 'Unlimited' },
+      { feature: 'Active Trading Accounts', free: '1 account', starter: '3 accounts', pro: 'Unlimited', sync: 'Unlimited' },
+      { feature: 'Screenshots per Trade', free: '1 screenshot', starter: '3 screenshots', pro: '10 screenshots', sync: '10 screenshots' },
+      { feature: 'Account Deposit Currencies', free: 'USD, NGN, GBP, EUR', starter: 'USD, NGN, GBP, EUR', pro: 'Normalized Multi-Currency', sync: 'Normalized Multi-Currency' },
+      { feature: 'CSV Broker Statement Import', free: 'Included', starter: 'Included', pro: 'Included', sync: 'Included' },
+      { feature: 'Position-Size Risk Calculator', free: 'Included', starter: 'Included', pro: 'Included', sync: 'Included' },
+      { feature: 'Economic News Calendar', free: 'Included', starter: 'Included', pro: 'Included (Auto-Correlation)', sync: 'Included (Auto-Correlation)' },
+      { feature: 'Structured Weekly Review', free: 'Included', starter: 'Included', pro: 'Included', sync: 'Included' },
+    ],
+  },
+  {
+    category: 'Execution & Psychology Analytics',
+    rows: [
+      { feature: 'Basic Equity Curve & P&L', free: 'Included', starter: 'Included', pro: 'Included', sync: 'Included' },
+      { feature: 'Trading Psychology & Emotion Tracking', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
+      { feature: 'Rule Violations & Mistake Tagging', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
+      { feature: 'Session Analytics (London, NY, Asian)', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
+      { feature: 'Strategy & Setup Performance Matrix', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
+      { feature: 'Expectancy & Profit Factor Analytics', free: 'Basic', starter: 'Detailed', pro: 'Advanced Quantitative', sync: 'Advanced Quantitative' },
+    ],
+  },
+  {
+    category: 'Prop Firm Cockpit & Reporting',
+    rows: [
+      { feature: 'Prop-Firm Challenge Tracker', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
+      { feature: 'Daily & Overall Drawdown Guards', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
+      { feature: 'Remaining Risk Allowance Engine', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
+      { feature: 'Prop-Firm News Restriction Buffers', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
+      { feature: 'PDF Performance Report Export', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
+    ],
+  },
+  {
+    category: 'MetaTrader Automation & AI Intelligence',
+    rows: [
+      { feature: 'Automated 24/7 MT4/MT5 Cloud Sync', free: 'Not included', starter: 'Not included', pro: 'Not included', sync: 'Included (MetaApi)' },
+      { feature: 'Log Trades with JAHZ AI (Chat & Screenshots)', free: 'Not included', starter: 'Not included', pro: '300 trades / mo', sync: 'Unlimited' },
+      { feature: 'AI Trade Review & Mistake Detection', free: '2 trial reviews', starter: 'Not included', pro: '150 reviews / mo', sync: '200 reviews / mo' },
+      { feature: 'Weekly AI Coaching Summaries', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
+      { feature: 'Screenshot Vision Setup Extraction', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
+      { feature: 'JAHZ Edge Finder Analytics', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
+      { feature: 'Natural Language Journal Assistant', free: 'Not included', starter: '20 drafts / mo', pro: '100 drafts / mo', sync: '100 drafts / mo' },
+    ],
+  },
 ];
 
 const faqs = [
-  ['Can I start for free?', 'Yes! The Free plan allows you to log up to 20 trades per month with basic analytics so you can build the journaling habit.'],
-  ['How does the monthly trade limit work?', 'The monthly trade limit counts trades created within the current calendar month. Once reached, you can upgrade to Starter or Pro to continue logging.'],
-  ['Is Paystack supported for payment?', 'Yes. Paystack is integrated for seamless payments in Naira (NGN) and card transactions across Africa.'],
-  ['What is the Founding Trader Program?', 'During launch mode, early users receive complimentary Pro access to test advanced AI reviews and prop-firm tracking.'],
-  ['Can I cancel or upgrade anytime?', 'Yes. You can upgrade, downgrade, or cancel your subscription at any time directly from your account settings.'],
+  [
+    'Can I start for free?',
+    'Yes! The Free plan allows you to log up to 20 trades per month with 1 trading account and 1 screenshot per trade. You also receive 2 complimentary AI trade reviews to experience our analysis tools firsthand. It is completely free with no expiration date.',
+  ],
+  [
+    'Do I need a payment card to sign up?',
+    'No. Creating a Free account requires only your name, email, and password. No credit card, debit card, or payment details of any kind are requested.',
+  ],
+  [
+    'What happens when I reach a trade or AI limit?',
+    'Your existing journal entries, statistics, and reports remain 100% accessible and safe. If you reach your monthly limit (20 trades on Free, 100 on Starter), you can either wait until your calendar quota resets on the 1st of the next month, or upgrade to a higher tier for immediate additional capacity.',
+  ],
+  [
+    'Can I cancel a paid subscription?',
+    'Yes, absolutely. You can cancel your subscription at any time directly from your Account Billing settings with one click. Upon cancellation, you will retain full paid access until the end of your current prepaid billing cycle, after which your account will smoothly transition to the Free tier without losing any past trade data.',
+  ],
+  [
+    'What happens to my data if I downgrade?',
+    'All your past trades, attached chart screenshots, analytics history, and review notes remain permanently saved in your account. If your account count or screenshot numbers exceed the lower tier\'s limits, existing data is preserved in read-only format; you simply cannot add new records beyond the tier\'s active limits until upgraded.',
+  ],
+  [
+    'Does JAHZJOURNALS support MT4/MT5 synchronization?',
+    'Yes, cloud synchronization infrastructure is implemented via MetaApi to automatically ingest closed trades from your MetaTrader 4 and 5 broker accounts. Under our sustainable infrastructure model, cloud sync is reserved for the Pro Sync tier and is currently rolling out to early-access waitlist members ahead of general commercial availability.',
+  ],
+  [
+    'Which payment methods are supported?',
+    'We accept all Nigerian bank debit cards (Mastercard, Visa, and Verve), instant bank transfers, and USSD via our secured Paystack integration. All transactions are processed in Nigerian Naira (NGN) with 256-bit bank-grade encryption.',
+  ],
+  [
+    'Are international USD payments available yet?',
+    'Currently, active subscription checkout is processed in Nigerian Naira (NGN) via Paystack. International billing in US Dollars (USD) via global card networks (Stripe) is undergoing configuration and will be activated once merchant banking rails are finalized. International reference prices ($12, $27, $32) are displayed for transparency.',
+  ],
+  [
+    'Is JAHZJOURNALS a broker or financial adviser?',
+    'No. JAHZJOURNALS is strictly a performance tracking, analytics, and trade journaling software platform. We do not accept deposits, execute live market orders, hold client funds, or provide financial, investment, or trading advice. Our mission is to help you measure and understand your own execution discipline.',
+  ],
 ];
 
 const Pricing = () => {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
 
-  const [promoCode, setPromoCode] = React.useState('');
-  const [redeemingPromo, setRedeemingPromo] = React.useState(false);
-  const [appliedPromo, setAppliedPromo] = React.useState(null);
-  const [activePublicPromo, setActivePublicPromo] = React.useState(null);
-  const [timeLeft, setTimeLeft] = React.useState(null);
+  const REGION_STORAGE_KEY = 'jahz_pricing_region_override';
+
+  // Development-only pricing preview parameters:
+  // /pricing?previewRegion=nigeria
+  // /pricing?previewRegion=international
+  // Strictly restricted to development environments (import.meta.env.DEV).
+  // Automatically ignored in production builds.
+  const [devPreviewActive, setDevPreviewActive] = useState(() => {
+    if (!import.meta.env.DEV) return null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get('previewRegion')?.toLowerCase()?.trim();
+      if (raw === 'nigeria') return 'nigeria';
+      if (raw === 'international') return 'international';
+      return null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [hasManualOverride, setHasManualOverride] = useState(() => {
+    try {
+      // Clean up any legacy permanent localStorage overrides so temporary VPNs never stick
+      localStorage.removeItem(REGION_STORAGE_KEY);
+      return Boolean(sessionStorage.getItem(REGION_STORAGE_KEY));
+    } catch {
+      return false;
+    }
+  });
+
+  const [detectedCountryCode, setDetectedCountryCode] = useState(null);
+  const [isVpnDetected, setIsVpnDetected] = useState(false);
+  const [isDetectionFallback, setIsDetectionFallback] = useState(false);
+
+  const [selectedRegion, setSelectedRegion] = useState(() => {
+    // 0. Development-only preview parameter (DEV mode only, presentation preview)
+    if (import.meta.env.DEV) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const raw = params.get('previewRegion')?.toLowerCase()?.trim();
+        if (raw === 'nigeria') return 'NG';
+        if (raw === 'international') return 'GLOBAL';
+      } catch {}
+    }
+
+    // 1. Session override takes precedence for this browser tab/session (never persistent indefinitely)
+    try {
+      const saved = sessionStorage.getItem(REGION_STORAGE_KEY);
+      if (saved === 'NG' || saved === 'GLOBAL') return saved;
+    } catch {}
+
+    // 2. Authenticated user preference
+    if (user?.billingCountry) {
+      return ['NG', 'GH', 'KE', 'ZA'].includes(user.billingCountry) ? 'NG' : 'GLOBAL';
+    }
+
+    // 3. Safe initial baseline: Nigeria
+    return 'NG';
+  });
+
+  const [promoCode, setPromoCode] = useState('');
+  const [redeemingPromo, setRedeemingPromo] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [activePublicPromo, setActivePublicPromo] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [loadingPlan, setLoadingPlan] = useState(null);
+
+  const [waitlistCounts, setWaitlistCounts] = useState({
+    PRO_SYNC: { count: 186 },
+    MENTOR_MEGA: { count: 43 }
+  });
+
+  useEffect(() => {
+    api.get('/waitlist/counts')
+      .then(res => { if (res.data) setWaitlistCounts(res.data); })
+      .catch(() => {});
+  }, []);
+
+
+  const handleDevSwitchPreview = (targetPreview) => {
+    if (!import.meta.env.DEV) return;
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('previewRegion', targetPreview);
+    window.history.replaceState({}, '', newUrl.toString());
+    setDevPreviewActive(targetPreview);
+    setSelectedRegion(targetPreview === 'nigeria' ? 'NG' : 'GLOBAL');
+  };
+
+  const handleExitDevPreview = () => {
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.delete('previewRegion');
+    window.history.replaceState({}, '', newUrl.toString());
+    setDevPreviewActive(null);
+    handleResetToDetected();
+  };
+
+  const handleManualRegionOverride = async (targetRegion) => {
+    if (targetRegion !== 'NG' && targetRegion !== 'GLOBAL') return;
+    setSelectedRegion(targetRegion);
+
+    // If dev preview is active, update URL and state without persisting to storage or backend profile
+    if (devPreviewActive && import.meta.env.DEV) {
+      const previewName = targetRegion === 'NG' ? 'nigeria' : 'international';
+      setDevPreviewActive(previewName);
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('previewRegion', previewName);
+      window.history.replaceState({}, '', newUrl.toString());
+      toast.success(`Switched dev preview to ${targetRegion === 'NG' ? 'Nigeria (NGN)' : 'International (USD)'}`);
+      return;
+    }
+
+    setHasManualOverride(true);
+    try {
+      sessionStorage.setItem(REGION_STORAGE_KEY, targetRegion);
+      localStorage.removeItem(REGION_STORAGE_KEY);
+    } catch {}
+
+    if (user) {
+      api.post('/subscriptions/region', {
+        country: targetRegion === 'NG' ? 'NG' : 'US',
+        currency: targetRegion === 'NG' ? 'NGN' : 'USD',
+      }).catch(() => {});
+    }
+
+    toast.success(
+      targetRegion === 'NG'
+        ? 'Switched to Nigerian pricing (NGN)'
+        : 'Switched to International reference pricing (USD)'
+    );
+  };
+
+  const handleResetToDetected = () => {
+    try {
+      sessionStorage.removeItem(REGION_STORAGE_KEY);
+      localStorage.removeItem(REGION_STORAGE_KEY);
+    } catch {}
+    setHasManualOverride(false);
+
+    const isPreviewActive = Boolean(import.meta.env.DEV && devPreviewActive);
+    const catalogueUrl = isPreviewActive
+      ? `/subscriptions/pricing-catalogue?previewRegion=${encodeURIComponent(devPreviewActive)}`
+      : '/subscriptions/pricing-catalogue';
+
+    api.get(catalogueUrl)
+      .then(({ data }) => {
+        if (data?.detectedCountry) {
+          setDetectedCountryCode(data.detectedCountry);
+        }
+        if (data?.isVpnDetected !== undefined) {
+          setIsVpnDetected(Boolean(data.isVpnDetected));
+        }
+        if (data?.isFallback !== undefined) {
+          setIsDetectionFallback(Boolean(data.isFallback));
+        }
+        const autoRegion = data?.region === 'GLOBAL' ? 'GLOBAL' : 'NG';
+        setSelectedRegion(autoRegion);
+        toast.success(`Reset to auto-detected region (${autoRegion === 'NG' ? 'Nigeria' : 'International'})`);
+      })
+      .catch(() => {
+        setSelectedRegion('NG');
+      });
+  };
 
   const handleRedeemCode = async (e) => {
     if (e) e.preventDefault();
@@ -156,9 +493,9 @@ const Pricing = () => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    const reference = searchParams.get('reference') || searchParams.get('trxref');
+    const reference = searchParams.get('reference') || searchParams.get('trxref') || searchParams.get('session_id');
     const promoParam = searchParams.get('promo') || searchParams.get('code');
 
     if (reference) {
@@ -174,12 +511,47 @@ const Pricing = () => {
         });
     }
 
-    // Fetch active public promotion (e.g. 50% Off Starter & Pro)
+    // Automatic country-level and VPN detection from server infrastructure
+    const manualSaved = (() => {
+      try {
+        return sessionStorage.getItem(REGION_STORAGE_KEY);
+      } catch {
+        return null;
+      }
+    })();
+
+    const isPreviewActive = Boolean(import.meta.env.DEV && devPreviewActive);
+    const catalogueUrl = isPreviewActive
+      ? `/subscriptions/pricing-catalogue?previewRegion=${encodeURIComponent(devPreviewActive)}`
+      : '/subscriptions/pricing-catalogue';
+
+    api.get(catalogueUrl)
+      .then(({ data }) => {
+        if (data?.detectedCountry) {
+          setDetectedCountryCode(data.detectedCountry);
+        }
+        if (data?.isVpnDetected !== undefined) {
+          setIsVpnDetected(Boolean(data.isVpnDetected));
+        }
+        if (data?.isFallback !== undefined) {
+          setIsDetectionFallback(Boolean(data.isFallback));
+        }
+        // If visitor is NOT in dev preview and has not set a manual session override, adopt auto-detected region smoothly
+        if (!isPreviewActive && !manualSaved && data?.region) {
+          const autoRegion = data.region === 'GLOBAL' ? 'GLOBAL' : 'NG';
+          setSelectedRegion((prev) => (prev !== autoRegion ? autoRegion : prev));
+        }
+      })
+      .catch((err) => {
+        // Safe default stays 'NG' on network or detection failure
+        console.debug('Country/VPN detection fallback to default NG:', err);
+      });
+
+    // Fetch active public promotion (e.g. 50% Off)
     api.get('/promotions/public-active')
       .then(({ data }) => {
         if (data && data.active && data.promotion) {
           setActivePublicPromo(data.promotion);
-          // If no specific promo param in URL, auto-apply this public promotion
           if (!promoParam) {
             setAppliedPromo({
               code: data.promotion.slug,
@@ -191,9 +563,7 @@ const Pricing = () => {
           }
         }
       })
-      .catch((err) => {
-        console.error('Failed to fetch public promotion:', err);
-      });
+      .catch(() => {});
 
     if (promoParam) {
       setPromoCode(promoParam);
@@ -215,7 +585,7 @@ const Pricing = () => {
   }, []);
 
   // Countdown timer effect
-  React.useEffect(() => {
+  useEffect(() => {
     const promoTarget = activePublicPromo || appliedPromo?.promotion;
     if (!promoTarget?.endsAt) {
       setTimeLeft(null);
@@ -242,12 +612,52 @@ const Pricing = () => {
     return () => clearInterval(interval);
   }, [activePublicPromo?.endsAt, appliedPromo?.promotion?.endsAt]);
 
-  const handleUpgrade = async (planName) => {
-    const apiPlanMapping = { 'Starter': 'STARTER', 'Pro': 'PRO' };
-    const planKey = apiPlanMapping[planName];
-    if (!planKey) return;
+    const handleProSyncWaitlist = async () => {
+    let emailToUse = user?.email;
+    if (!emailToUse) {
+      const input = window.prompt('Enter your email to reserve your spot on the Pro Sync early-access waitlist:');
+      if (!input || !input.includes('@')) return;
+      emailToUse = input.trim();
+    }
+
     try {
-      const payload = { plan: planKey };
+      const res = await api.post('/waitlist/join', {
+        tier: 'PRO_SYNC',
+        email: emailToUse,
+        name: user?.name || 'Trader'
+      });
+      toast.success(res.data.message || "🎉 You're on the early-access list!", { duration: 6000 });
+      if (res.data.count) {
+        setWaitlistCounts(prev => ({
+          ...prev,
+          PRO_SYNC: { ...(prev.PRO_SYNC || {}), count: res.data.count }
+        }));
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to join waitlist');
+    }
+  };
+
+  const handleUpgrade = async (planItem) => {
+    if (!planItem || planItem.planKey === 'FREE') return;
+
+    if (planItem.isWaitlist) {
+      handleProSyncWaitlist();
+      return;
+    }
+
+    if (selectedRegion === 'GLOBAL') {
+      toast.error('International USD checkout is currently in preparation. Please switch to Nigeria (NGN) to subscribe via Paystack.');
+      return;
+    }
+
+    try {
+      setLoadingPlan(planItem.id || planItem.planKey);
+      const payload = {
+        priceId: planItem.id,
+        plan: planItem.planKey,
+        country: 'NG',
+      };
       if (appliedPromo?.code) {
         payload.promoCode = appliedPromo.code;
       }
@@ -257,58 +667,76 @@ const Pricing = () => {
       if (data.authorization_url) {
         window.location.href = data.authorization_url;
       } else {
-        toast.success(data.message || `Upgraded to ${planName} successfully!`);
+        toast.success(data.message || `Upgraded to ${planItem.name} successfully!`);
         navigate('/dashboard');
       }
     } catch (e) {
       toast.error(e.response?.data?.message || 'Upgrade failed.');
+    } finally {
+      setLoadingPlan(null);
     }
   };
 
   const planRank = {
-    'FREE': 1,
-    'STARTER': 2,
-    'PRO': 3,
-    'MENTOR': 4,
-  };
-
-  const planKeyMap = {
-    'Free': 'FREE',
-    'Starter': 'STARTER',
-    'Pro': 'PRO',
-    'Mentor / Academy': 'MENTOR',
+    FREE: 1,
+    STARTER: 2,
+    PRO: 3,
+    SYNC_PLUS: 4,
+    PRO_SYNC: 4,
+    ELITE: 5,
+    MENTOR: 6,
   };
 
   const userPlanKey = (user?.subscriptionPlan || 'FREE').toUpperCase();
   const userRank = planRank[userPlanKey] || 1;
 
-  const getPlanStatus = (planName) => {
-    if (userRank === 4 && planName === 'Mentor / Academy') {
-      return { cta: 'Current Plan', to: '/mentor-workspace', onClick: undefined, highlighted: true };
-    }
-    if (planName === 'Mentor / Academy') {
-      return { cta: 'View More', to: '/pricing/mentor', onClick: undefined, highlighted: false };
+  const currentRegionalConfig = REGIONAL_CONFIG[selectedRegion] || REGIONAL_CONFIG.NG;
+  const currentPlans = currentRegionalConfig.plans;
+
+  const getPlanStatus = (planItem) => {
+    // International view: Individual paid tiers are reference-only while USD checkout is in preparation
+    if (selectedRegion === 'GLOBAL' && planItem.planKey !== 'FREE') {
+      return {
+        cta: 'International Billing Coming Soon',
+        to: undefined,
+        onClick: undefined,
+        highlighted: false,
+        disabled: true,
+      };
     }
 
-    const targetKey = planKeyMap[planName] || 'FREE';
+    if (planItem.isWaitlist) {
+      return {
+        cta: 'Join Sync Waitlist',
+        to: undefined,
+        onClick: handleProSyncWaitlist,
+        highlighted: false,
+      };
+    }
+
+    const targetKey = planItem.planKey;
     const isApplicable = appliedPromo?.applicablePlans && appliedPromo.applicablePlans.length > 0
       ? appliedPromo.applicablePlans.includes(targetKey)
-      : (targetKey === 'STARTER' || targetKey === 'PRO');
+      : (targetKey === 'STARTER' || targetKey === 'PRO' || targetKey === 'PRO_SYNC');
 
     if (!user) {
-      let ctaText = planName === 'Free' ? 'Start Free' : `Get ${planName}`;
-      if (appliedPromo && isApplicable && appliedPromo.discountPercent) {
-        ctaText = `Get ${planName} (${appliedPromo.discountPercent}% Off)`;
+      let ctaText = 'Get Started Free';
+      if (targetKey === 'STARTER') ctaText = 'Choose Starter';
+      if (targetKey === 'PRO') ctaText = 'Choose Pro';
+
+      if (appliedPromo && isApplicable && appliedPromo.discountPercent && targetKey !== 'FREE') {
+        ctaText = `${ctaText} (${appliedPromo.discountPercent}% Off)`;
       }
+
       const toUrl = appliedPromo
         ? `/register?promo=${encodeURIComponent(appliedPromo.code)}&plan=${targetKey.toLowerCase()}`
-        : '/register';
+        : (targetKey === 'FREE' ? '/register' : `/register?plan=${targetKey.toLowerCase()}`);
 
       return {
         cta: ctaText,
         to: toUrl,
         onClick: undefined,
-        highlighted: planName === 'Pro'
+        highlighted: Boolean(planItem.highlighted),
       };
     }
 
@@ -319,7 +747,7 @@ const Pricing = () => {
         cta: 'Current Plan',
         to: '/dashboard',
         onClick: undefined,
-        highlighted: true
+        highlighted: true,
       };
     }
 
@@ -328,194 +756,241 @@ const Pricing = () => {
         cta: 'Included in Your Plan',
         to: '/dashboard',
         onClick: undefined,
-        highlighted: false
+        highlighted: false,
       };
     }
 
-    let upgradeLabel = `Upgrade to ${planName}`;
+    let upgradeLabel = targetKey === 'STARTER' ? 'Choose Starter' : (targetKey === 'PRO' ? 'Choose Pro' : `Upgrade to ${planItem.name}`);
     if (appliedPromo && isApplicable && appliedPromo.discountPercent) {
-      const discountedPrice = planName === 'Starter' ? '₦1,500' : planName === 'Pro' ? '₦4,000' : '';
-      if (discountedPrice) {
-        upgradeLabel = `Upgrade to ${planName} (${discountedPrice})`;
-      } else {
-        upgradeLabel = `Upgrade (${appliedPromo.discountPercent}% Off)`;
-      }
+      upgradeLabel = `${upgradeLabel} (${appliedPromo.discountPercent}% Off)`;
     }
 
     return {
-      cta: upgradeLabel,
+      cta: loadingPlan === (planItem.id || planItem.planKey) ? 'Redirecting...' : upgradeLabel,
       to: undefined,
-      onClick: () => handleUpgrade(planName),
-      highlighted: targetKey === 'PRO'
+      onClick: () => handleUpgrade(planItem),
+      highlighted: Boolean(planItem.highlighted),
     };
+  };
+
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(([q, a]) => ({
+      '@type': 'Question',
+      name: q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: a,
+      },
+    })),
+  };
+
+  const productSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'JAHZJOURNALS',
+    applicationCategory: 'FinanceApplication',
+    operatingSystem: 'Web, Mobile (PWA)',
+    offers: [
+      {
+        '@type': 'Offer',
+        name: 'Free Plan',
+        price: '0',
+        priceCurrency: 'NGN',
+      },
+      {
+        '@type': 'Offer',
+        name: 'Starter Plan',
+        price: '4000',
+        priceCurrency: 'NGN',
+      },
+      {
+        '@type': 'Offer',
+        name: 'Pro Plan',
+        price: '8500',
+        priceCurrency: 'NGN',
+      },
+    ],
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <SEO
-        title="Pricing Plans | JAHZJOURNALS Forex Journal"
-        description="Simple, transparent pricing for disciplined traders. Choose Free, Starter, or Pro with AI reviews and prop firm challenge tracking."
-        canonical="https://jahzjournal.com/pricing"
+        title="Pricing & Plans — Transparent Forex Journaling | JAHZJOURNALS"
+        description="Simple, transparent regional pricing for disciplined forex and gold traders. Start free with 20 trades/mo, upgrade to Starter or Pro for psychology tracking, prop-firm guards, and AI reviews."
+        canonical="https://www.jahzjournal.com/pricing"
+        schemas={[faqSchema, productSchema]}
       />
       <Navbar />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-16">
         <Breadcrumbs />
-        
-        <PageHeader
-          eyebrow="Pricing & Plans"
-          title="Simple plans for disciplined traders and trading teams."
-          description="Build the habit free, build discipline with Starter, or find your edge with Pro."
-          primaryCta={user ? { label: 'Go to Dashboard', to: '/dashboard' } : { label: 'Start Free Today', to: '/register' }}
-          heroImage="/heroes/hero-pricing.png"
-          heroAlt="JAHZJOURNALS pricing plans for traders"
-          heroPosition={{ mobile: '70% top', tablet: '62% top', desktop: 'center top' }}
-        />
 
-        {/* Founding Trader Launch Banner */}
-        {import.meta.env.VITE_LAUNCH_MODE === 'true' && user?.subscriptions?.[0]?.source === 'PROMOTION' ? (
-          <section className="px-4 py-8">
-            <div className="mx-auto max-w-3xl rounded-3xl border border-amber-500/30 bg-amber-500/5 p-8 text-center relative overflow-hidden shadow-xl">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/15 text-amber-500 dark:text-amber-400 text-2xl">
-                🏅
+        {/* Development-Only Pricing Preview Indicator */}
+        {import.meta.env.DEV && devPreviewActive && (
+          <aside
+            role="status"
+            aria-label="Development Pricing Preview Indicator"
+            className="mb-6 rounded-2xl border-2 border-dashed border-amber-500/70 bg-amber-500/10 px-5 py-3.5 shadow-lg backdrop-blur-md text-amber-200"
+          >
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
+              <div className="flex items-center gap-2.5 flex-wrap justify-center md:justify-start">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow">
+                  <span>🛠️</span> DEV PREVIEW ACTIVE: {devPreviewActive === 'nigeria' ? '🇳🇬 Nigeria (NGN)' : '🌍 International (USD)'}
+                </span>
+                <span className="text-xs text-amber-100 font-medium">
+                  Presentation only. Does not authorize checkout sessions, alter user billing preferences, or modify backend pricing.
+                </span>
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">Founding Trader Active</h2>
-              <p className="mt-2 text-sm text-muted">
-                You currently enjoy complimentary <strong>PRO access</strong> as part of our launch program.
-              </p>
-              <div className="mt-6 flex justify-center">
-                <FoundingTraderBadge subscription={user.subscriptions[0]} variant="button" />
+
+              <div className="flex items-center gap-2 shrink-0 text-xs font-bold">
+                {devPreviewActive === 'nigeria' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDevSwitchPreview('international')}
+                    className="px-3 py-1.5 rounded-lg bg-surface border border-amber-400/40 text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer"
+                  >
+                    Preview International (USD) →
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleDevSwitchPreview('nigeria')}
+                    className="px-3 py-1.5 rounded-lg bg-surface border border-amber-400/40 text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer"
+                  >
+                    Preview Nigeria (NGN) →
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleExitDevPreview}
+                  className="px-3 py-1.5 rounded-lg bg-surface border border-border text-muted hover:text-foreground transition-all cursor-pointer"
+                >
+                  Exit Preview ✕
+                </button>
               </div>
             </div>
-          </section>
-        ) : null}
+          </aside>
+        )}
 
-        {/* Active Promotional Offer Banner with Expiration Countdown */}
-        {(activePublicPromo || appliedPromo) && (
-          <section className="px-4 py-2 mb-6">
-            <div className="mx-auto max-w-5xl rounded-3xl border border-emerald-500/40 bg-gradient-to-br from-gray-950 via-emerald-950/30 to-slate-950 p-6 sm:p-8 relative overflow-hidden shadow-2xl backdrop-blur-xl">
-              {/* Subtle ambient lighting */}
-              <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-              <div className="absolute -left-16 -bottom-16 h-52 w-52 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
-
-              <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                <div className="space-y-3 max-w-2xl">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 shadow-sm">
-                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                      Active Promo • {appliedPromo?.discountPercent || activePublicPromo?.discountPercent || 50}% OFF
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-sky-500/15 border border-sky-500/30 text-xs font-mono font-bold text-sky-400">
-                      CODE: {(appliedPromo?.code || activePublicPromo?.slug || 'PROMO').toUpperCase()}
-                    </span>
-                    <span className="text-xs font-bold text-emerald-400">
-                      ✓ Automatically applied to Starter & Pro
-                    </span>
-                  </div>
-
-                  <h2 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-                    {appliedPromo?.promotion?.name || activePublicPromo?.name || '50% Off Launch Promotion'}
-                  </h2>
-
-                  <p className="text-sm text-muted leading-relaxed">
-                    {appliedPromo?.promotion?.description || activePublicPromo?.description || 'Lock in 50% discount on Starter and Pro tiers. Discount is automatically calculated and applied at checkout.'}
-                  </p>
-
-                  {/* Context notice for logged-in vs visitors */}
-                  {user ? (
-                    <div className="pt-1 flex items-center gap-2 text-xs font-medium text-emerald-400/90">
-                      <span>👤 Logged in as <strong>{user.email}</strong> ({user.subscriptionPlan || 'FREE'} Tier)</span>
-                      <span>•</span>
-                      <span>Your 50% discount will reflect directly during Paystack payment</span>
-                    </div>
-                  ) : (
-                    <div className="pt-1 flex items-center gap-2 text-xs font-medium text-sky-400">
-                      <span>⚡ Not signed in? Choose a plan below to register and lock in 50% off immediately.</span>
-                    </div>
-                  )}
+        {/* 1. Compact Promotional Banner (Only if promotion is valid and active) */}
+        {(activePublicPromo || appliedPromo) && timeLeft && !timeLeft.expired && (
+          <section className="mb-4">
+            <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 via-surface to-emerald-950/40 px-4 py-2.5 sm:px-5 sm:py-3 shadow-md backdrop-blur-md">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left">
+                <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-black uppercase tracking-wider shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
+                    Launch Offer • {appliedPromo?.discountPercent || activePublicPromo?.discountPercent || 50}% OFF
+                  </span>
+                  <span className="text-xs text-foreground font-semibold">
+                    Starter & Pro plans automatically discounted at checkout.
+                  </span>
+                  <span className="text-[11px] font-mono font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
+                    CODE: {(appliedPromo?.code || activePublicPromo?.slug || '50OFF').toUpperCase()}
+                  </span>
                 </div>
 
-                {/* Live Expiration Countdown Timer */}
-                {timeLeft && !timeLeft.expired && (
-                  <div className="bg-surface/90 border border-border/80 rounded-2xl p-4 sm:p-5 text-center shrink-0 w-full lg:w-auto shadow-xl">
-                    <div className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2.5 flex items-center justify-center gap-1.5">
-                      <span>⏳</span> Promo Expires In
-                    </div>
-                    <div className="flex items-center justify-center gap-2 font-mono">
-                      <div className="flex flex-col items-center">
-                        <span className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-lg sm:text-xl font-black text-emerald-400 min-w-[48px]">
-                          {timeLeft.days}
-                        </span>
-                        <span className="text-[10px] text-muted font-sans font-bold uppercase mt-1">Days</span>
-                      </div>
-                      <span className="text-lg font-bold text-muted mb-4">:</span>
-                      <div className="flex flex-col items-center">
-                        <span className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-lg sm:text-xl font-black text-emerald-400 min-w-[48px]">
-                          {String(timeLeft.hours).padStart(2, '0')}
-                        </span>
-                        <span className="text-[10px] text-muted font-sans font-bold uppercase mt-1">Hours</span>
-                      </div>
-                      <span className="text-lg font-bold text-muted mb-4">:</span>
-                      <div className="flex flex-col items-center">
-                        <span className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-lg sm:text-xl font-black text-emerald-400 min-w-[48px]">
-                          {String(timeLeft.minutes).padStart(2, '0')}
-                        </span>
-                        <span className="text-[10px] text-muted font-sans font-bold uppercase mt-1">Mins</span>
-                      </div>
-                      <span className="text-lg font-bold text-muted mb-4">:</span>
-                      <div className="flex flex-col items-center">
-                        <span className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-lg sm:text-xl font-black text-emerald-400 min-w-[48px] animate-pulse">
-                          {String(timeLeft.seconds).padStart(2, '0')}
-                        </span>
-                        <span className="text-[10px] text-muted font-sans font-bold uppercase mt-1">Secs</span>
-                      </div>
-                    </div>
+                <div className="flex items-center gap-3 text-xs shrink-0">
+                  <div className="flex items-center gap-1.5 text-muted font-mono">
+                    <span className="text-[11px] font-sans text-muted">Expires in:</span>
+                    <span className="font-bold text-emerald-400 bg-surface-muted px-2 py-0.5 rounded border border-border">
+                      {timeLeft.days}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m {String(timeLeft.seconds).padStart(2, '0')}s
+                    </span>
                   </div>
-                )}
+                  <a 
+                    href="#pricing-cards"
+                    className="text-xs font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors cursor-pointer hidden md:inline"
+                  >
+                    View Plans ↓
+                  </a>
+                </div>
               </div>
             </div>
           </section>
         )}
 
-        {/* Pricing Cards Grid */}
-        <section className="py-12">
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {plans.map((plan) => {
-              const status = getPlanStatus(plan.name);
+        {/* 2. Pricing Headline and Concise Supporting Description */}
+        <section className="text-center max-w-3xl mx-auto pt-2 pb-5 px-4">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-500 dark:text-emerald-400 mb-2">
+            PRICING & PLANS
+          </p>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight">
+            Build Better Trading Habits. Understand Your Edge.
+          </h1>
+          <p className="mt-3 text-sm sm:text-base text-muted leading-relaxed max-w-2xl mx-auto">
+            Journal your forex and gold trades, identify recurring mistakes, analyse your performance, and keep your risk under control—all in one place.
+          </p>
+          
+          <div className="mt-4 flex items-center justify-center gap-3">
+            {user ? (
+              <Button to="/dashboard" size="sm">Go to Dashboard</Button>
+            ) : (
+              <Button to="/register" size="sm">Get Started Free</Button>
+            )}
+            <Button href="#compare-plans" variant="secondary" size="sm">Compare Plans</Button>
+          </div>
+        </section>
+
+        {/* International Reference Notice (Shown ONLY when viewing International USD reference pricing) */}
+        {selectedRegion === 'GLOBAL' && (
+          <section className="mb-6 px-4">
+            <div 
+              role="region"
+              aria-label="International Reference Pricing Notice"
+              className="mx-auto max-w-3xl rounded-2xl border border-sky-500/30 bg-sky-500/10 px-5 py-4 shadow-lg backdrop-blur-xl"
+            >
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 text-[11px] font-bold uppercase tracking-wider">
+                    <span>🌍</span> International Reference Notice
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed">
+                    International billing is coming soon. Prices shown are reference prices only; international checkout is not yet available.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleManualRegionOverride('NG')}
+                  className="shrink-0 px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-bold shadow hover:bg-emerald-400 transition-all flex items-center gap-1.5 whitespace-nowrap font-black cursor-pointer"
+                >
+                  <span>🇳🇬</span> Switch to Nigeria (NGN)
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 5. Pricing Cards Grid (4 Columns for Individual Traders) */}
+        <section id="pricing-cards" className="py-6 scroll-mt-20">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {currentPlans.map((plan) => {
+              const status = getPlanStatus(plan);
               let displayPrice = plan.price;
               let originalPrice = null;
-              const planKey = planKeyMap[plan.name] || 'FREE';
+              const planKey = plan.planKey;
               const applicable = appliedPromo?.applicablePlans && appliedPromo.applicablePlans.length > 0 
                 ? appliedPromo.applicablePlans.includes(planKey) 
-                : (planKey === 'STARTER' || planKey === 'PRO');
+                : (planKey === 'STARTER' || planKey === 'PRO' || planKey === 'PRO_SYNC');
               
-              if (appliedPromo && appliedPromo.discountPercent && applicable) {
-                if (plan.name === 'Starter') {
-                  originalPrice = '₦4,000';
-                  const orig = 4000;
-                  const disc = Math.round(orig * (1 - appliedPromo.discountPercent / 100));
-                  displayPrice = `₦${disc.toLocaleString()}`;
-                } else if (plan.name === 'Pro') {
-                  originalPrice = '₦8,000';
-                  const orig = 8000;
-                  const disc = Math.round(orig * (1 - appliedPromo.discountPercent / 100));
-                  displayPrice = `₦${disc.toLocaleString()}`;
-                } else if (plan.name === 'Mentor / Academy') {
-                  originalPrice = '₦8,000';
-                  const orig = 8000;
-                  const disc = Math.round(orig * (1 - appliedPromo.discountPercent / 100));
-                  displayPrice = `From ₦${disc.toLocaleString()}`;
-                }
+              if (appliedPromo && appliedPromo.discountPercent && applicable && plan.numericPrice > 0) {
+                const disc = Math.round(plan.numericPrice * (1 - appliedPromo.discountPercent / 100));
+                originalPrice = plan.price;
+                displayPrice = `${currentRegionalConfig.currencySymbol}${disc.toLocaleString()}`;
               }
 
               return (
                 <PricingCard
-                  key={plan.name}
+                  key={plan.id || plan.name}
                   {...plan}
-                  planHeader={plan.planHeader}
+                  badgeText={plan.badgeText}
+                  badgeVariant={plan.badgeVariant}
+                  waitlistCount={plan.planKey === 'PRO_SYNC' ? waitlistCounts?.PRO_SYNC?.count : undefined}
+                  planHeader={plan.targetAudience}
                   price={displayPrice}
                   originalPrice={originalPrice}
-                  tagline={appliedPromo && applicable ? `🔥 ${appliedPromo.discountPercent}% OFF APPLIED` : plan.tagline}
+                  tagline={appliedPromo && applicable && plan.numericPrice > 0 ? `🔥 ${appliedPromo.discountPercent}% OFF APPLIED` : plan.tagline}
                   highlighted={status.highlighted}
                   cta={status.cta}
                   onClick={status.onClick}
@@ -525,14 +1000,37 @@ const Pricing = () => {
             })}
           </div>
 
-          {/* Promo Code Section */}
+          {/* Dedicated Mentor & Academy Spotlight Banner */}
+          <div className="mt-8 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/30 via-surface to-surface p-6 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl">
+            <div className="space-y-2 max-w-3xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                <span>🎓</span> For Mentors, Coaches & Academies
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-foreground">
+                Managing a Telegram channel or coaching students?
+              </h3>
+              <p className="text-sm text-muted leading-relaxed">
+                Stop reviewing messy screenshots in group chats. Give your students structured trading journals, enforce strict strategy risk guards (e.g. max 1% risk rules), and issue graded feedback directly on their setups.
+              </p>
+              <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-muted pt-1">
+                <span className="flex items-center gap-1.5 text-emerald-400">✓ From ₦8,000 / month</span>
+                <span className="flex items-center gap-1.5 text-emerald-400">✓ 25 to 1,000+ student capacity</span>
+                <span className="flex items-center gap-1.5 text-emerald-400">✓ Paid student cohort checkout via Paystack</span>
+              </div>
+            </div>
+            <Button to="/pricing/mentor" variant="primary" size="lg" className="shrink-0 w-full sm:w-auto">
+              View Mentor Plans & Capacity →
+            </Button>
+          </div>
+
+          {/* Promo Code Box */}
           <div className="mt-8 max-w-2xl mx-auto rounded-2xl border border-border bg-surface p-6 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                 🏷️ Have an official promo code?
               </h3>
               <p className="text-xs text-muted mt-1">
-                Enter your code to unlock complimentary tier access or discounts.
+                Enter your code to unlock promotional discounts across Starter and Pro.
               </p>
             </div>
             <form onSubmit={handleRedeemCode} className="flex gap-2 w-full sm:w-auto">
@@ -546,68 +1044,241 @@ const Pricing = () => {
               <button
                 type="submit"
                 disabled={redeemingPromo || !promoCode.trim()}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-xl shadow-md disabled:opacity-50 transition-all shrink-0"
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-xl shadow-md disabled:opacity-50 transition-all shrink-0 cursor-pointer"
               >
                 {redeemingPromo ? 'Applying...' : 'Apply'}
               </button>
             </form>
           </div>
+
+          {/* Subtle Regional Pricing Override */}
+          <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 text-xs text-muted">
+            <span className="flex items-center gap-1.5 font-medium">
+              <Globe size={14} className="text-muted shrink-0" />
+              <span>Viewing:</span>
+            </span>
+            <div className="relative inline-flex items-center">
+              <select
+                value={selectedRegion}
+                onChange={(e) => handleManualRegionOverride(e.target.value)}
+                aria-label="Select pricing region override"
+                className="bg-surface border border-border text-foreground rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer shadow-sm hover:border-border/80 transition-all"
+              >
+                <option value="NG">🇳🇬 Pricing for Nigeria (NGN)</option>
+                <option value="GLOBAL">🌍 International pricing (USD)</option>
+              </select>
+            </div>
+            {hasManualOverride ? (
+              <button
+                type="button"
+                onClick={handleResetToDetected}
+                className="text-[11px] text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors cursor-pointer"
+                title="Reset to automatically detected region"
+              >
+                Reset to auto-detected
+              </button>
+            ) : (
+              <span className="text-[11px] text-muted/70 italic">
+                {isVpnDetected
+                  ? '(VPN/proxy connection detected)'
+                  : detectedCountryCode
+                    ? `(Auto-detected: ${detectedCountryCode})`
+                    : '(Auto-detected from connection)'}
+              </span>
+            )}
+          </div>
         </section>
 
-        {/* Interactive Feature Comparison Table */}
+        {/* ========================================================================= */}
+        {/* PLAIN-LANGUAGE AI SHOWCASE SECTION                                        */}
+        {/* ========================================================================= */}
         <section className="py-12 border-t border-border">
-          <div className="text-center mb-10">
+          <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+              <Sparkles size={14} /> JAHZ AI Intelligence
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-foreground">
+              Understand Your Trading Edge with JAHZ AI
+            </h2>
+            <p className="text-sm text-muted leading-relaxed">
+              Practical, objective analysis of your real trade execution—designed for self-reflection and discipline, not market predictions or get-rich-quick claims.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <Brain size={20} />
+              </div>
+              <h3 className="text-base font-bold text-foreground">AI Trade Review</h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Compares your executed entry, stop loss, and exit against your trading rules. Flags premature profit-taking, stop-widening, and rule violations so you can break destructive habits.
+              </p>
+              <div className="text-[11px] font-semibold text-emerald-400 pt-1">
+                ✓ Available on Pro & Pro Sync (150 reviews/mo)
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400">
+                <TrendingUp size={20} />
+              </div>
+              <h3 className="text-base font-bold text-foreground">Weekly Coaching Summaries</h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Synthesizes your weekly trade log into an honest behavioral report. Identifies session patterns (London vs New York) and flags revenge trading risks before they wipe out capital.
+              </p>
+              <div className="text-[11px] font-semibold text-sky-400 pt-1">
+                ✓ Available on Starter, Pro & Pro Sync
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+                <Eye size={20} />
+              </div>
+              <h3 className="text-base font-bold text-foreground">Screenshot Vision Extraction</h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Attach MT4/MT5 or TradingView chart screenshots. JAHZ Vision automatically reads your pair, order direction, entry price, and stop levels to eliminate tedious manual typing.
+              </p>
+              <div className="text-[11px] font-semibold text-amber-400 pt-1">
+                ✓ Available on Pro & Pro Sync
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+                <TrendingUp size={20} />
+              </div>
+              <h3 className="text-base font-bold text-foreground">JAHZ Edge Finder</h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Quantitative statistical analysis that cuts through market noise. Reveals which setups, session overlaps, and currency pairs (e.g. Gold vs EURUSD) yield your highest statistical profit factor.
+              </p>
+              <div className="text-[11px] font-semibold text-purple-400 pt-1">
+                ✓ Available on Pro & Pro Sync
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400">
+                <Bot size={20} />
+              </div>
+              <h3 className="text-base font-bold text-foreground">Natural Language Journal Assistant</h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Log thoughts on the go using plain conversational English. The assistant formats your reflections, emotions, and setup rationale into structured journal entries in seconds.
+              </p>
+              <div className="text-[11px] font-semibold text-teal-400 pt-1">
+                ✓ Available on Starter, Pro & Pro Sync
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 flex flex-col justify-between space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wide">
+                  <Shield size={16} /> Responsible AI Policy
+                </div>
+                <h4 className="text-sm font-bold text-foreground">Objective Reflection, Not Signals</h4>
+                <p className="text-xs text-muted leading-relaxed">
+                  JAHZ AI analyzes your historical journal data to assist your personal self-reflection. It does not provide financial advice, make trade predictions, or guarantee profitable outcomes.
+                </p>
+              </div>
+              <Link to="/register" className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300">
+                Test 2 Free AI Reviews Today →
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* RESPONSIVE FEATURE COMPARISON TABLE                                       */}
+        {/* ========================================================================= */}
+        <section id="compare-plans" className="py-12 border-t border-border scroll-mt-20">
+          <div className="text-center mb-10 space-y-2">
             <h2 className="text-2xl sm:text-3xl font-black text-foreground">Compare Plan Features</h2>
-            <p className="mt-2 text-sm text-muted">Detailed breakdown of features across all JAHZJOURNALS plans</p>
+            <p className="text-sm text-muted">Complete breakdown of limits, analytics, and automation across every tier</p>
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-xl">
-            <table className="w-full text-xs text-left">
+            <table className="w-full text-xs text-left border-collapse">
               <thead className="bg-surface-muted text-muted uppercase tracking-wider border-b border-border font-bold">
                 <tr>
-                  <th className="p-4 border-r border-border">Feature</th>
-                  <th className="p-4 text-center border-r border-border">Free</th>
-                  <th className="p-4 text-center border-r border-border">Starter</th>
-                  <th className="p-4 text-center border-r border-border text-emerald-500 dark:text-emerald-400 font-extrabold">Pro</th>
-                  <th className="p-4 text-center">Mentor</th>
+                  <th className="p-4 border-r border-border sticky left-0 bg-surface-muted z-10 min-w-[200px]">
+                    Feature
+                  </th>
+                  <th className="p-4 text-center border-r border-border min-w-[120px]">Free</th>
+                  <th className="p-4 text-center border-r border-border min-w-[120px]">Starter</th>
+                  <th className="p-4 text-center border-r border-border min-w-[140px] text-amber-500 dark:text-amber-400 font-extrabold bg-amber-500/5">
+                    Pro (Recommended)
+                  </th>
+                  <th className="p-4 text-center min-w-[140px] text-sky-500 dark:text-sky-400 font-extrabold bg-sky-500/5">
+                    Pro Sync (Cloud Sync)
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border text-muted">
-                {featureMatrix.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-surface-muted/50 transition-colors">
-                    <td className="p-4 font-semibold text-foreground border-r border-border">{row.feature}</td>
-                    
-                    {['free', 'starter', 'pro', 'mentor'].map((tierKey) => {
-                      const val = row[tierKey];
-                      return (
-                        <td key={tierKey} className="p-4 text-center border-r border-border">
-                          {typeof val === 'boolean' ? (
-                            val ? (
-                              <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
-                            ) : (
-                              <Minus size={16} className="mx-auto text-muted/40" />
-                            )
-                          ) : val === 'Coming Soon' ? (
-                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              Coming Soon
-                            </span>
+                {featureMatrixCategories.map((category, catIdx) => (
+                  <React.Fragment key={catIdx}>
+                    <tr className="bg-surface-muted/70 font-black text-foreground uppercase tracking-wider text-[11px]">
+                      <td colSpan={5} className="p-3 px-4 text-center border-y border-border/80 bg-surface-muted/90">
+                        {category.category}
+                      </td>
+                    </tr>
+                    {category.rows.map((row, rowIdx) => (
+                      <tr key={rowIdx} className="hover:bg-surface-muted/40 transition-colors">
+                        <td className="p-4 font-semibold text-foreground border-r border-border sticky left-0 bg-surface z-10 shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
+                          {row.feature}
+                        </td>
+                        <td className="p-4 text-center border-r border-border">
+                          {row.free === 'Included' ? (
+                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400" />
+                          ) : row.free === 'Not included' ? (
+                            <Minus size={16} className="mx-auto text-muted/40" />
                           ) : (
-                            <span className={`font-bold ${tierKey === 'pro' ? 'text-emerald-500 dark:text-emerald-400' : 'text-foreground'}`}>{val}</span>
+                            <span className="font-semibold text-foreground">{row.free}</span>
                           )}
                         </td>
-                      );
-                    })}
-                  </tr>
+                        <td className="p-4 text-center border-r border-border">
+                          {row.starter === 'Included' ? (
+                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400" />
+                          ) : row.starter === 'Not included' ? (
+                            <Minus size={16} className="mx-auto text-muted/40" />
+                          ) : (
+                            <span className="font-semibold text-foreground">{row.starter}</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center border-r border-border bg-amber-500/5 font-semibold text-foreground">
+                          {row.pro === 'Included' ? (
+                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
+                          ) : row.pro === 'Not included' ? (
+                            <Minus size={16} className="mx-auto text-muted/40" />
+                          ) : (
+                            <span className="font-bold text-amber-500 dark:text-amber-400">{row.pro}</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center bg-sky-500/5 font-semibold text-foreground">
+                          {row.sync === 'Included' ? (
+                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
+                          ) : row.sync === 'Not included' ? (
+                            <Minus size={16} className="mx-auto text-muted/40" />
+                          ) : (
+                            <span className="font-bold text-sky-500 dark:text-sky-400">{row.sync}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
           </div>
         </section>
 
-        {/* FAQs */}
+        {/* ========================================================================= */}
+        {/* COMPREHENSIVE 9-QUESTION FAQ SECTION                                      */}
+        {/* ========================================================================= */}
         <section className="py-12 border-t border-border">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground">Frequently Asked Questions</h2>
+          <div className="text-center mb-10 space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-black text-foreground">Frequently Asked Questions</h2>
+            <p className="text-sm text-muted">Transparent answers to all your billing, data, and sync questions</p>
           </div>
           <div className="mx-auto max-w-4xl space-y-4">
             {faqs.map(([question, answer]) => (
@@ -616,9 +1287,31 @@ const Pricing = () => {
           </div>
         </section>
 
+        {/* Genuine Security & Trust Information */}
+        <section className="py-8 border-t border-border">
+          <div className="max-w-4xl mx-auto rounded-2xl border border-border bg-surface p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
+                <Lock size={22} />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-foreground">Bank-Grade 256-Bit SSL Encryption</h4>
+                <p className="text-xs text-muted leading-relaxed">
+                  Your payments are processed securely by Paystack. JAHZJOURNALS never stores your credit card, debit card, or banking PINs.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-semibold text-muted shrink-0">
+              <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+              <span>•</span>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+            </div>
+          </div>
+        </section>
+
         <CTASection 
-          title="Start building your trading discipline today." 
-          cta={user ? "Go to Dashboard" : "Start Journaling Free"} 
+          title="Build Better Trading Habits. Understand Your Edge." 
+          cta={user ? "Go to Dashboard" : "Get Started Free"} 
         />
       </main>
 

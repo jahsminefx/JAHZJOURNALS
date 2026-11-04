@@ -69,10 +69,37 @@ const createContactMessage = async (req, res) => {
   }
 };
 
-// Get support threads for current logged-in user
+// Get or create active support conversation for current logged-in user
+const getMySupportThread = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const thread = await contactService.getOrCreateUserSupportThread(userId);
+
+    // If caller is user, mark as read for user
+    if (thread.unreadForUser > 0) {
+      await contactService.markThreadAsRead(thread.id, 'USER');
+      thread.unreadForUser = 0;
+    }
+
+    res.json(thread);
+  } catch (error) {
+    console.error('Error fetching/creating user support thread:', error);
+    res.status(500).json({ message: 'Failed to access support conversation' });
+  }
+};
+
+// Get support threads for current logged-in user (or all threads if Super Admin / Admin)
 const getUserSupportThreads = async (req, res) => {
   try {
     const userId = req.user.id;
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'].includes(req.user.role);
+
+    if (isAdmin && (req.query.all === 'true' || req.query.adminView === 'true')) {
+      const { status, search, priority, category } = req.query;
+      const threads = await contactService.getMessages({ status, search, priority, category });
+      return res.json(threads);
+    }
+
     const threads = await contactService.getUserMessages(userId);
     res.json(threads);
   } catch (error) {
@@ -81,11 +108,12 @@ const getUserSupportThreads = async (req, res) => {
   }
 };
 
-// Get single user support thread detail
+// Get single support thread detail
 const getUserSupportThreadById = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'].includes(req.user.role);
 
     const thread = await contactService.getMessageThread(id);
     if (!thread) {
@@ -93,12 +121,18 @@ const getUserSupportThreadById = async (req, res) => {
     }
 
     // Verify ownership (unless user is admin)
-    if (thread.userId && thread.userId !== userId && !['SUPER_ADMIN', 'ADMIN', 'SUPPORT'].includes(req.user.role)) {
+    if (thread.userId && thread.userId !== userId && !isAdmin) {
       return res.status(403).json({ message: 'Unauthorized to view this support thread' });
     }
 
-    // Clear unread counter for user
-    await contactService.markThreadAsRead(id, 'USER');
+    // Clear unread counter appropriately
+    if (isAdmin) {
+      await contactService.markThreadAsRead(id, 'ADMIN');
+      thread.unreadForAdmin = 0;
+    } else {
+      await contactService.markThreadAsRead(id, 'USER');
+      thread.unreadForUser = 0;
+    }
 
     res.json(thread);
   } catch (error) {
@@ -107,28 +141,141 @@ const getUserSupportThreadById = async (req, res) => {
   }
 };
 
-// User replies to an existing thread
+// Post reply to a specific thread (handles both user messages and admin replies seamlessly)
 const postUserReply = async (req, res) => {
   try {
     const { id } = req.params;
-    const { message, attachments } = req.body;
+    const { message, attachments, isInternal } = req.body;
     const userId = req.user.id;
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'].includes(req.user.role);
 
     if (!message || !message.trim()) {
       return res.status(400).json({ message: 'Reply message cannot be empty' });
     }
 
-    const reply = await contactService.addUserReply(id, userId, message.trim(), attachments || []);
-    res.json({ success: true, message: 'Reply sent', data: reply });
+    let result;
+    if (isAdmin) {
+      result = await contactService.addReply(id, userId, message.trim(), attachments || [], Boolean(isInternal));
+    } else {
+      result = await contactService.addUserReply(id, userId, message.trim(), attachments || []);
+    }
+
+    res.json({ success: true, message: 'Reply sent', data: result?.data || result });
   } catch (error) {
-    console.error('Error posting user reply:', error);
+    console.error('Error posting support reply:', error);
     res.status(500).json({ message: error.message || 'Failed to post reply' });
   }
 };
 
+// Post support message (convenience endpoint: auto-locates or creates thread if threadId not provided)
+const postSupportMessage = async (req, res) => {
+  try {
+    const { message, threadId, attachments } = req.body;
+    const userId = req.user.id;
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'].includes(req.user.role);
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ message: 'Message cannot be empty' });
+    }
+
+    let targetThreadId = threadId;
+    if (!targetThreadId) {
+      const active = await contactService.getOrCreateUserSupportThread(userId);
+      targetThreadId = active.id;
+    }
+
+    let result;
+    if (isAdmin) {
+      result = await contactService.addReply(targetThreadId, userId, message.trim(), attachments || [], false);
+    } else {
+      result = await contactService.addUserReply(targetThreadId, userId, message.trim(), attachments || []);
+    }
+
+    res.json({ success: true, message: 'Message delivered', data: result?.data || result, threadId: targetThreadId });
+  } catch (error) {
+    console.error('Error delivering support message:', error);
+    res.status(500).json({ message: error.message || 'Failed to deliver message' });
+  }
+};
+
+
+// Trader-facing ticket submission
+const createSupportTicket = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { subject, description, category = 'GENERAL', priority = 'NORMAL', attachments = [] } = req.body;
+
+    if (!subject || !subject.trim()) {
+      return res.status(400).json({ message: 'Please provide a subject for your ticket.' });
+    }
+    if (!description || !description.trim()) {
+      return res.status(400).json({ message: 'Please provide a detailed description of the issue.' });
+    }
+
+    const ticketCount = await prisma.supportTicket.count();
+    const ticketNumber = `TK-${1000 + ticketCount + 1}`;
+
+    const ticket = await prisma.supportTicket.create({
+      data: {
+        userId,
+        ticketNumber,
+        subject: subject.trim(),
+        description: description.trim(),
+        category,
+        priority,
+        status: 'OPEN',
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true, subscriptionPlan: true } }
+      }
+    });
+
+    // Bridge directly to active user support thread
+    try {
+      const thread = await contactService.getOrCreateUserSupportThread(userId);
+      await contactService.addUserReply(
+        thread.id,
+        userId,
+        `🎫 **[Formal Ticket #${ticketNumber}]**\n**Subject:** ${subject.trim()}\n**Category:** ${category} | **Priority:** ${priority}\n\n${description.trim()}`,
+        attachments || []
+      );
+    } catch (bridgeErr) {
+      console.warn('Could not bridge ticket to chat thread:', bridgeErr.message);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `Formal Support Ticket #${ticketNumber} created successfully.`,
+      ticket,
+      ticketNumber,
+    });
+  } catch (error) {
+    console.error('Error creating support ticket:', error);
+    res.status(500).json({ message: 'Failed to create support ticket' });
+  }
+};
+
+const getMySupportTickets = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const tickets = await prisma.supportTicket.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(tickets);
+  } catch (error) {
+    console.error('Error loading my support tickets:', error);
+    res.status(500).json({ message: 'Failed to load tickets' });
+  }
+};
+
 module.exports = {
+  createSupportTicket,
+  getMySupportTickets,
   createContactMessage,
+  getMySupportThread,
   getUserSupportThreads,
   getUserSupportThreadById,
   postUserReply,
+  postSupportMessage,
 };

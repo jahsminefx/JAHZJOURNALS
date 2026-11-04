@@ -25,7 +25,7 @@ export const SEO_DEFAULTS = {
     logo: 'https://jahzjournal.com/logo-mark.png',
     founder: 'Jahsmine Aninta',
     foundingDate: '2024-01-01',
-    email: 'support@jahzjournals.com',
+    email: 'jahzjournals@gmail.com',
     sameAs: [
       'https://twitter.com/jahzjournals',
       'https://github.com/jahsminefx/JAHZJOURNALS',

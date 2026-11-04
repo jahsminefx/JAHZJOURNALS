@@ -41,7 +41,7 @@ const getHealthStatus = async (req, res) => {
       database: { configured: !!process.env.DATABASE_URL, reachable: false, healthy: false },
       redis: { configured: !!process.env.REDIS_URL, reachable: false, healthy: false },
       bullmq: { configured: !!process.env.REDIS_URL, reachable: false, healthy: false },
-      cloudinary: { configured: !!process.env.CLOUDINARY_URL, reachable: false, healthy: false },
+      cloudinary: { configured: !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)), reachable: false, healthy: false },
       aiProvider: { configured: !!(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY), reachable: false, healthy: false },
       brevo: { configured: !!process.env.BREVO_API_KEY, reachable: false, healthy: false },
       paystack: { configured: !!process.env.PAYSTACK_SECRET_KEY, reachable: false, healthy: false },

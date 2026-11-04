@@ -105,6 +105,9 @@ enum SubscriptionPlan {
   FREE
   STARTER
   PRO
+  SYNC_PLUS
+  PRO_SYNC
+  ELITE
   MENTOR
 }
 
@@ -220,6 +223,15 @@ enum PropFirmPhaseStatus {
   RESET
 }
 
+enum PropFirmPayoutStatus {
+  REQUESTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  PAID
+  CANCELLED
+}
+
 model User {
   id           String @id @default(uuid())
   name         String
@@ -237,6 +249,8 @@ model User {
 
   subscriptionPlan           SubscriptionPlan   @default(FREE)
   subscriptionStatus         SubscriptionStatus @default(ACTIVE)
+  billingCountry             String?
+  billingCurrency            String?
   onboardingCompleted        Boolean            @default(false)
   isDisabled                 Boolean            @default(false)
   emailVerified              Boolean            @default(false)
@@ -296,6 +310,8 @@ model User {
   pushSubscriptions           PushSubscription[]
   blogReads                   BlogPostRead[]
   authoredContactNotes        ContactInternalNote[]        @relation("ContactNoteAuthor")
+  economicNewsAlertPreference EconomicNewsAlertPreference?
+  economicNewsAlertLogs       EconomicNewsAlertLog[]
 
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
@@ -521,6 +537,7 @@ model PropFirmAccount {
 
   phases            PropFirmPhase[]
   progressSnapshots PropFirmProgressSnapshot[]
+  payouts           PropFirmPayout[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -566,6 +583,32 @@ model PropFirmProgressSnapshot {
   recordedAt           DateTime        @default(now())
 
   @@index([propFirmAccountId, recordedAt])
+}
+
+model PropFirmPayout {
+  id                     String               @id @default(uuid())
+  propFirmAccount        PropFirmAccount      @relation(fields: [propFirmAccountId], references: [id], onDelete: Cascade)
+  propFirmAccountId      String
+  requestDate            DateTime             @default(now())
+  scheduledDate          DateTime?
+  processedDate          DateTime?
+  amountRequested        Float
+  profitSplitPercent     Float
+  netTraderPayout        Float
+  firmFeeOrDeduction     Float                @default(0)
+  status                 PropFirmPayoutStatus @default(REQUESTED)
+  paymentMethod          String?
+  transactionReference   String?
+  highWaterMarkAtRequest Float?
+  balanceAtRequest       Float?
+  notes                  String?
+  certificateUrl         String?
+
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  @@index([propFirmAccountId, requestDate])
+  @@index([status])
 }
 
 model TradingGoal {
@@ -1277,6 +1320,13 @@ model Subscription {
   autoRenew        Boolean            @default(false)
   paymentReference String?
 
+  priceId                String?
+  currency               String?            @default("NGN")
+  billingInterval        String?            @default("MONTHLY")
+  provider               String?            @default("PAYSTACK")
+  providerSubscriptionId String?
+  providerCustomerId     String?
+
   promotionId String?
   promotion   Promotion? @relation(fields: [promotionId], references: [id], onDelete: SetNull)
 
@@ -1792,4 +1842,59 @@ model BlogPostReminderLog {
 
   @@index([userId, blogPostId])
   @@index([sentAt])
+}
+
+model WebhookEvent {
+  id          String    @id @default(uuid())
+  provider    String    // 'PAYSTACK' | 'STRIPE'
+  eventId     String    @unique
+  eventType   String
+  status      String    @default("PROCESSING") // 'PROCESSING' | 'PROCESSED' | 'FAILED'
+  payload     Json?
+  error       String?
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([provider, eventId])
+  @@index([status, createdAt])
+}
+
+model EconomicNewsAlertPreference {
+  id               String   @id @default(uuid())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String   @unique
+  isEnabled        Boolean  @default(true)
+  targetingMode    String   @default("CURRENCIES_AND_PAIRS") // CURRENCIES_ONLY, PAIRS_ONLY, CURRENCIES_AND_PAIRS
+  currencies       String[] @default(["USD", "EUR", "GBP"])
+  pairs            String[] @default(["EURUSD", "GBPUSD", "USDJPY", "XAUUSD"])
+  impactLevels     String[] @default(["HIGH"])
+  leadTimesMinutes Int[]    @default([30])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId, isEnabled])
+}
+
+model EconomicNewsAlertLog {
+  id                String   @id @default(uuid())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  eventId           String
+  leadMinutes       Int
+  channel           String   // 'IN_APP', 'PUSH', 'EMAIL'
+  pair              String
+  matchedCurrencies String[] @default([])
+  matchedPairs      String[] @default([])
+  impact            String
+  eventTitle        String
+  eventCountry      String
+  eventDate         DateTime
+  notificationId    String?
+  status            String   @default("DELIVERED") // 'DELIVERED', 'FAILED'
+  errorReason       String?
+  deliveredAt       DateTime @default(now())
+  createdAt         DateTime @default(now())
+
+  @@unique([userId, eventId, leadMinutes, channel], name: "user_event_lead_channel")
+  @@index([userId, createdAt])
 }

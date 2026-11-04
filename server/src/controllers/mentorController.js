@@ -1646,6 +1646,17 @@ const submitAssignment = async (req, res) => {
     }
 
     const cleanTradeIds = Array.isArray(tradeIds) ? tradeIds.filter(Boolean) : [];
+    if (cleanTradeIds.length > 0) {
+      const ownedCount = await prisma.trade.count({
+        where: {
+          id: { in: cleanTradeIds },
+          tradingAccount: { userId: req.user.id }
+        }
+      });
+      if (ownedCount !== cleanTradeIds.length) {
+        return res.status(400).json({ message: 'One or more selected trades do not belong to your account.' });
+      }
+    }
 
     const submission = await prisma.mentorAssignmentSubmission.upsert({
       where: {
@@ -1898,8 +1909,13 @@ const getCoachingSummaries = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized to view coaching summaries.' });
     }
 
+    const whereClause = { studentId };
+    if (!isSelf && req.user.role !== 'ADMIN' && req.user.role !== 'SUPER_ADMIN') {
+      whereClause.mentorId = req.user.id;
+    }
+
     const summaries = await prisma.mentorCoachingSummary.findMany({
-      where: { studentId },
+      where: whereClause,
       include: {
         mentor: { select: { id: true, name: true, avatarUrl: true } }
       },

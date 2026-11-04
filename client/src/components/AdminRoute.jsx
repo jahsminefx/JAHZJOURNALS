@@ -1,12 +1,15 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import SEO from './SEO';
 
 const AdminRoute = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isAuthLoading, isLoading } = useAuth();
+  const location = useLocation();
 
-  if (isLoading) {
+  const loading = isAuthLoading ?? isLoading;
+
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-r-transparent"></div>
@@ -15,10 +18,11 @@ const AdminRoute = () => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    const redirectTarget = location.pathname + location.search;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(redirectTarget)}`} replace />;
   }
 
-  if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+  if (!['SUPER_ADMIN', 'ADMIN', 'SUPPORT'].includes(user.role)) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground">
         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center max-w-sm">

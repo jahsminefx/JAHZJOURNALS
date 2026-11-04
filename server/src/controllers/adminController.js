@@ -23,7 +23,11 @@ const getDashboardMetrics = async (req, res) => {
       freeUsers,
       starterUsers,
       proUsers,
+      proSyncUsers,
       mentorUsers,
+      privateCohortMentors,
+      growthCommunityMentors,
+      megaAcademyMentors,
       totalTrades,
       tradesToday,
       totalPromotions,
@@ -41,7 +45,11 @@ const getDashboardMetrics = async (req, res) => {
       prisma.user.count({ where: { subscriptionPlan: 'FREE' } }),
       prisma.user.count({ where: { subscriptionPlan: 'STARTER' } }),
       prisma.user.count({ where: { subscriptionPlan: 'PRO' } }),
-      prisma.user.count({ where: { subscriptionPlan: 'MENTOR' } }),
+      prisma.user.count({ where: { subscriptionPlan: 'PRO_SYNC' } }),
+      prisma.user.count({ where: { OR: [{ subscriptionPlan: 'MENTOR' }, { role: 'MENTOR' }] } }),
+      prisma.user.count({ where: { role: 'MENTOR', OR: [{ mentorTier: 'PRIVATE_COHORT' }, { mentorTier: null }] } }),
+      prisma.user.count({ where: { role: 'MENTOR', mentorTier: { in: ['GROWTH', 'GROWTH_COMMUNITY'] } } }),
+      prisma.user.count({ where: { role: 'MENTOR', mentorTier: { in: ['MEGA', 'MEGA_ACADEMY'] } } }),
       prisma.trade.count(),
       prisma.trade.count({
         where: {
@@ -136,12 +144,19 @@ const getDashboardMetrics = async (req, res) => {
         freeUsers,
         starterUsers,
         proUsers,
+        proSyncUsers,
         mentorUsers,
+        privateCohortMentors,
+        growthCommunityMentors,
+        megaAcademyMentors,
         foundingTraders,
-        totalPaidSubscribers: starterUsers + proUsers + mentorUsers
+        totalPaidSubscribers: starterUsers + proUsers + proSyncUsers + mentorUsers
       },
       mentorship: {
         totalMentors: mentorUsers,
+        privateCohortMentors,
+        growthCommunityMentors,
+        megaAcademyMentors,
         totalCohorts: totalMentorCohorts,
         paidCohorts: paidMentorCohorts,
         totalStudentsEnrolled: totalCohortStudents,
@@ -184,15 +199,41 @@ const getDashboardMetrics = async (req, res) => {
 
 const getUsers = async (req, res) => {
   try {
-    const { search, page = 1, limit = 50 } = req.query;
+    const { search, page = 1, limit = 50, plan, role } = req.query;
     const skip = (page - 1) * limit;
     
-    const where = search ? {
-      OR: [
+    const where = {};
+    if (search) {
+      where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
-      ]
-    } : {};
+      ];
+    }
+    if (plan) {
+      if (plan === 'MENTOR_PRIVATE_COHORT') {
+        where.AND = [
+          { OR: [{ role: 'MENTOR' }, { subscriptionPlan: 'MENTOR' }] },
+          { OR: [{ mentorTier: 'PRIVATE_COHORT' }, { mentorTier: null }] }
+        ];
+      } else if (plan === 'MENTOR_GROWTH') {
+        where.AND = [
+          { OR: [{ role: 'MENTOR' }, { subscriptionPlan: 'MENTOR' }] },
+          { mentorTier: { in: ['GROWTH', 'GROWTH_COMMUNITY'] } }
+        ];
+      } else if (plan === 'MENTOR_MEGA') {
+        where.AND = [
+          { OR: [{ role: 'MENTOR' }, { subscriptionPlan: 'MENTOR' }] },
+          { mentorTier: { in: ['MEGA', 'MEGA_ACADEMY'] } }
+        ];
+      } else if (plan === 'MENTOR') {
+        where.OR = [{ role: 'MENTOR' }, { subscriptionPlan: 'MENTOR' }];
+      } else {
+        where.subscriptionPlan = plan;
+      }
+    }
+    if (role) {
+      where.role = role;
+    }
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -200,7 +241,17 @@ const getUsers = async (req, res) => {
         skip: parseInt(skip),
         take: parseInt(limit),
         select: {
-          id: true, name: true, email: true, role: true, subscriptionPlan: true, subscriptionStatus: true, createdAt: true, isDisabled: true
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          subscriptionPlan: true,
+          subscriptionStatus: true,
+          mentorTier: true,
+          mentorMaxStudents: true,
+          mentorMaxCohorts: true,
+          createdAt: true,
+          isDisabled: true
         },
         orderBy: { createdAt: 'desc' }
       }),

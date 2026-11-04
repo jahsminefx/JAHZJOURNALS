@@ -23,12 +23,9 @@ const MTCloudSyncModal = ({
 
   const planKey = (user?.subscriptionPlan || 'FREE').toUpperCase();
   const isAllowedSync =
-    planKey === 'STARTER' ||
-    planKey === 'PRO' ||
-    planKey === 'MENTOR' ||
+    planKey === 'PRO_SYNC' ||    (planKey === 'MENTOR' && user?.mentorTier === 'MEGA_ACADEMY') ||
     user?.role === 'ADMIN' ||
-    user?.role === 'SUPER_ADMIN' ||
-    user?.role === 'MENTOR';
+    user?.role === 'SUPER_ADMIN';
 
   const targetAccountId = account?.id || accountId;
   const isCreateMode = !targetAccountId;
@@ -48,7 +45,7 @@ const MTCloudSyncModal = ({
   const handleConnect = async (e) => {
     e.preventDefault();
     if (!isAllowedSync) {
-      toast.error('MetaTrader Cloud Sync requires a Starter, Pro, or Mentor subscription.');
+      toast.error('MetaTrader Cloud Sync requires a Pro Sync subscription.');
       navigate('/pricing');
       onClose();
       return;
@@ -117,12 +114,12 @@ const MTCloudSyncModal = ({
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                 {isCreateMode ? '1-Click MT5 Auto-Import' : 'MetaTrader 4 / 5 Cloud Sync'}
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                  <Clock size={11} /> Coming Soon (Starter & Pro)
+                  <Clock size={11} /> Early Access • Jan 2027 (Pro Sync)
                 </span>
               </h2>
               <p className="text-xs text-muted">
                 {isCreateMode
-                  ? 'Automated 1-click cloud sync is coming soon for Starter & Pro members.'
+                  ? 'Automated 1-click cloud sync launches in Early Access in January 2027 for Pro Sync members.'
                   : `Connecting to ${account?.name || 'your trading account'}`}
               </p>
             </div>
@@ -136,7 +133,7 @@ const MTCloudSyncModal = ({
           </button>
         </div>
 
-        {/* If Free Tier: Upgrade Prompt */}
+        {/* If Not on Pro Sync: Upgrade Prompt */}
         {!isAllowedSync ? (
           <div className="p-6 space-y-5 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-inner">
@@ -144,13 +141,13 @@ const MTCloudSyncModal = ({
             </div>
             <div>
               <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full mb-2">
-                <Clock size={12} /> Coming Soon • Starter & Pro Only
+                <Clock size={12} /> Early Access • January 2027 • Pro Sync Only
               </span>
               <h3 className="text-xl font-black text-foreground">
                 Automated MetaTrader (MT4/MT5) Cloud Sync
               </h3>
               <p className="mt-2 text-xs leading-relaxed text-muted max-w-md mx-auto">
-                Automatic 1-click cloud sync is currently coming soon exclusively for <strong>Starter (₦4,000/mo)</strong> and <strong>Pro (₦8,000/mo)</strong> plans. Connect once with your read-only investor password and your live trades, balance, and executions sync automatically without manual typing.
+                Automatic 1-click cloud sync is launching in Early Access in <strong>January 2027</strong> exclusively for <strong>Pro Sync (₦38,000/mo)</strong> plans. Connect once with your read-only investor password and your live trades, balance, and executions sync automatically without manual typing.
               </p>
             </div>
 
@@ -165,7 +162,7 @@ const MTCloudSyncModal = ({
               </div>
               <div className="flex items-center gap-2 text-foreground font-medium">
                 <Clock size={16} className="text-amber-400 shrink-0" />
-                <span>Exclusive to Starter & Pro accounts upon launch</span>
+                <span>Exclusive to Pro Sync accounts (Early Access • January 2027)</span>
               </div>
             </div>
 
@@ -192,14 +189,14 @@ const MTCloudSyncModal = ({
             </div>
           </div>
         ) : CLOUD_SYNC_COMING_SOON ? (
-          /* Coming Soon View for Starter & Pro accounts */
+          /* Coming Soon View for Pro Sync accounts */
           <div className="p-6 space-y-5 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-inner">
               <Clock size={32} />
             </div>
             <div>
               <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full mb-2">
-                <Clock size={12} /> Coming Soon for Starter & Pro
+                <Clock size={12} /> Early Access • January 2027 (Pro Sync)
               </span>
               <h3 className="text-xl font-black text-foreground">
                 1-Click MetaTrader Cloud Sync
@@ -208,7 +205,7 @@ const MTCloudSyncModal = ({
                 We are currently upgrading our dedicated server infrastructure to deliver ultra-reliable, high-speed 24/7 background syncing without needing MetaTrader open on your machine.
               </p>
               <p className="mt-1.5 text-xs text-emerald-400 font-semibold">
-                As a valued {planKey === 'STARTER' ? 'Starter' : planKey === 'PRO' ? 'Pro' : 'member'}, your account will automatically unlock full access as soon as this launches!
+                As a valued Pro Sync member, your account will automatically unlock full access when Early Access opens in January 2027!
               </p>
             </div>
 

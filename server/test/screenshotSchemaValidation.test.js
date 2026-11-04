@@ -352,7 +352,7 @@ describe('JAHZJOURNALS — Vision AI Screenshot Extraction & Schema Validation R
       };
 
       const fakeReq = {
-        user: { id: 'dummy-user-id' },
+        user: { id: 'dummy-user-id', subscriptionPlan: 'PRO', subscriptionStatus: 'ACTIVE' },
         files: [mockFile],
         body: {},
         protocol: 'http',

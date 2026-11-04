@@ -16,6 +16,7 @@ import UpgradeCard from '../components/dashboard/UpgradeCard';
 import DisciplineBanner from '../components/dashboard/DisciplineBanner';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import DashboardPromotionBanner from '../components/DashboardPromotionBanner';
+import UpcomingNewsTicker from '../components/calendar/UpcomingNewsTicker';
 import EdgeFinderWidget from '../components/dashboard/EdgeFinderWidget';
 import DashboardSkeleton from '../components/dashboard/DashboardSkeleton';
 import DashboardEmptyState from '../components/dashboard/DashboardEmptyState';
@@ -294,6 +295,7 @@ const Dashboard = () => {
       />
 
       <AnnouncementBanner />
+      <UpcomingNewsTicker />
       <DashboardPromotionBanner />
 
       {/* Daily Review Prompt Banner */}

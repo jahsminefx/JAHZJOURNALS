@@ -489,8 +489,33 @@ export const evaluateTradeRiskCheck = ({
 
   // 6. PROP FIRM & COMBINED RISK CHECK
   let propFirmDetails = null;
-  if (account && (account.propFirmAccount || userSettings?.dailyLossLimit)) {
-    const dailyLimit = account.propFirmAccount?.dailyLossLimit || userSettings?.dailyLossLimit;
+  const isPropFirm = account?.accountCategory === 'PROP_FIRM' || account?.isPropFirmAccount || Boolean(account?.propFirmAccount);
+  const propFirmAccount = account?.propFirmAccount;
+
+  if (account && (isPropFirm || userSettings?.dailyLossLimit)) {
+    const startBal = Number(account.startingBalance || account.currentBalance || 10000);
+    const dailyLimit = propFirmAccount?.dailyLossAmount ?? 
+      (propFirmAccount?.dailyLossPercent ? startBal * (propFirmAccount.dailyLossPercent / 100) : null) ?? 
+      userSettings?.dailyLossLimit;
+
+    // Check Restricted Symbols
+    if (propFirmAccount?.restrictedSymbols?.length && spec?.symbol) {
+      const cleanSymbol = spec.symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const isRestricted = propFirmAccount.restrictedSymbols.some((sym) =>
+        cleanSymbol.includes(String(sym).toUpperCase().replace(/[^A-Z0-9]/g, ''))
+      );
+      if (isRestricted) {
+        hardBlocks.push(`🚨 RESTRICTED SYMBOL: Trading on ${spec.symbol} is strictly prohibited by your firm.`);
+        checklist.push({ category: '6. PROP FIRM CHECK', label: 'Symbol Eligibility', status: 'FAIL', detail: `${spec.symbol} Restricted` });
+      }
+    }
+
+    // Check Max Lot Size
+    if (propFirmAccount?.maxLotSize && safeLotSize > propFirmAccount.maxLotSize) {
+      hardBlocks.push(`🚨 MAX LOT LIMIT: Safe lot size (${safeLotSize}) exceeds firm maximum limit of ${propFirmAccount.maxLotSize} lots.`);
+      checklist.push({ category: '6. PROP FIRM CHECK', label: 'Max Lot Limit', status: 'FAIL', detail: `${safeLotSize} > ${propFirmAccount.maxLotSize} lots` });
+    }
+
     if (dailyLimit && dailyLimit > 0) {
       const remainingDaily = dailyLimit - (account.todayLossAmount || 0);
       const combinedRisk = existingOpenTradeRisk + estimatedTotalRisk;
@@ -506,16 +531,16 @@ export const evaluateTradeRiskCheck = ({
       };
 
       if (combinedRisk > remainingDaily) {
-        hardBlocks.push(`🚨 EXCEEDS COMBINED PROP-FIRM DAILY LIMIT: Existing risk ($${existingOpenTradeRisk}) + New trade risk ($${estimatedTotalRisk}) = $${combinedRisk}, exceeding remaining daily allowance of $${Math.max(0, remainingDaily).toFixed(2)}.`);
-        checklist.push({ category: '6. PROP FIRM CHECK', label: 'Combined Daily Loss Limit', status: 'FAIL', detail: `$${combinedRisk} > Remaining $${Math.max(0, remainingDaily).toFixed(2)}` });
-      } else if (remainingAfterCombined <= 20) {
-        warnings.push(`⚠️ Combined trade risk leaves only $${remainingAfterCombined.toFixed(2)} remaining before prop-firm limit breach.`);
-        checklist.push({ category: '6. PROP FIRM CHECK', label: 'Combined Daily Loss Limit', status: 'WARN', detail: `$${combinedRisk} (Leaves $${remainingAfterCombined.toFixed(2)})` });
+        hardBlocks.push(`🚨 EXCEEDS PROP-FIRM DAILY LIMIT: Trade risk ($${estimatedTotalRisk.toFixed(2)}) + open risk ($${existingOpenTradeRisk.toFixed(2)}) = $${combinedRisk.toFixed(2)}, exceeding remaining daily allowance of $${Math.max(0, remainingDaily).toFixed(2)}.`);
+        checklist.push({ category: '6. PROP FIRM CHECK', label: 'Combined Daily Loss Limit', status: 'FAIL', detail: `$${combinedRisk.toFixed(2)} > Remaining $${Math.max(0, remainingDaily).toFixed(2)}` });
+      } else if (remainingAfterCombined <= (dailyLimit * 0.15)) {
+        warnings.push(`⚠️ Critical Margin: Trade risk leaves only $${remainingAfterCombined.toFixed(2)} remaining daily allowance before breach.`);
+        checklist.push({ category: '6. PROP FIRM CHECK', label: 'Combined Daily Loss Limit', status: 'WARN', detail: `$${combinedRisk.toFixed(2)} (Leaves $${remainingAfterCombined.toFixed(2)})` });
       } else {
-        checklist.push({ category: '6. PROP FIRM CHECK', label: 'Combined Daily Loss Limit', status: 'PASS', detail: `$${combinedRisk} within remaining $${remainingDaily.toFixed(2)}` });
+        checklist.push({ category: '6. PROP FIRM CHECK', label: 'Combined Daily Loss Limit', status: 'PASS', detail: `$${combinedRisk.toFixed(2)} within remaining $${remainingDaily.toFixed(2)}` });
       }
     } else {
-      checklist.push({ category: '6. PROP FIRM CHECK', label: 'Prop Firm Rules', status: 'PASS', detail: 'No Active Limits' });
+      checklist.push({ category: '6. PROP FIRM CHECK', label: 'Prop Firm Rules', status: 'PASS', detail: 'No Daily Limit Configured' });
     }
   } else {
     checklist.push({ category: '6. PROP FIRM CHECK', label: 'Prop Firm Rules', status: 'PASS', detail: 'Standard Account' });

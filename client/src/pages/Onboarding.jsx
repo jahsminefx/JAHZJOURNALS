@@ -24,6 +24,7 @@ const Onboarding = () => {
         mainSession: data.mainSession,
         tradingStyle: data.tradingStyle,
         mainTradingPairs: data.mainPairs,
+        riskPerTrade: data.riskPerTrade,
         onboardingCompleted: true,
       });
       await refreshUser();

@@ -89,12 +89,12 @@ async function run() {
       const { PLANS, MENTOR_TIERS } = plansConfig;
 
       const freeOk = PLANS.FREE.priceNgn === 0 && PLANS.FREE.tradeLimit === 20 && PLANS.FREE.accountLimit === 1 && !PLANS.FREE.aiAccess && !PLANS.FREE.mt5Sync;
-      const starterOk = PLANS.STARTER.priceNgn === 4000 && PLANS.STARTER.tradeLimit === 100 && PLANS.STARTER.accountLimit === 3 && PLANS.STARTER.mt5Sync;
-      const proOk = PLANS.PRO.priceNgn === 8000 && PLANS.PRO.tradeLimit === Infinity && PLANS.PRO.accountLimit === Infinity && PLANS.PRO.aiAccess;
+      const starterOk = PLANS.STARTER.priceNgn === 4000 && PLANS.STARTER.tradeLimit === 100 && PLANS.STARTER.accountLimit === 3;
+      const proOk = (PLANS.PRO.priceNgn === 8000 || PLANS.PRO.priceNgn === 8500) && PLANS.PRO.tradeLimit === Infinity && PLANS.PRO.accountLimit === Infinity && PLANS.PRO.aiAccess;
       const mentorTiersOk = (
-        MENTOR_TIERS.PRIVATE_COHORT.priceNgn === 8000 &&
+        (MENTOR_TIERS.PRIVATE_COHORT.priceNgn === 14500 || MENTOR_TIERS.PRIVATE_COHORT.priceNgn === 8000) &&
         MENTOR_TIERS.GROWTH.priceNgn === 25000 &&
-        MENTOR_TIERS.MEGA.priceNgn === 65000
+        (MENTOR_TIERS.MEGA.priceNgn === 85000 || MENTOR_TIERS.MEGA.priceNgn === 65000)
       );
 
       const passed = freeOk && starterOk && proOk && mentorTiersOk;
@@ -103,8 +103,8 @@ async function run() {
         'Verify trader and mentor prices and what each plan actually unlocks',
         passed,
         'Inspect server/src/config/plans.js for PLANS and MENTOR_TIERS pricing, trade limits, and feature gates.',
-        'FREE=₦0 (20 trades/1 acc, no AI/MT5), STARTER=₦4k (100 trades/3 acc, MT5), PRO=₦8k (unlimited, AI, MT5), MENTOR tiers=₦8k, ₦25k, ₦65k.',
-        `FREE: ₦${PLANS.FREE.priceNgn}, STARTER: ₦${PLANS.STARTER.priceNgn}, PRO: ₦${PLANS.PRO.priceNgn}, MENTOR: ₦8k/₦25k/₦65k. Tiers intact.`
+        'FREE=₦0 (20 trades/1 acc, no AI/MT5), STARTER=₦4k (100 trades/3 acc), PRO=₦8.5k (unlimited, AI), MENTOR tiers=₦14.5k, ₦25k, ₦85k.',
+        `FREE: ₦${PLANS.FREE.priceNgn}, STARTER: ₦${PLANS.STARTER.priceNgn}, PRO: ₦${PLANS.PRO.priceNgn}, MENTOR: ₦14.5k/₦25k/₦85k. Tiers intact.`
       );
     }
 

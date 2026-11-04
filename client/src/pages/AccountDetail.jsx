@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, SlidersHorizontal, Trophy, Cloud, CheckCircle2, Clock } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, ShieldCheck, SlidersHorizontal, Trophy, Cloud, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import MTSyncSettings from '../components/accounts/MTSyncSettings';
+import PropFirmCockpit from '../components/propfirm/PropFirmCockpit';
+import { useAuth } from '../context/useAuth';
+import { hasFeature } from '../utils/planHelpers';
 
 const formatMoney = (value, currency = 'USD') => {
   const number = Number(value || 0);
@@ -226,6 +229,8 @@ const AccountDetail = () => {
   const [loading, setLoading] = useState(true);
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const hasPropFirmPro = hasFeature(user, 'propFirmAccess');
 
   useEffect(() => {
     const fetchAccount = async () => {
@@ -317,7 +322,75 @@ const AccountDetail = () => {
         )}
       </div>
 
-      {isPropFirm && account.propFirmAccount ? <PropFirmAccountDetail account={account} /> : <RegularAccountDetail account={account} />}
+      {isPropFirm ? (
+        hasPropFirmPro ? (
+          account.propFirmAccount ? (
+            <PropFirmCockpit
+              account={account}
+              onRefresh={() => api.get(`/accounts/${id}`).then(({ data }) => setAccount(data)).catch(console.error)}
+            />
+          ) : (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-amber-500/30 bg-surface p-6 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3.5">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+                      <ShieldAlert size={22} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-foreground text-base">Evaluation Rules Not Yet Configured</h3>
+                      <p className="mt-1 text-xs text-muted leading-relaxed max-w-xl">
+                        This account is tagged as a Prop-Firm account, but challenge parameters (firm, balance, loss thresholds) have not been established. Configure rules to activate automated drawdown and daily loss guards.
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    to={`/accounts/${account.id}/prop-firm/edit-challenge-rules`}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 shadow-sm active:scale-95"
+                  >
+                    <SlidersHorizontal size={14} />
+                    <span>Configure Rules</span>
+                  </Link>
+                </div>
+              </div>
+              <RegularAccountDetail account={account} />
+            </div>
+          )
+        ) : (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-emerald-500/30 bg-surface p-6 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3.5">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                    <ShieldCheck size={22} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-foreground text-base">Prop-Firm Challenge & Drawdown Cockpit</h3>
+                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/30">
+                        PRO FEATURE
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted leading-relaxed max-w-xl">
+                      This account is treated as a regular journal account on your current plan. Upgrade to <strong>Pro</strong> to activate automated daily loss allowances, trailing drawdown liquidation floors, remaining risk allowance engine, and evaluator-ready PDF reports.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to="/pricing"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 shadow-sm shadow-emerald-500/20 active:scale-95"
+                >
+                  <Sparkles size={14} />
+                  <span>Unlock Pro Cockpit</span>
+                </Link>
+              </div>
+            </div>
+            <RegularAccountDetail account={account} />
+          </div>
+        )
+      ) : (
+        <RegularAccountDetail account={account} />
+      )}
 
       {/* MetaTrader Live Sync Settings */}
       <div id="mt-sync-section" className="pt-2">

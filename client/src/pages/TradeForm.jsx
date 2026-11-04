@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Trash2, Sparkles } from 'lucide-react';
+import { Trash2, Sparkles, AlertTriangle } from 'lucide-react';
 import AiTradeCaptureModal from '../components/trades/AiTradeCaptureModal';
+import { useAuth } from '../context/useAuth';
+import { canLogTradesWithAi } from '../utils/planHelpers';
 import api from '../utils/api';
 import { loadSettings } from '../utils/settings';
 import AiDraftHelper from '../components/trades/review/AiDraftHelper';
@@ -89,9 +91,46 @@ const TradeForm = () => {
   const [emotionLogs, setEmotionLogs] = useState([]);
   const [deletingScreenshotId, setDeletingScreenshotId] = useState(null);
   const [showAiCapture, setShowAiCapture] = useState(false);
+  const [newsAlert, setNewsAlert] = useState(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canUseAi = canLogTradesWithAi(user);
   const appSettings = useMemo(() => loadSettings(), []);
   const { register, handleSubmit, reset, getValues, setValue, control, watch } = useForm({ defaultValues });
+
+  const watchedPair = watch('pair');
+  const watchedEntryTime = watch('entryTime');
+
+  useEffect(() => {
+    if (!watchedPair) {
+      setNewsAlert(null);
+      return;
+    }
+    const checkNews = async () => {
+      try {
+        const timeToCheck = watchedEntryTime || new Date().toISOString();
+        const res = await api.post('/calendar/check-trade-news', {
+          pair: watchedPair,
+          tradeTime: timeToCheck,
+          windowMinutes: 30,
+        });
+        if (res.data?.isNewsTrade) {
+          setNewsAlert(res.data);
+          const currentVal = getValues('newsRelated');
+          if (currentVal === '' || currentVal === undefined) {
+            setValue('newsRelated', 'true');
+          }
+        } else {
+          setNewsAlert(null);
+        }
+      } catch {
+        // Silent fail
+      }
+    };
+
+    const timer = setTimeout(checkNews, 500);
+    return () => clearTimeout(timer);
+  }, [watchedPair, watchedEntryTime, getValues, setValue]);
 
   const activeRules = useMemo(() => rules.filter((rule) => rule.active), [rules]);
 
@@ -341,11 +380,23 @@ const TradeForm = () => {
           </div>
           <button
             type="button"
-            onClick={() => setShowAiCapture(true)}
+            onClick={() => {
+              if (!canUseAi) {
+                toast.error('Logging trades with JAHZ AI is exclusive to Pro and Mentor plans. Please upgrade to unlock.');
+                navigate('/pricing');
+                return;
+              }
+              setShowAiCapture(true);
+            }}
             className="whitespace-nowrap px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-xs rounded-lg transition-all shadow-md shadow-indigo-500/20 flex items-center gap-1.5 shrink-0"
           >
             <Sparkles size={14} className="text-amber-300" />
-            Log Trade with JAHZ AI
+            <span>Log Trade with JAHZ AI</span>
+            {!canUseAi && (
+              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-amber-500/30 text-amber-200 border border-amber-400/40">
+                PRO
+              </span>
+            )}
           </button>
         </div>
       )}
@@ -594,14 +645,22 @@ const TradeForm = () => {
                   ['isAPlusSetup', 'A+ Setup'],
                   ['newsRelated', 'News Related'],
                 ].map(([name, label]) => (
-                  <label key={name} className="text-sm text-muted">
-                    {label}
-                    <select {...register(name)} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
-                      <option value="">Unspecified</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
-                    </select>
-                  </label>
+                  <div key={name}>
+                    <label className="text-sm text-muted">
+                      {label}
+                      <select {...register(name)} className="mt-1 block w-full bg-surface border border-border rounded-md py-2 px-3 focus:outline-none focus:border-green-500">
+                        <option value="">Unspecified</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    </label>
+                    {name === 'newsRelated' && newsAlert && (
+                      <div className="mt-1.5 flex items-start gap-1.5 text-[11px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5 rounded-lg">
+                        <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                        <span>{newsAlert.warning}</span>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </section>

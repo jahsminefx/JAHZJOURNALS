@@ -558,3 +558,215 @@ export const generateBusinessIntelligencePdfReport = async ({ user, execData, tr
     throw new Error('Failed to generate business intelligence PDF report');
   }
 };
+
+/**
+ * 4. GENERATE EVALUATOR-READY PROP FIRM COMPLIANCE PDF REPORT
+ */
+export const generatePropFirmCompliancePdfReport = async ({
+  account,
+  compliance,
+  trades = [],
+}) => {
+  try {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const currency = account?.currency || 'USD';
+    const propFirm = account?.propFirmAccount || {};
+
+    // Header & Footer
+    drawPdfHeader(
+      doc,
+      'PROP FIRM COMPLIANCE & RISK AUDIT REPORT',
+      `${propFirm.customFirmName || propFirm.firmName || 'Prop Firm'} • ${account?.name || 'Evaluation'}`,
+      1,
+      1
+    );
+    drawPdfFooter(doc);
+
+    let y = 36;
+
+    // 1. Account & Program Overview Box
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, y, pageWidth - 28, 26, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text('ACCOUNT & PROGRAM SPECIFICATION', 18, y + 6);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+
+    const isFunded = propFirm.accountStatus === 'FUNDED' || ['INSTANT_FUNDED', 'ALREADY_FUNDED'].includes(propFirm.evaluationType);
+    const line1 = [
+      `Firm: ${propFirm.customFirmName || propFirm.firmName || 'N/A'}`,
+      `Program: ${propFirm.programmeName || 'Evaluation'}`,
+      `Account Size: ${Number(account.startingBalance || 0).toLocaleString()} ${currency}`,
+      `Model: ${propFirm.drawdownType || 'STATIC'}`
+    ].join('   |   ');
+
+    const line2 = [
+      `Status: ${propFirm.accountStatus || 'ACTIVE'}`,
+      `Phase: ${isFunded ? 'FUNDED' : compliance?.currentPhase?.name || `Phase ${propFirm.currentPhaseNumber || 1}`}`,
+      `Reset Clock: ${propFirm.dailyResetTime || '00:00'} ${propFirm.dailyResetTimezone || 'UTC'}`,
+      `Audit Date: ${new Date().toISOString().split('T')[0]}`
+    ].join('   |   ');
+
+    doc.text(line1, 18, y + 13);
+    doc.text(line2, 18, y + 19);
+
+    y += 32;
+
+    // 2. Authoritative KPI Metrics Grid
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text('DETERMINISTIC COMPLIANCE AUDIT METRICS', 14, y);
+    y += 4;
+
+    const overall = compliance?.overallDrawdown || {};
+    const daily = compliance?.dailyLoss || {};
+    const progress = compliance?.challengeProgress || {};
+    const days = compliance?.tradingDays || {};
+    const consistency = compliance?.consistency || {};
+
+    const kpiMetrics = [
+      { label: 'Current Balance', value: `$${Number(compliance?.currentBalance ?? account.currentBalance ?? 0).toLocaleString()}` },
+      { label: 'Peak High-Water Mark', value: `$${Number(overall.highWaterMark || account.startingBalance || 0).toLocaleString()}` },
+      { label: 'Liquidation Floor', value: `$${Number(overall.liquidationFloor || 0).toLocaleString()}` },
+      { label: 'Drawdown Allowance', value: `$${Number(overall.remainingAllowanceAmount || 0).toLocaleString()}` },
+      { label: 'Daily Loss Limit', value: `$${Number(daily.limitAmount || 0).toLocaleString()}` },
+      { label: 'Remaining Daily Buffer', value: `$${Number(daily.remainingAllowanceAmount || 0).toLocaleString()}` },
+      { label: 'Trading Days Satisfied', value: `${days.completedDays || 0} / ${days.requiredDays || 'None'}` },
+      { label: 'Best-Day Profit %', value: `${(consistency.bestDayPercent || 0).toFixed(1)}%` },
+    ];
+
+    const colWidth = (pageWidth - 28 - 9) / 4;
+    const rowHeight = 15;
+
+    kpiMetrics.forEach((m, idx) => {
+      const col = idx % 4;
+      const row = Math.floor(idx / 4);
+      const xPos = 14 + col * (colWidth + 3);
+      const yPos = y + row * (rowHeight + 3);
+
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(xPos, yPos, colWidth, rowHeight, 1.5, 1.5, 'FD');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text(m.label.toUpperCase(), xPos + 3.5, yPos + 4.5);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(15, 23, 42);
+      doc.text(m.value, xPos + 3.5, yPos + 10.5);
+    });
+
+    y += 2 * (rowHeight + 3) + 6;
+
+    // 3. Rule Compliance Verdict Banner
+    doc.setFillColor(
+      compliance?.summaryStatus === 'BREACH_DETECTED' ? 254 : 240,
+      compliance?.summaryStatus === 'BREACH_DETECTED' ? 242 : 253,
+      compliance?.summaryStatus === 'BREACH_DETECTED' ? 242 : 244
+    );
+    doc.setDrawColor(
+      compliance?.summaryStatus === 'BREACH_DETECTED' ? 248 : 167,
+      compliance?.summaryStatus === 'BREACH_DETECTED' ? 113 : 243,
+      compliance?.summaryStatus === 'BREACH_DETECTED' ? 113 : 208
+    );
+    doc.roundedRect(14, y, pageWidth - 28, 14, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(
+      compliance?.summaryStatus === 'BREACH_DETECTED' ? 185 : 6,
+      compliance?.summaryStatus === 'BREACH_DETECTED' ? 28 : 95,
+      compliance?.summaryStatus === 'BREACH_DETECTED' ? 28 : 70
+    );
+    doc.text(`COMPLIANCE VERDICT: ${compliance?.summaryStatus || 'EVALUATED'}`, 18, y + 6);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(51, 65, 85);
+    doc.text(
+      overall.explanation ||
+      'Account operates safely within permitted drawdown and daily loss parameters based on closed trade ledger.',
+      18,
+      y + 10.5
+    );
+
+    y += 20;
+
+    // 4. Chronological Trade Audit Table
+    const tradeList = trades.length > 0 ? trades : account.trades || [];
+    if (tradeList.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text('AUDITABLE TRADE LEDGER INSPECTION', 14, y);
+      y += 5;
+
+      doc.setFillColor(15, 23, 42);
+      doc.rect(14, y, pageWidth - 28, 6.5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(255, 255, 255);
+      doc.text('DATE', 18, y + 4.5);
+      doc.text('PAIR', 50, y + 4.5);
+      doc.text('DIR', 80, y + 4.5);
+      doc.text('LOTS', 105, y + 4.5);
+      doc.text('RESULT', 135, y + 4.5);
+      doc.text('NET P&L', pageWidth - 18, y + 4.5, { align: 'right' });
+      y += 6.5;
+
+      tradeList.slice(0, 18).forEach((t, idx) => {
+        if (y > doc.internal.pageSize.getHeight() - 22) return;
+
+        doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 252);
+        doc.rect(14, y, pageWidth - 28, 5.5, 'F');
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(30, 41, 59);
+
+        const dateStr = (t.closedAt || t.exitTime || t.createdAt || '').slice(0, 10);
+        doc.text(dateStr || 'Recent', 18, y + 4);
+        doc.text(t.pair || '-', 50, y + 4);
+        doc.text(t.direction || 'BUY', 80, y + 4);
+        doc.text(String(t.lotSize || '0.10'), 105, y + 4);
+        doc.text(t.result || 'CLOSED', 135, y + 4);
+
+        const pnl = Number(t.profitLossAmount ?? t.pnl ?? 0);
+        doc.setTextColor(pnl >= 0 ? 16 : 225, pnl >= 0 ? 185 : 29, pnl >= 0 ? 129 : 72);
+        doc.text(`${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`, pageWidth - 18, y + 4, { align: 'right' });
+
+        y += 5.5;
+      });
+    }
+
+    // 5. Advisory Disclaimer Note
+    y = Math.min(y + 4, doc.internal.pageSize.getHeight() - 18);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      'Advisory Notice: This report provides deterministic compliance calculations based on journaled trades and broker sync. It does not replace live broker risk engines.',
+      14,
+      y
+    );
+
+    const safeName = (account?.name || 'Account').replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `JahzJournals_PropFirm_Compliance_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(fileName);
+    return true;
+  } catch (err) {
+    console.error('Prop Firm PDF Error:', err);
+    throw new Error('Failed to generate prop firm compliance PDF report.');
+  }
+};

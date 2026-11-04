@@ -2,6 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { protect, optionalProtect } = require('../middleware/authMiddleware');
+const { requireFeature, requireProFeature } = require('../middleware/subscriptionGate');
 const {
   getDashboardAnalytics,
   getPerformanceAnalytics,
@@ -13,9 +14,13 @@ const {
 const { deleteScreenshot } = require('../controllers/screenshotController');
 const {
   createContactMessage,
+  getMySupportThread,
   getUserSupportThreads,
   getUserSupportThreadById,
   postUserReply,
+  postSupportMessage,
+  createSupportTicket,
+  getMySupportTickets,
 } = require('../controllers/contactController');
 const {
   getWeeklyReviews,
@@ -81,13 +86,13 @@ router.put('/rules/:id', protect, updateRule);
 router.delete('/rules/:id', protect, deleteRule);
 router.patch('/rules/:id/status', protect, updateRuleStatus);
 
-router.post('/trades/:id/emotions', protect, logEmotion);
-router.put('/emotions/:id', protect, updateEmotion);
-router.delete('/emotions/:id', protect, deleteEmotion);
+router.post('/trades/:id/emotions', protect, requireFeature('emotionTracking', 'STARTER'), logEmotion);
+router.put('/emotions/:id', protect, requireFeature('emotionTracking', 'STARTER'), updateEmotion);
+router.delete('/emotions/:id', protect, requireFeature('emotionTracking', 'STARTER'), deleteEmotion);
 
-router.post('/trades/:id/violations', protect, logViolation);
-router.put('/violations/:id', protect, updateViolation);
-router.delete('/violations/:id', protect, deleteViolation);
+router.post('/trades/:id/violations', protect, requireFeature('ruleViolations', 'STARTER'), logViolation);
+router.put('/violations/:id', protect, requireFeature('ruleViolations', 'STARTER'), updateViolation);
+router.delete('/violations/:id', protect, requireFeature('ruleViolations', 'STARTER'), deleteViolation);
 
 router.delete('/screenshots/:id', protect, deleteScreenshot);
 
@@ -95,8 +100,8 @@ router.get('/analytics/dashboard', protect, getDashboardAnalytics);
 router.get('/analytics/performance', protect, getPerformanceAnalytics);
 router.get('/analytics/summary', protect, getSummaryAnalytics);
 router.get('/analytics/equity-curve', protect, getEquityCurve);
-router.get('/analytics/drawdown', protect, getDrawdown);
-router.get('/analytics/risk-reward', protect, getRiskReward);
+router.get('/analytics/drawdown', protect, requireProFeature('analytics'), getDrawdown);
+router.get('/analytics/risk-reward', protect, requireProFeature('analytics'), getRiskReward);
 
 router.get('/weekly-reviews', protect, getWeeklyReviews);
 router.post('/weekly-reviews/generate', protect, generateWeeklyReview);
@@ -105,9 +110,13 @@ router.put('/weekly-reviews/:id', updateWeeklyReview);
 
 router.post('/contact-messages', contactLimiter, optionalProtect, createContactMessage);
 router.get('/announcements', optionalProtect, require('../controllers/announcementController').getUserAnnouncements);
+router.get('/support/my-thread', protect, getMySupportThread);
+router.post('/support/message', protect, postSupportMessage);
 router.get('/support/threads', protect, getUserSupportThreads);
 router.get('/support/threads/:id', protect, getUserSupportThreadById);
 router.post('/support/threads/:id/reply', protect, postUserReply);
+router.post('/support/tickets', protect, createSupportTicket);
+router.get('/support/tickets/my', protect, getMySupportTickets);
 
 router.post('/automated/trades/:id/review', protect, createAiTradeReview);
 router.get('/automated/trades/:tradeId/review', protect, getAiTradeReview);
@@ -126,6 +135,12 @@ router.post('/feedback', protect, createUserFeedback);
 
 router.get('/admin/dashboard', protect, (req, res) => res.json({ status: 'admin panel' }));
 router.get('/mentor/dashboard', protect, (req, res) => res.json({ status: 'mentor panel' }));
-router.get('/reports', protect, (req, res) => res.json([]));
+router.get('/reports', protect, requireProFeature('pdf_reports'), (req, res) => res.json([]));
+
+
+// Tier Early-Access Waitlists (Pro Sync & Mega Academy)
+const { getWaitlistCounts, joinWaitlist } = require('../controllers/waitlistController');
+router.get('/waitlist/counts', getWaitlistCounts);
+router.post('/waitlist/join', optionalProtect, joinWaitlist);
 
 module.exports = router;

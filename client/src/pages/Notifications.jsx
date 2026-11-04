@@ -70,6 +70,9 @@ const resolveNotificationTargetUrl = (notif = {}, user = null) => {
   if (category === 'MENTOR_UPDATE') {
     return isMentor ? '/mentor-workspace' : '/student-cohorts';
   }
+  if (category.includes('SUPPORT') || title.includes('support')) {
+    return '/support';
+  }
   if (category === 'AI_COACH' || title.includes('ai')) {
     return '/ai';
   }
@@ -216,20 +219,13 @@ const Notifications = () => {
     const match = url.match(/threadId=([^&]+)/);
     
     if (match && match[1]) {
-      openChatModal(match[1]);
+      navigate(`/support?threadId=${match[1]}`);
       return;
     }
 
-    if (notif.type === 'SUPPORT_REPLY' || (notif.title && notif.title.toLowerCase().includes('support') && notif.title.toLowerCase().includes('reply'))) {
-      // Fetch user's support threads to open matching thread
-      try {
-        const userThreadsRes = await api.get('/support/threads');
-        const userThreads = userThreadsRes.data || [];
-        if (userThreads.length > 0) {
-          openChatModal(userThreads[0].id);
-          return;
-        }
-      } catch (_) {}
+    if (notif.type === 'SUPPORT_REPLY' || notif.type === 'SUPPORT_NEW' || (notif.title && notif.title.toLowerCase().includes('support'))) {
+      navigate('/support');
+      return;
     }
 
     // Navigate to resolved destination

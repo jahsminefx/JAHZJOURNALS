@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
-import { MessageSquarePlus, X, Send, GripHorizontal } from 'lucide-react';
-import api from '../utils/api';
-import toast from 'react-hot-toast';
+import { Headphones, X, GripHorizontal, LogIn, ExternalLink } from 'lucide-react';
 import useDraggable from '../hooks/useDraggable';
+import { useAuth } from '../context/useAuth';
+import { useNavigate } from 'react-router-dom';
+import SupportChatPanel from './support/SupportChatPanel';
 
 const GlobalFeedbackWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [type, setType] = useState('SUPPORT');
-  const [subject, setSubject] = useState('');
-  const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Draggable hook integration
   const { 
-    pos, 
     isDragging, 
     hasMoved, 
     containerRef, 
@@ -25,26 +23,6 @@ const GlobalFeedbackWidget = () => {
     e.stopPropagation();
     if (!hasMoved) {
       setIsOpen((prev) => !prev);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!subject.trim() || !description.trim()) {
-      return toast.error("Please provide both a subject and a description.");
-    }
-
-    setLoading(true);
-    try {
-      await api.post('/feedback', { type, subject, description });
-      toast.success("Feedback submitted successfully! Our team will review this shortly.");
-      setIsOpen(false);
-      setSubject('');
-      setDescription('');
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to submit feedback.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -64,97 +42,100 @@ const GlobalFeedbackWidget = () => {
         className={`p-3.5 md:p-4 rounded-full bg-emerald-600 text-white shadow-2xl hover:bg-emerald-500 transition-all flex items-center justify-center relative group active:scale-95 ${
           isOpen ? 'ring-4 ring-emerald-500/30' : ''
         }`}
-        aria-label="Report issue or request feature"
-        title="Drag to move • Click to send feedback"
+        aria-label="Open Direct Support Chat"
+        title="Drag to move • Click to chat with Support"
       >
-        <MessageSquarePlus size={22} className={isDragging ? 'animate-pulse' : ''} />
+        <Headphones size={22} className={isDragging ? 'animate-pulse' : ''} />
       </button>
 
       {/* Interactive Modal / Dialog */}
       {isOpen && (
         <div 
-          className="absolute bottom-16 right-0 w-[90vw] max-w-[380px] bg-white dark:bg-surface border border-gray-200 dark:border-border rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.35)] overflow-hidden animate-in slide-in-from-bottom-3 z-[9999]"
+          className="absolute bottom-16 right-0 w-[min(440px,calc(100vw-24px))] h-[min(650px,calc(100dvh-85px))] min-h-[500px] max-h-[680px] bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-3 z-[9999]"
         >
           {/* Draggable Header */}
           <div 
             {...pointerHandlers}
-            className="flex justify-between items-center bg-gray-100 dark:bg-surface-muted px-4 py-3 border-b border-gray-200 dark:border-border cursor-grab active:cursor-grabbing select-none"
+            className="flex justify-between items-center bg-surface px-3.5 py-2.5 border-b border-border cursor-grab active:cursor-grabbing select-none shrink-0"
           >
-            <div className="flex items-center gap-2 text-gray-700 dark:text-foreground">
-              <GripHorizontal size={16} className="text-muted" />
-              <h3 className="font-bold text-sm">Send Feedback</h3>
+            <div className="flex items-center gap-2 text-foreground">
+              <GripHorizontal size={15} className="text-muted/60 hover:text-muted shrink-0" />
+              <h3 className="font-bold text-xs sm:text-sm flex items-center gap-1.5">
+                <Headphones size={15} className="text-emerald-500" />
+                Direct Support Chat
+              </h3>
             </div>
-            <button 
-              type="button" 
-              onClick={() => setIsOpen(false)} 
-              className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-md"
-              aria-label="Close feedback modal"
-            >
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/support');
+                }}
+                className="text-muted hover:text-foreground hover:bg-surface-muted p-1.5 rounded-lg transition"
+                title="Open full Support Desk (/support)"
+                aria-label="Open full Support Desk"
+              >
+                <ExternalLink size={14} />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setIsOpen(false)} 
+                className="text-muted hover:text-foreground hover:bg-surface-muted p-1.5 rounded-lg transition-colors"
+                aria-label="Close support modal"
+                title="Close support modal"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
           
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold text-gray-700 dark:text-muted-foreground mb-1 uppercase tracking-wider">
-                Type of Feedback
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {['BUG', 'FEATURE', 'SUPPORT'].map((t) => (
+          <div className="flex-1 min-h-0 flex flex-col bg-background">
+            {user ? (
+              <SupportChatPanel
+                compact={true}
+                onExpand={() => {
+                  setIsOpen(false);
+                  navigate('/support');
+                }}
+              />
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto">
+                  <Headphones size={24} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">Log in for Direct Support</h4>
+                  <p className="text-xs text-muted max-w-xs mt-1">
+                    Direct 1-on-1 support chat with Super Admin is reserved for logged-in traders.
+                  </p>
+                </div>
+                <div className="flex gap-2 pt-2">
                   <button
-                    key={t}
                     type="button"
-                    onClick={() => setType(t)}
-                    className={`py-1.5 text-xs font-semibold rounded-lg border transition-all ${
-                      type === t 
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/50 font-bold' 
-                        : 'bg-transparent text-gray-500 border-gray-200 dark:border-border hover:bg-gray-50 dark:hover:bg-surface-muted'
-                    }`}
+                    onClick={() => {
+                      setIsOpen(false);
+                      navigate('/login');
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5"
                   >
-                    {t === 'BUG' ? 'Bug Report' : t === 'FEATURE' ? 'Feature' : 'Support'}
+                    <LogIn size={13} />
+                    <span>Log In</span>
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      navigate('/contact');
+                    }}
+                    className="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-muted hover:text-foreground transition"
+                  >
+                    General Contact
+                  </button>
+                </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-muted mb-1">Subject</label>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="What is this regarding?"
-                required
-                className="w-full bg-surface-muted border border-border text-foreground rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-muted mb-1">Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Please describe the issue or your idea in detail..."
-                required
-                rows={4}
-                className="w-full bg-surface-muted border border-border text-foreground rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 resize-none"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50 shadow-md"
-            >
-              {loading ? (
-                'Submitting...'
-              ) : (
-                <>
-                  <Send size={16} /> Submit Feedback
-                </>
-              )}
-            </button>
-          </form>
+            )}
+          </div>
         </div>
       )}
     </div>

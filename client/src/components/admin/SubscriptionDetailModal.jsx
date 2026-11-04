@@ -24,7 +24,12 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
       setData(res.data);
       
       const sub = res.data.subscription;
-      setEditPlan(sub.plan);
+      const initialPlan = sub.plan === 'MENTOR'
+        ? (sub.user?.mentorTier === 'MEGA' || sub.user?.mentorTier === 'MEGA_ACADEMY' ? 'MENTOR_MEGA'
+          : sub.user?.mentorTier === 'GROWTH' || sub.user?.mentorTier === 'GROWTH_COMMUNITY' ? 'MENTOR_GROWTH'
+          : 'MENTOR_PRIVATE_COHORT')
+        : sub.plan;
+      setEditPlan(initialPlan);
       setEditStatus(sub.status);
       setEditSource(sub.source);
       setEditAutoRenew((sub.autoRenew || false).toString());
@@ -57,8 +62,17 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
 
     try {
       setMutating(true);
+      let planToSend = editPlan;
+      let mentorTierToSend = null;
+      if (editPlan.startsWith('MENTOR_')) {
+        planToSend = 'MENTOR';
+        mentorTierToSend = editPlan === 'MENTOR_MEGA' ? 'MEGA'
+          : editPlan === 'MENTOR_GROWTH' ? 'GROWTH'
+          : 'PRIVATE_COHORT';
+      }
       const payload = {
-        plan: editPlan,
+        plan: planToSend,
+        mentorTier: mentorTierToSend,
         status: editStatus,
         source: editSource || 'ADMIN',
         autoRenew: editAutoRenew === 'true',
@@ -127,11 +141,18 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
               <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-1.5">
                    <label className="text-xs font-semibold text-muted-foreground">Subscription Plan</label>
-                   <select value={editPlan} onChange={e => handlePlanSelect(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
-                     <option value="FREE">Free</option>
-                     <option value="STARTER">Starter</option>
-                     <option value="PRO">Pro</option>
-                     <option value="MENTOR">Mentor</option>
+                   <select value={editPlan} onChange={e => handlePlanSelect(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none font-bold">
+                     <optgroup label="Trader Tiers">
+                       <option value="FREE">Free</option>
+                       <option value="STARTER">Starter</option>
+                       <option value="PRO">Pro</option>
+                       <option value="PRO_SYNC">Pro Sync</option>
+                     </optgroup>
+                     <optgroup label="Mentor Tiers">
+                       <option value="MENTOR_PRIVATE_COHORT">Private Cohort (80 Max)</option>
+                       <option value="MENTOR_GROWTH">Growth Community (200 Max)</option>
+                       <option value="MENTOR_MEGA">Mega Academy (1,000 Max)</option>
+                     </optgroup>
                    </select>
                  </div>
                  <div className="space-y-1.5">

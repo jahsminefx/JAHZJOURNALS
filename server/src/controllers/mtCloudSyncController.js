@@ -1,6 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { encryptCredential, decryptCredential } = require('../utils/cryptoUtils');
+const { canCreateTrades, hasFeatureAccess } = require('../services/entitlementService');
+const { getEffectivePlanKey, buildLimitReachedPayload } = require('../config/plans');
 const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions, getAccountConnectionStatus, fetchAccountInformation } = require('../services/metaApiService');
 const { detectTradingSession, resolveTradeRiskReward } = require('../utils/tradeCalculations');
 const { calculatePips } = require('../utils/pipCalculator');
@@ -393,6 +395,18 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
     };
   }
 
+  // Check trade limit if user is subject to a monthly quota
+  if (pendingNewTrades.length > 0) {
+    const quotaCheck = await canCreateTrades(account.userId, pendingNewTrades.length);
+    if (!quotaCheck.allowed) {
+      if (quotaCheck.remaining > 0) {
+        pendingNewTrades = pendingNewTrades.slice(0, quotaCheck.remaining);
+      } else {
+        pendingNewTrades = [];
+      }
+    }
+  }
+
   // Transaction: Insert new trades & enrich matched trades & update balance
   await prisma.$transaction(async (tx) => {
     if (pendingNewTrades.length > 0) {
@@ -628,6 +642,15 @@ const autoConnectCloudSync = async (req, res) => {
     const encryptedPassword = encryptCredential(cleanPassword);
 
     const isProp = accountCategory === 'PROP_FIRM';
+    if (isProp && !hasFeatureAccess(req.user, 'propFirmAccess')) {
+      return res.status(403).json(buildLimitReachedPayload({
+        feature: 'prop_firm',
+        current: 0,
+        limit: 0,
+        userPlan: getEffectivePlanKey(req.user),
+        requiredPlan: 'PRO',
+      }));
+    }
 
     // 4. Create the Trading Account in database
     const newAccount = await prisma.tradingAccount.create({

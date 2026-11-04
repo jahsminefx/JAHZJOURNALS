@@ -43,6 +43,7 @@ const getSystemMetrics = async (req, res) => {
 
         // 3. Queue Interpolation (Placeholder for BullMQ connection states mapped over Redis)
         const redisConnected = !!process.env.REDIS_URL;
+        const cloudinaryConnected = !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET));
 
         _cachedMetrics = {
             system: {
@@ -63,7 +64,7 @@ const getSystemMetrics = async (req, res) => {
             services: {
                 redis: redisConnected ? 'HEALTHY' : 'OFFLINE',
                 openrouter: process.env.OPENROUTER_API_KEY ? 'HEALTHY' : 'OFFLINE',
-                cloudinary: process.env.CLOUDINARY_URL ? 'HEALTHY' : 'OFFLINE'
+                cloudinary: cloudinaryConnected ? 'HEALTHY' : 'OFFLINE'
             },
             queue: {
                 waiting: redisConnected ? Math.floor(Math.random() * 5) : 0, // In true Prod, map via Queue.getWaitingCount()
@@ -80,25 +81,38 @@ const getSystemMetrics = async (req, res) => {
     }
 };
 
+const _dismissedLogs = new Set();
+const _mockLogs = [
+    { id: 1, type: 'UNHANDLED_EXCEPTION', message: 'JWT Signature expired natively', source: 'AuthMiddleware', timestamp: new Date(Date.now() - 1000 * 60 * 5) },
+    { id: 2, type: 'API_ERROR', message: 'Provider rate limits exceeded', source: 'OpenRouterBridge', timestamp: new Date(Date.now() - 1000 * 60 * 12) },
+    { id: 3, type: 'VALIDATION_ERROR', message: 'Empty JSON body detected on Support ping', source: 'adminCustomerSuccessController', timestamp: new Date(Date.now() - 1000 * 60 * 60) },
+];
+
 const getErrorLogs = async (req, res) => {
     try {
-        // Attempt to parse external error traces if utilizing Winston abstractions natively.
-        // For security and execution speeds, we return an abstract buffer imitating Log Tails.
-        
-        // Mocking a Log trace representing actual Error tables in memory:
-        const mockLogs = [
-            { id: 1, type: 'UNHANDLED_EXCEPTION', message: 'JWT Signature expired natively', source: 'AuthMiddleware', timestamp: new Date(Date.now() - 1000 * 60 * 5) },
-            { id: 2, type: 'API_ERROR', message: 'Provider rate limits exceeded', source: 'OpenRouterBridge', timestamp: new Date(Date.now() - 1000 * 60 * 12) },
-            { id: 3, type: 'VALIDATION_ERROR', message: 'Empty JSON body detected on Support ping', source: 'adminCustomerSuccessController', timestamp: new Date(Date.now() - 1000 * 60 * 60) },
-        ];
-
-        res.json({ logs: mockLogs, total: 3 });
+        const activeLogs = _mockLogs.filter(log => !_dismissedLogs.has(log.id));
+        res.json({ logs: activeLogs, total: activeLogs.length });
     } catch (e) {
         res.status(500).json({ message: 'Log extraction failure' });
     }
 };
 
+const dismissErrorLog = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (id === 'all') {
+            _mockLogs.forEach(l => _dismissedLogs.add(l.id));
+        } else {
+            _dismissedLogs.add(Number(id) || id);
+        }
+        res.json({ success: true, message: 'Log dismissed successfully' });
+    } catch (e) {
+        res.status(500).json({ message: 'Failed to dismiss log' });
+    }
+};
+
 module.exports = {
    getSystemMetrics,
-   getErrorLogs
+   getErrorLogs,
+   dismissErrorLog
 };

@@ -26,7 +26,7 @@ const groups = [
     title: 'Company',
     links: [
       ['About Us', '/about'],
-      ['Contact Support', '/contact'],
+      ['Contact', '/contact'],
       ['Login', '/login'],
       ['Register Free', '/register'],
     ],
@@ -38,6 +38,7 @@ const groups = [
       ['Privacy Policy', '/privacy'],
       ['Cookie Policy', '/cookies'],
       ['Risk Disclaimer', '/disclaimer'],
+      ['Refund Policy', '/refund'],
     ],
   },
 ];

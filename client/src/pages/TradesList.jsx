@@ -1,12 +1,14 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlusCircle, Search, Trash2, Download, LayoutList, LayoutGrid, List, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/useAuth';
 import api from '../utils/api';
 import DeleteTradeDialog from '../components/trades/DeleteTradeDialog';
 import ImportTradesModal from '../components/trades/ImportTradesModal';
 import TradeOutcomeBadge from '../components/trades/TradeOutcomeBadge';
 import AiTradeCaptureModal from '../components/trades/AiTradeCaptureModal';
+import { canLogTradesWithAi } from '../utils/planHelpers';
 import { SkeletonTable, SkeletonCard } from '../components/SkeletonLoader';
 import { loadSettings, fetchAndSyncSettings } from '../utils/settings';
 import { formatCurrency } from '../utils/dashboard';
@@ -26,6 +28,8 @@ const SESSIONS = [
 
 const TradesList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const queryString = searchParams.toString();
   const initialParams = Object.fromEntries(new URLSearchParams(queryString).entries());
   const initialCacheKey = createCacheKey('/trades', initialParams);
@@ -86,12 +90,17 @@ const TradesList = () => {
 
   useEffect(() => {
     if (searchParams.get('action') === 'ai-capture') {
-      setShowAiCapture(true);
+      if (!canLogTradesWithAi(user)) {
+        toast.error('Logging trades with JAHZ AI is exclusive to Pro and Mentor plans. Please upgrade to unlock.');
+        navigate('/pricing');
+      } else {
+        setShowAiCapture(true);
+      }
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('action');
       setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, user, navigate]);
 
   const handleAccountFilterChange = (newAccountId) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -434,11 +443,23 @@ const getPnlColor = (pnl) => {
 
           <button
             type="button"
-            onClick={() => setShowAiCapture(true)}
+            onClick={() => {
+              if (!canLogTradesWithAi(user)) {
+                toast.error('Logging trades with JAHZ AI is exclusive to Pro and Mentor plans. Please upgrade to unlock.');
+                navigate('/pricing');
+                return;
+              }
+              setShowAiCapture(true);
+            }}
             className="whitespace-nowrap flex items-center px-4 py-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-500/20 text-xs border border-indigo-400/30"
           >
             <Sparkles size={15} className="mr-1.5 text-amber-300" />
-            Log Trade with JAHZ AI
+            <span>Log Trade with JAHZ AI</span>
+            {!canLogTradesWithAi(user) && (
+              <span className="ml-2 px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-amber-500/30 text-amber-200 border border-amber-400/40">
+                PRO
+              </span>
+            )}
           </button>
 
           <Link 

@@ -12,21 +12,34 @@ const PricingCard = ({
   features,
   limits,
   highlighted = false,
+  badgeText,
+  badgeVariant = 'emerald', // 'emerald' | 'amber' | 'sky' | 'muted'
   cta = 'Start Free',
   onClick,
   to,
   planHeader,
-}) => (
-  <div className={`relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 ${
-    highlighted
-      ? 'border-emerald-400/60 bg-emerald-500/10 shadow-lg ring-1 ring-emerald-400/50'
-      : 'border-border bg-surface shadow-sm'
-  }`}>
-    {highlighted && (
-      <div className="absolute -top-3.5 right-6 rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-slate-950 shadow-md">
-        Recommended
-      </div>
-    )}
+  waitlistCount,
+}) => {
+  const badgeClasses = {
+    emerald: 'bg-emerald-400 text-slate-950 font-black',
+    amber: 'bg-amber-400 text-slate-950 font-black',
+    sky: 'bg-sky-400 text-slate-950 font-black',
+    muted: 'bg-surface-muted text-foreground border border-border font-bold',
+  };
+
+  const activeBadgeText = badgeText || (highlighted ? 'Recommended' : null);
+
+  return (
+    <div className={`relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 ${
+      highlighted
+        ? 'border-emerald-400/60 bg-emerald-500/10 shadow-lg ring-1 ring-emerald-400/50'
+        : 'border-border bg-surface shadow-sm'
+    }`}>
+      {activeBadgeText && (
+        <div className={`absolute -top-3.5 right-6 rounded-full px-3 py-1 text-xs shadow-md ${badgeClasses[badgeVariant] || badgeClasses.emerald}`}>
+          {activeBadgeText}
+        </div>
+      )}
 
     <div className="space-y-1">
       <h3 className="text-xl font-black text-foreground tracking-tight">{name}</h3>
@@ -57,6 +70,13 @@ const PricingCard = ({
       <span className="text-3xl font-black text-foreground">{price}</span>
       {price !== 'Custom' && <span className="text-xs text-muted font-medium">{period}</span>}
     </div>
+
+    {waitlistCount && (
+      <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[11px] font-bold">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+        <span>{waitlistCount} traders on the waitlist</span>
+      </div>
+    )}
 
     {limits && limits.length > 0 && (
       <div className="mt-4 pt-4 border-t border-border space-y-1.5 text-xs text-muted font-medium">
@@ -92,6 +112,7 @@ const PricingCard = ({
       </Button>
     )}
   </div>
-);
+  );
+};
 
 export default PricingCard;

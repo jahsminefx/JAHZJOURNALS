@@ -7,6 +7,7 @@ import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useAuth } from '../context/useAuth';
 import { generateWeeklyPdfReport } from '../utils/pdfReportService';
+import { hasFeature } from '../utils/planHelpers';
 
 const getMondayDate = () => {
   const date = new Date();
@@ -46,9 +47,7 @@ const WeeklyReview = () => {
       return;
     }
 
-    const plan = user?.subscriptionPlan || 'FREE';
-    const role = user?.role;
-    const isAllowed = ['PRO', 'MENTOR'].includes(plan) || ['SUPER_ADMIN', 'ADMIN', 'MENTOR'].includes(role);
+    const isAllowed = hasFeature(user, 'reportsAccess');
 
     if (!isAllowed) {
       toast.error('PDF Report Export is exclusive to PRO & MENTOR plans. Please upgrade your account.');

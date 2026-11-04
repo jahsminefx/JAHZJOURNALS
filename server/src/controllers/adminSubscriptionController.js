@@ -9,7 +9,20 @@ const getSubscriptions = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const where = {};
-    if (plan) where.plan = plan;
+    if (plan) {
+      if (plan === 'MENTOR_PRIVATE_COHORT') {
+        where.plan = 'MENTOR';
+        where.user = { ...(where.user || {}), OR: [{ mentorTier: 'PRIVATE_COHORT' }, { mentorTier: null }] };
+      } else if (plan === 'MENTOR_GROWTH') {
+        where.plan = 'MENTOR';
+        where.user = { ...(where.user || {}), mentorTier: { in: ['GROWTH', 'GROWTH_COMMUNITY'] } };
+      } else if (plan === 'MENTOR_MEGA') {
+        where.plan = 'MENTOR';
+        where.user = { ...(where.user || {}), mentorTier: { in: ['MEGA', 'MEGA_ACADEMY'] } };
+      } else {
+        where.plan = plan;
+      }
+    }
     if (status) where.status = status;
     if (source) where.source = source;
     if (search) {
@@ -27,7 +40,7 @@ const getSubscriptions = async (req, res) => {
         skip: parseInt(skip),
         take: parseInt(limit),
         include: {
-          user: { select: { id: true, name: true, email: true, createdAt: true, subscriptionPlan: true, subscriptionStatus: true } },
+          user: { select: { id: true, name: true, email: true, createdAt: true, role: true, subscriptionPlan: true, subscriptionStatus: true, mentorTier: true, mentorMaxStudents: true, mentorMaxCohorts: true } },
           promotion: { select: { name: true, badge: { select: { name: true } } } }
         },
         orderBy: { updatedAt: 'desc' }
@@ -75,10 +88,17 @@ const getSubscriptionMetrics = async (req, res) => {
       _count: { subscriptionPlan: true }
     });
 
+    const [privateCohortCount, growthCommunityCount, megaAcademyCount] = await Promise.all([
+      prisma.user.count({ where: { role: 'MENTOR', OR: [{ mentorTier: 'PRIVATE_COHORT' }, { mentorTier: null }] } }),
+      prisma.user.count({ where: { role: 'MENTOR', mentorTier: { in: ['GROWTH', 'GROWTH_COMMUNITY'] } } }),
+      prisma.user.count({ where: { role: 'MENTOR', mentorTier: { in: ['MEGA', 'MEGA_ACADEMY'] } } })
+    ]);
+
     const userPlans = {
       FREE: 0,
       STARTER: 0,
       PRO: 0,
+      PRO_SYNC: 0,
       MENTOR: 0
     };
     userPlanGroups.forEach(g => {
@@ -89,6 +109,7 @@ const getSubscriptionMetrics = async (req, res) => {
       FREE: userPlans.FREE || 0,
       STARTER: userPlans.STARTER || 0,
       PRO: userPlans.PRO || 0,
+      PRO_SYNC: userPlans.PRO_SYNC || 0,
       MENTOR: userPlans.MENTOR || 0,
       ...activePlanGroups.reduce((acc, curr) => ({ ...acc, [curr.plan]: curr._count.plan }), {})
     };
@@ -97,6 +118,11 @@ const getSubscriptionMetrics = async (req, res) => {
       totalSubs,
       plans,
       userPlans,
+      mentorTiers: {
+        PRIVATE_COHORT: privateCohortCount,
+        GROWTH: growthCommunityCount,
+        MEGA: megaAcademyCount
+      },
       statuses: statusGroups.reduce((acc, curr) => ({ ...acc, [curr.status]: curr._count.status }), {}),
       sources: sourceGroups.reduce((acc, curr) => ({ ...acc, [curr.source]: curr._count.source }), {}),
     });
@@ -113,7 +139,7 @@ const getSubscriptionDetails = async (req, res) => {
     const subscription = await prisma.subscription.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, name: true, email: true, role: true, createdAt: true, subscriptionPlan: true, subscriptionStatus: true } },
+        user: { select: { id: true, name: true, email: true, role: true, createdAt: true, subscriptionPlan: true, subscriptionStatus: true, mentorTier: true, mentorMaxStudents: true, mentorMaxCohorts: true } },
         promotion: true
       }
     });
@@ -186,19 +212,35 @@ const updateSubscription = async (req, res) => {
     });
 
     // Keep user table subscription state in sync
+    const { mentorTier } = req.body;
+    const userDataToUpdate = {
+      subscriptionPlan: newPlan,
+      subscriptionStatus: newStatus === 'SUSPENDED' ? 'INACTIVE' : newStatus
+    };
+
+    if (newPlan === 'MENTOR' || mentorTier) {
+      const resolvedTier = mentorTier === 'MEGA' || mentorTier === 'MEGA_ACADEMY' ? 'MEGA'
+        : mentorTier === 'GROWTH' || mentorTier === 'GROWTH_COMMUNITY' ? 'GROWTH'
+        : 'PRIVATE_COHORT';
+      
+      userDataToUpdate.mentorTier = resolvedTier;
+      userDataToUpdate.mentorMaxStudents = resolvedTier === 'MEGA' ? 1000 : resolvedTier === 'GROWTH' ? 200 : 80;
+      userDataToUpdate.mentorMaxCohorts = resolvedTier === 'MEGA' ? 999 : resolvedTier === 'GROWTH' ? 5 : 2;
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: currentSub.userId },
-      data: {
-        subscriptionPlan: newPlan,
-        subscriptionStatus: newStatus === 'SUSPENDED' ? 'INACTIVE' : newStatus
-      },
+      data: userDataToUpdate,
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
         subscriptionPlan: true,
-        subscriptionStatus: true
+        subscriptionStatus: true,
+        mentorTier: true,
+        mentorMaxStudents: true,
+        mentorMaxCohorts: true
       }
     });
 
@@ -225,7 +267,7 @@ const updateUserSubscriptionDirect = async (req, res) => {
     const { id } = req.params; // userId
     const { plan, status = 'ACTIVE', reason = 'ADMIN_GRANTED', notes } = req.body;
 
-    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'MENTOR'];
+    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'PRO_SYNC', 'MENTOR'];
     if (!plan || !VALID_PLANS.includes(plan)) {
       return res.status(400).json({ message: 'Invalid subscription plan specified.' });
     }
@@ -270,19 +312,38 @@ const updateUserSubscriptionDirect = async (req, res) => {
       });
     }
 
+    const { mentorTier } = req.body;
+    const userDataToUpdate = {
+      subscriptionPlan: plan,
+      subscriptionStatus: status === 'SUSPENDED' ? 'INACTIVE' : status
+    };
+
+    if (plan === 'MENTOR' || mentorTier) {
+      const resolvedTier = mentorTier === 'MEGA' || mentorTier === 'MEGA_ACADEMY' ? 'MEGA'
+        : mentorTier === 'GROWTH' || mentorTier === 'GROWTH_COMMUNITY' ? 'GROWTH'
+        : 'PRIVATE_COHORT';
+      
+      userDataToUpdate.mentorTier = resolvedTier;
+      userDataToUpdate.mentorMaxStudents = resolvedTier === 'MEGA' ? 1000 : resolvedTier === 'GROWTH' ? 200 : 80;
+      userDataToUpdate.mentorMaxCohorts = resolvedTier === 'MEGA' ? 999 : resolvedTier === 'GROWTH' ? 5 : 2;
+      if (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN') {
+        userDataToUpdate.role = 'MENTOR';
+      }
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: {
-        subscriptionPlan: plan,
-        subscriptionStatus: status === 'SUSPENDED' ? 'INACTIVE' : status
-      },
+      data: userDataToUpdate,
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
         subscriptionPlan: true,
-        subscriptionStatus: true
+        subscriptionStatus: true,
+        mentorTier: true,
+        mentorMaxStudents: true,
+        mentorMaxCohorts: true
       }
     });
 

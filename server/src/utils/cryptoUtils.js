@@ -1,11 +1,18 @@
 const crypto = require('crypto');
 
-// Secret key for credential encryption (uses process.env.CREDENTIAL_ENCRYPTION_KEY or fallback hash)
 const ALGORITHM = 'aes-256-gcm';
-const SECRET_KEY = crypto
-  .createHash('sha256')
-  .update(process.env.CREDENTIAL_ENCRYPTION_KEY || process.env.JWT_SECRET || 'jahzjournals_default_secret_key_2026')
-  .digest();
+
+function getEncryptionKey() {
+  const key = process.env.CREDENTIAL_ENCRYPTION_KEY || process.env.JWT_SECRET;
+  if (!key) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[Security Exception] CREDENTIAL_ENCRYPTION_KEY or JWT_SECRET must be configured in production');
+    }
+    // Safe fallback strictly in development/test environments
+    return crypto.createHash('sha256').update('jahzjournals_dev_only_key_not_for_prod').digest();
+  }
+  return crypto.createHash('sha256').update(key).digest();
+}
 
 /**
  * Encrypt a text string (e.g., Investor Password)
@@ -14,7 +21,7 @@ const SECRET_KEY = crypto
 const encryptCredential = (text) => {
   if (!text) return null;
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv(ALGORITHM, SECRET_KEY, iv);
+  const cipher = crypto.createCipheriv(ALGORITHM, getEncryptionKey(), iv);
   
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
@@ -35,7 +42,7 @@ const decryptCredential = (encryptedText) => {
     const [ivHex, authTagHex, encryptedHex] = parts;
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
-    const decipher = crypto.createDecipheriv(ALGORITHM, SECRET_KEY, iv);
+    const decipher = crypto.createDecipheriv(ALGORITHM, getEncryptionKey(), iv);
     
     decipher.setAuthTag(authTag);
     let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
@@ -51,4 +58,5 @@ const decryptCredential = (encryptedText) => {
 module.exports = {
   encryptCredential,
   decryptCredential,
+  getEncryptionKey,
 };

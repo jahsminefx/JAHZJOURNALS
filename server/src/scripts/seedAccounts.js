@@ -6,7 +6,7 @@ async function seedAccounts() {
     console.log('🌱 Starting Trading Accounts Seeding...');
 
     const bcrypt = require('bcryptjs');
-    const passwordHash = await bcrypt.hash('Password123!', 10);
+    const passwordHash = await bcrypt.hash('password123', 10);
 
     const user = await prisma.user.upsert({
       where: { email: 'demo@jahzjournals.com' },

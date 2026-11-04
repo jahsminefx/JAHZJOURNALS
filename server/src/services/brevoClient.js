@@ -23,6 +23,11 @@ const hashRecipient = (email) => {
   return crypto.createHash('sha256').update(cleanEmail).digest('hex').substring(0, 10);
 };
 
+const sanitizeLogSubject = (subj) => {
+  if (!subj || typeof subj !== 'string') return '';
+  return subj.replace(/\b\d{6}\b/g, '[REDACTED_CODE]');
+};
+
 /**
  * Transmit transactional email via official Brevo SDK with retries and structured logging
  */
@@ -31,7 +36,7 @@ const sendBrevoEmail = async ({ to, subject, html, text, replyTo, templateId, pa
 
   if (!apiKey || apiKey.trim() === '') {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(`[Brevo Log] (Not Configured - Mock Delivery) To: ${hashRecipient(to)} | Subject: "${subject}"`);
+      console.warn(`[Brevo Log] (Not Configured - Mock Delivery) To: ${hashRecipient(to)} | Subject: "${sanitizeLogSubject(subject)}"`);
     }
     return {
       success: false,
@@ -115,7 +120,7 @@ const sendBrevoEmail = async ({ to, subject, html, text, replyTo, templateId, pa
         messageId = res?.body?.messageId || res?.messageId || 'sent';
       }
 
-      console.log(`[Brevo Success] Type: "${subject}" | Recipient: ${hashRecipient(to)} | MessageID: ${messageId}`);
+      console.log(`[Brevo Success] Type: "${sanitizeLogSubject(subject)}" | Recipient: ${hashRecipient(to)} | MessageID: ${messageId}`);
 
       return {
         success: true,
@@ -171,7 +176,7 @@ const sendBrevoEmail = async ({ to, subject, html, text, replyTo, templateId, pa
           req.end();
         });
 
-        console.log(`[Brevo Success REST] Type: "${subject}" | Recipient: ${hashRecipient(to)} | MessageID: ${restResult.messageId}`);
+        console.log(`[Brevo Success REST] Type: "${sanitizeLogSubject(subject)}" | Recipient: ${hashRecipient(to)} | MessageID: ${restResult.messageId}`);
         return {
           success: true,
           provider: 'brevo',

@@ -303,7 +303,7 @@ const STATIC_ROUTES = {
       <h1>Contact JAHZJOURNALS Support</h1>
       <p>Have a question about your trading journal, automated MT4/MT5 synchronization, Prop Firm account setup, or academy partnership? Our team is ready to help.</p>
       <ul>
-        <li><strong>Support Email:</strong> support@jahzjournal.com</li>
+        <li><strong>Support Email:</strong> jahzjournals@gmail.com</li>
         <li><strong>Response Time:</strong> Within 24 business hours (Monday – Friday)</li>
       </ul>
     `

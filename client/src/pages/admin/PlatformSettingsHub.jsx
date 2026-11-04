@@ -17,14 +17,14 @@ const PlatformSettingsHub = () => {
 
     useEffect(() => {
         const fetchTree = async () => {
-             setLoading(true);
+             if (!configs) setLoading(true);
              try {
                 const [cfg, hist] = await Promise.all([
                     api.get('/admin/platform/config'),
                     api.get('/admin/platform/config/history')
                 ]);
                 setConfigs(cfg.data);
-                setHistory(hist.data);
+                setHistory(hist.data || []);
              } catch (e) {
                 toast.error('Failed to load platform settings.');
              } finally {
@@ -32,7 +32,7 @@ const PlatformSettingsHub = () => {
              }
         };
         fetchTree();
-    }, [activeTab]);
+    }, []);
 
     const handleUpdate = async (key, payloadObj) => {
         try {
@@ -109,22 +109,33 @@ const PlatformSettingsHub = () => {
                   <div className="space-y-6">
                       <h2 className="text-lg font-black tracking-wide border-b border-border pb-4">Feature Access by Plan & Role</h2>
                       <div className="grid md:grid-cols-2 gap-6">
-                          {['aiChat', 'visionAi', 'socialLogin', 'referrals', 'mentorWorkspace'].map(feature => (
-                              <div key={feature} className="p-4 border border-border rounded-xl bg-surface-muted/30 flex justify-between items-center">
+                          {[
+                            { key: 'aiChat', label: 'AI Chat (JAHZ AI)', desc: 'Interactive trade logging and coach chats', defaultVal: 'PRO_AND_ABOVE' },
+                            { key: 'visionAi', label: 'Vision AI', desc: 'Screenshot chart pattern extraction and vision recognition', defaultVal: 'PRO_AND_ABOVE' },
+                            { key: 'socialLogin', label: 'Social Login', desc: 'Google OAuth & third-party social logins', defaultVal: 'EVERYONE' },
+                            { key: 'referrals', label: 'Referrals Program', desc: 'Affiliate links and invite commissions', defaultVal: 'EVERYONE' },
+                            { key: 'mentorWorkspace', label: 'Mentor Workspace', desc: 'Cohorts, student rosters, feedback grading and curriculum', defaultVal: 'MENTOR_ALL' }
+                          ].map(feature => (
+                              <div key={feature.key || feature} className="p-4 border border-border rounded-xl bg-surface-muted/30 flex justify-between items-center">
                                   <div>
-                                     <h3 className="font-bold text-foreground capitalize">{feature.replace(/([A-Z])/g, ' $1').trim()}</h3>
-                                     <p className="text-xs text-muted-foreground mt-1">Control who has access to this feature</p>
+                                     <h3 className="font-bold text-foreground">{feature.label || feature}</h3>
+                                     <p className="text-xs text-muted-foreground mt-1">{feature.desc || 'Control who has access to this feature'}</p>
                                   </div>
                                   <select 
-                                     value={configs.FEATURES_CONFIG?.[feature] || 'EVERYONE'}
+                                     value={configs.FEATURES_CONFIG?.[feature.key || feature] || feature.defaultVal || 'EVERYONE'}
                                      onChange={(e) => {
-                                        const newPayload = { ...configs.FEATURES_CONFIG, [feature]: e.target.value };
+                                        const newPayload = { ...configs.FEATURES_CONFIG, [feature.key || feature]: e.target.value };
                                         handleUpdate('FEATURES_CONFIG', newPayload);
                                      }}
                                      className="bg-surface border border-border px-3 py-1.5 rounded-lg text-sm font-bold text-blue-500 focus:border-blue-500 outline-none"
                                   >
                                       <option value="EVERYONE">Enabled for Everyone</option>
-                                      <option value="PRO_ONLY">Pro Members Only</option>
+                                      <option value="STARTER_AND_ABOVE">Starter & Above</option>
+                                      <option value="PRO_AND_ABOVE">Pro & Above (Pro, Pro Sync)</option>
+                                      <option value="PRO_SYNC_ONLY">Pro Sync Only (MT4/MT5 Automated)</option>
+                                      <option value="MENTOR_ALL">All Mentors (Private Cohort, Growth, Mega)</option>
+                                      <option value="MEGA_MENTORS_ONLY">Mega Academy Mentors Only</option>
+                                      <option value="PRO_ONLY">Pro Only</option>
                                       <option value="FOUNDING_TRADERS">Founding Traders Only</option>
                                       <option value="DISABLED">Disabled</option>
                                   </select>

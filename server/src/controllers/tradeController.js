@@ -84,7 +84,12 @@ const buildTradeListWhere = (query, userId) => {
     where.session = query.session;
   }
   if (query.status) {
-    where.status = query.status;
+    const normStatus = String(query.status).trim().toUpperCase();
+    if (normStatus === 'OPEN' || normStatus === 'ACTIVE') {
+      where.status = 'ACTIVE';
+    } else if (['PLANNED', 'CLOSED', 'CANCELLED'].includes(normStatus)) {
+      where.status = normStatus;
+    }
   }
   if (query.result) {
     where.result = query.result;
@@ -174,6 +179,24 @@ const createTrade = async (req, res) => {
 
     if (!account) {
       return res.status(404).json({ message: 'Trading account not found' });
+    }
+
+    if (strategyId) {
+      const strategy = await prisma.strategy.findFirst({
+        where: { id: strategyId, userId: req.user.id }
+      });
+      if (!strategy) {
+        return res.status(404).json({ message: 'Strategy not found or does not belong to you' });
+      }
+    }
+
+    if (setupId) {
+      const setup = await prisma.setup.findFirst({
+        where: { id: setupId, strategy: { userId: req.user.id } }
+      });
+      if (!setup) {
+        return res.status(404).json({ message: 'Setup not found or does not belong to you' });
+      }
     }
 
     const parseNum = (val) => (val !== undefined && val !== null && val !== '' && !Number.isNaN(Number(val))) ? parseFloat(val) : null;
@@ -346,6 +369,33 @@ const updateTrade = async (req, res) => {
 
     if (!trade) {
       return res.status(404).json({ message: 'Trade not found' });
+    }
+
+    if (req.body.tradingAccountId && req.body.tradingAccountId !== trade.tradingAccountId) {
+      const targetAccount = await prisma.tradingAccount.findFirst({
+        where: { id: req.body.tradingAccountId, userId: req.user.id }
+      });
+      if (!targetAccount) {
+        return res.status(404).json({ message: 'Target trading account not found' });
+      }
+    }
+
+    if (req.body.strategyId) {
+      const strategy = await prisma.strategy.findFirst({
+        where: { id: req.body.strategyId, userId: req.user.id }
+      });
+      if (!strategy) {
+        return res.status(404).json({ message: 'Strategy not found or does not belong to you' });
+      }
+    }
+
+    if (req.body.setupId) {
+      const setup = await prisma.setup.findFirst({
+        where: { id: req.body.setupId, strategy: { userId: req.user.id } }
+      });
+      if (!setup) {
+        return res.status(404).json({ message: 'Setup not found or does not belong to you' });
+      }
     }
 
     const {

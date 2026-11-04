@@ -8,7 +8,7 @@
     "start": "node src/server.js",
     "start:web": "node src/server.js",
     "start:worker": "node src/worker.js",
-    "test": "node --test",
+    "test": "node --env-file=.env --test",
     "make-admin": "node src/scripts/make-admin.js",
     "create-admin": "node src/scripts/create-super-admin.js",
     "seed-accounts": "node src/scripts/seedAccounts.js"
@@ -39,7 +39,7 @@
     "openai": "^6.46.0",
     "streamifier": "^0.1.1",
     "web-push": "^3.6.7",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.14",

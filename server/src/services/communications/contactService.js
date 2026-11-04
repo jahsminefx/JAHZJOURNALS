@@ -147,24 +147,33 @@ const contactService = {
       });
 
       if (supportStaff.length > 0) {
+        const staffIds = supportStaff.map(s => s.id);
         const notif = await prisma.notification.create({
           data: {
             type: 'SUPPORT_NEW',
             category: 'INFO',
             title: `New Support Inquiry: ${subject}`,
             message: `From ${name} (${email}): "${message.substring(0, 100)}..."`,
-            actionUrl: `/admin/communications/contact`,
+            actionUrl: `/support?threadId=${contact.id}`,
           }
         });
 
         await prisma.notificationRecipient.createMany({
-          data: supportStaff.map(s => ({
+          data: staffIds.map(uid => ({
             notificationId: notif.id,
-            userId: s.id,
+            userId: uid,
             status: 'UNREAD'
           })),
           skipDuplicates: true
         });
+
+        const { sendPushToAll } = require('../pushNotificationService');
+        sendPushToAll({
+          title: `💬 New Support Inquiry: ${name}`,
+          message: message.length > 150 ? message.substring(0, 150) + '...' : message,
+          url: `/support?threadId=${contact.id}`,
+          category: 'SUPPORT_NEW'
+        }, staffIds).catch(err => console.error('Admin support push error:', err));
       }
     } catch (err) {
       console.error('Error dispatching new support thread notification:', err);
@@ -210,8 +219,8 @@ const contactService = {
         contactMessageId,
         senderType: 'ADMIN',
         senderId: adminId,
-        senderName: adminUser?.name || 'Support Team',
-        senderEmail: adminUser?.email || '',
+        senderName: adminUser?.name || 'JAHZ Support',
+        senderEmail: adminUser?.email || 'jahzjournals@gmail.com',
         message,
         attachments: Array.isArray(attachments) ? attachments : [],
         isInternal: false,
@@ -241,9 +250,9 @@ const contactService = {
           data: {
             type: 'SUPPORT_REPLY',
             category: 'INFO',
-            title: `Reply to: ${contact.subject}`,
+            title: `Support Reply: ${contact.subject || 'Support Chat'}`,
             message: message.length > 150 ? message.substring(0, 150) + '...' : message,
-            actionUrl: `/notifications?threadId=${contactMessageId}`,
+            actionUrl: `/support?threadId=${contactMessageId}`,
             senderId: adminId,
           }
         });
@@ -259,9 +268,9 @@ const contactService = {
         // Trigger Web Push Notification
         const { sendPushToUser } = require('../pushNotificationService');
         sendPushToUser(targetUserId, {
-          title: `💬 Support Reply: ${contact.subject}`,
+          title: `💬 JAHZ Support Reply`,
           message: message.length > 150 ? message.substring(0, 150) + '...' : message,
-          url: `/notifications?threadId=${contactMessageId}`,
+          url: `/support?threadId=${contactMessageId}`,
           category: 'SUPPORT_REPLY'
         }).catch(err => console.error('Support reply push error:', err));
       }
@@ -313,6 +322,48 @@ const contactService = {
         closedAt: null,
       }
     });
+
+    // Notify admins / support staff about user reply
+    try {
+      const supportStaff = await prisma.user.findMany({
+        where: { role: { in: ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'] } },
+        select: { id: true }
+      });
+
+      if (supportStaff.length > 0) {
+        const staffIds = supportStaff.map(s => s.id);
+        const senderDisplayName = user?.name || contact.name || 'Trader';
+        const notif = await prisma.notification.create({
+          data: {
+            type: 'SUPPORT_NEW',
+            category: 'INFO',
+            title: `Support Message from ${senderDisplayName}`,
+            message: message.length > 150 ? message.substring(0, 150) + '...' : message,
+            actionUrl: `/support?threadId=${contactMessageId}`,
+            senderId: userId,
+          }
+        });
+
+        await prisma.notificationRecipient.createMany({
+          data: staffIds.map(uid => ({
+            notificationId: notif.id,
+            userId: uid,
+            status: 'UNREAD'
+          })),
+          skipDuplicates: true
+        });
+
+        const { sendPushToAll } = require('../pushNotificationService');
+        sendPushToAll({
+          title: `💬 Support Message: ${senderDisplayName}`,
+          message: message.length > 150 ? message.substring(0, 150) + '...' : message,
+          url: `/support?threadId=${contactMessageId}`,
+          category: 'SUPPORT_NEW'
+        }, staffIds).catch(err => console.error('Admin push error on user reply:', err));
+      }
+    } catch (notifErr) {
+      console.error('Error dispatching admin notification for user reply:', notifErr);
+    }
 
     return thread;
   },
@@ -395,7 +446,77 @@ const contactService = {
         data: { priority: payload.priority }
       });
     }
-  }
+  },
+
+  // Get active support conversation for a logged-in user, or initialize one with a welcome greeting
+  async getOrCreateUserSupportThread(userId) {
+    if (!userId) throw new Error('User ID required');
+
+    const userThreads = await prisma.contactMessage.findMany({
+      where: { userId },
+      include: {
+        assignedTo: { select: { id: true, name: true, role: true } },
+        threads: {
+          orderBy: { createdAt: 'asc' }
+        }
+      },
+      orderBy: { lastMessageAt: 'desc' },
+      take: 1
+    });
+
+    if (userThreads.length > 0) {
+      const active = userThreads[0];
+      if (active.threads.length === 0 && active.message) {
+        const initial = await prisma.contactThread.create({
+          data: {
+            contactMessageId: active.id,
+            senderType: 'USER',
+            senderId: active.userId,
+            senderName: active.name,
+            senderEmail: active.email,
+            message: active.message,
+            createdAt: active.createdAt
+          }
+        });
+        active.threads = [initial];
+      }
+      return active;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, role: true, subscriptionPlan: true }
+    });
+
+    const contact = await prisma.contactMessage.create({
+      data: {
+        userId,
+        name: user?.name || 'Trader',
+        email: user?.email || '',
+        subject: 'Direct 1-on-1 Support',
+        message: 'Direct support channel opened.',
+        category: 'SUPPORT',
+        status: 'WAITING_FOR_USER',
+        unreadForUser: 0,
+        unreadForAdmin: 0,
+        lastMessageAt: new Date(),
+      }
+    });
+
+    const welcomeThread = await prisma.contactThread.create({
+      data: {
+        contactMessageId: contact.id,
+        senderType: 'ADMIN',
+        senderId: null,
+        senderName: 'JAHZ Support',
+        senderEmail: 'jahzjournals@gmail.com',
+        message: `Hello ${user?.name || 'there'}! Welcome to your direct 1-on-1 support channel with Super Admin. How can we assist you with your trading journal, prop firm tracking, MT5 broker sync, or account today?`,
+      }
+    });
+
+    contact.threads = [welcomeThread];
+    return contact;
+  },
 };
 
 module.exports = contactService;

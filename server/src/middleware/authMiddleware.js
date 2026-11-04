@@ -49,7 +49,8 @@ const protect = async (req, res, next) => {
          req.user.impersonatorId = decoded.impersonatorId;
       }
 
-      if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== req.user.tokenVersion) {
+      const tokenVersion = decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0;
+      if (tokenVersion !== req.user.tokenVersion) {
         return res.status(401).json({ message: 'Your session has been invalidated from another device. Please log in again.' });
       }
 
@@ -86,10 +87,18 @@ const optionalProtect = async (req, res, next) => {
         role: true,
         subscriptionPlan: true,
         subscriptionStatus: true,
+        tokenVersion: true,
         hasUsedMentorTrial: true,
         mentorTrialExpiresAt: true,
       },
     });
+
+    if (req.user) {
+      const tokenVersion = decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0;
+      if (tokenVersion !== req.user.tokenVersion) {
+        req.user = null;
+      }
+    }
   } catch (error) {
     req.user = null;
   }

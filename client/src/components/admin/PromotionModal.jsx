@@ -168,44 +168,88 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
             </div>
 
             {/* Affected Target Plans Multi-Select Checkboxes */}
-            <div className="space-y-2 z-10">
+            <div className="space-y-3 z-10">
               <label className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2">
                 <Crown size={14} /> Applicable Plans <span className="text-gray-400 font-normal italic">(Select all plans this promotion applies to)</span>
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-950 border border-emerald-500/30 p-4 rounded-xl">
-                {[
-                  { id: 'FREE', label: 'Free Plan' },
-                  { id: 'STARTER', label: 'Starter Plan' },
-                  { id: 'PRO', label: 'Pro Plan' },
-                  { id: 'MENTOR', label: 'Mentor Plan' },
-                ].map(plan => {
-                  const isChecked = (formData.applicablePlans || []).includes(plan.id);
-                  return (
-                    <label key={plan.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-emerald-500/10 border-emerald-500 text-emerald-300 font-bold shadow-[0_0_10px_rgba(16,185,129,0.15)]' : 'border-gray-800 text-gray-400 hover:border-gray-700 bg-gray-900/30'}`}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          const current = formData.applicablePlans || [];
-                          let updated;
-                          if (e.target.checked) {
-                            updated = [...current, plan.id];
-                          } else {
-                            updated = current.filter(p => p !== plan.id);
-                          }
-                          if (updated.length === 0) updated = ['STARTER'];
-                          setFormData({
-                            ...formData,
-                            applicablePlans: updated,
-                            planGranted: updated[updated.length - 1]
-                          });
-                        }}
-                        className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
-                      />
-                      <span className="text-xs">{plan.label}</span>
-                    </label>
-                  );
-                })}
+              
+              <div className="space-y-3 bg-gray-950 border border-emerald-500/30 p-4 rounded-xl">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">Trader Tiers</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {[
+                      { id: 'FREE', label: 'Free Plan' },
+                      { id: 'STARTER', label: 'Starter Plan' },
+                      { id: 'PRO', label: 'Pro Plan' },
+                      { id: 'PRO_SYNC', label: 'Pro Sync' },
+                    ].map(plan => {
+                      const isChecked = (formData.applicablePlans || []).includes(plan.id);
+                      return (
+                        <label key={plan.id} className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-emerald-500/10 border-emerald-500 text-emerald-300 font-bold shadow-[0_0_10px_rgba(16,185,129,0.15)]' : 'border-gray-800 text-gray-400 hover:border-gray-700 bg-gray-900/30'}`}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const current = formData.applicablePlans || [];
+                              let updated;
+                              if (e.target.checked) {
+                                updated = [...current, plan.id];
+                              } else {
+                                updated = current.filter(p => p !== plan.id);
+                              }
+                              if (updated.length === 0) updated = ['STARTER'];
+                              setFormData({
+                                ...formData,
+                                applicablePlans: updated,
+                                planGranted: updated[updated.length - 1]
+                              });
+                            }}
+                            className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                          />
+                          <span className="text-xs font-semibold">{plan.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-800/80 pt-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 block mb-2">Mentor Tiers</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {[
+                      { id: 'MENTOR_PRIVATE_COHORT', label: 'Private Cohort (80 Max)' },
+                      { id: 'MENTOR_GROWTH', label: 'Growth Community (200 Max)' },
+                      { id: 'MENTOR_MEGA', label: 'Mega Academy (1,000 Max)' },
+                    ].map(plan => {
+                      const isChecked = (formData.applicablePlans || []).includes(plan.id);
+                      return (
+                        <label key={plan.id} className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-indigo-500/15 border-indigo-500 text-indigo-300 font-bold shadow-[0_0_10px_rgba(99,102,241,0.15)]' : 'border-gray-800 text-gray-400 hover:border-gray-700 bg-gray-900/30'}`}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const current = formData.applicablePlans || [];
+                              let updated;
+                              if (e.target.checked) {
+                                updated = [...current, plan.id];
+                              } else {
+                                updated = current.filter(p => p !== plan.id);
+                              }
+                              if (updated.length === 0) updated = ['STARTER'];
+                              setFormData({
+                                ...formData,
+                                applicablePlans: updated,
+                                planGranted: updated[updated.length - 1]
+                              });
+                            }}
+                            className="w-4 h-4 accent-indigo-500 rounded cursor-pointer"
+                          />
+                          <span className="text-xs font-semibold">{plan.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -22,7 +22,10 @@ const BusinessIntelligenceHub = () => {
 
     useEffect(() => {
         const pullAnalytics = async () => {
-            setLoading(true);
+            const hasData = (activeTab === 'executive' || activeTab === 'revenue') ? !!execData :
+                            activeTab === 'trading' ? !!tradeData :
+                            activeTab === 'ai' ? !!aiData : false;
+            if (!hasData) setLoading(true);
             try {
                 if ((activeTab === 'executive' || activeTab === 'revenue') && !execData) {
                     const res = await api.get('/admin/business/executive');

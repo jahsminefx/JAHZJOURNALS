@@ -1,42 +1,24 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const { getPlanConfig, getEffectivePlanKey, buildLimitReachedPayload } = require('../config/plans');
+const {
+  canCreateTrades,
+  canCreateAccount,
+  canAttachScreenshot,
+  hasFeatureAccess,
+} = require('../services/entitlementService');
+const {
+  getPlanConfig,
+  getEffectivePlanKey,
+  buildLimitReachedPayload,
+} = require('../config/plans');
 
 /**
  * Middleware to check monthly trade creation limits for a user
  */
 const checkTradeLimit = async (req, res, next) => {
   try {
-    const userPlanKey = getEffectivePlanKey(req.user);
-    const planConfig = getPlanConfig(userPlanKey);
-
-    if (planConfig.tradeLimit === Infinity) {
-      return next();
+    const result = await canCreateTrades(req.user, 1);
+    if (!result.allowed) {
+      return res.status(403).json(result.payload);
     }
-
-    // Count trades created by user in current calendar month
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const tradeCount = await prisma.trade.count({
-      where: {
-        tradingAccount: { userId: req.user.id },
-        createdAt: { gte: startOfMonth },
-      },
-    });
-
-    if (tradeCount >= planConfig.tradeLimit) {
-      const requiredPlan = userPlanKey === 'FREE' ? 'STARTER' : 'PRO';
-      return res.status(403).json(buildLimitReachedPayload({
-        feature: 'trades',
-        current: tradeCount,
-        limit: planConfig.tradeLimit,
-        userPlan: userPlanKey,
-        requiredPlan,
-      }));
-    }
-
     next();
   } catch (error) {
     console.error('Subscription Check Trade Limit Error:', error);
@@ -49,28 +31,10 @@ const checkTradeLimit = async (req, res, next) => {
  */
 const checkAccountLimit = async (req, res, next) => {
   try {
-    const userPlanKey = getEffectivePlanKey(req.user);
-    const planConfig = getPlanConfig(userPlanKey);
-
-    if (planConfig.accountLimit === Infinity) {
-      return next();
+    const result = await canCreateAccount(req.user);
+    if (!result.allowed) {
+      return res.status(403).json(result.payload);
     }
-
-    const accountCount = await prisma.tradingAccount.count({
-      where: { userId: req.user.id },
-    });
-
-    if (accountCount >= planConfig.accountLimit) {
-      const requiredPlan = userPlanKey === 'FREE' ? 'STARTER' : 'PRO';
-      return res.status(403).json(buildLimitReachedPayload({
-        feature: 'accounts',
-        current: accountCount,
-        limit: planConfig.accountLimit,
-        userPlan: userPlanKey,
-        requiredPlan,
-      }));
-    }
-
     next();
   } catch (error) {
     console.error('Subscription Check Account Limit Error:', error);
@@ -83,31 +47,13 @@ const checkAccountLimit = async (req, res, next) => {
  */
 const checkScreenshotLimit = async (req, res, next) => {
   try {
-    const userPlanKey = getEffectivePlanKey(req.user);
-    const planConfig = getPlanConfig(userPlanKey);
-
-    if (planConfig.screenshotLimit === Infinity) {
-      return next();
-    }
-
     const { tradeId } = req.params;
     if (!tradeId) return next();
 
-    const screenshotCount = await prisma.tradeScreenshot.count({
-      where: { tradeId },
-    });
-
-    if (screenshotCount >= planConfig.screenshotLimit) {
-      const requiredPlan = userPlanKey === 'FREE' ? 'STARTER' : 'PRO';
-      return res.status(403).json(buildLimitReachedPayload({
-        feature: 'screenshots',
-        current: screenshotCount,
-        limit: planConfig.screenshotLimit,
-        userPlan: userPlanKey,
-        requiredPlan,
-      }));
+    const result = await canAttachScreenshot(tradeId, req.user, 1);
+    if (!result.allowed) {
+      return res.status(403).json(result.payload);
     }
-
     next();
   } catch (error) {
     console.error('Subscription Check Screenshot Limit Error:', error);
@@ -116,14 +62,44 @@ const checkScreenshotLimit = async (req, res, next) => {
 };
 
 /**
+ * Generic middleware to enforce any feature flag (e.g. emotionTracking, ruleViolations, etc.)
+ */
+const requireFeature = (featureKey, requiredPlan = 'STARTER', customMessage) => async (req, res, next) => {
+  try {
+    if (req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN') {
+      return next();
+    }
+
+    const userPlanKey = getEffectivePlanKey(req.user);
+    const isAllowed = hasFeatureAccess(req.user, featureKey);
+
+    if (isAllowed) {
+      return next();
+    }
+
+    return res.status(403).json(buildLimitReachedPayload({
+      feature: featureKey,
+      current: 0,
+      limit: 0,
+      userPlan: userPlanKey,
+      requiredPlan,
+      customMessage,
+    }));
+  } catch (error) {
+    console.error(`Subscription Feature Gate Error (${featureKey}):`, error);
+    next(error);
+  }
+};
+
+/**
  * Higher-order middleware to enforce feature access requiring PRO or MENTOR plans
  */
-const requireProFeature = (featureName = 'feature') => async (req, res, next) => {
+const requireProFeature = (featureName = 'feature', customMessage) => async (req, res, next) => {
   try {
     const userPlanKey = getEffectivePlanKey(req.user);
-    const planConfig = getPlanConfig(userPlanKey);
 
-    if (userPlanKey === 'PRO' || userPlanKey === 'MENTOR' || req.user.role === 'ADMIN' || req.user.role === 'SUPER_ADMIN') {
+    const proEquivalentPlans = new Set(['PRO', 'PRO_SYNC', 'MENTOR']);
+    if (proEquivalentPlans.has(userPlanKey) || req.user.role === 'ADMIN' || req.user.role === 'SUPER_ADMIN') {
       return next();
     }
 
@@ -133,6 +109,7 @@ const requireProFeature = (featureName = 'feature') => async (req, res, next) =>
       limit: 0,
       userPlan: userPlanKey,
       requiredPlan: 'PRO',
+      customMessage,
     }));
   } catch (error) {
     console.error(`Subscription Gate Error (${featureName}):`, error);
@@ -203,32 +180,50 @@ const requireMentorPlan = async (req, res, next) => {
 };
 
 /**
- * Middleware to enforce MT4/MT5 Cloud Sync access (Starter, Pro, Mentor, Admin)
+ * Middleware to enforce MT4/MT5 Cloud Sync access (Sync Plus, Pro Sync, Elite, Mega Academy, Admin)
  */
 const checkMt5SyncAllowed = async (req, res, next) => {
   try {
     const userPlanKey = getEffectivePlanKey(req.user);
-    const planConfig = getPlanConfig(userPlanKey);
+    const planConfig = getPlanConfig(req.user || userPlanKey);
 
-    if (
-      planConfig.mt5Sync ||
-      userPlanKey === 'STARTER' ||
-      userPlanKey === 'PRO' ||
-      userPlanKey === 'MENTOR' ||
-      req.user.role === 'ADMIN' ||
-      req.user.role === 'SUPER_ADMIN' ||
-      req.user.role === 'MENTOR'
-    ) {
+    // Platform admins always have access
+    if (req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN') {
       return next();
     }
+
+    const isMentor = req.user?.role === 'MENTOR' || userPlanKey === 'MENTOR';
+
+    if (isMentor) {
+      if (req.user?.mentorTier === 'MEGA' || planConfig.mt5Sync) {
+        return next();
+      }
+
+      return res.status(403).json(buildLimitReachedPayload({
+        feature: 'mt5_sync',
+        current: 0,
+        limit: 0,
+        userPlan: userPlanKey,
+        requiredPlan: 'MEGA',
+        customMessage: 'MetaTrader (MT4/MT5) Cloud Sync is exclusive to the Mega Academy plan. Upgrade your academy tier to unlock automated broker sync for your account.',
+      }));
+    }
+
+    const syncAllowedPlans = new Set(['PRO_SYNC']);
+
+    if (planConfig.mt5Sync || syncAllowedPlans.has(userPlanKey)) {
+      return next();
+    }
+
+    const requiredPlan = 'PRO_SYNC';
 
     return res.status(403).json(buildLimitReachedPayload({
       feature: 'mt5_sync',
       current: 0,
       limit: 0,
       userPlan: userPlanKey,
-      requiredPlan: 'STARTER',
-      customMessage: 'MetaTrader (MT4/MT5) Cloud Sync is available on Starter, Pro, and Mentor plans. Upgrade your plan to unlock automated broker syncing.',
+      requiredPlan,
+      customMessage: 'MetaTrader (MT4/MT5) Cloud Sync requires an active Pro Sync subscription. Upgrade to Pro Sync to connect your broker accounts.',
     }));
   } catch (error) {
     console.error('Subscription Check MT5 Sync Error:', error);
@@ -240,6 +235,7 @@ module.exports = {
   checkTradeLimit,
   checkAccountLimit,
   checkScreenshotLimit,
+  requireFeature,
   requireProFeature,
   requireMentorPlan,
   checkMt5SyncAllowed,

@@ -19,6 +19,8 @@ const PLANS = {
     ruleViolations: false,
     propFirmAccess: false,
     aiAccess: false,
+    weeklyCoachAccess: false,
+    aiTradeCapture: false,
     reportsAccess: false,
     mentorAccess: false,
     mt5Sync: false,
@@ -38,15 +40,17 @@ const PLANS = {
     ruleViolations: true,
     propFirmAccess: false,
     aiAccess: false,
+    weeklyCoachAccess: true,
+    aiTradeCapture: false,
     reportsAccess: false,
     mentorAccess: false,
-    mt5Sync: true,
+    mt5Sync: false,
   },
   PRO: {
     key: 'PRO',
     name: 'Pro',
-    priceNgn: 8000,
-    priceFormatted: '₦8,000 / month',
+    priceNgn: 8500,
+    priceFormatted: '₦8,500 / month',
     tagline: 'Find your edge.',
     description: 'The flagship individual trader plan with AI reviews, prop-firm tracking, and advanced analytics.',
     tradeLimit: Infinity,
@@ -57,6 +61,29 @@ const PLANS = {
     ruleViolations: true,
     propFirmAccess: true,
     aiAccess: true,
+    weeklyCoachAccess: true,
+    aiTradeCapture: true,
+    reportsAccess: true,
+    mentorAccess: false,
+    mt5Sync: false,
+  },
+  PRO_SYNC: {
+    key: 'PRO_SYNC',
+    name: 'Pro Sync',
+    priceNgn: 38000,
+    priceFormatted: '₦38,000 / month',
+    tagline: 'Automate your journal.',
+    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for your live and funded broker accounts.',
+    tradeLimit: Infinity,
+    accountLimit: Infinity,
+    screenshotLimit: 10,
+    analyticsLevel: 'ADVANCED',
+    emotionTracking: true,
+    ruleViolations: true,
+    propFirmAccess: true,
+    aiAccess: true,
+    weeklyCoachAccess: true,
+    aiTradeCapture: true,
     reportsAccess: true,
     mentorAccess: false,
     mt5Sync: true,
@@ -76,9 +103,11 @@ const PLANS = {
     ruleViolations: true,
     propFirmAccess: true,
     aiAccess: true,
+    weeklyCoachAccess: true,
+    aiTradeCapture: true,
     reportsAccess: true,
     mentorAccess: true,
-    mt5Sync: true,
+    mt5Sync: false,
   },
 };
 
@@ -86,31 +115,32 @@ const MENTOR_TIERS = {
   PRIVATE_COHORT: {
     key: 'PRIVATE_COHORT',
     name: 'Private Cohort',
-    priceNgn: 8000,
-    priceFormatted: '₦8,000 / month',
-    maxStudents: 50,
+    priceNgn: 14500,
+    priceFormatted: '₦14,500 / month',
+    maxStudents: 80,
     maxCohorts: 2,
-    studentRange: '25 – 50 Students',
+    studentRange: 'Up to 80 Students',
     tagline: 'Ideal for private masterminds & small coaching cohorts',
     features: [
-      'Up to 50 active student trading journals',
+      'Up to 80 active student trading journals',
       '2 private trading cohorts with invite links',
       'Strategy Risk Guard rules (e.g. 1% max risk)',
       'Direct trade comments & feedback grading',
-      'Full Pro trading features for the mentor',
+      'Full Pro trading features for the mentor (300 AI captures/mo)',
     ],
+    mt5Sync: false,
   },
   GROWTH: {
     key: 'GROWTH',
     name: 'Growth Community',
     priceNgn: 25000,
     priceFormatted: '₦25,000 / month',
-    maxStudents: 150,
+    maxStudents: 200,
     maxCohorts: 5,
-    studentRange: '100 – 150 Students',
+    studentRange: 'Up to 200 Students',
     tagline: 'Most popular for active trading coaches & communities',
     features: [
-      'Up to 150 active student trading journals',
+      'Up to 200 active student trading journals',
       '5 private trading cohorts',
       'Everything in Private Cohort',
       'Automated cohort risk adherence & violation reports',
@@ -118,24 +148,28 @@ const MENTOR_TIERS = {
       'Paid student cohort checkouts (1.5% platform fee)',
       'Custom academy branding',
     ],
+    mt5Sync: false,
   },
   MEGA: {
     key: 'MEGA',
     name: 'Mega Academy',
-    priceNgn: 65000,
-    priceFormatted: '₦65,000 / month',
+    priceNgn: 85000,
+    priceFormatted: '₦85,000 / month',
     maxStudents: 1000,
     maxCohorts: Infinity,
-    studentRange: '500 – 1,000+ Students',
+    studentRange: 'Up to 1,000 Students',
     tagline: 'Flat rate for large communities & institutional academies',
     features: [
       'Up to 1,000 active student trading journals',
       'Unlimited trading cohorts',
       'Everything in Growth Community',
+      'MetaTrader 4/5 Cloud Sync included for coach',
+      'Unlimited JAHZ AI Trade Captures',
       'Bulk student invite links & CSV data exports',
       'Aggregated academy risk & performance analytics',
       'Priority mentor onboarding & dedicated VIP support',
     ],
+    mt5Sync: true,
   },
 };
 
@@ -177,14 +211,31 @@ const getPlanConfig = (userOrPlanKey) => {
     ? userOrPlanKey
     : getEffectivePlanKey(userOrPlanKey);
     
-  return PLANS[planKey] || PLANS.FREE;
+  const baseConfig = PLANS[planKey] || PLANS.FREE;
+
+  // For MENTOR, only MEGA tier receives MT4/MT5 Cloud Sync
+  if (planKey === 'MENTOR' && typeof userOrPlanKey === 'object' && userOrPlanKey !== null) {
+    const isMega = userOrPlanKey.mentorTier === 'MEGA';
+    return {
+      ...baseConfig,
+      mt5Sync: isMega,
+    };
+  }
+
+  return baseConfig;
 };
 
 /**
  * Helper to build standard PLAN_LIMIT_REACHED response payload
  */
 const buildLimitReachedPayload = ({ feature, current, limit, userPlan, requiredPlan, customMessage }) => {
-  const planNames = { FREE: 'Free', STARTER: 'Starter', PRO: 'Pro', MENTOR: 'Mentor/Academy' };
+  const planNames = {
+    FREE: 'Free',
+    STARTER: 'Starter',
+    PRO: 'Pro',
+    PRO_SYNC: 'Pro Sync',
+    MENTOR: 'Mentor/Academy'
+  };
   const reqPlanName = planNames[requiredPlan] || requiredPlan;
   
   let message = customMessage;
@@ -195,16 +246,24 @@ const buildLimitReachedPayload = ({ feature, current, limit, userPlan, requiredP
       message = `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} trading ${limit === 1 ? 'account' : 'accounts'}. Upgrade to ${reqPlanName} to connect more accounts.`;
     } else if (feature === 'screenshots') {
       message = `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} screenshots per trade. Upgrade to ${reqPlanName} to attach more chart images.`;
+    } else if (feature === 'ai_trade_capture') {
+      message = (limit && limit > 0)
+        ? `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} AI trade captures this month. Upgrade to Pro Sync for unlimited AI trade logging or wait for your quota to reset on the 1st of next month.`
+        : `Logging trades with JAHZ AI is reserved for Pro, Pro Sync, and Mentor plans. Upgrade to Pro to capture trades via AI chat and screenshots.`;
+    } else if (feature === 'weekly_coach') {
+      message = (limit && limit > 0)
+        ? `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} Weekly AI Coach summaries this month. Upgrade to ${reqPlanName} for expanded capacity.`
+        : `Weekly AI Coaching Summaries are available starting on the Starter plan. Upgrade to Starter, Pro, or Pro Sync to unlock Weekly AI Coach.`;
     } else if (feature === 'ai') {
-      message = `AI Trade Review and AI Coach features require a Pro subscription. Upgrade to Pro to unlock AI insights.`;
+      message = `AI Trade Review and AI Coach features require a Starter, Pro, or Pro Sync subscription. Upgrade to unlock AI insights.`;
     } else if (feature === 'prop_firm') {
-      message = `Prop firm challenge tracking requires a Pro subscription. Upgrade to Pro to track your evaluation rules.`;
+      message = `Prop firm challenge tracking requires a Pro or Pro Sync subscription. Upgrade to track your evaluation rules.`;
     } else if (feature === 'pdf_reports') {
-      message = `Exporting PDF performance reports requires a Pro subscription. Upgrade to Pro to generate reports.`;
+      message = `Exporting PDF performance reports requires a Pro or Pro Sync subscription. Upgrade to generate reports.`;
     } else if (feature === 'mentor') {
       message = `Mentor and student management features require a Mentor/Academy plan.`;
     } else if (feature === 'mt5_sync') {
-      message = `MetaTrader 5 (MT5) Cloud Sync is available on Starter, Pro, and Mentor plans. Upgrade to Starter or Pro to automatically sync your MT5 broker accounts.`;
+      message = `MetaTrader (MT4/MT5) Cloud Sync is available on Pro Sync and Mega Academy plans. Upgrade to an automated sync tier to automatically sync your MT4/MT5 broker accounts.`;
     } else {
       message = `Feature unavailable on your current plan. Upgrade to ${reqPlanName} to unlock.`;
     }

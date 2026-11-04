@@ -16,23 +16,50 @@ const sizes = {
 const Button = ({
   children,
   to,
+  href,
   variant = 'primary',
   size = 'md',
   className = '',
+  onClick,
   ...props
 }) => {
   const classes = `inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-background ${variants[variant]} ${sizes[size]} ${className}`;
 
+  const linkHref = href || (to && to.startsWith('#') ? to : null);
+
+  if (linkHref) {
+    const handleAnchorClick = (e) => {
+      if (linkHref.startsWith('#')) {
+        const targetId = linkHref.substring(1);
+        const targetElement = document.getElementById(targetId);
+        if (targetElement) {
+          e.preventDefault();
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (window.history?.pushState) {
+            window.history.pushState(null, '', linkHref);
+          }
+        }
+      }
+      onClick?.(e);
+    };
+
+    return (
+      <a href={linkHref} className={classes} onClick={handleAnchorClick} {...props}>
+        {children}
+      </a>
+    );
+  }
+
   if (to) {
     return (
-      <Link to={to} className={classes} {...props}>
+      <Link to={to} className={classes} onClick={onClick} {...props}>
         {children}
       </Link>
     );
   }
 
   return (
-    <button type="button" className={classes} {...props}>
+    <button type="button" className={classes} onClick={onClick} {...props}>
       {children}
     </button>
   );

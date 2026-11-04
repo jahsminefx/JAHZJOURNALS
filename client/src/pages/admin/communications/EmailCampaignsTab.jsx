@@ -191,12 +191,21 @@ const EmailCampaignsTab = () => {
                 <select
                   value={form.segment}
                   onChange={(e) => setForm({ ...form, segment: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none font-bold"
                 >
                   <option value="ALL">All Active Users</option>
-                  <option value="PRO">PRO Plan Subscribers Only</option>
-                  <option value="STARTER">STARTER Plan Users Only</option>
-                  <option value="FREE">FREE Plan Users Only</option>
+                  <optgroup label="Trader Tiers">
+                    <option value="FREE">Free Plan Users Only</option>
+                    <option value="STARTER">Starter Plan Users Only</option>
+                    <option value="PRO">Pro Plan Subscribers Only</option>
+                    <option value="PRO_SYNC">Pro Sync Subscribers Only</option>
+                  </optgroup>
+                  <optgroup label="Mentor Tiers">
+                    <option value="MENTOR">All Mentors</option>
+                    <option value="MENTOR_PRIVATE_COHORT">Private Cohort Mentors Only</option>
+                    <option value="MENTOR_GROWTH">Growth Community Mentors Only</option>
+                    <option value="MENTOR_MEGA">Mega Academy Mentors Only</option>
+                  </optgroup>
                 </select>
               </div>
 

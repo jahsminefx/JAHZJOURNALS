@@ -38,10 +38,29 @@ const emailCampaignService = {
 
     if (campaign.segment === 'PRO') {
       whereUser.subscriptionPlan = 'PRO';
+    } else if (campaign.segment === 'PRO_SYNC') {
+      whereUser.subscriptionPlan = 'PRO_SYNC';
     } else if (campaign.segment === 'STARTER') {
       whereUser.subscriptionPlan = 'STARTER';
     } else if (campaign.segment === 'FREE') {
       whereUser.subscriptionPlan = 'FREE';
+    } else if (campaign.segment === 'MENTOR') {
+      whereUser.OR = [{ role: 'MENTOR' }, { subscriptionPlan: 'MENTOR' }];
+    } else if (campaign.segment === 'MENTOR_PRIVATE_COHORT') {
+      whereUser.AND = [
+        { OR: [{ role: 'MENTOR' }, { subscriptionPlan: 'MENTOR' }] },
+        { OR: [{ mentorTier: 'PRIVATE_COHORT' }, { mentorTier: null }] }
+      ];
+    } else if (campaign.segment === 'MENTOR_GROWTH') {
+      whereUser.AND = [
+        { OR: [{ role: 'MENTOR' }, { subscriptionPlan: 'MENTOR' }] },
+        { mentorTier: { in: ['GROWTH', 'GROWTH_COMMUNITY'] } }
+      ];
+    } else if (campaign.segment === 'MENTOR_MEGA') {
+      whereUser.AND = [
+        { OR: [{ role: 'MENTOR' }, { subscriptionPlan: 'MENTOR' }] },
+        { mentorTier: { in: ['MEGA', 'MEGA_ACADEMY'] } }
+      ];
     }
 
     const recipients = await prisma.user.findMany({

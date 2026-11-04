@@ -6,6 +6,7 @@ const { cleanupStalledAiRequests } = require('../controllers/aiController');
 const { syncAllCloudAccounts } = require('../controllers/mtCloudSyncController');
 const { startSubscriptionCron } = require('../services/subscriptionCron');
 const { sendWeeklyExecutiveDigest } = require('../services/executiveDigestService');
+const { triggerAlertSweepJob } = require('../jobs/queues/economicAlertQueue');
 
 // Schedulers & Background Sweepers
 const startSchedulers = () => {
@@ -40,6 +41,19 @@ const startSchedulers = () => {
       }
     } catch (error) {
       console.error('[CRON] Error during MT cloud auto-sync:', error);
+    }
+  });
+
+  // ── Economic News Alert Sweeper ── Runs every 2 minutes ──
+  // Evaluates upcoming high/medium impact releases against user alert preferences
+  cron.schedule('*/2 * * * *', async () => {
+    try {
+      const summary = await triggerAlertSweepJob();
+      if (summary && summary.dispatchedAlerts > 0) {
+        console.log(`[CRON] Dispatched ${summary.dispatchedAlerts} economic news alert(s) across ${summary.evaluatedUsers} active user preferences.`);
+      }
+    } catch (error) {
+      console.error('[CRON] Error during economic alerts sweep:', error);
     }
   });
 

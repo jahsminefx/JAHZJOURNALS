@@ -100,7 +100,7 @@ const RiskCalculator = () => {
         const [accRes, settingsRes, openTradesRes] = await Promise.all([
           api.get('/accounts').catch(() => ({ data: [] })),
           api.get('/settings').catch(() => ({ data: null })),
-          api.get('/trades?status=OPEN').catch(() => ({ data: { trades: [] } })),
+          api.get('/trades?status=ACTIVE').catch(() => ({ data: { trades: [] } })),
         ]);
         
         const fetchedAccounts = accRes.data || [];

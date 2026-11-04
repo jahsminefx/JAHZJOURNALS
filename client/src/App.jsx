@@ -18,6 +18,7 @@ const PromotionManagement = lazy(() => import('./pages/admin/PromotionManagement
 const FoundingTraderAdmin = lazy(() => import('./pages/admin/FoundingTraderAdmin'));
 const AiConsole = lazy(() => import('./pages/admin/AiConsole'));
 const CustomerSuccessDashboard = lazy(() => import('./pages/admin/CustomerSuccessDashboard'));
+const Support = lazy(() => import('./pages/Support'));
 const SupportTickets = lazy(() => import('./pages/admin/SupportTickets'));
 const BugReports = lazy(() => import('./pages/admin/BugReports'));
 const FeatureRequests = lazy(() => import('./pages/admin/FeatureRequests'));
@@ -66,6 +67,7 @@ const SharedTradePage = lazy(() => import('./pages/shared/SharedTradePage'));
 const SharedDailyReviewPage = lazy(() => import('./pages/shared/SharedDailyReviewPage'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const WeeklyReview = lazy(() => import('./pages/WeeklyReview'));
+const EconomicCalendarPage = lazy(() => import('./pages/EconomicCalendarPage'));
 const RulesPage = lazy(() => import('./pages/RulesPage'));
 const StrategiesPage = lazy(() => import('./pages/StrategiesPage'));
 const TradingPlanBuilder = lazy(() => import('./pages/TradingPlanBuilder'));
@@ -136,6 +138,8 @@ function App() {
               <Route path="/privacy" element={<Legal type="privacy" />} />
               <Route path="/disclaimer" element={<Legal type="disclaimer" />} />
               <Route path="/cookies" element={<Legal type="cookies" />} />
+              <Route path="/refund" element={<Legal type="refund" />} />
+              <Route path="/refund-policy" element={<Legal type="refund" />} />
               <Route path="/blog" element={<BlogList />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/trading-psychology" element={<TradingPsychology />} />
@@ -174,12 +178,14 @@ function App() {
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/weekly-review" element={<WeeklyReview />} />
                 <Route path="/daily-review" element={<DailyReviewPage />} />
+                <Route path="/calendar" element={<EconomicCalendarPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/promotions" element={<PromotionsPage />} />
                 <Route path="/promotions/:id" element={<PromotionDetailPage />} />
                 <Route path="/student-cohorts" element={<StudentCohortsPage />} />
                 <Route path="/my-cohorts" element={<StudentCohortsPage />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/support" element={<Support />} />
 
                 {/* AI Hub Routes */}
                 <Route path="/ai" element={<AiHubPage />} />

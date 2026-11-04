@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, LineChart, Briefcase, PlusCircle, Calculator, Compass, Settings, 
   LogOut, Wallet, ShieldCheck, Layers, Sparkles, User as UserIcon, X, 
-  ChevronLeft, ChevronRight, HelpCircle, Bell, Tag, CalendarCheck, Users, Cloud, GraduationCap
+  ChevronLeft, ChevronRight, HelpCircle, Bell, Tag, CalendarCheck, Calendar, Users, Cloud, GraduationCap, Headphones
 } from 'lucide-react';
 
 import toast from 'react-hot-toast';
@@ -12,6 +12,7 @@ import BrandLogo from './BrandLogo';
 import UpgradeCard from './dashboard/UpgradeCard';
 import FoundingTraderBadge from './FoundingTraderBadge';
 import AiTradeCaptureModal from './trades/AiTradeCaptureModal';
+import { canLogTradesWithAi } from '../utils/planHelpers';
 
 const LOCAL_STORAGE_COLLAPSED_KEY = 'jahzjournals-sidebar-collapsed';
 
@@ -107,6 +108,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     { name: 'Strategies', path: '/strategies', icon: Layers },
     { name: 'Analytics', path: '/analytics', icon: LineChart },
     { name: 'Calculator', path: '/risk-calculator', icon: Calculator },
+    { name: 'Calendar', path: '/calendar', icon: Calendar },
     { name: 'Daily Review', path: '/daily-review', icon: CalendarCheck },
     { name: 'Weekly Review', path: '/weekly-review', icon: Compass },
     { name: 'JAHZ AI', path: '/ai', icon: Sparkles, prefix: '/ai' },
@@ -118,7 +120,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
     { name: 'Notifications', path: '/notifications', icon: Bell },
     { name: 'Upgrade Plan', path: '/pricing', icon: Sparkles },
     { name: 'Settings', path: '/settings', icon: Settings },
-    { name: 'Help & Support', path: '/contact', icon: HelpCircle },
+    { name: 'Support', path: '/support', icon: Headphones, prefix: '/support' },
   ];
 
   const handleLogout = async () => {
@@ -200,15 +202,21 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
           const active = isItemActive(item);
 
           if (item.action === 'ai-capture') {
+            const canUseAiLogging = canLogTradesWithAi(user);
             return (
               <button
                 key={item.name}
                 type="button"
                 onClick={() => {
                   onCloseMobile?.();
+                  if (!canUseAiLogging) {
+                    toast.error('Logging trades with JAHZ AI is exclusive to Pro and Mentor plans. Please upgrade to unlock.');
+                    navigate('/pricing');
+                    return;
+                  }
                   setIsAiCaptureOpen(true);
                 }}
-                title={collapsed ? 'Log Trade with JAHZ AI' : undefined}
+                title={collapsed ? (canUseAiLogging ? 'Log Trade with JAHZ AI' : 'Log Trade with JAHZ AI (Pro/Mentor Only)') : undefined}
                 className={`flex items-center w-full px-3.5 py-2.5 rounded-xl transition-all duration-200 group text-left ${
                   isAiCaptureOpen
                     ? 'bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-indigo-600/20 text-indigo-400 font-bold border border-indigo-500/30 shadow-xs'
@@ -221,8 +229,12 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
                     <span className="text-sm truncate font-bold bg-gradient-to-r from-indigo-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
                       {item.name}
                     </span>
-                    <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                      AI
+                    <span className={`ml-1.5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md border ${
+                      canUseAiLogging
+                        ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    }`}>
+                      {canUseAiLogging ? 'AI' : 'PRO'}
                     </span>
                   </span>
                 )}

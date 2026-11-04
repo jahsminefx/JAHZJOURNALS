@@ -21,6 +21,8 @@ describe('Unified AI Chat Trade Capture Controller Suite', () => {
         email: `unified_tester_${Date.now()}@example.com`,
         passwordHash: 'dummyhash',
         role: 'TRADER',
+        subscriptionPlan: 'PRO',
+        subscriptionStatus: 'ACTIVE',
       },
     });
 

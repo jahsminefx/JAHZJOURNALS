@@ -5,6 +5,20 @@ import { Search, Filter, Gift, Archive, Plus, Activity, Rocket, Zap, ChevronRigh
 import { format } from 'date-fns';
 import PromotionModal from '../../components/admin/PromotionModal';
 
+const formatPlanName = (plan) => {
+  switch (plan) {
+    case 'PRO_SYNC': return 'Pro Sync';
+    case 'PRO': return 'Pro';
+    case 'STARTER': return 'Starter';
+    case 'FREE': return 'Free';
+    case 'MENTOR_MEGA': return 'Mega Academy';
+    case 'MENTOR_GROWTH': return 'Growth Community';
+    case 'MENTOR_PRIVATE_COHORT': return 'Private Cohort';
+    case 'MENTOR': return 'Mentor';
+    default: return plan;
+  }
+};
+
 const PromotionManagement = () => {
   const [metrics, setMetrics] = useState(null);
   const [promotions, setPromotions] = useState([]);

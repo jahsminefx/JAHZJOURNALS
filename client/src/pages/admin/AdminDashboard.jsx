@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { 
   Users, CreditCard, Activity, TrendingUp, AlertTriangle, GraduationCap,
   Sparkles, Gift, DollarSign, ShieldCheck, RefreshCw, ArrowUpRight,
-  Clock, CheckCircle2, ChevronRight, Layers, ShieldAlert, Award
+  Clock, CheckCircle2, ChevronRight, Layers, ShieldAlert, Award, Crown
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -82,7 +82,13 @@ const AdminDashboard = () => {
     );
   }
 
-  const { users, subscriptions, mentorship, promotions, trading, infrastructure, queues } = metrics;
+  const users = metrics?.users || {};
+  const subscriptions = metrics?.subscriptions || {};
+  const mentorship = metrics?.mentorship || {};
+  const promotions = metrics?.promotions || {};
+  const trading = metrics?.trading || { totalTrades: 0, tradesToday: 0 };
+  const infrastructure = metrics?.infrastructure || {};
+  const queues = metrics?.queues || {};
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-12">
@@ -141,7 +147,7 @@ const AdminDashboard = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
           {/* Total Registered */}
           <div className="p-4 rounded-2xl border border-border bg-surface shadow-xs">
             <div className="flex items-center justify-between text-muted-foreground mb-2">
@@ -187,15 +193,27 @@ const AdminDashboard = () => {
             <p className="mt-1 text-[11px] text-emerald-500 font-semibold">Full AI & multi-account</p>
           </div>
 
-          {/* Mentor Plan */}
+          {/* Pro Sync Plan */}
+          <div className="p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-xs">
+            <div className="flex items-center justify-between text-cyan-400 mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Pro Sync Tier</span>
+              <RefreshCw size={16} />
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black text-foreground">
+              {(subscriptions.proSyncUsers || 0).toLocaleString()}
+            </h3>
+            <p className="mt-1 text-[11px] text-cyan-400 font-semibold">MT4/MT5 Cloud Sync</p>
+          </div>
+
+          {/* Mentor Tiers Overview */}
           <div className="p-4 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 shadow-xs col-span-2 sm:col-span-1">
-            <div className="flex items-center justify-between text-indigo-500 mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Mentor Tier</span>
+            <div className="flex items-center justify-between text-indigo-400 mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Mentors (3 Tiers)</span>
               <GraduationCap size={18} />
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-foreground">{subscriptions.mentorUsers.toLocaleString()}</h3>
             <p className="mt-1 text-[11px] text-indigo-400 font-semibold">
-              {mentorship.totalCohorts} active cohort{mentorship.totalCohorts === 1 ? '' : 's'}
+              {subscriptions.privateCohortMentors || 0} Cohort • {subscriptions.growthCommunityMentors || 0} Growth • {subscriptions.megaAcademyMentors || 0} Mega
             </p>
           </div>
         </div>
@@ -423,8 +441,8 @@ const AdminDashboard = () => {
             <div className="p-3.5 rounded-xl border border-border bg-surface-muted/30">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Total Trades Logged</span>
               <div className="mt-1 flex items-baseline justify-between">
-                <span className="text-xl sm:text-2xl font-black text-foreground">{trading.totalTrades.toLocaleString()}</span>
-                <span className="text-xs font-bold text-purple-500">+{trading.tradesToday} today</span>
+                <span className="text-xl sm:text-2xl font-black text-foreground">{(trading.totalTrades ?? 0).toLocaleString()}</span>
+                <span className="text-xs font-bold text-purple-500">+{trading.tradesToday || 0} today</span>
               </div>
             </div>
 

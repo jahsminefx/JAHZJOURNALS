@@ -20,7 +20,7 @@ const defaultBenefits = [
 const JoinCohortPage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
 
   const inviteToken = searchParams.get('token');
@@ -38,7 +38,7 @@ const JoinCohortPage = () => {
 
   // 1. If returning from Paystack payment redirect
   useEffect(() => {
-    if (isPaymentVerify && paymentReference && token) {
+    if (isPaymentVerify && paymentReference && user) {
       const verifyPayment = async () => {
         setVerifyingPayment(true);
         try {
@@ -89,7 +89,7 @@ const JoinCohortPage = () => {
   }, [groupId, inviteToken]);
 
   const handleEnrollment = async () => {
-    if (!token) {
+    if (!user) {
       const redirectUrl = inviteToken ? `/cohorts/join/${groupId}?token=${inviteToken}` : `/cohorts/join/${groupId}`;
       navigate(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
       return;
@@ -405,7 +405,7 @@ const JoinCohortPage = () => {
 
         {/* Action Controls */}
         <div className="pt-2 border-t border-border space-y-3">
-          {token ? (
+          {user ? (
             <div>
               <Button
                 onClick={handleEnrollment}

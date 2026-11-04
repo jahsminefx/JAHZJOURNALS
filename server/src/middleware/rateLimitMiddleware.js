@@ -9,11 +9,20 @@ const globalApiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Strict Limiter for Authentication (Login/Register/Reset)
+// Strict Limiter for Authentication (Login/Register)
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: process.env.NODE_ENV !== 'production' ? 5000 : 100,
   message: { message: 'Too many authentication attempts, please try again after an hour.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Dedicated Limiter for Password Reset Requests & Confirmations (prevents email flooding & brute force)
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV !== 'production' ? 5000 : 15,
+  message: { message: 'Too many password reset attempts, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -27,8 +36,19 @@ const aiFeaturesLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Strict Limiter for Payment Verification (prevents reference enumeration)
+const paymentVerificationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV !== 'production' ? 5000 : 30,
+  message: { message: 'Too many payment verification attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   globalApiLimiter,
   authLimiter,
-  aiFeaturesLimiter
+  passwordResetLimiter,
+  aiFeaturesLimiter,
+  paymentVerificationLimiter,
 };

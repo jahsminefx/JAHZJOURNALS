@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { checkAiAllowance } = require('../services/entitlementService');
 
 const emotionStages = ['BEFORE_TRADE', 'DURING_TRADE', 'AFTER_TRADE'];
 const emotions = [
@@ -338,7 +339,12 @@ const createAiTradeReview = async (req, res) => {
     });
 
     if (!trade) {
-      return res.status(404).json({ message: 'We couldn\'t find the trade for this review.' });
+      return res.status(404).json({ message: "We couldn't find the trade for this review." });
+    }
+
+    const limitCheck = await checkAiAllowance(req.user, 'TRADE_REVIEW');
+    if (!limitCheck.allowed) {
+      return res.status(403).json(limitCheck.payload);
     }
 
     const profitLoss = Number(trade.profitLossAmount || 0);
@@ -397,7 +403,7 @@ const getAiTradeReview = async (req, res) => {
     const trade = await getUserTrade(tradeId, req.user.id);
 
     if (!trade) {
-      return res.status(404).json({ message: 'We couldn\'t find the trade for this review.' });
+      return res.status(404).json({ message: "We couldn't find the trade for this review." });
     }
 
     const review = await prisma.aiTradeReview.findFirst({

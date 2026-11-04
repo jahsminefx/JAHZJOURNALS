@@ -2,6 +2,7 @@ const csv = require('csv-parser');
 const streamifier = require('streamifier');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { canCreateTrades } = require('../services/entitlementService');
 const {
   classifyTrade,
   isStopAtOrPastEntry,
@@ -467,6 +468,13 @@ const importTrades = async (req, res) => {
 
     if (newTrades.length === 0 && tradesToEnrich.length === 0) {
       return res.status(200).json({ message: 'All trades in this file have already been matched and imported.' });
+    }
+
+    if (newTrades.length > 0) {
+      const quotaCheck = await canCreateTrades(req.user, newTrades.length);
+      if (!quotaCheck.allowed) {
+        return res.status(403).json(quotaCheck.payload);
+      }
     }
 
     await prisma.$transaction(async (tx) => {

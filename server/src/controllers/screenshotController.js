@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { canAttachScreenshot } = require('../services/entitlementService');
 const cloudinary = require('../utils/cloudinary');
 const streamifier = require('streamifier');
 const {
@@ -56,9 +57,9 @@ const uploadScreenshot = async (req, res) => {
       return res.status(404).json({ message: 'We couldn\'t find that trade.' });
     }
 
-    const screenshotCount = await prisma.tradeScreenshot.count({ where: { tradeId } });
-    if (screenshotCount >= maxScreenshotsPerTrade) {
-      return res.status(400).json({ message: `You can attach up to ${maxScreenshotsPerTrade} screenshots per trade.` });
+    const attachCheck = await canAttachScreenshot(tradeId, req.user, 1);
+    if (!attachCheck.allowed) {
+      return res.status(403).json(attachCheck.payload);
     }
 
     let result;

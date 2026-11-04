@@ -121,7 +121,7 @@ const updateUserProfile = async (req, res) => {
       mainTradingPairs,
       mainSession,
       tradingStyle,
-      onboardingCompleted,
+      riskPerTrade, defaultRiskPercent, onboardingCompleted,
     } = req.body;
 
     const data = {
@@ -134,6 +134,29 @@ const updateUserProfile = async (req, res) => {
       ...(mainSession !== undefined && { mainSession }),
       ...(tradingStyle !== undefined && { tradingStyle }),
       ...(onboardingCompleted !== undefined && { onboardingCompleted: parseBoolean(onboardingCompleted) }),
+    };
+
+    const rawRisk = riskPerTrade !== undefined ? riskPerTrade : defaultRiskPercent;
+    const parsedRisk = parseOptionalDecimal(rawRisk);
+    const hasRiskInput = riskPerTrade !== undefined || defaultRiskPercent !== undefined;
+
+    if (hasRiskInput && (parsedRisk === null || !Number.isNaN(parsedRisk))) {
+      const normalizedPairs = mainTradingPairs !== undefined ? normalizeStringList(mainTradingPairs) : undefined;
+      const settingsPayload = {
+        riskPerTrade: parsedRisk,
+        defaultRiskPercent: parsedRisk,
+        ...(mainSession !== undefined && { preferredSession: mainSession }),
+        ...(normalizedPairs !== undefined && { mainPairs: normalizedPairs.join(', ') }),
+      };
+
+      await prisma.userSettings.upsert({
+        where: { userId: req.user.id },
+        update: settingsPayload,
+        create: {
+          userId: req.user.id,
+          ...settingsPayload,
+        },
+      });
     };
 
     const user = await prisma.user.update({

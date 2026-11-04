@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { Activity, Users, AlertCircle, MessageSquare, Ticket, Bug, Lightbulb } from 'lucide-react';
+import { Activity, Users, AlertCircle, MessageSquare, Ticket, Bug, Lightbulb, LifeBuoy } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const CustomerSuccessDashboard = () => {
@@ -63,6 +63,4 @@ const CustomerSuccessDashboard = () => {
    );
 };
 
-// Internal icon import resolving above bounds
-import { LifeBuoy } from 'lucide-react';
 export default CustomerSuccessDashboard;

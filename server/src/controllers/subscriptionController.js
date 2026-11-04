@@ -1,14 +1,31 @@
 const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('../utils/logger');
 const { determineActivationMethod } = require('../services/subscriptionService');
+const { getQuotaSummary } = require('../services/entitlementService');
 const { sendSubscriptionConfirmationEmail } = require('../services/emailService');
+const {
+  isInternationalCheckoutEnabled,
+  REGIONS,
+  REGIONAL_PRICES,
+  resolveRegion,
+  getPriceById,
+  getTraderPricesForRegion,
+  getMentorPricesForRegion,
+  getDefaultPriceForPlan,
+  validatePriceSelection,
+  detectCountry,
+} = require('../config/pricingCatalogue');
+const { resolveRegionalPricing } = require('../services/regionalPricingResolver');
+const paymentGatewayFactory = require('../services/billing/paymentGatewayFactory');
 
 const getPaystackSecret = () => (process.env.PAYSTACK_SECRET_KEY || '').trim();
 
 const getPlanMappings = () => ({
   STARTER: { amountInKobo: 400000, planCode: process.env.PAYSTACK_STARTER_PLAN },
-  PRO: { amountInKobo: 800000, planCode: process.env.PAYSTACK_PRO_PLAN },
+  PRO: { amountInKobo: 850000, planCode: process.env.PAYSTACK_PRO_PLAN },
+  PRO_SYNC: { amountInKobo: 3800000, planCode: process.env.PAYSTACK_SYNC_PLUS_PLAN },
   MENTOR: { amountInKobo: 2500000, planCode: process.env.PAYSTACK_MENTOR_PLAN },
 });
 
@@ -16,10 +33,11 @@ const PLAN_RANK = {
   FREE: 1,
   STARTER: 2,
   PRO: 3,
-  MENTOR: 4,
+  PRO_SYNC: 4,
+  MENTOR: 6,
 };
 
-const VALID_PLANS = new Set(['FREE', 'STARTER', 'PRO', 'MENTOR']);
+const VALID_PLANS = new Set(['FREE', 'STARTER', 'PRO', 'PRO_SYNC', 'MENTOR']);
 
 const resolveClientUrl = (req) => {
   const configured = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim();
@@ -100,31 +118,52 @@ const findUserForPaystackTransaction = async (txData, fallbackUserId = null) => 
 
 const inferPlanFromTransaction = (txData) => {
   const metadata = txData?.metadata && typeof txData.metadata === 'object' ? txData.metadata : {};
+  if (metadata.plan && VALID_PLANS.has(String(metadata.plan).toUpperCase())) {
+    return String(metadata.plan).toUpperCase();
+  }
   if (metadata.requestedPlan && VALID_PLANS.has(String(metadata.requestedPlan).toUpperCase())) {
     return String(metadata.requestedPlan).toUpperCase();
+  }
+  if (metadata.priceId) {
+    const priceRecord = getPriceById(metadata.priceId);
+    if (priceRecord && VALID_PLANS.has(priceRecord.planId)) {
+      return priceRecord.planId;
+    }
   }
   const planObjName = txData?.plan_object?.name ? String(txData.plan_object.name).toUpperCase() : '';
   if (VALID_PLANS.has(planObjName)) {
     return planObjName;
   }
-  const amountNgn = (txData?.amount || 0) / 100;
-  if (metadata.studentCount || amountNgn >= 10000) return 'MENTOR';
-  if (amountNgn >= 6000) return 'PRO';
-  return 'STARTER';
+  const currency = (txData?.currency || 'NGN').toUpperCase();
+  const amountMinor = typeof txData?.amount === 'number' ? txData.amount : 0;
+  if (currency === 'USD') {
+    const amountUsd = amountMinor > 200 ? amountMinor / 100 : amountMinor;
+    if (amountUsd >= 40) return 'MENTOR';
+    if (amountUsd >= 30) return 'ELITE';
+    if (amountUsd >= 20) return 'PRO_SYNC';
+    return 'STARTER';
+  } else {
+    // NGN
+    const amountNgn = amountMinor > 1000 ? amountMinor / 100 : amountMinor;
+    if (metadata.studentCount || amountNgn >= 50000) return 'MENTOR';
+    if (amountNgn >= 30000) return 'SYNC_PLUS';
+    if (amountNgn >= 6000) return 'PRO';
+    return 'STARTER';
+  }
 };
 
 /**
- * Idempotently records a successful Paystack transaction across:
- * 1) prisma.payment
- * 2) prisma.user (subscriptionPlan & subscriptionStatus)
- * 3) prisma.subscription (ACTIVE record with source='PAYMENT', paymentReference, expiresAt)
- * 4) prisma.subscriptionHistory (audit trail with reason='PAYMENT_COMPLETED')
+ * Idempotently records a successful payment across:
+ * 1) prisma.payment (status: 'SUCCESS')
+ * 2) prisma.user (subscriptionPlan & subscriptionStatus = 'ACTIVE')
+ * 3) prisma.subscription (ACTIVE record with priceId, currency, provider)
+ * 4) prisma.subscriptionHistory (audit trail)
  */
-const fulfillPaystackTransaction = async (txData, options = {}) => {
-  const { fallbackUserId = null, isHistoricalSync = false } = options;
-  const reference = txData?.reference;
+const fulfillSubscriptionPayment = async (txData, options = {}) => {
+  const { fallbackUserId = null, isHistoricalSync = false, provider = 'PAYSTACK' } = options;
+  const reference = txData?.reference || txData?.id;
   if (!reference) {
-    throw new Error('Missing transaction reference in Paystack payload');
+    throw new Error('Missing transaction reference/ID in payment payload');
   }
 
   const user = await findUserForPaystackTransaction(txData, fallbackUserId);
@@ -133,11 +172,14 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
   }
 
   const requestedPlan = inferPlanFromTransaction(txData);
-  const amount = typeof txData.amount === 'number' ? txData.amount / 100 : 0;
-  const currency = (txData.currency || 'NGN').toUpperCase();
-  const paidAt = txData.paid_at || txData.paidAt ? new Date(txData.paid_at || txData.paidAt) : new Date();
-  const channel = txData.channel || 'card';
   const metadata = txData?.metadata && typeof txData.metadata === 'object' ? txData.metadata : {};
+  const priceId = metadata.priceId || null;
+  const amount = typeof txData.amount === 'number'
+    ? (txData.amount > 1000 && provider === 'PAYSTACK' ? txData.amount / 100 : (txData.amount > 200 && provider === 'STRIPE' ? txData.amount / 100 : txData.amount))
+    : 0;
+  const currency = (txData.currency || (provider === 'STRIPE' ? 'USD' : 'NGN')).toUpperCase();
+  const paidAt = txData.paid_at || txData.paidAt ? new Date(txData.paid_at || txData.paidAt) : new Date();
+  const channel = txData.channel || (provider === 'STRIPE' ? 'stripe_checkout' : 'card');
   const rawPromotionId = metadata.promotionId || null;
 
   let validPromotionId = null;
@@ -149,13 +191,13 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
   const existingPayment = await prisma.payment.findUnique({ where: { reference } });
   const wasAlreadySuccess = existingPayment?.status === 'SUCCESS';
 
-  // 1. Upsert Payment record with accurate currency & status
+  // 1. Upsert Payment record
   const paymentRecord = await prisma.payment.upsert({
     where: { reference },
     update: {
       amount: amount > 0 ? amount : existingPayment?.amount || 0,
       currency,
-      provider: 'PAYSTACK',
+      provider,
       status: 'SUCCESS',
       paidAt,
     },
@@ -163,7 +205,7 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
       userId: user.id,
       amount,
       currency,
-      provider: 'PAYSTACK',
+      provider,
       reference,
       status: 'SUCCESS',
       paidAt,
@@ -171,7 +213,7 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
     },
   });
 
-  // 2. Check active subscription state to determine if user plan should be updated
+  // 2. Active subscription update
   const currentSub = await prisma.subscription.findFirst({
     where: { userId: user.id },
     orderBy: { updatedAt: 'desc' },
@@ -204,11 +246,14 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
       subscriptionStatus: 'ACTIVE',
     };
 
+    if (!user.billingCurrency) updateData.billingCurrency = currency;
+    if (metadata.country && !user.billingCountry) updateData.billingCountry = metadata.country;
+
     if (effectivePlan === 'MENTOR') {
-      const tierKey = metadata.mentorTier || (amount >= 65000 ? 'MEGA' : amount >= 25000 ? 'GROWTH' : 'PRIVATE_COHORT');
+      const tierKey = metadata.mentorTier || (amount >= 85000 || (currency === 'USD' && amount >= 199) ? 'MEGA' : amount >= 25000 || (currency === 'USD' && amount >= 90) ? 'GROWTH' : 'PRIVATE_COHORT');
       updateData.role = 'MENTOR';
       updateData.mentorTier = tierKey;
-      updateData.mentorMaxStudents = tierKey === 'MEGA' ? 1000 : tierKey === 'GROWTH' ? 150 : 50;
+      updateData.mentorMaxStudents = tierKey === 'MEGA' ? 1000 : tierKey === 'GROWTH' ? 200 : 80;
       updateData.mentorMaxCohorts = tierKey === 'MEGA' ? 100 : tierKey === 'GROWTH' ? 5 : 2;
     }
 
@@ -217,32 +262,32 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
       data: updateData,
     });
 
+    const subData = {
+      plan: effectivePlan,
+      status: 'ACTIVE',
+      source: 'PAYMENT',
+      autoRenew: true,
+      paymentReference: reference,
+      priceId: priceId || undefined,
+      currency,
+      provider,
+      providerSubscriptionId: options.providerSubscriptionId || metadata.subscriptionId || undefined,
+      providerCustomerId: options.providerCustomerId || metadata.customerId || undefined,
+      promotionId: validPromotionId,
+      startedAt: paidAt,
+      expiresAt,
+    };
+
     if (currentSub) {
       await prisma.subscription.update({
         where: { id: currentSub.id },
-        data: {
-          plan: effectivePlan,
-          status: 'ACTIVE',
-          source: 'PAYMENT',
-          autoRenew: true,
-          paymentReference: reference,
-          promotionId: validPromotionId,
-          startedAt: paidAt,
-          expiresAt,
-        },
+        data: subData,
       });
     } else {
       await prisma.subscription.create({
         data: {
           userId: user.id,
-          plan: effectivePlan,
-          status: 'ACTIVE',
-          source: 'PAYMENT',
-          autoRenew: true,
-          paymentReference: reference,
-          promotionId: validPromotionId,
-          startedAt: paidAt,
-          expiresAt,
+          ...subData,
         },
       });
     }
@@ -271,7 +316,7 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
         promotionId: validPromotionId,
         paymentReference: reference,
         changedBy: 'USER',
-        notes: `Paystack payment of ${currency} ${amount.toLocaleString()} verified via ${channel} (Ref: ${reference})${studentNote}${discountNote}`,
+        notes: `${provider} payment of ${currency} ${amount.toLocaleString()} verified via ${channel} (Ref: ${reference})${studentNote}${discountNote}`,
         createdAt: paidAt,
       },
     });
@@ -291,6 +336,10 @@ const fulfillPaystackTransaction = async (txData, options = {}) => {
     payment: paymentRecord,
     user: updatedUser,
   };
+};
+
+const fulfillPaystackTransaction = async (txData, options = {}) => {
+  return fulfillSubscriptionPayment(txData, { ...options, provider: 'PAYSTACK' });
 };
 
 /**
@@ -371,36 +420,59 @@ const syncPaystackTransactions = async (options = {}) => {
 
 const initializeSubscription = async (req, res) => {
   try {
-    const { plan, email, promoCode, studentCount } = req.body;
-    const planMappings = getPlanMappings();
-    const planConfig = planMappings[plan];
-    if (!planConfig) {
-      return res.status(400).json({ message: 'Invalid subscription plan selected.' });
-    }
+    const { plan, priceId, country: requestedCountry, email, promoCode, studentCount, tier, gateway } = req.body;
 
-    let appliedPromo = null;
-    let amountInKobo = planConfig.amountInKobo;
-    let mentorStudentCount = null;
+    const userCountry = requestedCountry || req.user?.billingCountry || detectCountry(req);
+    let resolvedPriceRecord = null;
+    let targetPlanKey = plan;
 
-    let selectedMentorTier = null;
-    if (plan === 'MENTOR') {
-      const { tier } = req.body;
-      const parsed = parseInt(studentCount, 10);
-      if (tier === 'GROWTH' || (!tier && parsed > 50 && parsed <= 150)) {
-        selectedMentorTier = 'GROWTH';
-        amountInKobo = 25000 * 100;
-        mentorStudentCount = 150;
-      } else if (tier === 'MEGA' || (!tier && parsed > 150)) {
-        selectedMentorTier = 'MEGA';
-        amountInKobo = 65000 * 100;
-        mentorStudentCount = 1000;
-      } else {
-        selectedMentorTier = 'PRIVATE_COHORT';
-        amountInKobo = 8000 * 100;
-        mentorStudentCount = 50;
+    // 1. Resolve Price Record
+    if (priceId) {
+      const validation = validatePriceSelection({
+        priceId,
+        planId: plan,
+        countryCode: userCountry,
+      });
+
+      if (!validation.valid) {
+        return res.status(400).json({
+          message: validation.message,
+          reason: validation.reason,
+        });
+      }
+      resolvedPriceRecord = validation.priceRecord;
+      targetPlanKey = resolvedPriceRecord.planId;
+    } else {
+      if (!plan || !VALID_PLANS.has(String(plan).toUpperCase())) {
+        return res.status(400).json({ message: 'Invalid subscription plan selected.' });
+      }
+      targetPlanKey = String(plan).toUpperCase();
+      resolvedPriceRecord = getDefaultPriceForPlan(targetPlanKey, userCountry, tier);
+      if (!resolvedPriceRecord) {
+        return res.status(400).json({ message: `No active pricing found for plan "${plan}" in region "${userCountry}".` });
       }
     }
 
+    let appliedPromo = null;
+    let mentorStudentCount = null;
+    let selectedMentorTier = null;
+
+    if (targetPlanKey === 'MENTOR') {
+      const parsed = parseInt(studentCount, 10);
+      if (tier === 'GROWTH' || (!tier && parsed > 80 && parsed <= 200)) {
+        selectedMentorTier = 'GROWTH';
+        mentorStudentCount = 200;
+      } else if (tier === 'MEGA' || (!tier && parsed > 200)) {
+        selectedMentorTier = 'MEGA';
+        mentorStudentCount = 1000;
+      } else {
+        selectedMentorTier = 'PRIVATE_COHORT';
+        mentorStudentCount = 80;
+      }
+      resolvedPriceRecord = getDefaultPriceForPlan('MENTOR', userCountry, selectedMentorTier) || resolvedPriceRecord;
+    }
+
+    // 2. Promotion handling
     if (promoCode && promoCode.trim()) {
       const cleanCode = promoCode.toLowerCase().trim();
       const promo = await prisma.promotion.findFirst({
@@ -416,198 +488,150 @@ const initializeSubscription = async (req, res) => {
         const isStarted = !promo.startsAt || new Date(promo.startsAt) <= now;
         const hasRedemptions = !promo.maxRedemptions || promo.currentRedemptions < promo.maxRedemptions;
         const promoPlans = promo.applicablePlans && promo.applicablePlans.length > 0 ? promo.applicablePlans : [promo.planGranted];
-        const isPlanApplicable = promoPlans.includes(plan);
+        const isPlanApplicable = promoPlans.includes(targetPlanKey);
 
         if (isNotExpired && isStarted && hasRedemptions && isPlanApplicable) {
           if (promo.discountType === 'PERCENTAGE_DISCOUNT' || (promo.discountPercent && promo.discountPercent > 0 && promo.discountPercent < 100)) {
-            const percent = promo.discountPercent || 50;
-            amountInKobo = Math.round(amountInKobo * (1 - percent / 100));
             appliedPromo = promo;
           }
         }
       }
     }
 
-    const activation = await determineActivationMethod(req.user, plan);
+    const activation = await determineActivationMethod(req.user, targetPlanKey);
 
     if (!appliedPromo && activation.method === 'PROMOTION') {
       return res.json({ success: true, authorization_url: null, message: activation.message });
     }
-    if (activation.method === 'ALREADY_ACTIVE' && (!appliedPromo || req.user.subscriptionPlan === plan)) {
+    if (activation.method === 'ALREADY_ACTIVE' && (!appliedPromo || req.user.subscriptionPlan === targetPlanKey)) {
       return res.status(400).json({ message: activation.message });
     }
 
     const userEmail = email || req.user.email;
     const clientUrl = resolveClientUrl(req);
-    const secret = getPaystackSecret();
 
-    if (secret && secret !== 'sk_test_example') {
-      const buildInitPayload = (includePlanCode) => ({
-        email: userEmail,
-        amount: amountInKobo,
-        currency: 'NGN',
-        plan: includePlanCode && !appliedPromo && plan !== 'MENTOR' ? (planConfig.planCode || undefined) : undefined,
-        callback_url: `${clientUrl}/pricing?payment=success`,
-        metadata: {
+    // 2.5 Enforce International Checkout Gate
+    if (resolvedPriceRecord && (resolvedPriceRecord.region === 'GLOBAL' || resolvedPriceRecord.currency !== 'NGN' || resolvedPriceRecord.provider === 'STRIPE')) {
+      if (!isInternationalCheckoutEnabled()) {
+        return res.status(403).json({
+          success: false,
+          error: 'INTERNATIONAL_CHECKOUT_DISABLED',
+          message: 'International USD checkout is currently disabled. Active subscriptions are processed in Nigerian Naira (NGN) via Paystack.',
+        });
+      }
+    }
+
+    // 3. Resolve Gateway Adapter
+    const preferredProvider = gateway ? String(gateway).toUpperCase() : resolvedPriceRecord.provider;
+    const adapter = paymentGatewayFactory.getAdapter(preferredProvider);
+
+    const checkoutSession = await adapter.createCheckoutSession({
+      user: { id: req.user.id, email: userEmail },
+      priceRecord: resolvedPriceRecord,
+      planKey: targetPlanKey,
+      clientUrl,
+      promo: appliedPromo,
+      metadata: {
+        userId: req.user.id,
+        userEmail: req.user.email,
+        requestedPlan: targetPlanKey,
+        priceId: resolvedPriceRecord.id,
+        country: userCountry,
+        mentorTier: selectedMentorTier || undefined,
+        studentCount: mentorStudentCount || undefined,
+        promotionId: appliedPromo ? appliedPromo.id : undefined,
+        discountPercent: appliedPromo ? appliedPromo.discountPercent : undefined,
+      },
+    });
+
+    if (checkoutSession.success && checkoutSession.reference) {
+      await prisma.payment.upsert({
+        where: { reference: checkoutSession.reference },
+        update: {
+          amount: checkoutSession.amountInMinor / 100,
+          currency: checkoutSession.currency,
+          provider: adapter.name,
+        },
+        create: {
           userId: req.user.id,
-          userEmail: req.user.email,
-          requestedPlan: plan,
-          mentorTier: selectedMentorTier || undefined,
-          studentCount: mentorStudentCount || undefined,
-          calculatedAmountNgn: Math.round(amountInKobo / 100),
-          promotionId: appliedPromo ? appliedPromo.id : undefined,
-          discountPercent: appliedPromo ? appliedPromo.discountPercent : undefined,
+          amount: checkoutSession.amountInMinor / 100,
+          currency: checkoutSession.currency,
+          provider: adapter.name,
+          reference: checkoutSession.reference,
+          status: 'PENDING',
         },
-      });
+      }).catch((err) => console.warn('Failed creating initial pending payment:', err?.message || err));
 
-      let response = await fetch('https://api.paystack.co/transaction/initialize', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${secret}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(buildInitPayload(true)),
-      });
-
-      let data = await response.json();
-
-      // If planCode failed (e.g. switching from test keys to live keys where test PLN_ code doesn't exist), retry with direct amount
-      if (!data.status && !appliedPromo && planConfig.planCode) {
-        console.warn(`Paystack plan code ${planConfig.planCode} rejected (${data.message}). Retrying with direct amount...`);
-        response = await fetch('https://api.paystack.co/transaction/initialize', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${secret}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(buildInitPayload(false)),
-        });
-        data = await response.json();
-      }
-
-      if (data.status && data.data?.authorization_url) {
-        // Record PENDING transaction immediately so it is tracked even before redirect
-        if (data.data.reference) {
-          await prisma.payment.upsert({
-            where: { reference: data.data.reference },
-            update: {
-              amount: amountInKobo / 100,
-              currency: 'NGN',
-            },
-            create: {
-              userId: req.user.id,
-              amount: amountInKobo / 100,
-              currency: 'NGN',
-              provider: 'PAYSTACK',
-              reference: data.data.reference,
-              status: 'PENDING',
-            },
-          }).catch((err) => console.warn('Failed creating initial pending payment:', err?.message || err));
-        }
-
-        return res.json({
-          success: true,
-          authorization_url: data.data.authorization_url,
-          reference: data.data.reference,
-          message: appliedPromo
-            ? `Paystack checkout initialized with ${appliedPromo.discountPercent}% discount!`
-            : 'Paystack checkout initialized successfully.',
-        });
-      }
-
-      console.error('Paystack Initialize API Error Response:', data);
-      return res.status(400).json({
-        message: data.message || 'Paystack could not initialize checkout. Please check your payment configuration.',
+      return res.json({
+        success: true,
+        authorization_url: checkoutSession.authorizationUrl,
+        reference: checkoutSession.reference,
+        provider: adapter.name,
+        currency: checkoutSession.currency,
+        amountFormatted: resolvedPriceRecord.amountFormatted,
+        priceId: resolvedPriceRecord.id,
+        message: appliedPromo
+          ? `${adapter.name} checkout initialized with ${appliedPromo.discountPercent}% discount!`
+          : `${adapter.name} checkout initialized successfully.`,
       });
     }
 
-    // Safe fallback ONLY when PAYSTACK_SECRET_KEY is not configured or is 'sk_test_example' (unit tests)
-    const authorization_url = `https://checkout.paystack.com/mock-url-${plan.toLowerCase()}`;
-    return res.json({
-      success: true,
-      authorization_url,
-      message: appliedPromo
-        ? `Proceed to payment gateway (${appliedPromo.discountPercent || 50}% discount applied)`
-        : (activation.message || 'Proceed to payment gateway'),
+    return res.status(400).json({
+      message: 'Could not initialize checkout. Please check payment gateway configuration.',
     });
   } catch (error) {
     console.error('Subscription Init Error:', error);
-    res.status(500).json({ message: 'Unable to initialize subscription at this time.' });
+    res.status(500).json({ message: error.message || 'Unable to initialize subscription at this time.' });
   }
 };
 
 const verifySubscription = async (req, res) => {
   try {
-    const { reference } = req.params;
+    const reference = req.params.reference || req.query.reference || req.query.session_id;
     if (!reference) {
       return res.status(400).json({ message: 'Transaction reference is required.' });
     }
 
-    const secret = getPaystackSecret();
+    const providerKey = (reference.startsWith('cs_') || req.query.provider === 'stripe') ? 'STRIPE' : 'PAYSTACK';
+    const adapter = paymentGatewayFactory.getAdapter(providerKey);
 
-    if (secret && secret !== 'sk_test_example') {
-      const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-        headers: {
-          Authorization: `Bearer ${secret}`,
-        },
+    const verificationResult = await adapter.verifyPayment(reference);
+
+    if (verificationResult.success) {
+      const result = await fulfillSubscriptionPayment(verificationResult.rawData || {
+        reference: verificationResult.reference,
+        amount: verificationResult.amount,
+        currency: verificationResult.currency,
+        metadata: verificationResult.metadata,
+      }, {
+        fallbackUserId: req.user?.id || null,
+        provider: providerKey,
+        providerSubscriptionId: verificationResult.providerSubscriptionId,
+        providerCustomerId: verificationResult.providerCustomerId,
       });
 
-      const data = await response.json();
-      if (data.status && data.data) {
-        const txStatus = String(data.data.status || '').toLowerCase();
+      if (!result.fulfilled) {
+        return res.status(404).json({ message: 'Payment verified, but matching user account was not found.' });
+      }
 
-        if (txStatus === 'success') {
-          const result = await fulfillPaystackTransaction(data.data, {
-            fallbackUserId: req.user?.id || null,
-            isHistoricalSync: false,
-          });
-
-          if (!result.fulfilled) {
-            return res.status(404).json({ message: 'Payment verified on Paystack, but matching user account was not found.' });
-          }
-
-          if (!result.wasAlreadySuccess && result.user) {
-            sendSubscriptionConfirmationEmail(result.user, result.plan).catch((err) => {
-              console.warn('Subscription confirmation email warning:', err?.message || err);
-            });
-          }
-
-          return res.json({
-            success: true,
-            plan: result.plan,
-            payment: result.payment,
-            message: `Payment verified successfully! Your account has been upgraded to ${result.plan}.`,
-          });
-        }
-
-        // Update payment status if it was abandoned/failed/pending
-        const user = await findUserForPaystackTransaction(data.data, req.user?.id || null);
-        if (user) {
-          await prisma.payment.upsert({
-            where: { reference },
-            update: {
-              status: txStatus.toUpperCase() || 'FAILED',
-              currency: (data.data.currency || 'NGN').toUpperCase(),
-            },
-            create: {
-              userId: user.id,
-              amount: typeof data.data.amount === 'number' ? data.data.amount / 100 : 0,
-              currency: (data.data.currency || 'NGN').toUpperCase(),
-              provider: 'PAYSTACK',
-              reference,
-              status: txStatus.toUpperCase() || 'FAILED',
-            },
-          }).catch(() => {});
-        }
-
-        return res.status(400).json({
-          message: `Transaction status on Paystack is "${data.data.status}". ${data.data.gateway_response || ''}`.trim(),
-          status: txStatus.toUpperCase(),
+      if (!result.wasAlreadySuccess && result.user) {
+        sendSubscriptionConfirmationEmail(result.user, result.plan).catch((err) => {
+          console.warn('Subscription confirmation email warning:', err?.message || err);
         });
       }
+
+      return res.json({
+        success: true,
+        plan: result.plan,
+        payment: result.payment,
+        message: `Payment verified successfully! Your account has been upgraded to ${result.plan}.`,
+      });
     }
 
-    return res.status(400).json({ message: 'Transaction verification failed or payment was not successful.' });
+    return res.status(400).json({
+      message: verificationResult.message || `Transaction status is "${verificationResult.status}".`,
+      status: verificationResult.status,
+    });
   } catch (error) {
     console.error('Subscription Verification Error:', error);
     res.status(500).json({ message: 'Unable to verify transaction at this time.' });
@@ -688,17 +712,47 @@ const getBillingHistory = async (req, res) => {
 
 const handlePaystackWebhook = async (req, res) => {
   try {
-    const secret = getPaystackSecret();
-    const hash = crypto
-      .createHmac('sha512', secret)
-      .update(req.rawBody || JSON.stringify(req.body))
-      .digest('hex');
+    const signature = req.headers['x-paystack-signature'];
+    const rawBody = req.rawBody;
 
-    if (hash !== req.headers['x-paystack-signature']) {
+    if (!signature) {
+      return res.status(400).send('Missing signature header');
+    }
+
+    if (!rawBody || (Buffer.isBuffer(rawBody) && rawBody.length === 0)) {
+      return res.status(400).send('Missing raw request body for signature verification');
+    }
+
+    const paystackAdapter = paymentGatewayFactory.getAdapter('PAYSTACK');
+    if (!paystackAdapter.verifyWebhookSignature(rawBody, signature)) {
       return res.status(400).send('Invalid signature');
     }
 
     const event = req.body;
+    const eventType = event.event || 'charge.success';
+    const reference = event.data?.reference || `ref_${Date.now()}`;
+    const eventId = `paystack_${eventType}_${reference}`;
+
+    // Idempotency check using WebhookEvent
+    const existingEvt = await prisma.webhookEvent.findUnique({
+      where: { eventId },
+    });
+
+    if (existingEvt && existingEvt.status === 'PROCESSED') {
+      return res.status(200).send('Webhook Processed Successfully (Deduplicated)');
+    }
+
+    await prisma.webhookEvent.upsert({
+      where: { eventId },
+      update: { status: 'PROCESSING' },
+      create: {
+        provider: 'PAYSTACK',
+        eventId,
+        eventType,
+        status: 'PROCESSING',
+        payload: event,
+      },
+    }).catch(() => {});
 
     if (event.event === 'charge.success' && event.data) {
       const metadata = event.data.metadata || {};
@@ -766,8 +820,9 @@ const handlePaystackWebhook = async (req, res) => {
           },
         }).catch((err) => console.warn('Cohort webhook fulfillment warning:', err?.message));
       } else {
-        const result = await fulfillPaystackTransaction(event.data, {
+        const result = await fulfillSubscriptionPayment(event.data, {
           isHistoricalSync: false,
+          provider: 'PAYSTACK',
         });
 
         if (result.fulfilled) {
@@ -781,10 +836,150 @@ const handlePaystackWebhook = async (req, res) => {
       }
     }
 
+    await prisma.webhookEvent.update({
+      where: { eventId },
+      data: { status: 'PROCESSED', processedAt: new Date() },
+    }).catch(() => {});
+
     res.status(200).send('Webhook Processed Successfully');
   } catch (error) {
     console.error('Webhook processing failed:', error);
     res.status(500).send('Webhook Processing Error');
+  }
+};
+
+const handleStripeWebhook = async (req, res) => {
+  try {
+    const stripeAdapter = paymentGatewayFactory.getAdapter('STRIPE');
+
+    // Reject immediately if Stripe gateway is not configured
+    if (!stripeAdapter.isConfigured()) {
+      return res.status(503).json({ message: 'Stripe webhook receiver is unconfigured.' });
+    }
+
+    const signature = req.headers['stripe-signature'];
+    const rawBody = req.rawBody;
+
+    if (!signature) {
+      return res.status(400).send('Missing stripe-signature header');
+    }
+
+    if (!rawBody || (Buffer.isBuffer(rawBody) && rawBody.length === 0) || (typeof rawBody === 'string' && rawBody.trim() === '')) {
+      return res.status(400).send('Missing raw request body');
+    }
+
+    const rawBodyString = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : String(rawBody);
+    if (!stripeAdapter.verifyWebhookSignature(rawBodyString, signature)) {
+      return res.status(400).send('Invalid signature');
+    }
+
+    const event = req.body;
+    if (!event || typeof event !== 'object') {
+      return res.status(400).send('Malformed event payload');
+    }
+
+    const parsed = stripeAdapter.parseWebhookEvent(event);
+    if (!parsed || !parsed.eventId) {
+      return res.status(400).send('Invalid event structure');
+    }
+
+    const existingEvt = await prisma.webhookEvent.findUnique({
+      where: { eventId: parsed.eventId },
+    });
+
+    if (existingEvt && existingEvt.status === 'PROCESSED') {
+      return res.status(200).json({ received: true, deduplicated: true });
+    }
+
+    await prisma.webhookEvent.upsert({
+      where: { eventId: parsed.eventId },
+      update: { status: 'PROCESSING' },
+      create: {
+        provider: 'STRIPE',
+        eventId: parsed.eventId,
+        eventType: parsed.eventType,
+        status: 'PROCESSING',
+        payload: event,
+      },
+    }).catch(() => {});
+
+    if (parsed.eventType === 'checkout.session.completed' || parsed.eventType === 'invoice.payment_succeeded') {
+      await fulfillSubscriptionPayment(parsed.rawData, {
+        provider: 'STRIPE',
+        providerSubscriptionId: parsed.providerSubscriptionId,
+        providerCustomerId: parsed.providerCustomerId,
+      });
+    } else if (parsed.eventType === 'customer.subscription.deleted') {
+      const subId = parsed.providerSubscriptionId || parsed.reference;
+      if (subId) {
+        await prisma.subscription.updateMany({
+          where: { providerSubscriptionId: subId },
+          data: { status: 'CANCELLED', autoRenew: false },
+        });
+      }
+    }
+
+    await prisma.webhookEvent.update({
+      where: { eventId: parsed.eventId },
+      data: { status: 'PROCESSED', processedAt: new Date() },
+    }).catch(() => {});
+
+    res.status(200).json({ received: true });
+  } catch (error) {
+    logger.error('Stripe webhook processing error', { message: error.message });
+    res.status(500).send('Webhook processing error');
+  }
+};
+
+const getPricingCatalogueEndpoint = async (req, res) => {
+  try {
+    const resolution = await resolveRegionalPricing(req);
+
+    res.json({
+      success: true,
+      ...resolution,
+    });
+  } catch (error) {
+    console.error('getPricingCatalogue error:', error);
+    res.status(500).json({ message: 'Failed to retrieve pricing catalogue.' });
+  }
+};
+
+const setUserRegionEndpoint = async (req, res) => {
+  try {
+    const { country, currency } = req.body;
+    if (!country) {
+      return res.status(400).json({ message: 'Country code is required.' });
+    }
+
+    const cleanCountry = String(country).trim().toUpperCase();
+    const region = resolveRegion(cleanCountry);
+    const defaultCurrency = region === 'NG' ? 'NGN' : 'USD';
+    const cleanCurrency = currency ? String(currency).trim().toUpperCase() : defaultCurrency;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        billingCountry: cleanCountry,
+        billingCurrency: cleanCurrency,
+      },
+      select: {
+        id: true,
+        email: true,
+        billingCountry: true,
+        billingCurrency: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      user: updatedUser,
+      region,
+      message: `Billing region updated to ${cleanCountry} (${cleanCurrency}).`,
+    });
+  } catch (error) {
+    console.error('setUserRegion error:', error);
+    res.status(500).json({ message: 'Failed to update billing region.' });
   }
 };
 
@@ -901,7 +1096,7 @@ const activateMentorFreeTrial = async (req, res) => {
           subscriptionPlan: 'MENTOR',
           subscriptionStatus: 'ACTIVE',
           mentorTier: 'PRIVATE_COHORT',
-          mentorMaxStudents: 50,
+          mentorMaxStudents: 80,
           mentorMaxCohorts: 2,
           hasUsedMentorTrial: true,
           mentorTrialExpiresAt: expiresAt,
@@ -913,8 +1108,8 @@ const activateMentorFreeTrial = async (req, res) => {
         data: {
           type: 'SUBSCRIPTION',
           category: 'SUCCESS',
-          title: '🎉 14-Day Mentor Free Trial Activated',
-          message: `Welcome to the Mentor Workspace! You have 14 days of complimentary Private Cohort access (up to 50 students, 2 cohorts, and Strategy Risk Guards) ending on ${expiresAt.toLocaleDateString()}, plus a 12-hour grace buffer.`,
+          title: '🎉 14-Day Private Cohort Free Trial Activated',
+          message: `Welcome to the Mentor Workspace! You have 14 days of complimentary Private Cohort access (up to 80 students, 2 cohorts, and Strategy Risk Guards) ending on ${expiresAt.toLocaleDateString()}, plus a 12-hour grace buffer. Note: Free trials are exclusive to Private Cohort; Growth Community and Mega Academy require an active subscription.`,
           actionUrl: '/mentor-workspace',
           senderId: 'SYSTEM'
         }
@@ -1010,16 +1205,36 @@ const getMentorTrialStatus = async (req, res) => {
   }
 };
 
+const getSubscriptionEntitlements = async (req, res) => {
+  try {
+    const summary = await getQuotaSummary(req.user.id);
+    res.json({
+      success: true,
+      entitlements: summary,
+    });
+  } catch (error) {
+    console.error('getSubscriptionEntitlements error:', error);
+    res.status(500).json({ message: 'Failed to retrieve subscription entitlements.' });
+  }
+};
+
 module.exports = {
+  PLAN_RANK,
+  VALID_PLANS,
   initializeSubscription,
   verifySubscription,
   cancelSubscription,
   getBillingHistory,
   handlePaystackWebhook,
+  handleStripeWebhook,
+  getPricingCatalogueEndpoint,
+  setUserRegionEndpoint,
+  fulfillSubscriptionPayment,
   fulfillPaystackTransaction,
   syncPaystackTransactions,
   getPaystackSecret,
   resolveClientUrl,
   activateMentorFreeTrial,
   getMentorTrialStatus,
+  getSubscriptionEntitlements,
 };

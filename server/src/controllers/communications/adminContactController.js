@@ -1,4 +1,6 @@
 const contactService = require('../../services/communications/contactService');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 exports.getContactMessages = async (req, res) => {
   try {
@@ -118,5 +120,72 @@ exports.bulkAction = async (req, res) => {
   } catch (error) {
     console.error('Bulk processing error:', error);
     res.status(500).json({ error: 'Failed to process bulk action' });
+  }
+};
+
+exports.convertToTicket = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category, priority, subject, description } = req.body;
+    const adminId = req.user.id;
+
+    const contact = await prisma.contactMessage.findUnique({
+      where: { id },
+      include: { user: true }
+    });
+
+    if (!contact) {
+      return res.status(404).json({ error: 'Conversation thread not found' });
+    }
+
+    const ticketCount = await prisma.supportTicket.count();
+    const ticketNumber = `TK-${1000 + ticketCount + 1}`;
+
+    const finalCategory = category || contact.category || 'GENERAL';
+    const finalPriority = priority || contact.priority || 'NORMAL';
+    const finalSubject = subject || contact.subject;
+    const finalDescription = description || contact.message;
+
+    const ticket = await prisma.supportTicket.create({
+      data: {
+        userId: contact.userId || null,
+        ticketNumber,
+        subject: finalSubject,
+        description: finalDescription,
+        category: finalCategory,
+        priority: finalPriority,
+        status: 'OPEN',
+        assignedTo: adminId,
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true, subscriptionPlan: true } }
+      }
+    });
+
+    // Tag the contact message with the ticket number
+    const updatedTags = Array.from(new Set([...(contact.tags || []), ticketNumber]));
+    await prisma.contactMessage.update({
+      where: { id },
+      data: { tags: updatedTags }
+    });
+
+    // Add automated note in the conversation
+    await contactService.addReply(
+      id,
+      adminId,
+      `🎫 **Formal Support Ticket #${ticketNumber} Created**\nThis inquiry has been escalated to our official tracking queue.\n• **Category:** ${finalCategory}\n• **Priority:** ${finalPriority}\n• **Status:** Under Investigation`,
+      [],
+      false
+    );
+
+    res.status(201).json({
+      success: true,
+      message: `Successfully escalated to Support Ticket #${ticketNumber}`,
+      ticket,
+      ticketNumber
+    });
+  } catch (error) {
+    console.error('Error converting contact message to ticket:', error);
+    res.status(500).json({ error: 'Failed to convert conversation to ticket' });
   }
 };

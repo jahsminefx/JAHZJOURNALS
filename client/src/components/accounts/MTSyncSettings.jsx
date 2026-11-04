@@ -141,11 +141,11 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
               <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                 Method 1: 1-Click Cloud Sync (Investor Password)
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
-                  <Clock size={11} /> Coming Soon (Starter & Pro)
+                  <Clock size={11} /> Early Access • Jan 2027 (Pro Sync)
                 </span>
               </h4>
               <p className="text-xs text-muted">
-                100% read-only broker connection. Automated 24/7 cloud sync is coming soon exclusively for Starter & Pro accounts.
+                100% read-only broker connection. Automated 24/7 cloud sync launches in Early Access in January 2027 exclusively for Pro Sync accounts.
               </p>
             </div>
           </div>
@@ -157,7 +157,7 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
               className="shrink-0 font-bold bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25"
             >
               <Clock size={16} className="mr-1.5" />
-              Coming Soon
+              Early Access • Jan 2027
             </Button>
           )}
         </div>
@@ -217,7 +217,7 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
             <div className="flex items-center gap-2">
               <Clock size={16} className="text-amber-400 shrink-0" />
               <span>
-                1-Click Cloud Sync is <strong className="text-foreground">Coming Soon</strong> exclusively for Starter & Pro accounts. In the meantime, use <strong className="text-emerald-400">Method 2 (Desktop EA)</strong> below to sync your trades right now for free!
+                1-Click Cloud Sync launches in <strong className="text-foreground">Early Access in January 2027</strong> exclusively for Pro Sync accounts. In the meantime, use <strong className="text-emerald-400">Method 2 (Desktop EA)</strong> below to sync your trades right now for free!
               </span>
             </div>
             <button

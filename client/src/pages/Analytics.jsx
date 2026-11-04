@@ -15,6 +15,7 @@ import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useAuth } from '../context/useAuth';
 import { generatePerformancePdfReport } from '../utils/pdfReportService';
+import { hasFeature, hasAdvancedAnalytics } from '../utils/planHelpers';
 import { createCacheKey, getCachedData, setCachedData } from '../utils/apiCache';
 
 const groupOptions = [
@@ -58,9 +59,7 @@ const Analytics = () => {
   const { user } = useAuth();
 
   const handleExportPdf = async () => {
-    const plan = user?.subscriptionPlan || 'FREE';
-    const role = user?.role;
-    const isAllowed = ['PRO', 'MENTOR'].includes(plan) || ['SUPER_ADMIN', 'ADMIN', 'MENTOR'].includes(role);
+    const isAllowed = hasFeature(user, 'reportsAccess');
 
     if (!isAllowed) {
       toast.error('PDF Report Export is exclusive to PRO & MENTOR plans. Please upgrade your account.');
@@ -111,7 +110,10 @@ const Analytics = () => {
     Object.fromEntries(Object.entries(filters).filter(([, value]) => value)),
   ), [filters]);
 
+  const canViewAdvancedAnalytics = useMemo(() => hasAdvancedAnalytics(user), [user]);
+
   const fetchAnalytics = useCallback(async () => {
+    const isAdvancedAllowed = hasAdvancedAnalytics(user);
     const perfKey = createCacheKey(`/analytics/performance?${queryParams.toString()}`);
     const eqKey = createCacheKey(`/analytics/equity-curve?${filterQuery.toString()}`);
     const ddKey = createCacheKey(`/analytics/drawdown?${filterQuery.toString()}`);
@@ -119,14 +121,18 @@ const Analytics = () => {
 
     const cachedPerf = getCachedData(perfKey);
     const cachedEq = getCachedData(eqKey);
-    const cachedDd = getCachedData(ddKey);
+    const cachedDd = isAdvancedAllowed ? getCachedData(ddKey) : null;
     const cachedDir = getCachedData(dirKey);
 
-    if (cachedPerf && cachedEq && cachedDd && cachedDir) {
+    const hasAllCache = cachedPerf && cachedEq && cachedDir && (!isAdvancedAllowed || cachedDd);
+
+    if (hasAllCache) {
       setPerformance(cachedPerf.data);
       setEquityCurve(cachedEq.data.data || []);
       setEquityMetrics(cachedEq.data.metrics || null);
-      setDrawdown(cachedDd.data);
+      if (isAdvancedAllowed && cachedDd) {
+        setDrawdown(cachedDd.data);
+      }
       setDirectionPerformance(cachedDir.data.data || []);
       setLoading(false);
     } else {
@@ -134,23 +140,41 @@ const Analytics = () => {
     }
 
     try {
-      const [performanceResponse, equityResponse, drawdownResponse, directionResponse] = await Promise.all([
+      const promises = [
         api.get(`/analytics/performance?${queryParams.toString()}`),
         api.get(`/analytics/equity-curve?${filterQuery.toString()}`),
-        api.get(`/analytics/drawdown?${filterQuery.toString()}`),
         api.get(`/analytics/performance?groupBy=direction&${filterQuery.toString()}`),
-      ]);
+      ];
 
-      setCachedData(perfKey, performanceResponse.data, { staleTime: 60000 });
-      setCachedData(eqKey, equityResponse.data, { staleTime: 60000 });
-      setCachedData(ddKey, drawdownResponse.data, { staleTime: 60000 });
-      setCachedData(dirKey, directionResponse.data, { staleTime: 60000 });
+      if (isAdvancedAllowed) {
+        promises.push(api.get(`/analytics/drawdown?${filterQuery.toString()}`));
+      }
 
-      setPerformance(performanceResponse.data);
-      setEquityCurve(equityResponse.data.data || []);
-      setEquityMetrics(equityResponse.data.metrics || null);
-      setDrawdown(drawdownResponse.data);
-      setDirectionPerformance(directionResponse.data.data || []);
+      const results = await Promise.allSettled(promises);
+      const [perfRes, eqRes, dirRes, ddRes] = results;
+
+      if (perfRes.status === 'fulfilled') {
+        setCachedData(perfKey, perfRes.value.data, { staleTime: 60000 });
+        setPerformance(perfRes.value.data);
+      }
+
+      if (eqRes.status === 'fulfilled') {
+        setCachedData(eqKey, eqRes.value.data, { staleTime: 60000 });
+        setEquityCurve(eqRes.value.data.data || []);
+        setEquityMetrics(eqRes.value.data.metrics || null);
+      }
+
+      if (dirRes.status === 'fulfilled') {
+        setCachedData(dirKey, dirRes.value.data, { staleTime: 60000 });
+        setDirectionPerformance(dirRes.value.data.data || []);
+      }
+
+      if (isAdvancedAllowed && ddRes && ddRes.status === 'fulfilled' && ddRes.value?.data) {
+        setCachedData(ddKey, ddRes.value.data, { staleTime: 60000 });
+        setDrawdown(ddRes.value.data);
+      } else if (!isAdvancedAllowed) {
+        setDrawdown(null);
+      }
     } catch (error) {
       if (!cachedPerf) {
         toast.error(error.response?.data?.message || 'We had trouble pulling your analytics.');
@@ -158,7 +182,7 @@ const Analytics = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterQuery, queryParams]);
+  }, [filterQuery, queryParams, user]);
 
   useEffect(() => {
     const accountsKey = createCacheKey('/accounts');
@@ -866,16 +890,40 @@ const Analytics = () => {
             </div>
 
             {/* Drawdown Analysis Section */}
-            <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+            <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
               <div>
                 <div className="flex items-center justify-between mb-4 border-b border-border/70 pb-3">
                   <div className="flex items-center gap-2">
                     <ShieldAlert size={16} className="text-rose-400" />
                     <h3 className="text-base font-semibold tracking-tight text-foreground">Drawdown Analysis</h3>
                   </div>
+                  {!canViewAdvancedAnalytics && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                      <Sparkles size={10} /> Pro
+                    </span>
+                  )}
                 </div>
 
-                {!drawdownAnalysis ? (
+                {!canViewAdvancedAnalytics ? (
+                  <div className="py-8 px-4 text-center flex flex-col items-center justify-center space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-surface-muted/80 border border-border flex items-center justify-center text-muted">
+                      <ShieldAlert size={20} className="text-muted" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">Drawdown & Recovery Analytics</h4>
+                      <p className="text-[11px] text-muted max-w-xs mx-auto mt-1">
+                        Track your maximum drawdown depth, recovery velocity, and consecutive loss streaks to manage downside risk like an institutional trader.
+                      </p>
+                    </div>
+                    <a
+                      href="/pricing"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-xs"
+                    >
+                      <Sparkles size={12} />
+                      <span>Upgrade to Pro to Unlock</span>
+                    </a>
+                  </div>
+                ) : !drawdownAnalysis ? (
                   <div className="py-12 text-center text-xs text-muted">No drawdown analytics recorded.</div>
                 ) : (
                   <div className="space-y-4">
@@ -997,7 +1045,11 @@ const Analytics = () => {
               </div>
               <div className="text-right">
                 <span className="text-xs text-muted">Max Drawdown: </span>
-                <strong className="text-xs font-bold font-mono text-rose-400">${Number(drawdown?.maximumDrawdown || 0).toFixed(2)}</strong>
+                {canViewAdvancedAnalytics && drawdown ? (
+                  <strong className="text-xs font-bold font-mono text-rose-400">${Number(drawdown?.maximumDrawdown || 0).toFixed(2)}</strong>
+                ) : (
+                  <span className="text-[10px] font-sans font-bold px-1.5 py-0.5 rounded bg-surface-muted text-muted border border-border">Pro Feature</span>
+                )}
               </div>
             </div>
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
+const { requireProFeature } = require('../middleware/subscriptionGate');
 const upload = require('../middleware/uploadMiddleware');
 const { aiFeaturesLimiter } = require('../middleware/rateLimitMiddleware');
 const {
@@ -11,10 +12,13 @@ const {
   handleJournalAssist,
 } = require('../controllers/aiTradeCaptureController');
 
-router.post('/chat', protect, aiFeaturesLimiter, upload.array('images', 10), handleChatTradeCapture);
-router.post('/upload-screenshot', protect, aiFeaturesLimiter, upload.array('images', 10), handleScreenshotTradeCapture);
-router.post('/check-duplicate', protect, handleCheckDuplicate);
-router.post('/confirm-save', protect, handleConfirmSave);
-router.post('/journal-assist', protect, aiFeaturesLimiter, handleJournalAssist);
+// All AI trade capture endpoints require authentication and an active Pro or Mentor subscription
+router.use(protect, requireProFeature('ai_trade_capture'));
+
+router.post('/chat', aiFeaturesLimiter, upload.array('images', 10), handleChatTradeCapture);
+router.post('/upload-screenshot', aiFeaturesLimiter, upload.array('images', 10), handleScreenshotTradeCapture);
+router.post('/check-duplicate', handleCheckDuplicate);
+router.post('/confirm-save', handleConfirmSave);
+router.post('/journal-assist', aiFeaturesLimiter, handleJournalAssist);
 
 module.exports = router;

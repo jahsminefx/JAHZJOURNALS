@@ -7,7 +7,8 @@ const {
   getEffectivePlanKey, 
   buildLimitReachedPayload 
 } = require('../src/config/plans');
-const { requireMentorPlan } = require('../src/middleware/subscriptionGate');
+const { requireMentorPlan, checkMt5SyncAllowed } = require('../src/middleware/subscriptionGate');
+const { hasFeatureAccess, checkAiAllowance } = require('../src/services/entitlementService');
 
 // Helper to simulate express req, res, next
 const createMockHttp = ({ user = null, params = {}, body = {} } = {}) => {
@@ -40,17 +41,20 @@ const createMockHttp = ({ user = null, params = {}, body = {} } = {}) => {
 // ==========================================
 
 test('Mentor Workspace Tiers are defined with correct prices and student caps', () => {
-  assert.strictEqual(MENTOR_TIERS.PRIVATE_COHORT.priceNgn, 8000);
-  assert.strictEqual(MENTOR_TIERS.PRIVATE_COHORT.maxStudents, 50);
+  assert.strictEqual(MENTOR_TIERS.PRIVATE_COHORT.priceNgn, 14500);
+  assert.strictEqual(MENTOR_TIERS.PRIVATE_COHORT.maxStudents, 80);
   assert.strictEqual(MENTOR_TIERS.PRIVATE_COHORT.maxCohorts, 2);
+  assert.strictEqual(MENTOR_TIERS.PRIVATE_COHORT.mt5Sync, false);
 
   assert.strictEqual(MENTOR_TIERS.GROWTH.priceNgn, 25000);
-  assert.strictEqual(MENTOR_TIERS.GROWTH.maxStudents, 150);
+  assert.strictEqual(MENTOR_TIERS.GROWTH.maxStudents, 200);
   assert.strictEqual(MENTOR_TIERS.GROWTH.maxCohorts, 5);
+  assert.strictEqual(MENTOR_TIERS.GROWTH.mt5Sync, false);
 
-  assert.strictEqual(MENTOR_TIERS.MEGA.priceNgn, 65000);
+  assert.strictEqual(MENTOR_TIERS.MEGA.priceNgn, 85000);
   assert.strictEqual(MENTOR_TIERS.MEGA.maxStudents, 1000);
   assert.strictEqual(MENTOR_TIERS.MEGA.maxCohorts, Infinity);
+  assert.strictEqual(MENTOR_TIERS.MEGA.mt5Sync, true);
 
   // Fallback defaults to PRIVATE_COHORT
   assert.strictEqual(getMentorTierConfig('UNKNOWN').key, 'PRIVATE_COHORT');
@@ -270,4 +274,42 @@ test('Cohort Fee: 1.5% platform commission and mentor payout calculated accurate
   assert.strictEqual(platformFeeAmount, 750); // ₦750
   assert.strictEqual(mentorPayoutAmount, 49250); // ₦49,250
   assert.strictEqual(platformFeeAmount + mentorPayoutAmount, cohortPrice);
+});
+
+// ==========================================
+// 7. MENTOR TIER PRIVILEGES: MT4/MT5 SYNC & AI TRADE LOGGING
+// ==========================================
+
+test('MT4/MT5 Cloud Sync is allowed for Mega Academy mentors and blocked for Private Cohort and Growth', async () => {
+  // Mega Academy mentor: allowed
+  const megaMentor = createMockHttp({
+    user: { id: 'm-mega', role: 'MENTOR', subscriptionPlan: 'MENTOR', subscriptionStatus: 'ACTIVE', mentorTier: 'MEGA' }
+  });
+  await checkMt5SyncAllowed(megaMentor.req, megaMentor.res, megaMentor.next);
+  assert.strictEqual(megaMentor.wasNextCalled(), true);
+
+  // Private Cohort mentor: blocked (403)
+  const cohortMentor = createMockHttp({
+    user: { id: 'm-cohort', role: 'MENTOR', subscriptionPlan: 'MENTOR', subscriptionStatus: 'ACTIVE', mentorTier: 'PRIVATE_COHORT' }
+  });
+  await checkMt5SyncAllowed(cohortMentor.req, cohortMentor.res, cohortMentor.next);
+  assert.strictEqual(cohortMentor.wasNextCalled(), false);
+  assert.strictEqual(cohortMentor.getStatus(), 403);
+  assert.strictEqual(cohortMentor.getData().error, 'PLAN_LIMIT_REACHED');
+  assert.strictEqual(cohortMentor.getData().requiredPlan, 'MEGA');
+  assert.match(cohortMentor.getData().message, /Mega Academy/i);
+
+  // Growth Community mentor: blocked (403)
+  const growthMentor = createMockHttp({
+    user: { id: 'm-growth', role: 'MENTOR', subscriptionPlan: 'MENTOR', subscriptionStatus: 'ACTIVE', mentorTier: 'GROWTH' }
+  });
+  await checkMt5SyncAllowed(growthMentor.req, growthMentor.res, growthMentor.next);
+  assert.strictEqual(growthMentor.wasNextCalled(), false);
+  assert.strictEqual(growthMentor.getStatus(), 403);
+  assert.strictEqual(growthMentor.getData().requiredPlan, 'MEGA');
+
+  // hasFeatureAccess check
+  assert.strictEqual(hasFeatureAccess(megaMentor.req.user, 'mt5Sync'), true);
+  assert.strictEqual(hasFeatureAccess(cohortMentor.req.user, 'mt5Sync'), false);
+  assert.strictEqual(hasFeatureAccess(growthMentor.req.user, 'mt5Sync'), false);
 });

@@ -1,6 +1,16 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const {
+  canCreateTrades,
+  canAttachScreenshot,
+  checkAiAllowance,
+  hasFeatureAccess,
+} = require('../services/entitlementService');
+const {
+  getEffectivePlanKey,
+  buildLimitReachedPayload,
+} = require('../config/plans');
+const {
   parseTradeFromText,
   parseTradeFromImage,
   parseBatchImages,
@@ -79,6 +89,28 @@ const handleChatTradeCapture = async (req, res) => {
       return res.status(400).json({ message: 'Please provide trade details in text or attach at least one screenshot.' });
     }
 
+    // Check Pro / Mentor tier access for AI trade capture
+    const effectiveUser = (req.user?.role && req.user?.subscriptionStatus !== undefined)
+      ? req.user
+      : (req.user?.id ? await prisma.user.findUnique({ where: { id: req.user.id } }) : req.user);
+    const userPlanKey = getEffectivePlanKey(effectiveUser);
+    const proEquivalentPlans = new Set(['PRO', 'PRO_SYNC', 'MENTOR']);
+    const isProOrMentor = proEquivalentPlans.has(userPlanKey) || effectiveUser?.role === 'ADMIN' || effectiveUser?.role === 'SUPER_ADMIN';
+    if (!isProOrMentor) {
+      return res.status(403).json(buildLimitReachedPayload({
+        feature: 'ai_trade_capture',
+        current: 0,
+        limit: 0,
+        userPlan: userPlanKey,
+        requiredPlan: 'PRO',
+      }));
+    }
+
+    const limitCheck = await checkAiAllowance(effectiveUser, 'AI_TRADE_CAPTURE');
+    if (!limitCheck.allowed) {
+      return res.status(403).json(limitCheck.payload);
+    }
+
     const userId = req.user.id;
     const baseUrl = getRequestBaseUrl(req);
 
@@ -103,7 +135,7 @@ const handleChatTradeCapture = async (req, res) => {
       }),
       prisma.userSettings.findUnique({
         where: { userId },
-        select: { breakEvenThresholdAmount: true },
+        select: { breakEvenThresholdAmount: true, allowScreenshotAnalysis: true, includeScreenshots: true },
       }),
       prisma.trade.findMany({
         where: { tradingAccount: { userId } },
@@ -113,6 +145,18 @@ const handleChatTradeCapture = async (req, res) => {
     ]);
 
     const userThresholdAmount = userSettings?.breakEvenThresholdAmount !== undefined ? userSettings.breakEvenThresholdAmount : null;
+
+    if (hasFiles) {
+      const isScreenshotAllowed = userSettings
+        ? (userSettings.allowScreenshotAnalysis === true || userSettings.includeScreenshots === true)
+        : true;
+      if (!isScreenshotAllowed) {
+        return res.status(403).json({
+          error: 'SCREENSHOT_ANALYSIS_DISABLED',
+          message: 'Screenshot analysis is disabled in your privacy settings. Enable "Include screenshots" or "Allow screenshot analysis" in Settings to use this feature.',
+        });
+      }
+    }
 
     // CASE 1: Screenshot(s) attached (single or multiple)
     if (hasFiles) {
@@ -335,6 +379,50 @@ const handleConfirmSave = async (req, res) => {
       return res.status(400).json({ message: 'No trades supplied to save.' });
     }
 
+    // Check Pro / Mentor tier access for confirming and saving AI captured trades
+    const saveEffectiveUser = (req.user?.role && req.user?.subscriptionStatus !== undefined)
+      ? req.user
+      : (req.user?.id ? await prisma.user.findUnique({ where: { id: req.user.id } }) : req.user);
+    if (saveEffectiveUser && saveEffectiveUser.role) {
+      const saveUserPlanKey = getEffectivePlanKey(saveEffectiveUser);
+      const saveProEquivalentPlans = new Set(['PRO', 'PRO_SYNC', 'MENTOR']);
+      const isSaveProOrMentor = saveProEquivalentPlans.has(saveUserPlanKey) || saveEffectiveUser.role === 'ADMIN' || saveEffectiveUser.role === 'SUPER_ADMIN';
+      if (!isSaveProOrMentor) {
+        if (idempotencyKey) await releaseIdempotencyKey(idempotencyKey, userId);
+        return res.status(403).json(buildLimitReachedPayload({
+          feature: 'ai_trade_capture',
+          current: 0,
+          limit: 0,
+          userPlan: saveUserPlanKey,
+          requiredPlan: 'PRO',
+        }));
+      }
+    }
+
+    // Check monthly AI trade capture quota
+    const aiQuotaCheck = await checkAiAllowance(saveEffectiveUser || req.user, 'AI_TRADE_CAPTURE');
+    if (!aiQuotaCheck.allowed) {
+      if (idempotencyKey) await releaseIdempotencyKey(idempotencyKey, userId);
+      return res.status(403).json(aiQuotaCheck.payload);
+    }
+    if (aiQuotaCheck.limit !== Infinity && (aiQuotaCheck.current + tradesToSave.length > aiQuotaCheck.limit)) {
+      if (idempotencyKey) await releaseIdempotencyKey(idempotencyKey, userId);
+      return res.status(403).json(buildLimitReachedPayload({
+        feature: 'ai_trade_capture',
+        current: aiQuotaCheck.current,
+        limit: aiQuotaCheck.limit,
+        userPlan: aiQuotaCheck.plan,
+        requiredPlan: 'PRO_SYNC',
+        customMessage: `You have ${Math.max(0, aiQuotaCheck.limit - aiQuotaCheck.current)} AI trade capture${aiQuotaCheck.limit - aiQuotaCheck.current === 1 ? '' : 's'} remaining this month on your ${aiQuotaCheck.plan} plan, but this operation saves ${tradesToSave.length}. Upgrade to Pro Sync for unlimited AI trade logging.`,
+      }));
+    }
+
+    const quotaCheck = await canCreateTrades(req.user, tradesToSave.length);
+    if (!quotaCheck.allowed) {
+      if (idempotencyKey) await releaseIdempotencyKey(idempotencyKey, userId);
+      return res.status(403).json(quotaCheck.payload);
+    }
+
     // Fetch user settings for custom Break-Even threshold
     const userSettings = await prisma.userSettings.findUnique({
       where: { userId },
@@ -511,24 +599,27 @@ const handleConfirmSave = async (req, res) => {
             },
           });
 
-          // Link screenshot if provided
+          // Link screenshot if provided and allowed by plan
           if (item.imageUrl) {
-            const screenshotType = item.screenshotType === 'CHART_SETUP'
-              ? 'MARKED_CHART'
-              : (isClosed ? 'EXIT' : 'ENTRY');
+            const canAttach = await canAttachScreenshot(tradeRecord.id, req.user, 1, tx);
+            if (canAttach.allowed) {
+              const screenshotType = item.screenshotType === 'CHART_SETUP'
+                ? 'MARKED_CHART'
+                : (isClosed ? 'EXIT' : 'ENTRY');
 
-            await tx.tradeScreenshot.create({
-              data: {
-                tradeId: tradeRecord.id,
-                imageUrl: item.imageUrl,
-                screenshotType,
-                note: 'Attached via JAHZ AI Trade Capture',
-              },
-            });
+              await tx.tradeScreenshot.create({
+                data: {
+                  tradeId: tradeRecord.id,
+                  imageUrl: item.imageUrl,
+                  screenshotType,
+                  note: 'Attached via JAHZ AI Trade Capture',
+                },
+              });
+            }
           }
 
-          // Link emotion logs if provided
-          if (Array.isArray(item.emotions) && item.emotions.length > 0) {
+          // Link emotion logs if provided and allowed by plan
+          if (hasFeatureAccess(req.user, 'emotionTracking') && Array.isArray(item.emotions) && item.emotions.length > 0) {
             for (const em of item.emotions) {
               if (typeof em === 'string' && em.trim()) {
                 await tx.emotionLog.create({
@@ -601,6 +692,11 @@ const handleJournalAssist = async (req, res) => {
     const { tradeId, userNotes = '' } = req.body;
     if (!tradeId) {
       return res.status(400).json({ message: 'tradeId is required.' });
+    }
+
+    const limitCheck = await checkAiAllowance(req.user, 'JOURNAL_ASSISTANT');
+    if (!limitCheck.allowed) {
+      return res.status(403).json(limitCheck.payload);
     }
 
     const trade = await prisma.trade.findFirst({

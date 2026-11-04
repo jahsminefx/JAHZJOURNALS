@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/useAuth';
+import { canLogTradesWithAi } from '../../utils/planHelpers';
 import {
   X,
   Sparkles,
@@ -115,6 +117,8 @@ const AiTradeCaptureModal = ({
   initialAccountId = '',
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAllowed = canLogTradesWithAi(user);
 
   // Accounts & Strategies
   const [accounts, setAccounts] = useState([]);
@@ -978,6 +982,82 @@ const AiTradeCaptureModal = ({
   };
 
   if (!isOpen) return null;
+
+  if (!isAllowed) {
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-200"
+      >
+        <div className="flex flex-col w-full max-w-lg rounded-3xl bg-surface border border-border shadow-2xl overflow-hidden relative p-6 sm:p-8 text-center">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-muted hover:text-foreground rounded-xl hover:bg-surface-muted transition"
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+
+          <div className="mx-auto w-16 h-16 rounded-3xl bg-gradient-to-tr from-amber-500/20 via-indigo-500/20 to-purple-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-5 shadow-lg shadow-amber-500/10">
+            <Sparkles size={32} />
+          </div>
+
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/20 mx-auto mb-3">
+            👑 Pro & Mentor Feature
+          </span>
+
+          <h3 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+            Log Trades with JAHZ AI
+          </h3>
+
+          <p className="text-sm text-muted mt-2 leading-relaxed">
+            Automatic AI trade capture from chat and MT4/MT5 screenshots is reserved for <strong>Pro</strong> and <strong>Mentor</strong> accounts.
+          </p>
+
+          <div className="mt-6 space-y-2.5 text-left bg-surface-muted/60 p-4 rounded-2xl border border-border/80">
+            <div className="flex items-center gap-2.5 text-xs text-foreground font-semibold">
+              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+              <span>Natural language chat extraction (type in plain English)</span>
+            </div>
+            <div className="flex items-center gap-2.5 text-xs text-foreground font-semibold">
+              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+              <span>Multi-screenshot MT4, MT5 & TradingView OCR parsing</span>
+            </div>
+            <div className="flex items-center gap-2.5 text-xs text-foreground font-semibold">
+              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+              <span>Automated R:R, pips, and market session calculations</span>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col sm:flex-row items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                navigate('/pricing');
+              }}
+              className="w-full sm:flex-1 py-3 px-4 bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black rounded-xl text-sm shadow-md shadow-emerald-500/20 transition flex items-center justify-center gap-2"
+            >
+              <span>Upgrade to Pro</span>
+              <ArrowRight size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                navigate('/trades/new');
+              }}
+              className="w-full sm:w-auto py-3 px-4 bg-surface-muted hover:bg-surface border border-border text-foreground font-bold rounded-xl text-sm transition"
+            >
+              Log Manually
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

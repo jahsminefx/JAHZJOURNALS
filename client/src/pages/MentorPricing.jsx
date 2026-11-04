@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   Flame,
   Check,
-  X
+  X,
+  Minus
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -25,6 +26,7 @@ import FAQItem from '../components/FAQItem';
 import CTASection from '../components/CTASection';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import Button from '../components/Button';
 import { useAuth } from '../context/useAuth';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -32,30 +34,30 @@ import toast from 'react-hot-toast';
 const PRESET_TIERS = [
   {
     name: 'Private Cohort',
-    studentRange: '25 – 50 Students',
-    studentsDefault: 50,
-    priceNgn: 8000,
+    studentRange: 'Up to 80 Students',
+    studentsDefault: 80,
+    priceNgn: 14500,
     tagline: 'Ideal for private masterminds & small coaching cohorts',
     icon: GraduationCap,
     features: [
-      '25 to 50 active student trading journals',
+      'Up to 80 active student trading journals',
       '2 private trading cohorts with invite links',
       'Black-and-white strategy risk violation guards (e.g. 1% max risk)',
       'Direct trade comments & feedback grading',
       'Telegram/WhatsApp link attachment for welcome receipt',
-      'Full Pro trading features for the mentor',
+      'Full Pro trading features for the mentor (300 AI captures/mo)',
     ],
   },
   {
     name: 'Growth Community',
-    studentRange: '100 – 150 Students',
-    studentsDefault: 150,
+    studentRange: 'Up to 200 Students',
+    studentsDefault: 200,
     priceNgn: 25000,
     tagline: 'Most popular for active trading coaches & communities',
     icon: Award,
     highlighted: true,
     features: [
-      '100 to 150 active student trading journals',
+      'Up to 200 active student trading journals',
       '5 private trading cohorts',
       'Everything in Private Cohort',
       'Automated cohort risk adherence & violation reports',
@@ -66,18 +68,204 @@ const PRESET_TIERS = [
   },
   {
     name: 'Mega Academy',
-    studentRange: '500 – 1,000+ Students',
+    studentRange: 'Up to 1,000 Students',
     studentsDefault: 1000,
-    priceNgn: 65000,
+    priceNgn: 85000,
     tagline: 'Flat rate for large Telegram communities & institutional academies',
     icon: Building,
+    isWaitlist: true,
+    badgeText: 'Early Access • Jan 2027',
     features: [
-      '500 to 1,000+ active student trading journals (Capped flat rate)',
+      'Up to 1,000 active student trading journals (Flat rate)',
       'Unlimited trading cohorts',
+      'MetaTrader 4/5 Cloud Sync included for coach',
+      'Unlimited JAHZ AI Trade Captures',
       'Everything in Growth Community',
       'Bulk student invite links & CSV data exports',
       'Aggregated academy risk & performance audit reports',
       'Priority mentor onboarding & dedicated VIP support',
+    ],
+  },
+];
+
+const mentorFeatureMatrixCategories = [
+  {
+    category: 'Student Capacity & Cohorts',
+    rows: [
+      {
+        feature: 'Monthly Student Journal Capacity',
+        subtext: 'Active student trading journals included in your plan',
+        private: 'Up to 80 students',
+        growth: 'Up to 200 students',
+        mega: 'Up to 1,000 students (Flat Cap)',
+      },
+      {
+        feature: 'Private Trading Cohorts',
+        subtext: 'Isolated groups with separate invite links and leaderboards',
+        private: '2 cohorts',
+        growth: '5 cohorts',
+        mega: 'Unlimited cohorts',
+      },
+      {
+        feature: 'Student Journal Cost',
+        subtext: 'Whether your students need their own paid subscription',
+        private: 'Free for students',
+        growth: 'Free for students',
+        mega: 'Free for students',
+      },
+      {
+        feature: 'Invite Links & Direct Join Codes',
+        subtext: 'Shareable links for seamless cohort onboarding',
+        private: 'Included',
+        growth: 'Included',
+        mega: 'Bulk links & vanity URLs',
+      },
+      {
+        feature: '14-Day Free Trial Eligibility',
+        subtext: 'Try with up to 80 students and 2 cohorts with no credit card required',
+        private: 'Included (14 Days Free)',
+        growth: 'Not included (Direct checkout)',
+        mega: 'Not included (Direct checkout)',
+      },
+    ],
+  },
+  {
+    category: 'Strategy Risk Guard & Discipline Rules',
+    rows: [
+      {
+        feature: 'Strategy Risk Guard Rules',
+        subtext: 'Hard constraints like max 1.0% risk per trade or max daily drawdown',
+        private: 'Included',
+        growth: 'Included',
+        mega: 'Included',
+      },
+      {
+        feature: 'Automatic Violation Flagging',
+        subtext: 'Instantly marks over-leveraged trades in red with exact breach amounts',
+        private: 'Included',
+        growth: 'Included',
+        mega: 'Included',
+      },
+      {
+        feature: 'Automated Cohort Adherence Reports',
+        subtext: 'Weekly aggregated summaries of student rule compliance',
+        private: 'Not included',
+        growth: 'Included (Weekly)',
+        mega: 'Included (Real-time & Audit)',
+      },
+      {
+        feature: 'Over-Leverage Risk Scorecard',
+        subtext: 'Student-by-student discipline and risk ranking metrics',
+        private: 'Basic scorecard',
+        growth: 'Advanced scorecard',
+        mega: 'Academy-wide deep intelligence',
+      },
+    ],
+  },
+  {
+    category: 'Trade Reviews, Grading & Feedback',
+    rows: [
+      {
+        feature: 'Direct Screenshot Comments',
+        subtext: 'Timestamped annotations directly on student chart screenshots',
+        private: 'Included',
+        growth: 'Included',
+        mega: 'Included',
+      },
+      {
+        feature: 'Trade Grading & Execution Badges',
+        subtext: 'Assign letter grades (A+, B, C) and execution feedback tags',
+        private: 'Included',
+        growth: 'Included',
+        mega: 'Included',
+      },
+      {
+        feature: 'AI Student Performance Summaries',
+        subtext: 'Automated AI synthesis of cohort-wide strengths and weak setups',
+        private: 'Not included',
+        growth: 'Included (Batch summaries)',
+        mega: 'Unlimited Academy AI Insights',
+      },
+      {
+        feature: 'Homework & Review Assignments',
+        subtext: 'Assign specific chart exercises and review student submissions',
+        private: 'Not included',
+        growth: 'Included',
+        mega: 'Included',
+      },
+    ],
+  },
+  {
+    category: 'Monetization & Academy Branding',
+    rows: [
+      {
+        feature: 'Paid Cohort Student Checkouts',
+        subtext: 'Charge students to join your cohort via Paystack integration',
+        private: 'Not included',
+        growth: 'Included (1.5% commission)',
+        mega: 'Included (1.5% commission)',
+      },
+      {
+        feature: 'Direct Nigerian Bank Payouts',
+        subtext: 'Automated settlement to your bank account for student fees',
+        private: 'Not included',
+        growth: 'Included (Automated)',
+        mega: 'Included (Priority Settlement)',
+      },
+      {
+        feature: 'Telegram & WhatsApp Community Welcome Link',
+        subtext: 'Auto-attach your private channel link on checkout receipts',
+        private: 'Included',
+        growth: 'Included',
+        mega: 'Included',
+      },
+      {
+        feature: 'Custom Academy Branding & Badges',
+        subtext: 'Display your academy logo and mentor badges in student journals',
+        private: 'Basic branding',
+        growth: 'Full Academy Branding',
+        mega: 'Full White-label Academy Hub',
+      },
+      {
+        feature: 'Student Data & Performance CSV Export',
+        subtext: 'Bulk export cohort trade logs, pips, and R-multiples',
+        private: 'Not included',
+        growth: 'Included',
+        mega: 'Direct CSV, PDF & Bulk Data Export',
+      },
+    ],
+  },
+  {
+    category: 'Mentor Personal Trading Privileges',
+    rows: [
+      {
+        feature: 'Full Pro Trader Journal for Mentor',
+        subtext: 'All individual Pro features included for the coach',
+        private: 'Included (Unlimited Trades)',
+        growth: 'Included (Unlimited Trades)',
+        mega: 'Included (Unlimited Trades)',
+      },
+      {
+        feature: 'Log Trades with JAHZ AI',
+        subtext: 'Capture trades via natural language chat and OCR screenshots',
+        private: '300 trades / mo',
+        growth: '300 trades / mo',
+        mega: 'Unlimited',
+      },
+      {
+        feature: 'MetaTrader (MT4/MT5) Cloud Sync',
+        subtext: 'Automated 24/7 broker synchronization for the mentor account',
+        private: 'Not included',
+        growth: 'Not included',
+        mega: 'Included (Automated 24/7 Sync)',
+      },
+      {
+        feature: 'Onboarding & VIP Support',
+        subtext: 'Assistance setting up cohorts and importing student callsets',
+        private: 'Standard Support',
+        growth: 'Priority Coach Support',
+        mega: 'Dedicated VIP Account Manager',
+      },
     ],
   },
 ];
@@ -103,6 +291,10 @@ const mentorFaqs = [
     'Can I upgrade my student capacity as my channel grows?',
     'Yes, absolutely. You can upgrade or adjust your student tier at any time directly from this page or your billing settings. Your capacity updates instantly.',
   ],
+  [
+    'Can I try Growth Community or Mega Academy on a free trial?',
+    'No. The complimentary 14-day free trial is strictly exclusive to the Private Cohort plan (up to 80 students and 2 cohorts). Growth Community and Mega Academy require an active subscription upon enrollment. You can test the mentor workspace for 14 days on Private Cohort and upgrade to Growth or Mega at any time.',
+  ],
 ];
 
 const MentorPricing = () => {
@@ -110,8 +302,55 @@ const MentorPricing = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [studentCount, setStudentCount] = useState(50);
+  const [studentCount, setStudentCount] = useState(80);
+  const [selectedRegion, setSelectedRegion] = useState(() => {
+    if (user?.billingCountry) {
+      return ['NG', 'GH', 'KE', 'ZA'].includes(user.billingCountry) ? 'NG' : 'GLOBAL';
+    }
+    return 'NG';
+  });
   const [loadingCheckout, setLoadingCheckout] = useState(false);
+
+  const [waitlistCounts, setWaitlistCounts] = useState({
+    MENTOR_MEGA: { count: 43 }
+  });
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
+
+  useEffect(() => {
+    api.get('/waitlist/counts')
+      .then(res => { if (res.data) setWaitlistCounts(res.data); })
+      .catch(() => {});
+  }, []);
+
+  const handleJoinWaitlist = async (tierKey = 'MENTOR_MEGA') => {
+    let emailToUse = user?.email;
+    if (!emailToUse) {
+      const input = window.prompt('Enter your email to reserve your spot on the Mega Academy early-access waitlist:');
+      if (!input || !input.includes('@')) return;
+      emailToUse = input.trim();
+    }
+
+    try {
+      setJoiningWaitlist(true);
+      const res = await api.post('/waitlist/join', {
+        tier: tierKey,
+        email: emailToUse,
+        name: user?.name || 'Academy Leader'
+      });
+      toast.success(res.data.message || "🎉 You're on the early-access list!", { duration: 6000 });
+      if (res.data.count) {
+        setWaitlistCounts(prev => ({
+          ...prev,
+          [tierKey]: { ...(prev[tierKey] || {}), count: res.data.count }
+        }));
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to join waitlist');
+    } finally {
+      setJoiningWaitlist(false);
+    }
+  };
+
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [activePublicPromo, setActivePublicPromo] = useState(null);
 
@@ -123,6 +362,14 @@ const MentorPricing = () => {
     if (!isNaN(studentsParam) && studentsParam >= 25) {
       setStudentCount(studentsParam);
     }
+
+    api.get('/subscriptions/pricing-catalogue')
+      .then(({ data }) => {
+        if (data && data.region && !user?.billingCountry) {
+          setSelectedRegion(data.region);
+        }
+      })
+      .catch(() => {});
 
     api.get('/promotions/public-active')
       .then(({ data }) => {
@@ -155,23 +402,24 @@ const MentorPricing = () => {
   }, [location.search]);
 
   // Scaled bracket pricing:
-  // 25 - 50 students: ₦8,000/mo
-  // 51 - 150 students: ₦25,000/mo
-  // 151 - 1,000+ students: Flat ₦65,000/mo
+  // Local (NGN): Up to 80: ₦14,500 | 81-200: ₦25,000 | 201+: ₦85,000
+  // Global (USD): Up to 80: $59 | 81-200: $99 | 201+: $249
   const calculateMentorPrice = (count) => {
     const safeCount = Math.max(25, count || 25);
-    let rawTotal = 8000;
-    let tierName = 'Private Cohort (25 – 50 Students)';
+    const isGlobal = selectedRegion === 'GLOBAL';
+    const symbol = isGlobal ? '$' : '₦';
+    let rawTotal = isGlobal ? 59 : 14500;
+    let tierName = 'Private Cohort (Up to 80 Students)';
 
-    if (safeCount <= 50) {
-      rawTotal = 8000;
-      tierName = 'Private Cohort (25 – 50 Students)';
-    } else if (safeCount <= 150) {
-      rawTotal = 25000;
-      tierName = 'Growth Community (100 – 150 Students)';
+    if (safeCount <= 80) {
+      rawTotal = isGlobal ? 59 : 14500;
+      tierName = 'Private Cohort (Up to 80 Students)';
+    } else if (safeCount <= 200) {
+      rawTotal = isGlobal ? 99 : 25000;
+      tierName = 'Growth Community (Up to 200 Students)';
     } else {
-      rawTotal = 65000;
-      tierName = 'Mega Academy (500 – 1,000+ Students Flat Cap)';
+      rawTotal = isGlobal ? 249 : 85000;
+      tierName = 'Mega Academy (Up to 1,000 Students Flat Cap)';
     }
 
     let finalPrice = rawTotal;
@@ -187,6 +435,7 @@ const MentorPricing = () => {
       finalPrice,
       originalPrice,
       tierName,
+      symbol,
       perStudentEffective: Math.round(finalPrice / safeCount),
     };
   };
@@ -194,6 +443,11 @@ const MentorPricing = () => {
   const currentPricing = calculateMentorPrice(studentCount);
 
   const handleCheckout = async (targetCount) => {
+    if (selectedRegion === 'GLOBAL') {
+      toast.error('International USD billing is currently in preparation. Please switch to Nigeria (NGN) to subscribe via Paystack.');
+      return;
+    }
+
     const countToUse = targetCount || studentCount;
     const safeCount = Math.max(25, countToUse);
 
@@ -210,6 +464,7 @@ const MentorPricing = () => {
       const payload = {
         plan: 'MENTOR',
         studentCount: safeCount,
+        country: selectedRegion === 'NG' ? 'NG' : 'US',
       };
       if (appliedPromo?.code) {
         payload.promoCode = appliedPromo.code;
@@ -274,7 +529,7 @@ const MentorPricing = () => {
           heroPosition={{ mobile: '72% top', tablet: '64% top', desktop: 'center top' }}
         />
 
-        {/* 14-Day Mentor Free Trial Banner for unregistered or eligible non-mentor users */}
+        {/* 14-Day Private Cohort Free Trial Banner for unregistered or eligible non-mentor users */}
         {(!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) && (
           <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-950/40 via-surface to-slate-950 p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-5 shadow-xl">
             <div className="flex items-center gap-4">
@@ -282,16 +537,19 @@ const MentorPricing = () => {
                 ⏳
               </span>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-400">
                     Two Weeks Complimentary + 12h Grace
                   </span>
+                  <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                    Private Cohort Exclusive
+                  </span>
                 </div>
                 <h3 className="text-base sm:text-lg font-black text-foreground mt-1">
-                  Try the Mentor Workspace Free for 14 Days
+                  Try the Private Cohort Free for 14 Days
                 </h3>
                 <p className="text-xs text-muted max-w-xl mt-0.5 leading-relaxed">
-                  Already registered as a trader? You can activate a 14-day full Private Cohort trial (manage up to 50 students, create 2 cohorts, and test Strategy Risk Guards) with a 12-hour grace buffer. No credit card required. Strictly one trial per user.
+                  Already registered as a trader? You can activate a 14-day complimentary trial of the Private Cohort plan (manage up to 80 students, create 2 cohorts, and test Strategy Risk Guards) with a 12-hour grace buffer. Free trials are strictly exclusive to the Private Cohort tier; Growth Community and Mega Academy require a direct subscription. No credit card required. Strictly one trial per user.
                 </p>
               </div>
             </div>
@@ -304,7 +562,7 @@ const MentorPricing = () => {
                 <span>Activating Trial...</span>
               ) : (
                 <>
-                  <span>{user ? 'Activate 14-Day Free Trial' : 'Sign Up for 14-Day Trial'}</span>
+                  <span>{user ? 'Activate 14-Day Private Cohort Trial' : 'Sign Up for 14-Day Trial'}</span>
                   <ArrowRight size={15} />
                 </>
               )}
@@ -363,7 +621,7 @@ const MentorPricing = () => {
               </div>
             </div>
             <button
-              onClick={() => handleCheckout(50)}
+              onClick={() => handleCheckout(80)}
               className="shrink-0 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-5 text-xs transition-all shadow-md cursor-pointer"
             >
               Upgrade Now
@@ -428,6 +686,15 @@ const MentorPricing = () => {
             <p className="text-xs sm:text-sm text-muted max-w-2xl mx-auto">
               Fair, bracketed pricing designed for African forex communities. Includes unlimited trade review comments, strategy risk guards, and subaccount payouts.
             </p>
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                href="#compare-mentor-plans"
+                className="text-xs px-5 py-2 font-bold border-border hover:bg-surface-muted text-muted hover:text-foreground cursor-pointer"
+              >
+                Compare Plan Features
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
@@ -454,6 +721,11 @@ const MentorPricing = () => {
                       Most Popular
                     </div>
                   )}
+                  {tier.isWaitlist && (
+                    <div className="absolute -top-3.5 right-6 rounded-full bg-sky-400 px-3 py-1 text-xs font-black text-slate-950 shadow-md">
+                      {tier.badgeText || 'Early Access • Jan 2027'}
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-muted border border-border text-emerald-400">
@@ -464,6 +736,19 @@ const MentorPricing = () => {
                       <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wide">
                         {tier.studentRange}
                       </p>
+                      {tier.name === 'Private Cohort' ? (
+                        <span className="inline-block mt-1 rounded bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-blue-400">
+                          14-Day Free Trial Available
+                        </span>
+                      ) : tier.isWaitlist ? (
+                        <span className="inline-block mt-1 rounded bg-sky-500/15 border border-sky-500/30 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-sky-400">
+                          Early Access • Jan 2027
+                        </span>
+                      ) : (
+                        <span className="inline-block mt-1 rounded bg-surface-muted border border-border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted">
+                          Direct Subscription Only
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -482,6 +767,12 @@ const MentorPricing = () => {
                     </span>
                     <span className="text-xs text-muted font-medium">/month</span>
                   </div>
+                  {tier.isWaitlist && waitlistCounts?.MENTOR_MEGA && (
+                    <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[11px] font-bold">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                      <span>{waitlistCounts.MENTOR_MEGA.count} academy leaders on waitlist</span>
+                    </div>
+                  )}
 
                   <ul className="mt-6 flex-1 space-y-3 pt-4 border-t border-border">
                     {tier.features.map((feat) => (
@@ -492,21 +783,62 @@ const MentorPricing = () => {
                     ))}
                   </ul>
 
-                  <button
-                    type="button"
-                    disabled={loadingCheckout}
-                    onClick={() => {
-                      setStudentCount(tier.studentsDefault);
-                      handleCheckout(tier.studentsDefault);
-                    }}
-                    className={`mt-7 w-full py-2.5 px-4 rounded-xl text-xs font-black transition shadow-sm ${
-                      tier.highlighted
-                        ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
-                        : 'bg-surface-muted hover:bg-surface border border-border text-foreground'
-                    }`}
-                  >
-                    Select {tier.name} ({tier.studentRange})
-                  </button>
+                  {tier.isWaitlist ? (
+                    <button
+                      type="button"
+                      disabled={joiningWaitlist}
+                      onClick={() => handleJoinWaitlist('MENTOR_MEGA')}
+                      className="mt-7 w-full py-2.5 px-4 rounded-xl text-xs font-black transition shadow-sm cursor-pointer bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center gap-1.5"
+                    >
+                      <Sparkles size={13} className="text-sky-400" />
+                      <span>{joiningWaitlist ? 'Reserving Spot...' : 'Join Mega Waitlist'}</span>
+                    </button>
+                  ) : tier.name === 'Private Cohort' && (!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) ? (
+                    <div className="mt-7 space-y-2">
+                      <button
+                        type="button"
+                        disabled={activatingTrial}
+                        onClick={handleStartTrial}
+                        className="w-full py-2.5 px-4 rounded-xl text-xs font-black bg-blue-500 hover:bg-blue-400 text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        {activatingTrial ? (
+                          <span>Activating Trial...</span>
+                        ) : (
+                          <>
+                            <span>Try Free for 14 Days</span>
+                            <ArrowRight size={14} />
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={loadingCheckout}
+                        onClick={() => {
+                          setStudentCount(tier.studentsDefault);
+                          handleCheckout(tier.studentsDefault);
+                        }}
+                        className="w-full py-1 text-[11px] font-bold text-muted hover:text-foreground transition cursor-pointer text-center"
+                      >
+                        or subscribe directly (₦{finalPrice.toLocaleString()}/mo)
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={loadingCheckout}
+                      onClick={() => {
+                        setStudentCount(tier.studentsDefault);
+                        handleCheckout(tier.studentsDefault);
+                      }}
+                      className={`mt-7 w-full py-2.5 px-4 rounded-xl text-xs font-black transition shadow-sm cursor-pointer ${
+                        tier.highlighted
+                          ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
+                          : 'bg-surface-muted hover:bg-surface border border-border text-foreground'
+                      }`}
+                    >
+                      Select {tier.name} ({tier.studentRange})
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -586,16 +918,16 @@ const MentorPricing = () => {
                     className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer accent-emerald-400"
                   />
                   <div className="flex justify-between text-[11px] font-semibold text-muted font-mono">
-                    <span>25 - 50 (₦8k)</span>
-                    <span>100 - 150 (₦25k)</span>
-                    <span>500 - 1,000+ (₦65k Flat)</span>
+                    <span>Up to 80 (₦14.5k)</span>
+                    <span>Up to 200 (₦25k)</span>
+                    <span>Up to 1,000 (₦85k Flat)</span>
                   </div>
                 </div>
 
                 {/* Quick Presets */}
                 <div className="pt-2 flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-muted mr-1">Quick Select:</span>
-                  {[25, 50, 100, 150, 250, 500, 1000].map((num) => (
+                  {[50, 80, 100, 150, 200, 500, 1000].map((num) => (
                     <button
                       key={num}
                       type="button"
@@ -633,7 +965,7 @@ const MentorPricing = () => {
                     </p>
                     <p className="flex items-center gap-1.5">
                       <CheckCircle2 size={13} className="text-emerald-400" />
-                      <span>Effective rate: <strong>₦{currentPricing.perStudentEffective.toLocaleString()} / student per month</strong></span>
+                      <span>Effective rate: <strong>{currentPricing.symbol}{currentPricing.perStudentEffective.toLocaleString()} / student per month</strong></span>
                     </p>
                   </div>
                 </div>
@@ -642,12 +974,12 @@ const MentorPricing = () => {
                 <div className="text-right flex flex-col md:items-end justify-center shrink-0 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6">
                   {currentPricing.originalPrice && (
                     <span className="text-sm line-through text-muted/70 font-semibold">
-                      ₦{currentPricing.originalPrice.toLocaleString()} / month
+                      {currentPricing.symbol}{currentPricing.originalPrice.toLocaleString()} / month
                     </span>
                   )}
                   <div className="flex items-baseline gap-1 md:justify-end">
                     <span className="text-3xl sm:text-4xl font-black text-foreground">
-                      ₦{currentPricing.finalPrice.toLocaleString()}
+                      {currentPricing.symbol}{currentPricing.finalPrice.toLocaleString()}
                     </span>
                     <span className="text-xs text-muted font-medium">/month</span>
                   </div>
@@ -676,6 +1008,203 @@ const MentorPricing = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* COMPREHENSIVE MENTOR PLAN COMPARISON TABLE                                */}
+        {/* ========================================================================= */}
+        <section id="compare-mentor-plans" className="py-12 border-t border-border scroll-mt-20">
+          <div className="text-center mb-10 space-y-2">
+            <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+              Side-by-Side Comparison
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-foreground">
+              Compare Mentor & Academy Plans
+            </h2>
+            <p className="text-xs sm:text-sm text-muted max-w-2xl mx-auto">
+              A comprehensive breakdown of student journal capacities, cohort controls, automated risk guards, and community monetization tools.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-xl max-w-6xl mx-auto">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="bg-surface-muted text-muted uppercase tracking-wider border-b border-border font-bold">
+                <tr>
+                  <th className="p-4 border-r border-border sticky left-0 bg-surface-muted z-10 min-w-[240px]">
+                    Capability / Feature
+                  </th>
+                  <th className="p-4 text-center border-r border-border min-w-[160px]">
+                    <div className="font-bold text-foreground">Private Cohort</div>
+                    <div className="text-[11px] font-normal text-muted normal-case mt-0.5">Up to 80 Students</div>
+                  </th>
+                  <th className="p-4 text-center border-r border-border min-w-[180px] text-emerald-500 dark:text-emerald-400 font-extrabold bg-emerald-500/5">
+                    <div className="flex items-center justify-center gap-1.5 font-bold text-emerald-400">
+                      <span>Growth Community</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-400 font-bold uppercase tracking-wider">
+                        Popular
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-normal text-emerald-400/80 normal-case mt-0.5">Up to 200 Students</div>
+                  </th>
+                  <th className="p-4 text-center min-w-[160px]">
+                    <div className="font-bold text-foreground">Mega Academy</div>
+                    <div className="text-[11px] font-normal text-muted normal-case mt-0.5">Up to 1,000 Students</div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border text-muted">
+                {mentorFeatureMatrixCategories.map((cat, idx) => (
+                  <React.Fragment key={idx}>
+                    <tr className="bg-surface-muted/70 font-black text-foreground uppercase tracking-wider text-[11px]">
+                      <td colSpan={4} className="p-3 px-4 text-center border-y border-border/80 bg-surface-muted/90">
+                        {cat.category}
+                      </td>
+                    </tr>
+                    {cat.rows.map((row, rIdx) => (
+                      <tr key={rIdx} className="hover:bg-surface-muted/40 transition-colors">
+                        <td className="p-4 font-semibold text-foreground border-r border-border sticky left-0 bg-surface z-10 shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
+                          <div>{row.feature}</div>
+                          {row.subtext && <div className="text-[11px] text-muted font-normal mt-0.5 leading-relaxed">{row.subtext}</div>}
+                        </td>
+                        <td className="p-4 text-center border-r border-border">
+                          {row.private === 'Included' ? (
+                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
+                          ) : row.private === 'Not included' ? (
+                            <Minus size={16} className="mx-auto text-muted/40" />
+                          ) : (
+                            <span className="font-semibold text-foreground">{row.private}</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center border-r border-border bg-emerald-500/5 font-semibold text-foreground">
+                          {row.growth === 'Included' ? (
+                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
+                          ) : row.growth === 'Not included' ? (
+                            <Minus size={16} className="mx-auto text-muted/40" />
+                          ) : (
+                            <span className="font-bold text-emerald-500 dark:text-emerald-400">{row.growth}</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center font-semibold text-foreground">
+                          {row.mega === 'Included' ? (
+                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
+                          ) : row.mega === 'Not included' ? (
+                            <Minus size={16} className="mx-auto text-muted/40" />
+                          ) : (
+                            <span className="font-bold text-foreground">{row.mega}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </tbody>
+              <tfoot className="border-t-2 border-border bg-surface-muted/50 font-bold">
+                <tr>
+                  <td className="p-4 border-r border-border sticky left-0 bg-surface-muted/90 z-10">
+                    <span className="font-extrabold text-foreground text-xs uppercase tracking-wider">Select Package</span>
+                    <p className="text-[11px] text-muted font-normal mt-0.5">Includes student journal access and coaching workspace</p>
+                  </td>
+                  <td className="p-4 text-center border-r border-border">
+                    <div className="text-sm font-black text-foreground mb-2">
+                      {selectedRegion === 'GLOBAL'
+                        ? '$59'
+                        : `₦${(appliedPromo?.discountPercent ? Math.round(14500 * (1 - appliedPromo.discountPercent / 100)) : 14500).toLocaleString()}`}
+                      <span className="text-[10px] text-muted font-normal"> / mo</span>
+                    </div>
+                    {(!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) ? (
+                      <div className="space-y-1.5">
+                        <button
+                          type="button"
+                          disabled={activatingTrial}
+                          onClick={handleStartTrial}
+                          className="w-full py-2 px-3 rounded-xl text-xs font-black bg-blue-500 hover:bg-blue-400 text-white transition shadow-sm cursor-pointer"
+                        >
+                          Try Free (14 Days)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={loadingCheckout}
+                          onClick={() => {
+                            setStudentCount(80);
+                            handleCheckout(80);
+                          }}
+                          className="text-[10px] text-muted hover:text-foreground font-semibold underline cursor-pointer"
+                        >
+                          or Subscribe Directly
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={loadingCheckout}
+                        onClick={() => {
+                          setStudentCount(80);
+                          handleCheckout(80);
+                        }}
+                        className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-surface hover:bg-surface-muted border border-border text-foreground transition shadow-sm cursor-pointer"
+                      >
+                        Choose Private Cohort
+                      </button>
+                    )}
+                  </td>
+                  <td className="p-4 text-center border-r border-border bg-emerald-500/5">
+                    <div className="text-sm font-black text-emerald-400 mb-2">
+                      {selectedRegion === 'GLOBAL'
+                        ? '$99'
+                        : `₦${(appliedPromo?.discountPercent ? Math.round(25000 * (1 - appliedPromo.discountPercent / 100)) : 25000).toLocaleString()}`}
+                      <span className="text-[10px] text-emerald-400/80 font-normal"> / mo</span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={loadingCheckout}
+                      onClick={() => {
+                        setStudentCount(200);
+                        handleCheckout(200);
+                      }}
+                      className="w-full py-2 px-3 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shadow-md shadow-emerald-500/20 cursor-pointer"
+                    >
+                      Choose Growth Community
+                    </button>
+                  </td>
+                  <td className="p-4 text-center">
+                    <div className="text-sm font-black text-foreground mb-2">
+                      {selectedRegion === 'GLOBAL'
+                        ? '$249'
+                        : `₦${(appliedPromo?.discountPercent ? Math.round(85000 * (1 - appliedPromo.discountPercent / 100)) : 85000).toLocaleString()}`}
+                      <span className="text-[10px] text-muted font-normal"> / mo flat</span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={loadingCheckout}
+                      onClick={() => {
+                        setStudentCount(1000);
+                        handleCheckout(1000);
+                      }}
+                      className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-surface hover:bg-surface-muted border border-border text-foreground transition shadow-sm cursor-pointer"
+                    >
+                      Choose Mega Academy
+                    </button>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div className="mt-4 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted px-2">
+            <p>
+              All tiers include unlimited trade logging for the mentor, Strategy Risk Guard enforcement, and zero per-student fees for your members.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setStudentCount(80);
+                handleCheckout(80);
+              }}
+              className="text-emerald-400 hover:text-emerald-300 font-bold underline cursor-pointer shrink-0"
+            >
+              Start with Private Cohort (Up to 80 Students) →
+            </button>
           </div>
         </section>
 

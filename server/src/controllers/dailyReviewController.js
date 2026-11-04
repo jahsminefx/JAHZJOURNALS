@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const dailyReviewService = require('../services/dailyReviewService');
 const { enqueueAiJob } = require('../jobs/queues/aiQueue');
+const { checkAiAllowance } = require('../services/entitlementService');
 
 const writtenFields = [
   'whatWentWell',
@@ -204,6 +205,11 @@ const triggerAiDailyReview = async (req, res) => {
 
     if (!review) {
       return res.status(404).json({ message: 'Daily review not found. Please save your review before requesting AI analysis.' });
+    }
+
+    const limitCheck = await checkAiAllowance(req.user, 'DAILY_REVIEW');
+    if (!limitCheck.allowed) {
+      return res.status(403).json(limitCheck.payload);
     }
 
     // Check for existing active AI request for this review (Duplicate Protection)

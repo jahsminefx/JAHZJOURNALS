@@ -18,6 +18,8 @@ describe('AI Trade Capture Controller Integration Suite', () => {
         email: `ai_tester_${Date.now()}@example.com`,
         passwordHash: 'dummyhash',
         role: 'TRADER',
+        subscriptionPlan: 'PRO',
+        subscriptionStatus: 'ACTIVE',
       },
     });
 

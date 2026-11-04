@@ -1255,7 +1255,7 @@ const Settings = () => {
                 <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-surface-muted/60 border border-border/50">
                   <span className="text-muted text-[11px]">AI Trade Reviews</span>
                   <span className="font-bold text-foreground">
-                    {user?.subscriptionPlan === 'PRO' ? 'Full AI Coach' : user?.subscriptionPlan === 'STARTER' ? 'Standard' : 'Basic'}
+                    {user?.subscriptionPlan === 'PRO' || user?.subscriptionPlan === 'PRO_SYNC' ? 'Full AI Coach' : user?.subscriptionPlan === 'STARTER' ? 'Weekly AI Coach' : 'Basic'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-surface-muted/60 border border-border/50">

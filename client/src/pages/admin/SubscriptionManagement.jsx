@@ -171,6 +171,8 @@ const SubscriptionManagement = () => {
     switch (plan) {
       case 'MENTOR':
         return 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30';
+      case 'PRO_SYNC':
+        return 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30';
       case 'PRO':
         return 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
       case 'STARTER':
@@ -253,14 +255,18 @@ const SubscriptionManagement = () => {
 
       {/* Metrics Cards */}
       {metrics && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
           <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
             <p className="text-xs font-bold uppercase text-muted-foreground">Total Records</p>
             <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.totalSubs}</h3>
           </div>
-          <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase text-indigo-400">Mentor Plan</p>
-            <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.MENTOR || metrics.userPlans?.MENTOR || 0}</h3>
+          <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase text-cyan-400">Pro Sync</p>
+            <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.PRO_SYNC || metrics.userPlans?.PRO_SYNC || 0}</h3>
+          </div>
+          <div className="rounded-xl border border-slate-500/30 bg-slate-500/10 p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase text-muted-foreground">Free Tier</p>
+            <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.FREE || metrics.userPlans?.FREE || 0}</h3>
           </div>
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 shadow-sm">
             <p className="text-xs font-bold uppercase text-emerald-500">Active Pro</p>
@@ -270,9 +276,9 @@ const SubscriptionManagement = () => {
             <p className="text-xs font-bold uppercase text-blue-500">Active Starter</p>
             <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.STARTER || metrics.userPlans?.STARTER || 0}</h3>
           </div>
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase text-amber-500">Promotions</p>
-            <h3 className="mt-2 text-2xl font-black text-amber-400">{metrics.sources?.PROMOTION || 0}</h3>
+          <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase text-indigo-400">Mentor Plan</p>
+            <h3 className="mt-2 text-2xl font-black text-foreground">{metrics.plans?.MENTOR || metrics.userPlans?.MENTOR || 0}</h3>
           </div>
           <div
             onClick={() => setActiveTab('payments')}
@@ -345,10 +351,18 @@ const SubscriptionManagement = () => {
                 className="text-sm bg-surface border border-border rounded-lg px-2 py-1.5 outline-none focus:border-emerald-500"
               >
                 <option value="">All Plans</option>
-                <option value="FREE">Free</option>
-                <option value="STARTER">Starter</option>
-                <option value="PRO">Pro</option>
-                <option value="MENTOR">Mentor</option>
+                <optgroup label="Trader Tiers">
+                  <option value="FREE">Free</option>
+                  <option value="STARTER">Starter</option>
+                  <option value="PRO">Pro</option>
+                  <option value="PRO_SYNC">Pro Sync</option>
+                </optgroup>
+                <optgroup label="Mentor Tiers">
+                  <option value="MENTOR">All Mentors</option>
+                  <option value="MENTOR_PRIVATE_COHORT">Private Cohort (80 Max)</option>
+                  <option value="MENTOR_GROWTH">Growth Community (200 Max)</option>
+                  <option value="MENTOR_MEGA">Mega Academy (1,000 Max)</option>
+                </optgroup>
               </select>
 
               <select
@@ -418,8 +432,17 @@ const SubscriptionManagement = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${getPlanBadge(sub.plan)}`}>
-                          {sub.plan}
+                          {sub.plan === 'MENTOR'
+                            ? (sub.user?.mentorTier === 'MEGA' || sub.user?.mentorTier === 'MEGA_ACADEMY' ? 'Mega Academy'
+                              : sub.user?.mentorTier === 'GROWTH' || sub.user?.mentorTier === 'GROWTH_COMMUNITY' ? 'Growth Community'
+                              : 'Private Cohort')
+                            : sub.plan}
                         </span>
+                        {sub.plan === 'MENTOR' && (
+                          <div className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
+                            Cap: {sub.user?.mentorMaxStudents || 80} students
+                          </div>
+                        )}
                         {sub.promotion && <div className="text-xs text-amber-500 font-medium mt-1">🏅 {sub.promotion.name}</div>}
                       </td>
                       <td className="px-6 py-4">

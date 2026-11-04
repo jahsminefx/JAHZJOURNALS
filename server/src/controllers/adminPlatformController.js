@@ -20,10 +20,17 @@ const _defaultConfigs = {
       ipLockoutThreshold: 10
    },
    INTEGRATIONS_CONFIG: {
-      cloudinaryConnected: !!process.env.CLOUDINARY_URL,
+      cloudinaryConnected: !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)),
       openrouterConnected: !!process.env.OPENROUTER_API_KEY,
       paystackConnected: !!process.env.PAYSTACK_SECRET_KEY,
       redisActive: true
+   },
+   FEATURES_CONFIG: {
+      aiChat: 'PRO_AND_ABOVE',
+      visionAi: 'PRO_AND_ABOVE',
+      socialLogin: 'EVERYONE',
+      referrals: 'EVERYONE',
+      mentorWorkspace: 'MENTOR_ALL'
    }
 };
 

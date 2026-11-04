@@ -14,7 +14,7 @@ test('Free Plan has correct limits (20 trades/mo, 1 account, 1 screenshot/trade,
   assert.strictEqual(config.mt5Sync, false);
 });
 
-test('Starter Plan has correct limits (100 trades/mo, 3 accounts, 3 screenshots/trade, MT5 sync enabled)', () => {
+test('Starter Plan has correct limits (100 trades/mo, 3 accounts, 3 screenshots/trade, no MT5 sync in regional model)', () => {
   const config = getPlanConfig('STARTER');
   assert.strictEqual(config.priceNgn, 4000);
   assert.strictEqual(config.priceFormatted, '₦4,000 / month');
@@ -25,10 +25,10 @@ test('Starter Plan has correct limits (100 trades/mo, 3 accounts, 3 screenshots/
   assert.strictEqual(config.ruleViolations, true);
   assert.strictEqual(config.propFirmAccess, false);
   assert.strictEqual(config.aiAccess, false);
-  assert.strictEqual(config.mt5Sync, true);
+  assert.strictEqual(config.mt5Sync, false);
 });
 
-test('Pro Plan has correct limits (Infinity trades/accounts, 10 screenshots, AI/PropFirm/Reports/MT5 sync)', () => {
+test('Pro Plan has correct limits (Infinity trades/accounts, 10 screenshots, AI/PropFirm/Reports, sync in Sync Plus tier)', () => {
   const config = getPlanConfig('PRO');
   assert.strictEqual(config.tradeLimit, Infinity);
   assert.strictEqual(config.accountLimit, Infinity);
@@ -36,7 +36,40 @@ test('Pro Plan has correct limits (Infinity trades/accounts, 10 screenshots, AI/
   assert.strictEqual(config.aiAccess, true);
   assert.strictEqual(config.propFirmAccess, true);
   assert.strictEqual(config.reportsAccess, true);
+  assert.strictEqual(config.mt5Sync, false);
+});
+
+test('Sync Plus Plan has local MT5 Cloud Sync enabled at target price', () => {
+  const config = getPlanConfig('SYNC_PLUS');
+  assert.strictEqual(config.tradeLimit, Infinity);
+  assert.strictEqual(config.accountLimit, Infinity);
+  assert.strictEqual(config.screenshotLimit, 10);
+  assert.strictEqual(config.aiAccess, true);
+  assert.strictEqual(config.propFirmAccess, true);
   assert.strictEqual(config.mt5Sync, true);
+  assert.strictEqual(config.priceNgn, 38000);
+});
+
+test('Pro Sync Plan has international MT5 Cloud Sync enabled ($27/mo)', () => {
+  const config = getPlanConfig('PRO_SYNC');
+  assert.strictEqual(config.tradeLimit, Infinity);
+  assert.strictEqual(config.accountLimit, Infinity);
+  assert.strictEqual(config.screenshotLimit, 10);
+  assert.strictEqual(config.aiAccess, true);
+  assert.strictEqual(config.propFirmAccess, true);
+  assert.strictEqual(config.mt5Sync, true);
+  assert.strictEqual(config.priceUsd, 27);
+});
+
+test('Elite Plan has highest individual trader limits and unlimited screenshots ($32/mo)', () => {
+  const config = getPlanConfig('ELITE');
+  assert.strictEqual(config.tradeLimit, Infinity);
+  assert.strictEqual(config.accountLimit, Infinity);
+  assert.strictEqual(config.screenshotLimit, Infinity);
+  assert.strictEqual(config.aiAccess, true);
+  assert.strictEqual(config.propFirmAccess, true);
+  assert.strictEqual(config.mt5Sync, true);
+  assert.strictEqual(config.priceUsd, 32);
 });
 
 test('Mentor Plan has unlimited features, mentor access, and MT5 sync', () => {
@@ -75,39 +108,64 @@ test('buildLimitReachedPayload produces consistent structured error object', () 
   });
 });
 
-test('checkMt5SyncAllowed middleware blocks Free users and allows Starter/Pro/Mentor/Admin', async () => {
+test('checkMt5SyncAllowed middleware enforces MT5 Cloud Sync access according to regional tiers', async () => {
   const { checkMt5SyncAllowed } = require('../src/middleware/subscriptionGate');
 
+  const createMockRes = () => {
+    const res = {
+      statusCode: null,
+      jsonData: null,
+      status(code) { this.statusCode = code; return this; },
+      json(data) { this.jsonData = data; return this; },
+    };
+    return res;
+  };
+
   // Test Free user blocked
-  let freeStatus = null;
-  let freeJson = null;
+  const freeRes = createMockRes();
   let freeNextCalled = false;
   const freeReq = { user: { id: 'u1', subscriptionPlan: 'FREE', subscriptionStatus: 'ACTIVE', role: 'USER' } };
-  const freeRes = {
-    status(code) { freeStatus = code; return this; },
-    json(data) { freeJson = data; return this; }
-  };
   await checkMt5SyncAllowed(freeReq, freeRes, () => { freeNextCalled = true; });
   assert.strictEqual(freeNextCalled, false);
-  assert.strictEqual(freeStatus, 403);
-  assert.strictEqual(freeJson?.error, 'PLAN_LIMIT_REACHED');
-  assert.strictEqual(freeJson?.feature, 'mt5_sync');
+  assert.strictEqual(freeRes.statusCode, 403);
+  assert.strictEqual(freeRes.jsonData?.error, 'PLAN_LIMIT_REACHED');
+  assert.strictEqual(freeRes.jsonData?.feature, 'mt5_sync');
 
-  // Test Starter user allowed
+  // Test Starter user blocked under new regional sync tier policy
+  const starterRes = createMockRes();
   let starterNextCalled = false;
   const starterReq = { user: { id: 'u2', subscriptionPlan: 'STARTER', subscriptionStatus: 'ACTIVE', role: 'USER' } };
-  await checkMt5SyncAllowed(starterReq, {}, () => { starterNextCalled = true; });
-  assert.strictEqual(starterNextCalled, true);
+  await checkMt5SyncAllowed(starterReq, starterRes, () => { starterNextCalled = true; });
+  assert.strictEqual(starterNextCalled, false);
+  assert.strictEqual(starterRes.statusCode, 403);
 
-  // Test Pro user allowed
-  let proNextCalled = false;
-  const proReq = { user: { id: 'u3', subscriptionPlan: 'PRO', subscriptionStatus: 'ACTIVE', role: 'USER' } };
-  await checkMt5SyncAllowed(proReq, {}, () => { proNextCalled = true; });
-  assert.strictEqual(proNextCalled, true);
+  // Test Sync Plus user allowed
+  let syncPlusNextCalled = false;
+  const syncPlusReq = { user: { id: 'u3', subscriptionPlan: 'SYNC_PLUS', subscriptionStatus: 'ACTIVE', role: 'USER' } };
+  await checkMt5SyncAllowed(syncPlusReq, createMockRes(), () => { syncPlusNextCalled = true; });
+  assert.strictEqual(syncPlusNextCalled, true);
+
+  // Test Pro Sync user allowed
+  let proSyncNextCalled = false;
+  const proSyncReq = { user: { id: 'u4', subscriptionPlan: 'PRO_SYNC', subscriptionStatus: 'ACTIVE', role: 'USER' } };
+  await checkMt5SyncAllowed(proSyncReq, createMockRes(), () => { proSyncNextCalled = true; });
+  assert.strictEqual(proSyncNextCalled, true);
+
+  // Test Elite user allowed
+  let eliteNextCalled = false;
+  const eliteReq = { user: { id: 'u5', subscriptionPlan: 'ELITE', subscriptionStatus: 'ACTIVE', role: 'USER' } };
+  await checkMt5SyncAllowed(eliteReq, createMockRes(), () => { eliteNextCalled = true; });
+  assert.strictEqual(eliteNextCalled, true);
 
   // Test Mentor user allowed
   let mentorNextCalled = false;
-  const mentorReq = { user: { id: 'u4', subscriptionPlan: 'MENTOR', subscriptionStatus: 'ACTIVE', role: 'MENTOR' } };
-  await checkMt5SyncAllowed(mentorReq, {}, () => { mentorNextCalled = true; });
+  const mentorReq = { user: { id: 'u6', subscriptionPlan: 'MENTOR', subscriptionStatus: 'ACTIVE', role: 'MENTOR' } };
+  await checkMt5SyncAllowed(mentorReq, createMockRes(), () => { mentorNextCalled = true; });
   assert.strictEqual(mentorNextCalled, true);
+
+  // Test Admin allowed
+  let adminNextCalled = false;
+  const adminReq = { user: { id: 'u7', subscriptionPlan: 'FREE', subscriptionStatus: 'ACTIVE', role: 'ADMIN' } };
+  await checkMt5SyncAllowed(adminReq, createMockRes(), () => { adminNextCalled = true; });
+  assert.strictEqual(adminNextCalled, true);
 });
