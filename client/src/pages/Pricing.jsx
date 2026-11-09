@@ -233,50 +233,53 @@ const featureMatrixCategories = [
   {
     category: 'Core Journaling Limits',
     rows: [
-      { feature: 'Monthly Trade Log Quota', free: '20 trades / mo', starter: '100 trades / mo', pro: 'Unlimited', sync: 'Unlimited' },
-      { feature: 'Active Trading Accounts', free: '1 account', starter: '3 accounts', pro: 'Unlimited', sync: 'Unlimited' },
-      { feature: 'Screenshots per Trade', free: '1 screenshot', starter: '3 screenshots', pro: '10 screenshots', sync: '10 screenshots' },
-      { feature: 'Account Deposit Currencies', free: 'USD, NGN, GBP, EUR', starter: 'USD, NGN, GBP, EUR', pro: 'Normalized Multi-Currency', sync: 'Normalized Multi-Currency' },
-      { feature: 'CSV Broker Statement Import', free: 'Included', starter: 'Included', pro: 'Included', sync: 'Included' },
-      { feature: 'Position-Size Risk Calculator', free: 'Included', starter: 'Included', pro: 'Included', sync: 'Included' },
-      { feature: 'Economic News Calendar', free: 'Included', starter: 'Included', pro: 'Included (Auto-Correlation)', sync: 'Included (Auto-Correlation)' },
-      { feature: 'Structured Weekly Review', free: 'Included', starter: 'Included', pro: 'Included', sync: 'Included' },
+      { feature: 'Monthly Trade Log Quota', free: '20 trades / mo', starter: '100 trades / mo', pro: 'Unlimited', starterSync: 'Unlimited', proSync: 'Unlimited' },
+      { feature: 'Active Trading Accounts (Manual)', free: '1 account', starter: '3 accounts', pro: 'Unlimited', starterSync: 'Unlimited', proSync: 'Unlimited' },
+      { feature: 'Automated MT4/MT5 Cloud Synced Accounts', free: 'Not included', starter: 'Not included', pro: 'Not included', starterSync: 'Up to 2 accounts', proSync: 'Up to 5 accounts (Priority)' },
+      { feature: 'Screenshots per Trade', free: '1 screenshot', starter: '3 screenshots', pro: '10 screenshots', starterSync: '10 screenshots', proSync: '10 screenshots' },
+      { feature: 'Account Deposit Currencies', free: 'USD, NGN, GBP, EUR', starter: 'USD, NGN, GBP, EUR', pro: 'Normalized Multi-Currency', starterSync: 'Normalized Multi-Currency', proSync: 'Normalized Multi-Currency' },
+      { feature: 'CSV Broker Statement Import', free: 'Included', starter: 'Included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Position-Size Risk Calculator', free: 'Included', starter: 'Included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Economic News Calendar', free: 'Included', starter: 'Included', pro: 'Included (Auto-Correlation)', starterSync: 'Included (Auto-Correlation)', proSync: 'Included (Auto-Correlation)' },
+      { feature: 'Structured Weekly Review', free: 'Included', starter: 'Included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
     ],
   },
   {
     category: 'Execution & Psychology Analytics',
     rows: [
-      { feature: 'Basic Equity Curve & P&L', free: 'Included', starter: 'Included', pro: 'Included', sync: 'Included' },
-      { feature: 'Trading Psychology & Emotion Tracking', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
-      { feature: 'Rule Violations & Mistake Tagging', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
-      { feature: 'Session Analytics (London, NY, Asian)', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
-      { feature: 'Strategy & Setup Performance Matrix', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
-      { feature: 'Expectancy & Profit Factor Analytics', free: 'Basic', starter: 'Detailed', pro: 'Advanced Quantitative', sync: 'Advanced Quantitative' },
+      { feature: 'Basic Equity Curve & P&L', free: 'Included', starter: 'Included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Trading Psychology & Emotion Tracking', free: 'Not included', starter: 'Included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Rule Violations & Mistake Tagging', free: 'Included', starter: 'Included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Session Analytics (London, NY, Asian)', free: 'Not included', starter: 'Included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Strategy & Setup Performance Matrix', free: 'Not included', starter: 'Included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Expectancy & Profit Factor Analytics', free: 'Basic', starter: 'Detailed', pro: 'Advanced Quantitative', starterSync: 'Advanced Quantitative', proSync: 'Advanced Quantitative' },
     ],
   },
   {
     category: 'Prop Firm Cockpit & Reporting',
     rows: [
-      { feature: 'Prop-Firm Challenge Tracker', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
-      { feature: 'Daily & Overall Drawdown Guards', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
-      { feature: 'Remaining Risk Allowance Engine', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
-      { feature: 'Prop-Firm News Restriction Buffers', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
-      { feature: 'PDF Performance Report Export', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
+      { feature: 'Prop-Firm Challenge Tracker', free: 'Not included', starter: 'Not included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Daily & Overall Drawdown Guards', free: 'Not included', starter: 'Not included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Remaining Risk Allowance Engine', free: 'Not included', starter: 'Not included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Prop-Firm News Restriction Buffers', free: 'Not included', starter: 'Not included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'PDF Performance Report Export', free: 'Not included', starter: 'Not included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
     ],
   },
   {
     category: 'MetaTrader Automation & AI Intelligence',
     rows: [
-      { feature: 'Automated 24/7 MT4/MT5 Cloud Sync', free: 'Not included', starter: 'Not included', pro: 'Not included', sync: 'Included (MetaApi)' },
-      { feature: 'Log Trades with JAHZ AI (Chat & Screenshots)', free: 'Not included', starter: 'Not included', pro: '300 trades / mo', sync: 'Unlimited' },
-      { feature: 'AI Trade Review & Mistake Detection', free: '2 trial reviews', starter: 'Not included', pro: '150 reviews / mo', sync: '200 reviews / mo' },
-      { feature: 'Weekly AI Coaching Summaries', free: 'Not included', starter: 'Included', pro: 'Included', sync: 'Included' },
-      { feature: 'Screenshot Vision Setup Extraction', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
-      { feature: 'JAHZ Edge Finder Analytics', free: 'Not included', starter: 'Not included', pro: 'Included', sync: 'Included' },
-      { feature: 'Natural Language Journal Assistant', free: 'Not included', starter: '20 drafts / mo', pro: '100 drafts / mo', sync: '100 drafts / mo' },
+      { feature: 'Automated 24/7 MT4/MT5 Cloud Sync', free: 'Not included', starter: 'Not included', pro: 'Not included', starterSync: 'Included (2 Accounts)', proSync: 'Included (5 Accounts)' },
+      { feature: 'Cloud Sync Engine Priority', free: 'Not included', starter: 'Not included', pro: 'Not included', starterSync: 'Standard Sync Engine', proSync: 'Priority High-Speed Engine' },
+      { feature: 'Log Trades with JAHZ AI (Chat & Screenshots)', free: 'Not included', starter: 'Not included', pro: '300 trades / mo', starterSync: 'Unlimited', proSync: 'Unlimited' },
+      { feature: 'AI Trade Review & Mistake Detection', free: '2 trial reviews', starter: 'Not included', pro: '150 reviews / mo', starterSync: '150 reviews / mo', proSync: '200 reviews / mo' },
+      { feature: 'Weekly AI Coaching Summaries', free: 'Not included', starter: 'Included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Screenshot Vision Setup Extraction', free: 'Not included', starter: 'Not included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'JAHZ Edge Finder Analytics', free: 'Not included', starter: 'Not included', pro: 'Included', starterSync: 'Included', proSync: 'Included' },
+      { feature: 'Natural Language Journal Assistant', free: 'Not included', starter: '20 drafts / mo', pro: '100 drafts / mo', starterSync: '100 drafts / mo', proSync: '100 drafts / mo' },
     ],
   },
 ];
+
 
 const faqs = [
   [
@@ -301,7 +304,7 @@ const faqs = [
   ],
   [
     'Does JAHZJOURNALS support MT4/MT5 synchronization?',
-    'Yes, cloud synchronization infrastructure is implemented via MetaApi to automatically ingest closed trades from your MetaTrader 4 and 5 broker accounts. Under our sustainable infrastructure model, cloud sync is reserved for the Pro Sync tier and is currently rolling out to early-access waitlist members ahead of general commercial availability.',
+    'Yes, automated cloud synchronization is powered via MetaApi to automatically ingest trades from your MetaTrader 4 and 5 broker accounts. Cloud sync is available in two plans: Starter Sync (up to 2 accounts at ₦38,000/mo) and Pro Sync (up to 5 accounts with priority processing at ₦72,000/mo).',
   ],
   [
     'Which payment methods are supported?',
@@ -1229,13 +1232,16 @@ const Pricing = () => {
                   <th className="p-4 border-r border-border sticky left-0 bg-surface-muted z-10 min-w-[200px]">
                     Feature
                   </th>
-                  <th className="p-4 text-center border-r border-border min-w-[120px]">Free</th>
-                  <th className="p-4 text-center border-r border-border min-w-[120px]">Starter</th>
-                  <th className="p-4 text-center border-r border-border min-w-[140px] text-amber-500 dark:text-amber-400 font-extrabold bg-amber-500/5">
+                  <th className="p-4 text-center border-r border-border min-w-[110px]">Free</th>
+                  <th className="p-4 text-center border-r border-border min-w-[110px]">Starter</th>
+                  <th className="p-4 text-center border-r border-border min-w-[130px] text-amber-500 dark:text-amber-400 font-extrabold bg-amber-500/5">
                     Pro (Recommended)
                   </th>
-                  <th className="p-4 text-center min-w-[140px] text-sky-500 dark:text-sky-400 font-extrabold bg-sky-500/5">
-                    Pro Sync (Cloud Sync)
+                  <th className="p-4 text-center border-r border-border min-w-[140px] text-sky-500 dark:text-sky-400 font-extrabold bg-sky-500/5">
+                    Starter Sync (2 Sync)
+                  </th>
+                  <th className="p-4 text-center min-w-[140px] text-purple-500 dark:text-purple-400 font-extrabold bg-purple-500/5">
+                    Pro Sync (5 Sync)
                   </th>
                 </tr>
               </thead>
@@ -1243,7 +1249,7 @@ const Pricing = () => {
                 {featureMatrixCategories.map((category, catIdx) => (
                   <React.Fragment key={catIdx}>
                     <tr className="bg-surface-muted/70 font-black text-foreground uppercase tracking-wider text-[11px]">
-                      <td colSpan={5} className="p-3 px-4 text-center border-y border-border/80 bg-surface-muted/90">
+                      <td colSpan={6} className="p-3 px-4 text-center border-y border-border/80 bg-surface-muted/90">
                         {category.category}
                       </td>
                     </tr>
@@ -1279,13 +1285,22 @@ const Pricing = () => {
                             <span className="font-bold text-amber-500 dark:text-amber-400">{row.pro}</span>
                           )}
                         </td>
-                        <td className="p-4 text-center bg-sky-500/5 font-semibold text-foreground">
-                          {row.sync === 'Included' ? (
+                        <td className="p-4 text-center border-r border-border bg-sky-500/5 font-semibold text-foreground">
+                          {row.starterSync === 'Included' ? (
                             <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
-                          ) : row.sync === 'Not included' ? (
+                          ) : row.starterSync === 'Not included' ? (
                             <Minus size={16} className="mx-auto text-muted/40" />
                           ) : (
-                            <span className="font-bold text-sky-500 dark:text-sky-400">{row.sync}</span>
+                            <span className="font-bold text-sky-500 dark:text-sky-400">{row.starterSync}</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center bg-purple-500/5 font-semibold text-foreground">
+                          {row.proSync === 'Included' ? (
+                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
+                          ) : row.proSync === 'Not included' ? (
+                            <Minus size={16} className="mx-auto text-muted/40" />
+                          ) : (
+                            <span className="font-bold text-purple-500 dark:text-purple-400">{row.proSync}</span>
                           )}
                         </td>
                       </tr>
