@@ -138,7 +138,7 @@ const REGIONAL_PRICES = {
     isApproximate: false,
     highlighted: true,
     tagline: 'Automate your journal with power.',
-    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for up to 6 trading accounts with priority processing.',
+    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for up to 5 trading accounts with priority processing.',
   },
   price_ngn_sync_plus_monthly: {
     id: 'price_ngn_sync_plus_monthly',

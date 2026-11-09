@@ -109,7 +109,7 @@ export const PLANS = {
     priceFormatted: '₦72,000 / $48 / month',
     tradeLimit: Infinity,
     accountLimit: Infinity,
-    cloudSyncAccountLimit: 6,
+    cloudSyncAccountLimit: 5,
     screenshotLimit: 10,
     analyticsLevel: 'ADVANCED',
     emotionTracking: true,

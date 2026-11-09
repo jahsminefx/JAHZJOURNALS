@@ -278,7 +278,7 @@ const canConnectCloudSyncAccount = async (userIdOrUser, txOrPrisma = prisma) => 
     };
   }
 
-  const limit = planConfig.cloudSyncAccountLimit || (userPlanKey === 'STARTER_SYNC' || userPlanKey === 'SYNC_PLUS' ? 2 : 6);
+  const limit = planConfig.cloudSyncAccountLimit || (userPlanKey === 'STARTER_SYNC' || userPlanKey === 'SYNC_PLUS' ? 2 : 5);
   const userId = user?.id;
   if (!userId) {
     return { allowed: false, current: 0, limit, plan: userPlanKey };
@@ -306,7 +306,7 @@ const canConnectCloudSyncAccount = async (userIdOrUser, txOrPrisma = prisma) => 
         limit,
         userPlan: userPlanKey,
         requiredPlan,
-        customMessage: `You have reached your ${planConfig.name} limit of ${limit} active synced MetaTrader accounts. ${isStarterSync ? 'Upgrade to Pro Sync to connect up to 6 accounts.' : 'Please disconnect an existing synced account to connect a new one.'}`
+        customMessage: `You have reached your ${planConfig.name} limit of ${limit} active synced MetaTrader accounts. ${isStarterSync ? 'Upgrade to Pro Sync to connect up to 5 accounts.' : 'Please disconnect an existing synced account to connect a new one.'}`
       })
     };
   }

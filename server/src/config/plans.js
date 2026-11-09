@@ -118,10 +118,10 @@ const PLANS = {
     priceNgn: 72000,
     priceFormatted: '₦72,000 / month',
     tagline: 'Automate your journal with power.',
-    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for up to 6 trading accounts with priority processing.',
+    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for up to 5 trading accounts with priority processing.',
     tradeLimit: Infinity,
     accountLimit: Infinity,
-    cloudSyncAccountLimit: 6,
+    cloudSyncAccountLimit: 5,
     screenshotLimit: 10,
     analyticsLevel: 'ADVANCED',
     emotionTracking: true,
@@ -312,7 +312,7 @@ const buildLimitReachedPayload = ({ feature, current, limit, userPlan, requiredP
       message = `Mentor and student management features require a Mentor/Academy plan.`;
     } else if (feature === 'mt5_sync') {
       message = (limit && limit > 0)
-        ? `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} active synced MetaTrader accounts. Upgrade to Pro Sync to connect up to 6 accounts.`
+        ? `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} active synced MetaTrader accounts. Upgrade to Pro Sync to connect up to 5 accounts.`
         : `MetaTrader (MT4/MT5) Cloud Sync is available on Starter Sync, Pro Sync, and Mega Academy plans. Upgrade to an automated sync tier to automatically sync your MT4/MT5 broker accounts.`;
     } else {
       message = `Feature unavailable on your current plan. Upgrade to ${reqPlanName} to unlock.`;
