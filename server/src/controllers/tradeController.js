@@ -316,7 +316,14 @@ const createTrade = async (req, res) => {
     await reconcileAccountBalance(tradingAccountId);
     await syncMentorCohortTradeSharesForTrade(trade, req.user.id);
 
-    res.status(201).json(trade);
+    // Automatically evaluate Strategy Risk Guard rules across all tiers
+    const { evaluateAndRecordTradeRules } = require('../services/riskGuardService');
+    const riskGuardViolations = await evaluateAndRecordTradeRules(trade.id, req.user.id);
+
+    res.status(201).json({
+      ...trade,
+      riskGuardViolations: riskGuardViolations || [],
+    });
   } catch (error) {
     console.error('Error in createTrade:', error);
     res.status(500).json({ message: 'Failed to create trade' });
@@ -351,7 +358,14 @@ const getTradeById = async (req, res) => {
       return res.status(404).json({ message: 'Trade not found' });
     }
 
-    res.json(trade);
+    // Automatically evaluate Strategy Risk Guard rules across all tiers
+    const { evaluateAndRecordTradeRules } = require('../services/riskGuardService');
+    const riskGuardViolations = await evaluateAndRecordTradeRules(trade.id, req.user.id);
+
+    res.json({
+      ...trade,
+      riskGuardViolations: riskGuardViolations || [],
+    });
   } catch (error) {
     console.error('Error in getTradeById:', error);
     res.status(500).json({ message: 'Failed to fetch trade details' });
@@ -603,7 +617,14 @@ const updateTrade = async (req, res) => {
     }
     await syncMentorCohortTradeSharesForTrade(updatedTrade, req.user.id);
 
-    res.json(updatedTrade);
+    // Automatically evaluate Strategy Risk Guard rules across all tiers
+    const { evaluateAndRecordTradeRules } = require('../services/riskGuardService');
+    const riskGuardViolations = await evaluateAndRecordTradeRules(updatedTrade.id, req.user.id);
+
+    res.json({
+      ...updatedTrade,
+      riskGuardViolations: riskGuardViolations || [],
+    });
   } catch (error) {
     console.error('Error in updateTrade:', error);
     res.status(500).json({ message: 'Failed to update trade' });

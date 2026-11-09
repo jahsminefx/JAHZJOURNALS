@@ -623,12 +623,34 @@ const TradeDetail = () => {
           </div>
 
           <div className="bg-surface-muted p-6 rounded-xl border border-border shadow-lg">
-            <h3 className="text-lg font-bold text-green-400 border-b border-border pb-2 mb-4">Rules Broken</h3>
-            {ruleViolations.length === 0 ? (
+            <h3 className="text-lg font-bold text-green-400 border-b border-border pb-2 mb-4 flex items-center justify-between">
+              <span>Rules Broken</span>
+              {(ruleViolations.length > 0 || (trade.riskGuardViolations && trade.riskGuardViolations.length > 0)) && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30">
+                  {Math.max(ruleViolations.length, trade.riskGuardViolations?.length || 0)} Flagged
+                </span>
+              )}
+            </h3>
+            {ruleViolations.length === 0 && (!trade.riskGuardViolations || trade.riskGuardViolations.length === 0) ? (
               <p className="text-sm text-muted">No rules broken — well done.</p>
             ) : (
               <div className="space-y-3">
-                {ruleViolations.map((violation) => (
+                {trade.riskGuardViolations && trade.riskGuardViolations.map((v, idx) => (
+                  <div key={`rg-${idx}`} className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-bold text-rose-400 text-sm flex items-center gap-1.5">
+                        <AlertTriangle size={14} className="text-rose-400" />
+                        {v.title}
+                      </p>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">
+                        Limit: {v.ruleLimit} vs Actual: {v.actualValue}
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground">{v.message}</p>
+                    {v.evidence && <p className="text-[11px] text-muted italic">Evidence: {v.evidence}</p>}
+                  </div>
+                ))}
+                {ruleViolations.filter(v => !trade.riskGuardViolations?.some(rg => rg.title === v.tradeRule?.name)).map((violation) => (
                   <div key={violation.id} className="rounded-lg border border-border bg-surface p-3">
                     <p className="font-medium text-foreground">{violation.tradeRule?.name || 'Rule'}</p>
                     <p className="text-xs text-muted">{violation.severity}{violation.note ? ` - ${violation.note}` : ''}</p>

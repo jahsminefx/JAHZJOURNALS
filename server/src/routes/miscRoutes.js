@@ -90,9 +90,9 @@ router.post('/trades/:id/emotions', protect, requireFeature('emotionTracking', '
 router.put('/emotions/:id', protect, requireFeature('emotionTracking', 'STARTER'), updateEmotion);
 router.delete('/emotions/:id', protect, requireFeature('emotionTracking', 'STARTER'), deleteEmotion);
 
-router.post('/trades/:id/violations', protect, requireFeature('ruleViolations', 'STARTER'), logViolation);
-router.put('/violations/:id', protect, requireFeature('ruleViolations', 'STARTER'), updateViolation);
-router.delete('/violations/:id', protect, requireFeature('ruleViolations', 'STARTER'), deleteViolation);
+router.post('/trades/:id/violations', protect, logViolation);
+router.put('/violations/:id', protect, updateViolation);
+router.delete('/violations/:id', protect, deleteViolation);
 
 router.delete('/screenshots/:id', protect, deleteScreenshot);
 

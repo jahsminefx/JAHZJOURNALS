@@ -195,7 +195,7 @@ const checkMt5SyncAllowed = async (req, res, next) => {
     const isMentor = req.user?.role === 'MENTOR' || userPlanKey === 'MENTOR';
 
     if (isMentor) {
-      if (req.user?.mentorTier === 'MEGA' || planConfig.mt5Sync) {
+      if (req.user?.mentorTier === 'MEGA' || req.user?.mentorTier === 'MEGA_PRO_SYNC' || planConfig.mt5Sync) {
         return next();
       }
 
@@ -209,7 +209,7 @@ const checkMt5SyncAllowed = async (req, res, next) => {
       }));
     }
 
-    const syncAllowedPlans = new Set(['PRO_SYNC']);
+    const syncAllowedPlans = new Set(['PRO_SYNC', 'STARTER_SYNC', 'SYNC_PLUS']);
 
     if (planConfig.mt5Sync || syncAllowedPlans.has(userPlanKey)) {
       return next();

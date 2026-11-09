@@ -16,7 +16,7 @@ const PLANS = {
     screenshotLimit: 1, // screenshots per trade
     analyticsLevel: 'BASIC', // BASIC | DETAILED | ADVANCED
     emotionTracking: false,
-    ruleViolations: false,
+    ruleViolations: true,
     propFirmAccess: false,
     aiAccess: false,
     weeklyCoachAccess: false,
@@ -205,11 +205,35 @@ const MENTOR_TIERS = {
     maxCohorts: Infinity,
     studentRange: 'Up to 1,000 Students',
     tagline: 'Flat rate for large communities & institutional academies',
+    cloudSyncAccountLimit: 2,
     features: [
       'Up to 1,000 active student trading journals',
       'Unlimited trading cohorts',
       'Everything in Growth Community',
-      'MetaTrader 4/5 Cloud Sync included for coach',
+      'MetaTrader 4/5 Cloud Sync included for coach (up to 2 accounts max)',
+      'Unlimited JAHZ AI Trade Captures',
+      'Bulk student invite links & CSV data exports',
+      'Aggregated academy risk & performance analytics',
+      'Priority mentor onboarding & dedicated VIP support',
+    ],
+    mt5Sync: true,
+  },
+  MEGA_PRO_SYNC: {
+    key: 'MEGA_PRO_SYNC',
+    name: 'Mega Academy x Pro Sync',
+    priceNgn: 120000,
+    priceFormatted: '₦120,000 / month',
+    maxStudents: 1000,
+    maxCohorts: Infinity,
+    studentRange: 'Up to 1,000 Students',
+    tagline: 'Institutional capacity bundled with Pro MT4/MT5 Cloud Sync (up to 5 accounts)',
+    cloudSyncAccountLimit: 5,
+    features: [
+      'Up to 1,000 active student trading journals',
+      'Unlimited trading cohorts',
+      'Everything in Growth Community',
+      'MetaTrader 4/5 Cloud Sync included for coach (up to 5 accounts max)',
+      'Priority MT4/MT5 Cloud Terminal Engine',
       'Unlimited JAHZ AI Trade Captures',
       'Bulk student invite links & CSV data exports',
       'Aggregated academy risk & performance analytics',
@@ -259,12 +283,14 @@ const getPlanConfig = (userOrPlanKey) => {
     
   const baseConfig = PLANS[planKey] || PLANS.FREE;
 
-  // For MENTOR, only MEGA tier receives MT4/MT5 Cloud Sync
+  // For MENTOR, MEGA and MEGA_PRO_SYNC tiers receive MT4/MT5 Cloud Sync
   if (planKey === 'MENTOR' && typeof userOrPlanKey === 'object' && userOrPlanKey !== null) {
-    const isMega = userOrPlanKey.mentorTier === 'MEGA';
+    const isMega = userOrPlanKey.mentorTier === 'MEGA' || userOrPlanKey.mentorTier === 'MEGA_PRO_SYNC';
+    const isMegaProSync = userOrPlanKey.mentorTier === 'MEGA_PRO_SYNC';
     return {
       ...baseConfig,
       mt5Sync: isMega,
+      cloudSyncAccountLimit: isMegaProSync ? 5 : (isMega ? 2 : 0),
     };
   }
 

@@ -455,6 +455,25 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
   const { reconcileAccountBalance } = require('../services/accountBalanceService');
   await reconcileAccountBalance(account.id);
 
+  // Automatically evaluate Strategy Risk Guard rules across all tiers
+  if (pendingNewTrades.length > 0) {
+    try {
+      const { evaluateAndRecordTradeRules } = require('../services/riskGuardService');
+      const syncedTrades = await prisma.trade.findMany({
+        where: {
+          tradingAccountId: account.id,
+          externalId: { in: pendingNewTrades.map(t => t.externalId).filter(Boolean) }
+        },
+        select: { id: true }
+      });
+      for (const st of syncedTrades) {
+        await evaluateAndRecordTradeRules(st.id, account.userId);
+      }
+    } catch (evalErr) {
+      console.error('Error evaluating cloud synced trades:', evalErr);
+    }
+  }
+
   if (pendingNewTrades.length > 0 || tradesToEnrich.length > 0) {
     try {
       const { sendPushToUser } = require('../services/pushNotificationService');

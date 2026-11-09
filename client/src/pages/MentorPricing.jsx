@@ -78,7 +78,7 @@ const PRESET_TIERS = [
     features: [
       'Up to 1,000 active student trading journals (Flat rate)',
       'Unlimited trading cohorts',
-      'MetaTrader 4/5 Cloud Sync included for coach',
+      'MetaTrader 4/5 Cloud Sync included for coach (up to 2 accounts max)',
       'Unlimited JAHZ AI Trade Captures',
       'Everything in Growth Community',
       'Bulk student invite links & CSV data exports',
@@ -352,6 +352,7 @@ const MentorPricing = () => {
   };
 
   const [appliedPromo, setAppliedPromo] = useState(null);
+  const [megaProSyncSelected, setMegaProSyncSelected] = useState(false);
   const [activePublicPromo, setActivePublicPromo] = useState(null);
 
   // Fetch active promo & URL query params
@@ -753,17 +754,46 @@ const MentorPricing = () => {
                   </div>
 
                   <p className="mt-3 text-xs text-muted leading-relaxed min-h-[34px]">
-                    {tier.tagline}
+                    {tier.name === 'Mega Academy' && megaProSyncSelected
+                      ? 'Mega Academy bundled with Pro Sync: 5 active MT4/MT5 synced terminals for institutional leaders.'
+                      : tier.tagline}
                   </p>
+
+                  {tier.name === 'Mega Academy' && (
+                    <div className="mt-3 p-1 rounded-xl bg-surface-muted border border-border flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setMegaProSyncSelected(false)}
+                        className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                          !megaProSyncSelected
+                            ? 'bg-sky-500 text-slate-950 shadow-sm'
+                            : 'text-muted hover:text-foreground'
+                        }`}
+                      >
+                        Base (2 Sync)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMegaProSyncSelected(true)}
+                        className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                          megaProSyncSelected
+                            ? 'bg-purple-500 text-white shadow-sm'
+                            : 'text-muted hover:text-foreground'
+                        }`}
+                      >
+                        + Pro Sync (5 Sync)
+                      </button>
+                    </div>
+                  )}
 
                   <div className="mt-5 flex items-baseline gap-2">
                     {origPrice && (
                       <span className="text-base line-through text-muted/70 font-semibold">
-                        ₦{origPrice.toLocaleString()}
+                        ₦{(tier.name === 'Mega Academy' && megaProSyncSelected ? 120000 : origPrice).toLocaleString()}
                       </span>
                     )}
                     <span className="text-3xl font-black text-foreground">
-                      ₦{finalPrice.toLocaleString()}
+                      ₦{(tier.name === 'Mega Academy' && megaProSyncSelected ? 120000 : finalPrice).toLocaleString()}
                     </span>
                     <span className="text-xs text-muted font-medium">/month</span>
                   </div>
@@ -775,7 +805,10 @@ const MentorPricing = () => {
                   )}
 
                   <ul className="mt-6 flex-1 space-y-3 pt-4 border-t border-border">
-                    {tier.features.map((feat) => (
+                    {(tier.name === 'Mega Academy' && megaProSyncSelected
+                      ? tier.features.map(f => f.includes('2 accounts max') ? 'MetaTrader 4/5 Cloud Sync included (up to 5 accounts max)' : f)
+                      : tier.features
+                    ).map((feat) => (
                       <li key={feat} className="flex gap-2.5 text-xs text-muted">
                         <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-emerald-400" />
                         <span>{feat}</span>
@@ -784,15 +817,38 @@ const MentorPricing = () => {
                   </ul>
 
                   {tier.isWaitlist ? (
-                    <button
-                      type="button"
-                      disabled={joiningWaitlist}
-                      onClick={() => handleJoinWaitlist('MENTOR_MEGA')}
-                      className="mt-7 w-full py-2.5 px-4 rounded-xl text-xs font-black transition shadow-sm cursor-pointer bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center gap-1.5"
-                    >
-                      <Sparkles size={13} className="text-sky-400" />
-                      <span>{joiningWaitlist ? 'Reserving Spot...' : 'Join Mega Waitlist'}</span>
-                    </button>
+                    <div className="mt-7 space-y-2">
+                      <button
+                        type="button"
+                        disabled={joiningWaitlist}
+                        onClick={() => handleJoinWaitlist(megaProSyncSelected ? 'MENTOR_MEGA_PRO_SYNC' : 'MENTOR_MEGA')}
+                        className={`w-full py-2.5 px-4 rounded-xl text-xs font-black transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5 ${
+                          megaProSyncSelected
+                            ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40'
+                            : 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                        }`}
+                      >
+                        <Sparkles size={13} className={megaProSyncSelected ? 'text-purple-400' : 'text-sky-400'} />
+                        <span>
+                          {joiningWaitlist
+                            ? 'Reserving Spot...'
+                            : megaProSyncSelected
+                            ? 'Join Mega x Pro Sync Waitlist'
+                            : 'Join Mega Waitlist'}
+                        </span>
+                      </button>
+                      {tier.name === 'Mega Academy' && (
+                        <button
+                          type="button"
+                          onClick={() => setMegaProSyncSelected(!megaProSyncSelected)}
+                          className="w-full text-center text-[10px] font-bold text-muted hover:text-foreground transition underline cursor-pointer"
+                        >
+                          {megaProSyncSelected
+                            ? '← Switch to Base Mega Academy (2 Sync • ₦85,000/mo)'
+                            : 'Need up to 5 synced accounts? Switch to Pro Sync (+₦35,000/mo) →'}
+                        </button>
+                      )}
+                    </div>
                   ) : tier.name === 'Private Cohort' && (!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) ? (
                     <div className="mt-7 space-y-2">
                       <button

@@ -27,7 +27,7 @@ const AccountsList = () => {
 
   const planKey = (user?.subscriptionPlan || 'FREE').toUpperCase();
   const isAllowedSync =
-    planKey === 'STARTER_SYNC' || planKey === 'SYNC_PLUS' || planKey === 'PRO_SYNC' || (planKey === 'MENTOR' && user?.mentorTier === 'MEGA_ACADEMY') ||
+    planKey === 'STARTER_SYNC' || planKey === 'SYNC_PLUS' || planKey === 'PRO_SYNC' || (planKey === 'MENTOR' && (user?.mentorTier === 'MEGA' || user?.mentorTier === 'MEGA_PRO_SYNC' || user?.mentorTier === 'MEGA_ACADEMY')) ||
     user?.role === 'ADMIN' ||
     user?.role === 'SUPER_ADMIN';
 

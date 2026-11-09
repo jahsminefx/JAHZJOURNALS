@@ -272,6 +272,24 @@ const REGIONAL_PRICES = {
     maxCohorts: Infinity,
     tagline: 'Mega Academy (Up to 1,000 Students Flat Cap)',
   },
+  price_ngn_mentor_mega_pro_sync_monthly: {
+    id: 'price_ngn_mentor_mega_pro_sync_monthly',
+    planId: 'MENTOR',
+    subTier: 'MEGA_PRO_SYNC',
+    region: 'NG',
+    currency: 'NGN',
+    amountInMinor: 12000000, // ₦120,000.00
+    amountFormatted: '₦120,000 / month',
+    billingInterval: 'MONTHLY',
+    provider: 'PAYSTACK',
+    providerPlanCode: process.env.PAYSTACK_MENTOR_MEGA_PRO_SYNC_PLAN || 'PLN_vwgx6qtvxh79h8q',
+    active: true,
+    checkoutAvailable: true,
+    isReferenceOnly: false,
+    maxStudents: 1000,
+    maxCohorts: Infinity,
+    tagline: 'Mega Academy x Pro Sync (Up to 1,000 Students & 5 MT4/MT5 Synced Accounts)',
+  },
 
   // Proposed International Mentor Reference Prices
   price_usd_mentor_cohort_monthly: {
@@ -385,6 +403,7 @@ function getDefaultPriceForPlan(planKey, regionCode = 'NG', mentorTier = 'PRIVAT
     if (normalizedPlan === 'PRO_SYNC') return REGIONAL_PRICES.price_ngn_pro_sync_monthly;
     if (normalizedPlan === 'MENTOR') {
       if (mentorTier === 'GROWTH') return REGIONAL_PRICES.price_ngn_mentor_growth_monthly;
+      if (mentorTier === 'MEGA_PRO_SYNC') return REGIONAL_PRICES.price_ngn_mentor_mega_pro_sync_monthly;
       if (mentorTier === 'MEGA') return REGIONAL_PRICES.price_ngn_mentor_mega_monthly;
       return REGIONAL_PRICES.price_ngn_mentor_cohort_monthly;
     }

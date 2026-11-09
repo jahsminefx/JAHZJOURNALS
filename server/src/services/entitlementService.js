@@ -278,7 +278,7 @@ const canConnectCloudSyncAccount = async (userIdOrUser, txOrPrisma = prisma) => 
     };
   }
 
-  const limit = planConfig.cloudSyncAccountLimit || (userPlanKey === 'STARTER_SYNC' || userPlanKey === 'SYNC_PLUS' ? 2 : 5);
+  const limit = planConfig.cloudSyncAccountLimit || (userPlanKey === 'STARTER_SYNC' || userPlanKey === 'SYNC_PLUS' ? 2 : (userPlanKey === 'MENTOR' && user?.mentorTier === 'MEGA' ? 2 : 5));
   const userId = user?.id;
   if (!userId) {
     return { allowed: false, current: 0, limit, plan: userPlanKey };
@@ -293,7 +293,14 @@ const canConnectCloudSyncAccount = async (userIdOrUser, txOrPrisma = prisma) => 
 
   if (currentSyncedCount >= limit) {
     const isStarterSync = userPlanKey === 'STARTER_SYNC' || userPlanKey === 'SYNC_PLUS';
-    const requiredPlan = isStarterSync ? 'PRO_SYNC' : 'PRO_SYNC';
+    const isBaseMega = userPlanKey === 'MENTOR' && user?.mentorTier === 'MEGA';
+    const requiredPlan = isStarterSync ? 'PRO_SYNC' : (isBaseMega ? 'MEGA_PRO_SYNC' : 'PRO_SYNC');
+    const customMessage = isStarterSync
+      ? `You have reached your Starter Sync limit of 2 active synced MetaTrader accounts. Upgrade to Pro Sync to connect up to 5 accounts.`
+      : isBaseMega
+      ? `You have reached your Mega Academy limit of 2 active synced MetaTrader accounts. Upgrade to Mega Academy x Pro Sync to connect up to 5 accounts.`
+      : `You have reached your ${planConfig.name} limit of ${limit} active synced MetaTrader accounts. Please disconnect an existing synced account to connect a new one.`;
+
     return {
       allowed: false,
       current: currentSyncedCount,
@@ -306,7 +313,7 @@ const canConnectCloudSyncAccount = async (userIdOrUser, txOrPrisma = prisma) => 
         limit,
         userPlan: userPlanKey,
         requiredPlan,
-        customMessage: `You have reached your ${planConfig.name} limit of ${limit} active synced MetaTrader accounts. ${isStarterSync ? 'Upgrade to Pro Sync to connect up to 5 accounts.' : 'Please disconnect an existing synced account to connect a new one.'}`
+        customMessage
       })
     };
   }
@@ -562,11 +569,11 @@ const hasFeatureAccess = (userOrPlanKey, featureKey) => {
     return true;
   }
 
-  // Mentor tier check for mt5Sync: only MEGA tier mentors have MT4/MT5 Cloud Sync
+  // Mentor tier check for mt5Sync: MEGA and MEGA_PRO_SYNC tiers have MT4/MT5 Cloud Sync
   if (featureKey === 'mt5Sync') {
     if (planKey === 'MENTOR') {
       if (typeof userOrPlanKey === 'object' && userOrPlanKey !== null) {
-        return userOrPlanKey.mentorTier === 'MEGA';
+        return userOrPlanKey.mentorTier === 'MEGA' || userOrPlanKey.mentorTier === 'MEGA_PRO_SYNC';
       }
       return false;
     }

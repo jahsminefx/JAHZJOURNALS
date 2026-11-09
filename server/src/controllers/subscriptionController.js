@@ -31,6 +31,7 @@ const getPlanMappings = () => ({
   MENTOR_PRIVATE_COHORT: { amountInKobo: 1450000, planCode: process.env.PAYSTACK_MENTOR_PRIVATE_COHORT_PLAN },
   MENTOR_GROWTH: { amountInKobo: 2500000, planCode: process.env.PAYSTACK_MENTOR_GROWTH_PLAN || process.env.PAYSTACK_MENTOR_PLAN },
   MENTOR_MEGA: { amountInKobo: 8500000, planCode: process.env.PAYSTACK_MENTOR_MEGA_PLAN },
+  MENTOR_MEGA_PRO_SYNC: { amountInKobo: 12000000, planCode: process.env.PAYSTACK_MENTOR_MEGA_PRO_SYNC_PLAN || 'PLN_vwgx6qtvxh79h8q' },
   MENTOR: { amountInKobo: 2500000, planCode: process.env.PAYSTACK_MENTOR_PLAN || process.env.PAYSTACK_MENTOR_GROWTH_PLAN },
 });
 
@@ -258,11 +259,12 @@ const fulfillSubscriptionPayment = async (txData, options = {}) => {
     if (metadata.country && !user.billingCountry) updateData.billingCountry = metadata.country;
 
     if (effectivePlan === 'MENTOR') {
-      const tierKey = metadata.mentorTier || (amount >= 85000 || (currency === 'USD' && amount >= 199) ? 'MEGA' : amount >= 25000 || (currency === 'USD' && amount >= 90) ? 'GROWTH' : 'PRIVATE_COHORT');
+      const tierKey = metadata.mentorTier || (amount >= 120000 ? 'MEGA_PRO_SYNC' : amount >= 85000 || (currency === 'USD' && amount >= 199) ? 'MEGA' : amount >= 25000 || (currency === 'USD' && amount >= 90) ? 'GROWTH' : 'PRIVATE_COHORT');
+      const isAnyMega = tierKey === 'MEGA' || tierKey === 'MEGA_PRO_SYNC';
       updateData.role = 'MENTOR';
       updateData.mentorTier = tierKey;
-      updateData.mentorMaxStudents = tierKey === 'MEGA' ? 1000 : tierKey === 'GROWTH' ? 200 : 80;
-      updateData.mentorMaxCohorts = tierKey === 'MEGA' ? 100 : tierKey === 'GROWTH' ? 5 : 2;
+      updateData.mentorMaxStudents = isAnyMega ? 1000 : tierKey === 'GROWTH' ? 200 : 80;
+      updateData.mentorMaxCohorts = isAnyMega ? 100 : tierKey === 'GROWTH' ? 5 : 2;
     }
 
     updatedUser = await prisma.user.update({

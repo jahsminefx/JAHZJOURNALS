@@ -14,7 +14,7 @@ export const PLANS = {
     screenshotLimit: 1,
     analyticsLevel: 'BASIC',
     emotionTracking: false,
-    ruleViolations: false,
+    ruleViolations: true,
     propFirmAccess: false,
     aiAccess: false,
     weeklyCoachAccess: false,
@@ -196,7 +196,19 @@ export const getPlanConfig = (userOrPlan) => {
     ? userOrPlan.toUpperCase()
     : getEffectivePlan(userOrPlan);
 
-  return PLANS[planKey] || PLANS.FREE;
+  const baseConfig = PLANS[planKey] || PLANS.FREE;
+
+  if (planKey === 'MENTOR' && typeof userOrPlan === 'object' && userOrPlan !== null) {
+    const isMega = userOrPlan.mentorTier === 'MEGA' || userOrPlan.mentorTier === 'MEGA_PRO_SYNC';
+    const isMegaProSync = userOrPlan.mentorTier === 'MEGA_PRO_SYNC';
+    return {
+      ...baseConfig,
+      mt5Sync: isMega,
+      cloudSyncAccountLimit: isMegaProSync ? 5 : (isMega ? 2 : 0),
+    };
+  }
+
+  return baseConfig;
 };
 
 /**
