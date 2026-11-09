@@ -25,6 +25,7 @@ const REGIONAL_CONFIG = {
       {
         id: 'price_ngn_free',
         planKey: 'FREE',
+        category: 'Manual Journaling',
         name: 'Free',
         tagline: 'Build the habit.',
         price: '₦0',
@@ -44,6 +45,7 @@ const REGIONAL_CONFIG = {
       {
         id: 'price_ngn_starter_monthly',
         planKey: 'STARTER',
+        category: 'Discipline & Analytics',
         name: 'Starter',
         tagline: 'Build discipline.',
         price: '₦4,000',
@@ -64,6 +66,7 @@ const REGIONAL_CONFIG = {
       {
         id: 'price_ngn_pro_monthly',
         planKey: 'PRO',
+        category: 'Funded & Prop Prep',
         name: 'Pro',
         tagline: 'Find your edge.',
         price: '₦8,500',
@@ -88,6 +91,7 @@ const REGIONAL_CONFIG = {
       {
         id: 'price_ngn_starter_sync_monthly',
         planKey: 'STARTER_SYNC',
+        category: 'Automated Cloud Sync',
         name: 'Starter Sync',
         tagline: 'Automate your core accounts.',
         price: '₦38,000',
@@ -111,6 +115,7 @@ const REGIONAL_CONFIG = {
       {
         id: 'price_ngn_pro_sync_monthly',
         planKey: 'PRO_SYNC',
+        category: 'Priority Cloud Sync',
         name: 'Pro Sync',
         tagline: 'Automate your journal with power.',
         price: '₦72,000',
@@ -143,6 +148,7 @@ const REGIONAL_CONFIG = {
       {
         id: 'price_usd_free',
         planKey: 'FREE',
+        category: 'Manual Journaling',
         name: 'Free',
         tagline: 'Build the habit.',
         price: '$0',
@@ -162,6 +168,7 @@ const REGIONAL_CONFIG = {
       {
         id: 'price_usd_starter_monthly',
         planKey: 'STARTER',
+        category: 'Discipline & Analytics',
         name: 'Starter',
         tagline: 'Reference Pricing',
         price: '$12',
@@ -182,6 +189,7 @@ const REGIONAL_CONFIG = {
       {
         id: 'price_usd_pro_sync_monthly',
         planKey: 'PRO_SYNC',
+        category: 'Automated Cloud Sync',
         name: 'Pro Sync',
         tagline: 'Reference Pricing • Recommended',
         price: '$27',
@@ -206,6 +214,7 @@ const REGIONAL_CONFIG = {
       {
         id: 'price_usd_elite_monthly',
         planKey: 'ELITE',
+        category: 'Priority Cloud Sync',
         name: 'Elite',
         tagline: 'Reference Pricing • Highest Tier',
         price: '$32',
@@ -852,7 +861,7 @@ const Pricing = () => {
       />
       <Navbar />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-16">
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-16">
         <Breadcrumbs />
 
         {/* Development-Only Pricing Preview Indicator */}
@@ -990,18 +999,26 @@ const Pricing = () => {
           </section>
         )}
 
-        {/* 5. Pricing Cards Grid (5 Columns for Individual Traders) */}
+        {/* 5. Pricing Cards Grid (Responsive 3-Column Layout Across 2 Rows) */}
         <section id="pricing-cards" className="py-6 scroll-mt-20">
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {currentPlans.map((plan) => {
+          {(() => {
+            const standardPlans = currentPlans.filter(
+              (p) => !p.planKey.includes('SYNC') && p.planKey !== 'ELITE'
+            );
+            const syncPlans = currentPlans.filter(
+              (p) => p.planKey.includes('SYNC') || p.planKey === 'ELITE'
+            );
+
+            const renderCard = (plan) => {
               const status = getPlanStatus(plan);
               let displayPrice = plan.price;
               let originalPrice = null;
               const planKey = plan.planKey;
-              const applicable = appliedPromo?.applicablePlans && appliedPromo.applicablePlans.length > 0 
-                ? appliedPromo.applicablePlans.includes(planKey) 
-                : (planKey === 'STARTER' || planKey === 'PRO' || planKey === 'STARTER_SYNC' || planKey === 'PRO_SYNC');
-              
+              const applicable =
+                appliedPromo?.applicablePlans && appliedPromo.applicablePlans.length > 0
+                  ? appliedPromo.applicablePlans.includes(planKey)
+                  : (planKey === 'STARTER' || planKey === 'PRO' || planKey === 'STARTER_SYNC' || planKey === 'PRO_SYNC');
+
               if (appliedPromo && appliedPromo.discountPercent && applicable && plan.numericPrice > 0) {
                 const disc = Math.round(plan.numericPrice * (1 - appliedPromo.discountPercent / 100));
                 originalPrice = plan.price;
@@ -1012,24 +1029,84 @@ const Pricing = () => {
                 <PricingCard
                   key={plan.id || plan.name}
                   {...plan}
+                  category={plan.category}
                   badgeText={plan.badgeText}
                   badgeVariant={plan.badgeVariant}
-                  waitlistCount={plan.isWaitlist ? (waitlistCounts?.[plan.planKey]?.count || waitlistCounts?.PRO_SYNC?.count) : undefined}
+                  waitlistCount={
+                    plan.isWaitlist
+                      ? waitlistCounts?.[plan.planKey]?.count || waitlistCounts?.PRO_SYNC?.count
+                      : undefined
+                  }
                   planHeader={plan.targetAudience}
                   price={displayPrice}
                   originalPrice={originalPrice}
-                  tagline={appliedPromo && applicable && plan.numericPrice > 0 ? `🔥 ${appliedPromo.discountPercent}% OFF APPLIED` : plan.tagline}
+                  tagline={
+                    appliedPromo && applicable && plan.numericPrice > 0
+                      ? `🔥 ${appliedPromo.discountPercent}% OFF APPLIED`
+                      : plan.tagline
+                  }
                   highlighted={status.highlighted}
                   cta={status.cta}
                   onClick={status.onClick}
                   to={status.to}
+                  disabled={status.disabled}
                 />
               );
-            })}
-          </div>
+            };
+
+            return (
+              <div className="space-y-12">
+                {/* Row 1: Standard Plans (Free, Starter, Pro) */}
+                <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                  {standardPlans.map((plan, idx) => (
+                    <div
+                      key={plan.id || plan.name}
+                      className={`flex flex-col ${
+                        idx === 2 && standardPlans.length === 3
+                          ? 'md:col-span-2 lg:col-span-1 md:max-w-md md:mx-auto md:w-full lg:max-w-none'
+                          : ''
+                      }`}
+                    >
+                      {renderCard(plan)}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Row 2: Automated Cloud Sync Plans (Starter Sync, Pro Sync) */}
+                {syncPlans.length > 0 && (
+                  <div>
+                    {/* Subtle Category Header / Divider */}
+                    <div className="mb-8 text-center">
+                      <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-500 dark:text-sky-400 text-xs font-black uppercase tracking-widest mb-2 shadow-sm">
+                        <span>⚡</span> AUTOMATED SYNC
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+                        Automated MetaTrader Cloud Sync Plans
+                      </h2>
+                      <p className="mt-1.5 text-xs sm:text-sm text-muted max-w-xl mx-auto leading-relaxed">
+                        Hands-free 24/7 trade ingestion directly from your MetaTrader 4 and 5 broker accounts via secure cloud synchronization.
+                      </p>
+                    </div>
+
+                    {/* Centered Row with Matching Card Widths */}
+                    <div className="flex flex-col md:flex-row justify-center items-stretch gap-6">
+                      {syncPlans.map((plan) => (
+                        <div
+                          key={plan.id || plan.name}
+                          className="w-full md:w-[calc(50%-12px)] lg:w-[calc((100%-48px)/3)] flex flex-col"
+                        >
+                          {renderCard(plan)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Dedicated Mentor & Academy Spotlight Banner */}
-          <div className="mt-8 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/30 via-surface to-surface p-6 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="mt-14 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/30 via-surface to-surface p-6 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl">
             <div className="space-y-2 max-w-3xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider">
                 <span>🎓</span> For Mentors, Coaches & Academies
