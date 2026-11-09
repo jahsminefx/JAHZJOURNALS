@@ -8,6 +8,8 @@ import PromotionModal from '../../components/admin/PromotionModal';
 const formatPlanName = (plan) => {
   switch (plan) {
     case 'PRO_SYNC': return 'Pro Sync';
+    case 'STARTER_SYNC':
+    case 'SYNC_PLUS': return 'Starter Sync';
     case 'PRO': return 'Pro';
     case 'STARTER': return 'Starter';
     case 'FREE': return 'Free';

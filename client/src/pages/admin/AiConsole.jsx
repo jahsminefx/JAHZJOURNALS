@@ -257,7 +257,7 @@ const ConfigTab = () => {
                    >
                      <option value="EVERYONE">Enabled for Everyone</option>
                      <option value="STARTER_AND_ABOVE">Starter & Above</option>
-                     <option value="PRO_AND_ABOVE">Pro & Above (Pro, Pro Sync)</option>
+                     <option value="PRO_AND_ABOVE">Pro & Above (Pro, Starter Sync, Pro Sync)</option>
                      <option value="PRO_SYNC_ONLY">Pro Sync Only</option>
                      <option value="MENTORS_ONLY">Mentors Only (All 3 Tiers)</option>
                      <option value="MEGA_MENTORS_ONLY">Mega Academy Mentors Only</option>

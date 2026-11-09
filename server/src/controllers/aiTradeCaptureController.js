@@ -94,7 +94,7 @@ const handleChatTradeCapture = async (req, res) => {
       ? req.user
       : (req.user?.id ? await prisma.user.findUnique({ where: { id: req.user.id } }) : req.user);
     const userPlanKey = getEffectivePlanKey(effectiveUser);
-    const proEquivalentPlans = new Set(['PRO', 'PRO_SYNC', 'MENTOR']);
+    const proEquivalentPlans = new Set(['PRO', 'STARTER_SYNC', 'SYNC_PLUS', 'PRO_SYNC', 'MENTOR']);
     const isProOrMentor = proEquivalentPlans.has(userPlanKey) || effectiveUser?.role === 'ADMIN' || effectiveUser?.role === 'SUPER_ADMIN';
     if (!isProOrMentor) {
       return res.status(403).json(buildLimitReachedPayload({

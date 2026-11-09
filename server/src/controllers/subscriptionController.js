@@ -25,7 +25,9 @@ const getPaystackSecret = () => (process.env.PAYSTACK_SECRET_KEY || '').trim();
 const getPlanMappings = () => ({
   STARTER: { amountInKobo: 400000, planCode: process.env.PAYSTACK_STARTER_PLAN },
   PRO: { amountInKobo: 850000, planCode: process.env.PAYSTACK_PRO_PLAN },
-  PRO_SYNC: { amountInKobo: 3800000, planCode: process.env.PAYSTACK_PRO_SYNC_PLAN || process.env.PAYSTACK_SYNC_PLUS_PLAN },
+  STARTER_SYNC: { amountInKobo: 3800000, planCode: process.env.PAYSTACK_STARTER_SYNC_PLAN || process.env.PAYSTACK_SYNC_PLUS_PLAN },
+  SYNC_PLUS: { amountInKobo: 3800000, planCode: process.env.PAYSTACK_STARTER_SYNC_PLAN || process.env.PAYSTACK_SYNC_PLUS_PLAN },
+  PRO_SYNC: { amountInKobo: 7200000, planCode: process.env.PAYSTACK_PRO_SYNC_PLAN },
   MENTOR_PRIVATE_COHORT: { amountInKobo: 1450000, planCode: process.env.PAYSTACK_MENTOR_PRIVATE_COHORT_PLAN },
   MENTOR_GROWTH: { amountInKobo: 2500000, planCode: process.env.PAYSTACK_MENTOR_GROWTH_PLAN || process.env.PAYSTACK_MENTOR_PLAN },
   MENTOR_MEGA: { amountInKobo: 8500000, planCode: process.env.PAYSTACK_MENTOR_MEGA_PLAN },
@@ -36,11 +38,13 @@ const PLAN_RANK = {
   FREE: 1,
   STARTER: 2,
   PRO: 3,
-  PRO_SYNC: 4,
+  STARTER_SYNC: 4,
+  SYNC_PLUS: 4,
+  PRO_SYNC: 5,
   MENTOR: 6,
 };
 
-const VALID_PLANS = new Set(['FREE', 'STARTER', 'PRO', 'PRO_SYNC', 'MENTOR']);
+const VALID_PLANS = new Set(['FREE', 'STARTER', 'PRO', 'STARTER_SYNC', 'SYNC_PLUS', 'PRO_SYNC', 'MENTOR']);
 
 const resolveClientUrl = (req) => {
   const configured = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim();
@@ -148,8 +152,9 @@ const inferPlanFromTransaction = (txData) => {
   } else {
     // NGN
     const amountNgn = amountMinor > 1000 ? amountMinor / 100 : amountMinor;
-    if (metadata.studentCount || amountNgn >= 50000) return 'MENTOR';
-    if (amountNgn >= 30000) return 'SYNC_PLUS';
+    if (metadata.studentCount || amountNgn >= 80000) return 'MENTOR';
+    if (amountNgn >= 60000) return 'PRO_SYNC';
+    if (amountNgn >= 30000) return 'STARTER_SYNC';
     if (amountNgn >= 6000) return 'PRO';
     return 'STARTER';
   }

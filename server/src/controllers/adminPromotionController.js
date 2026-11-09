@@ -101,7 +101,7 @@ const createPromotion = async (req, res) => {
       return res.status(400).json({ message: 'Name and slug are required.' });
     }
 
-    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'PRO_SYNC', 'MENTOR', 'MENTOR_PRIVATE_COHORT', 'MENTOR_GROWTH', 'MENTOR_MEGA'];
+    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'STARTER_SYNC', 'SYNC_PLUS', 'PRO_SYNC', 'MENTOR', 'MENTOR_PRIVATE_COHORT', 'MENTOR_GROWTH', 'MENTOR_MEGA'];
 
     let parsedApplicablePlans = [];
     if (Array.isArray(applicablePlans)) {
@@ -189,7 +189,7 @@ const updatePromotion = async (req, res) => {
     const oldPromo = await prisma.promotion.findUnique({ where: { id } });
     if (!oldPromo) return res.status(404).json({ message: 'Promotion not found' });
 
-    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'PRO_SYNC', 'MENTOR', 'MENTOR_PRIVATE_COHORT', 'MENTOR_GROWTH', 'MENTOR_MEGA'];
+    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'STARTER_SYNC', 'SYNC_PLUS', 'PRO_SYNC', 'MENTOR', 'MENTOR_PRIVATE_COHORT', 'MENTOR_GROWTH', 'MENTOR_MEGA'];
     if (updateData.applicablePlans) {
       if (Array.isArray(updateData.applicablePlans)) {
         updateData.applicablePlans = updateData.applicablePlans.filter(p => VALID_PLANS.includes(p));

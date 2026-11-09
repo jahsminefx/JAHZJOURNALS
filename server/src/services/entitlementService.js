@@ -247,6 +247,79 @@ const canCreateAccount = async (userIdOrUser, txOrPrisma = prisma) => {
 };
 
 /**
+ * Evaluates whether a user can connect an additional automated MT4/MT5 cloud sync account
+ */
+const canConnectCloudSyncAccount = async (userIdOrUser, txOrPrisma = prisma) => {
+  const user = await resolveUser(userIdOrUser, txOrPrisma);
+  const userPlanKey = getEffectivePlanKey(user);
+  const planConfig = getPlanConfig(user || userPlanKey);
+
+  // Super admin / admin bypass
+  if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+    return { allowed: true, current: 0, limit: Infinity, plan: userPlanKey };
+  }
+
+  // Feature gate: mt5Sync must be enabled
+  if (!hasFeatureAccess(user, 'mt5Sync')) {
+    return {
+      allowed: false,
+      current: 0,
+      limit: 0,
+      plan: userPlanKey,
+      requiredPlan: 'STARTER_SYNC',
+      payload: buildLimitReachedPayload({
+        feature: 'mt5_sync',
+        current: 0,
+        limit: 0,
+        userPlan: userPlanKey,
+        requiredPlan: 'STARTER_SYNC',
+        customMessage: 'MetaTrader (MT4/MT5) Cloud Sync requires a Starter Sync, Pro Sync, or Mega Academy plan. Upgrade to unlock automated cloud sync.'
+      })
+    };
+  }
+
+  const limit = planConfig.cloudSyncAccountLimit || (userPlanKey === 'STARTER_SYNC' || userPlanKey === 'SYNC_PLUS' ? 2 : 6);
+  const userId = user?.id;
+  if (!userId) {
+    return { allowed: false, current: 0, limit, plan: userPlanKey };
+  }
+
+  const currentSyncedCount = await txOrPrisma.tradingAccount.count({
+    where: {
+      userId,
+      cloudSyncEnabled: true,
+    },
+  });
+
+  if (currentSyncedCount >= limit) {
+    const isStarterSync = userPlanKey === 'STARTER_SYNC' || userPlanKey === 'SYNC_PLUS';
+    const requiredPlan = isStarterSync ? 'PRO_SYNC' : 'PRO_SYNC';
+    return {
+      allowed: false,
+      current: currentSyncedCount,
+      limit,
+      plan: userPlanKey,
+      requiredPlan,
+      payload: buildLimitReachedPayload({
+        feature: 'mt5_sync',
+        current: currentSyncedCount,
+        limit,
+        userPlan: userPlanKey,
+        requiredPlan,
+        customMessage: `You have reached your ${planConfig.name} limit of ${limit} active synced MetaTrader accounts. ${isStarterSync ? 'Upgrade to Pro Sync to connect up to 6 accounts.' : 'Please disconnect an existing synced account to connect a new one.'}`
+      })
+    };
+  }
+
+  return {
+    allowed: true,
+    current: currentSyncedCount,
+    limit,
+    plan: userPlanKey,
+  };
+};
+
+/**
  * Evaluates whether a screenshot can be attached to a specific trade based on user's plan limit
  */
 const canAttachScreenshot = async (tradeId, userIdOrUser, countToAdd = 1, txOrPrisma = prisma) => {
@@ -570,6 +643,7 @@ module.exports = {
   resolveUser,
   canCreateTrades,
   canCreateAccount,
+  canConnectCloudSyncAccount,
   canAttachScreenshot,
   checkAiAllowance,
   hasFeatureAccess,

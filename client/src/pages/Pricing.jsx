@@ -86,26 +86,48 @@ const REGIONAL_CONFIG = {
         ],
       },
       {
-        id: 'price_ngn_pro_sync_monthly',
-        planKey: 'PRO_SYNC',
-        name: 'Pro Sync',
-        tagline: 'Automate your journal.',
+        id: 'price_ngn_starter_sync_monthly',
+        planKey: 'STARTER_SYNC',
+        name: 'Starter Sync',
+        tagline: 'Automate your core accounts.',
         price: '₦38,000',
         numericPrice: 38000,
         highlighted: false,
         badgeText: 'Early Access • Jan 2027',
         badgeVariant: 'sky',
-        description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for your live and funded broker accounts.',
-        targetAudience: 'Reduce manual trade entry using supported MetaTrader synchronization.',
-        limits: ['Automated 24/7 Cloud Sync', 'Unlimited trades / accounts', '10 screenshots per trade'],
+        description: 'Full Pro features plus automated MetaTrader 4/5 Cloud Sync for up to 2 active trading accounts.',
+        targetAudience: 'Automate trade journaling for your personal and primary funded account.',
+        limits: ['Automated MT4/MT5 Cloud Sync (2 accounts)', 'Unlimited trades & manual accounts', '10 screenshots per trade'],
         features: [
           'All Pro plan capabilities',
-          'Automated MetaTrader (MT4/MT5) Cloud Sync',
-          'Log Trades with JAHZ AI (Unlimited)',
+          'Automated MetaTrader (MT4/MT5) Cloud Sync (2 accounts)',
+          'Log Trades with JAHZ AI (300 trades/month)',
           'Instant trade ingestion on broker close',
-          'Multi-account live broker synchronization',
           'Prop-firm real-time drawdown monitoring',
-          'Priority trade processing',
+          'Automated balance & equity sync',
+        ],
+        isWaitlist: true,
+      },
+      {
+        id: 'price_ngn_pro_sync_monthly',
+        planKey: 'PRO_SYNC',
+        name: 'Pro Sync',
+        tagline: 'Automate your journal with power.',
+        price: '₦72,000',
+        numericPrice: 72000,
+        highlighted: false,
+        badgeText: 'Early Access • Jan 2027',
+        badgeVariant: 'sky',
+        description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for up to 6 trading accounts with priority processing.',
+        targetAudience: 'Engineered for multi-funded prop traders managing multiple evaluation and live accounts.',
+        limits: ['Priority MT4/MT5 Cloud Sync (Up to 6 accounts)', 'Unlimited trades & manual accounts', '10 screenshots per trade'],
+        features: [
+          'All Starter Sync capabilities',
+          'Up to 6 synced MetaTrader (MT4/MT5) accounts',
+          'Log Trades with JAHZ AI (Unlimited)',
+          'Priority 1-minute cloud sync polling',
+          'Multi-broker aggregated risk dashboard',
+          'Priority VIP support & direct channel',
         ],
         isWaitlist: true,
       },
@@ -612,17 +634,18 @@ const Pricing = () => {
     return () => clearInterval(interval);
   }, [activePublicPromo?.endsAt, appliedPromo?.promotion?.endsAt]);
 
-    const handleProSyncWaitlist = async () => {
+  const handleProSyncWaitlist = async (targetTier = 'PRO_SYNC') => {
     let emailToUse = user?.email;
     if (!emailToUse) {
-      const input = window.prompt('Enter your email to reserve your spot on the Pro Sync early-access waitlist:');
+      const tierLabel = targetTier === 'STARTER_SYNC' ? 'Starter Sync' : 'Pro Sync';
+      const input = window.prompt(`Enter your email to reserve your spot on the ${tierLabel} early-access waitlist:`);
       if (!input || !input.includes('@')) return;
       emailToUse = input.trim();
     }
 
     try {
       const res = await api.post('/waitlist/join', {
-        tier: 'PRO_SYNC',
+        tier: targetTier,
         email: emailToUse,
         name: user?.name || 'Trader'
       });
@@ -630,6 +653,7 @@ const Pricing = () => {
       if (res.data.count) {
         setWaitlistCounts(prev => ({
           ...prev,
+          [targetTier]: { ...(prev[targetTier] || {}), count: res.data.count },
           PRO_SYNC: { ...(prev.PRO_SYNC || {}), count: res.data.count }
         }));
       }
@@ -642,7 +666,7 @@ const Pricing = () => {
     if (!planItem || planItem.planKey === 'FREE') return;
 
     if (planItem.isWaitlist) {
-      handleProSyncWaitlist();
+      handleProSyncWaitlist(planItem.planKey);
       return;
     }
 
@@ -681,10 +705,11 @@ const Pricing = () => {
     FREE: 1,
     STARTER: 2,
     PRO: 3,
+    STARTER_SYNC: 4,
     SYNC_PLUS: 4,
-    PRO_SYNC: 4,
-    ELITE: 5,
-    MENTOR: 6,
+    PRO_SYNC: 5,
+    ELITE: 6,
+    MENTOR: 7,
   };
 
   const userPlanKey = (user?.subscriptionPlan || 'FREE').toUpperCase();
@@ -707,9 +732,9 @@ const Pricing = () => {
 
     if (planItem.isWaitlist) {
       return {
-        cta: 'Join Sync Waitlist',
+        cta: `Join ${planItem.name} Waitlist`,
         to: undefined,
-        onClick: handleProSyncWaitlist,
+        onClick: () => handleProSyncWaitlist(planItem.planKey),
         highlighted: false,
       };
     }
@@ -962,9 +987,9 @@ const Pricing = () => {
           </section>
         )}
 
-        {/* 5. Pricing Cards Grid (4 Columns for Individual Traders) */}
+        {/* 5. Pricing Cards Grid (5 Columns for Individual Traders) */}
         <section id="pricing-cards" className="py-6 scroll-mt-20">
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {currentPlans.map((plan) => {
               const status = getPlanStatus(plan);
               let displayPrice = plan.price;
@@ -972,7 +997,7 @@ const Pricing = () => {
               const planKey = plan.planKey;
               const applicable = appliedPromo?.applicablePlans && appliedPromo.applicablePlans.length > 0 
                 ? appliedPromo.applicablePlans.includes(planKey) 
-                : (planKey === 'STARTER' || planKey === 'PRO' || planKey === 'PRO_SYNC');
+                : (planKey === 'STARTER' || planKey === 'PRO' || planKey === 'STARTER_SYNC' || planKey === 'PRO_SYNC');
               
               if (appliedPromo && appliedPromo.discountPercent && applicable && plan.numericPrice > 0) {
                 const disc = Math.round(plan.numericPrice * (1 - appliedPromo.discountPercent / 100));
@@ -986,7 +1011,7 @@ const Pricing = () => {
                   {...plan}
                   badgeText={plan.badgeText}
                   badgeVariant={plan.badgeVariant}
-                  waitlistCount={plan.planKey === 'PRO_SYNC' ? waitlistCounts?.PRO_SYNC?.count : undefined}
+                  waitlistCount={plan.isWaitlist ? (waitlistCounts?.[plan.planKey]?.count || waitlistCounts?.PRO_SYNC?.count) : undefined}
                   planHeader={plan.targetAudience}
                   price={displayPrice}
                   originalPrice={originalPrice}

@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { encryptCredential, decryptCredential } = require('../utils/cryptoUtils');
-const { canCreateTrades, hasFeatureAccess } = require('../services/entitlementService');
+const { canCreateTrades, canConnectCloudSyncAccount, hasFeatureAccess } = require('../services/entitlementService');
 const { getEffectivePlanKey, buildLimitReachedPayload } = require('../config/plans');
 const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions, getAccountConnectionStatus, fetchAccountInformation } = require('../services/metaApiService');
 const { detectTradingSession, resolveTradeRiskReward } = require('../utils/tradeCalculations');
@@ -523,6 +523,11 @@ const connectCloudSync = async (req, res) => {
       return res.status(404).json({ message: 'Trading account not found.' });
     }
 
+    const syncCheck = await canConnectCloudSyncAccount(req.user.id);
+    if (!syncCheck.allowed) {
+      return res.status(403).json(syncCheck.payload);
+    }
+
     const cleanServer = String(server).trim();
     const cleanLogin = String(login).trim();
     const cleanPassword = String(investorPassword).trim();
@@ -608,6 +613,11 @@ const autoConnectCloudSync = async (req, res) => {
     const cleanLogin = String(login).trim();
     const cleanPassword = String(investorPassword).trim();
     const cleanPlatform = String(platform).toUpperCase().trim();
+
+    const syncCheck = await canConnectCloudSyncAccount(req.user.id);
+    if (!syncCheck.allowed) {
+      return res.status(403).json(syncCheck.payload);
+    }
 
     // 1. Provision cloud account instance via MetaApi
     const provisionResult = await provisionCloudAccount({

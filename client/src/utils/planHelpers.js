@@ -61,13 +61,34 @@ export const PLANS = {
     mentorAccess: false,
     mt5Sync: false,
   },
-  SYNC_PLUS: {
-    key: 'SYNC_PLUS',
-    name: 'Sync Plus',
+  STARTER_SYNC: {
+    key: 'STARTER_SYNC',
+    name: 'Starter Sync',
     priceNgn: 38000,
     priceFormatted: '₦38,000 / month',
     tradeLimit: Infinity,
     accountLimit: Infinity,
+    cloudSyncAccountLimit: 2,
+    screenshotLimit: 10,
+    analyticsLevel: 'ADVANCED',
+    emotionTracking: true,
+    ruleViolations: true,
+    propFirmAccess: true,
+    aiAccess: true,
+    weeklyCoachAccess: true,
+    aiTradeCapture: true,
+    reportsAccess: true,
+    mentorAccess: false,
+    mt5Sync: true,
+  },
+  SYNC_PLUS: {
+    key: 'SYNC_PLUS',
+    name: 'Starter Sync',
+    priceNgn: 38000,
+    priceFormatted: '₦38,000 / month',
+    tradeLimit: Infinity,
+    accountLimit: Infinity,
+    cloudSyncAccountLimit: 2,
     screenshotLimit: 10,
     analyticsLevel: 'ADVANCED',
     emotionTracking: true,
@@ -83,11 +104,12 @@ export const PLANS = {
   PRO_SYNC: {
     key: 'PRO_SYNC',
     name: 'Pro Sync',
-    priceNgn: 38000,
-    priceUsd: 27,
-    priceFormatted: '₦38,000 / $27 / month',
+    priceNgn: 72000,
+    priceUsd: 48,
+    priceFormatted: '₦72,000 / $48 / month',
     tradeLimit: Infinity,
     accountLimit: Infinity,
+    cloudSyncAccountLimit: 6,
     screenshotLimit: 10,
     analyticsLevel: 'ADVANCED',
     emotionTracking: true,
@@ -206,7 +228,7 @@ export const canLogTradesWithAi = (user) => {
   }
 
   const plan = getEffectivePlan(user);
-  const proEquivalentPlans = new Set(['PRO', 'SYNC_PLUS', 'PRO_SYNC', 'ELITE', 'MENTOR']);
+  const proEquivalentPlans = new Set(['PRO', 'STARTER_SYNC', 'SYNC_PLUS', 'PRO_SYNC', 'ELITE', 'MENTOR']);
   return proEquivalentPlans.has(plan);
 };
 
@@ -226,6 +248,6 @@ export const hasAdvancedAnalytics = (user) => {
   }
 
   const plan = getEffectivePlan(user);
-  const proEquivalentPlans = new Set(['PRO', 'SYNC_PLUS', 'PRO_SYNC', 'ELITE', 'MENTOR']);
+  const proEquivalentPlans = new Set(['PRO', 'STARTER_SYNC', 'SYNC_PLUS', 'PRO_SYNC', 'ELITE', 'MENTOR']);
   return proEquivalentPlans.has(plan);
 };

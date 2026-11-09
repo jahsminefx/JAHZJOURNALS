@@ -146,6 +146,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                        <option value="FREE">Free</option>
                        <option value="STARTER">Starter</option>
                        <option value="PRO">Pro</option>
+                       <option value="STARTER_SYNC">Starter Sync</option>
                        <option value="PRO_SYNC">Pro Sync</option>
                      </optgroup>
                      <optgroup label="Mentor Tiers">

@@ -66,16 +66,62 @@ const PLANS = {
     reportsAccess: true,
     mentorAccess: false,
     mt5Sync: false,
+    cloudSyncAccountLimit: 0,
+  },
+  STARTER_SYNC: {
+    key: 'STARTER_SYNC',
+    name: 'Starter Sync',
+    priceNgn: 38000,
+    priceFormatted: '₦38,000 / month',
+    tagline: 'Automate your core accounts.',
+    description: 'Full Pro features plus automated MetaTrader 4/5 Cloud Sync for up to 2 active trading accounts.',
+    tradeLimit: Infinity,
+    accountLimit: Infinity,
+    cloudSyncAccountLimit: 2,
+    screenshotLimit: 10,
+    analyticsLevel: 'ADVANCED',
+    emotionTracking: true,
+    ruleViolations: true,
+    propFirmAccess: true,
+    aiAccess: true,
+    weeklyCoachAccess: true,
+    aiTradeCapture: true,
+    reportsAccess: true,
+    mentorAccess: false,
+    mt5Sync: true,
+  },
+  SYNC_PLUS: {
+    key: 'SYNC_PLUS',
+    name: 'Starter Sync',
+    priceNgn: 38000,
+    priceFormatted: '₦38,000 / month',
+    tagline: 'Automate your core accounts.',
+    description: 'Full Pro features plus automated MetaTrader 4/5 Cloud Sync for up to 2 active trading accounts.',
+    tradeLimit: Infinity,
+    accountLimit: Infinity,
+    cloudSyncAccountLimit: 2,
+    screenshotLimit: 10,
+    analyticsLevel: 'ADVANCED',
+    emotionTracking: true,
+    ruleViolations: true,
+    propFirmAccess: true,
+    aiAccess: true,
+    weeklyCoachAccess: true,
+    aiTradeCapture: true,
+    reportsAccess: true,
+    mentorAccess: false,
+    mt5Sync: true,
   },
   PRO_SYNC: {
     key: 'PRO_SYNC',
     name: 'Pro Sync',
-    priceNgn: 38000,
-    priceFormatted: '₦38,000 / month',
-    tagline: 'Automate your journal.',
-    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for your live and funded broker accounts.',
+    priceNgn: 72000,
+    priceFormatted: '₦72,000 / month',
+    tagline: 'Automate your journal with power.',
+    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for up to 6 trading accounts with priority processing.',
     tradeLimit: Infinity,
     accountLimit: Infinity,
+    cloudSyncAccountLimit: 6,
     screenshotLimit: 10,
     analyticsLevel: 'ADVANCED',
     emotionTracking: true,
@@ -233,6 +279,8 @@ const buildLimitReachedPayload = ({ feature, current, limit, userPlan, requiredP
     FREE: 'Free',
     STARTER: 'Starter',
     PRO: 'Pro',
+    STARTER_SYNC: 'Starter Sync',
+    SYNC_PLUS: 'Starter Sync',
     PRO_SYNC: 'Pro Sync',
     MENTOR: 'Mentor/Academy'
   };
@@ -248,22 +296,24 @@ const buildLimitReachedPayload = ({ feature, current, limit, userPlan, requiredP
       message = `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} screenshots per trade. Upgrade to ${reqPlanName} to attach more chart images.`;
     } else if (feature === 'ai_trade_capture') {
       message = (limit && limit > 0)
-        ? `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} AI trade captures this month. Upgrade to Pro Sync for unlimited AI trade logging or wait for your quota to reset on the 1st of next month.`
-        : `Logging trades with JAHZ AI is reserved for Pro, Pro Sync, and Mentor plans. Upgrade to Pro to capture trades via AI chat and screenshots.`;
+        ? `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} AI trade captures this month. Upgrade to Starter Sync or Pro Sync for unlimited AI trade logging or wait for your quota to reset on the 1st of next month.`
+        : `Logging trades with JAHZ AI is reserved for Pro, Starter Sync, Pro Sync, and Mentor plans. Upgrade to Pro to capture trades via AI chat and screenshots.`;
     } else if (feature === 'weekly_coach') {
       message = (limit && limit > 0)
         ? `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} Weekly AI Coach summaries this month. Upgrade to ${reqPlanName} for expanded capacity.`
-        : `Weekly AI Coaching Summaries are available starting on the Starter plan. Upgrade to Starter, Pro, or Pro Sync to unlock Weekly AI Coach.`;
+        : `Weekly AI Coaching Summaries are available starting on the Starter plan. Upgrade to Starter, Pro, or Sync tiers to unlock Weekly AI Coach.`;
     } else if (feature === 'ai') {
-      message = `AI Trade Review and AI Coach features require a Starter, Pro, or Pro Sync subscription. Upgrade to unlock AI insights.`;
+      message = `AI Trade Review and AI Coach features require a Starter, Pro, or Sync subscription. Upgrade to unlock AI insights.`;
     } else if (feature === 'prop_firm') {
-      message = `Prop firm challenge tracking requires a Pro or Pro Sync subscription. Upgrade to track your evaluation rules.`;
+      message = `Prop firm challenge tracking requires a Pro, Starter Sync, or Pro Sync subscription. Upgrade to track your evaluation rules.`;
     } else if (feature === 'pdf_reports') {
-      message = `Exporting PDF performance reports requires a Pro or Pro Sync subscription. Upgrade to generate reports.`;
+      message = `Exporting PDF performance reports requires a Pro, Starter Sync, or Pro Sync subscription. Upgrade to generate reports.`;
     } else if (feature === 'mentor') {
       message = `Mentor and student management features require a Mentor/Academy plan.`;
     } else if (feature === 'mt5_sync') {
-      message = `MetaTrader (MT4/MT5) Cloud Sync is available on Pro Sync and Mega Academy plans. Upgrade to an automated sync tier to automatically sync your MT4/MT5 broker accounts.`;
+      message = (limit && limit > 0)
+        ? `You've reached your ${planNames[userPlan] || userPlan} plan limit of ${limit} active synced MetaTrader accounts. Upgrade to Pro Sync to connect up to 6 accounts.`
+        : `MetaTrader (MT4/MT5) Cloud Sync is available on Starter Sync, Pro Sync, and Mega Academy plans. Upgrade to an automated sync tier to automatically sync your MT4/MT5 broker accounts.`;
     } else {
       message = `Feature unavailable on your current plan. Upgrade to ${reqPlanName} to unlock.`;
     }

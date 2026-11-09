@@ -98,6 +98,7 @@ const getSubscriptionMetrics = async (req, res) => {
       FREE: 0,
       STARTER: 0,
       PRO: 0,
+      STARTER_SYNC: 0,
       PRO_SYNC: 0,
       MENTOR: 0
     };
@@ -109,6 +110,7 @@ const getSubscriptionMetrics = async (req, res) => {
       FREE: userPlans.FREE || 0,
       STARTER: userPlans.STARTER || 0,
       PRO: userPlans.PRO || 0,
+      STARTER_SYNC: (userPlans.STARTER_SYNC || 0) + (userPlans.SYNC_PLUS || 0),
       PRO_SYNC: userPlans.PRO_SYNC || 0,
       MENTOR: userPlans.MENTOR || 0,
       ...activePlanGroups.reduce((acc, curr) => ({ ...acc, [curr.plan]: curr._count.plan }), {})
@@ -267,7 +269,7 @@ const updateUserSubscriptionDirect = async (req, res) => {
     const { id } = req.params; // userId
     const { plan, status = 'ACTIVE', reason = 'ADMIN_GRANTED', notes } = req.body;
 
-    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'PRO_SYNC', 'MENTOR'];
+    const VALID_PLANS = ['FREE', 'STARTER', 'PRO', 'STARTER_SYNC', 'SYNC_PLUS', 'PRO_SYNC', 'MENTOR'];
     if (!plan || !VALID_PLANS.includes(plan)) {
       return res.status(400).json({ message: 'Invalid subscription plan specified.' });
     }

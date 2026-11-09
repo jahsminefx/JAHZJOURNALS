@@ -155,6 +155,9 @@ const UserManagement = () => {
     switch (plan) {
       case 'PRO_SYNC':
         return 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30';
+      case 'STARTER_SYNC':
+      case 'SYNC_PLUS':
+        return 'bg-teal-500/15 text-teal-400 border-teal-500/30';
       case 'PRO':
         return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
       case 'STARTER':
@@ -194,6 +197,7 @@ const UserManagement = () => {
               <option value="FREE">Free</option>
               <option value="STARTER">Starter</option>
               <option value="PRO">Pro</option>
+              <option value="STARTER_SYNC">Starter Sync</option>
               <option value="PRO_SYNC">Pro Sync</option>
             </optgroup>
             <optgroup label="Mentor Tiers">
@@ -309,6 +313,7 @@ const UserManagement = () => {
                               <option value="FREE">FREE</option>
                               <option value="STARTER">STARTER</option>
                               <option value="PRO">PRO</option>
+                              <option value="STARTER_SYNC">STARTER SYNC</option>
                               <option value="PRO_SYNC">PRO SYNC</option>
                             </optgroup>
                             <optgroup label="Mentor Tiers">

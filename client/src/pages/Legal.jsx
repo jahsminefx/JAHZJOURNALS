@@ -550,7 +550,7 @@ const Legal = ({ type }) => {
           </ul>
 
           <p className="mb-4 text-xs leading-relaxed">
-            <strong>Advertising Cookies (Public Pages Only):</strong> On eligible public marketing and educational blog pages, third-party advertising providers (such as Google AdSense) may set cookies to measure ad performance. You can manage or disable advertising cookies at any time through our Privacy Choices banner or your browser settings. <strong>No advertising cookies or scripts are ever loaded on authenticated trader dashboard pages.</strong>
+            <strong>Advertising Cookies (Public Pages &amp; Free Accounts):</strong> On eligible public marketing and educational blog pages, third-party advertising providers (such as Google AdSense) may set cookies to measure ad performance. Additionally, users on the Free plan may see non-intrusive display advertisements within their authenticated dashboard experience; upgrading to any paid subscription (Starter, Pro, Pro Sync, or Mentor) removes all in-app advertisements entirely. You can manage or disable advertising cookies at any time through our Privacy Choices banner or your browser settings. <strong>Paid subscribers never see advertising cookies or scripts on any authenticated dashboard page.</strong>
           </p>
         </>
       ),

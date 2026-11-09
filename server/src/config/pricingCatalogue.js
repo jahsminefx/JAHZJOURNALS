@@ -20,10 +20,14 @@ function isInternationalCheckoutEnabled() {
   return process.env.ENABLE_INTERNATIONAL_CHECKOUT === 'true';
 }
 
-// Configurable fixed price for Nigerian Pro Sync (equivalent to USD $27 at approved reference rate)
-// Reference Rate: ₦1,407.41 / USD -> $27 * ₦1,407.41 = ₦38,000.
+// Configurable fixed price for Nigerian Starter Sync & Pro Sync
+// Starter Sync: ₦38,000 / month (equivalent to ~$24 USD at baseline)
+// Pro Sync: ₦72,000 / month (equivalent to ~$46 USD at baseline)
 // Fixed and stored as configurable integer minor units (kobo); NEVER dynamically recalculated from live FX.
-const PRO_SYNC_NGN_PRICE = Number(process.env.PRO_SYNC_NGN_PRICE) || 38000;
+const STARTER_SYNC_NGN_PRICE = Number(process.env.STARTER_SYNC_NGN_PRICE) || 38000;
+const STARTER_SYNC_NGN_KOBO = Number(process.env.STARTER_SYNC_NGN_KOBO) || (STARTER_SYNC_NGN_PRICE * 100);
+
+const PRO_SYNC_NGN_PRICE = Number(process.env.PRO_SYNC_NGN_PRICE) || 72000;
 const PRO_SYNC_NGN_KOBO = Number(process.env.PRO_SYNC_NGN_KOBO) || (PRO_SYNC_NGN_PRICE * 100);
 
 const REGIONS = {
@@ -101,40 +105,57 @@ const REGIONAL_PRICES = {
     tagline: 'Find your edge.',
     description: 'The flagship individual trader plan with AI reviews, prop-firm tracking, and PDF reports.',
   },
+  price_ngn_starter_sync_monthly: {
+    id: 'price_ngn_starter_sync_monthly',
+    planId: 'STARTER_SYNC',
+    region: 'NG',
+    currency: 'NGN',
+    amountInMinor: STARTER_SYNC_NGN_KOBO, // ₦38,000.00 (3,800,000 kobo)
+    amountFormatted: `₦${STARTER_SYNC_NGN_PRICE.toLocaleString()} / month`,
+    billingInterval: 'MONTHLY',
+    provider: 'PAYSTACK',
+    providerPlanCode: process.env.PAYSTACK_STARTER_SYNC_PLAN || process.env.PAYSTACK_SYNC_PLUS_PLAN || null,
+    active: true,
+    checkoutAvailable: true,
+    isReferenceOnly: false,
+    isApproximate: false,
+    tagline: 'Automate your core accounts.',
+    description: 'Full Pro features plus automated MetaTrader 4/5 Cloud Sync for up to 2 active trading accounts.',
+  },
   price_ngn_pro_sync_monthly: {
     id: 'price_ngn_pro_sync_monthly',
     planId: 'PRO_SYNC',
     region: 'NG',
     currency: 'NGN',
-    amountInMinor: PRO_SYNC_NGN_KOBO, // ₦38,000.00 (3,800,000 kobo)
+    amountInMinor: PRO_SYNC_NGN_KOBO, // ₦72,000.00 (7,200,000 kobo)
     amountFormatted: `₦${PRO_SYNC_NGN_PRICE.toLocaleString()} / month`,
     billingInterval: 'MONTHLY',
     provider: 'PAYSTACK',
-    providerPlanCode: process.env.PAYSTACK_PRO_SYNC_PLAN || process.env.PAYSTACK_SYNC_PLUS_PLAN || null,
+    providerPlanCode: process.env.PAYSTACK_PRO_SYNC_PLAN || null,
     active: true,
     checkoutAvailable: true,
     isReferenceOnly: false,
     isApproximate: false,
     highlighted: true,
-    tagline: 'Automate your journal.',
-    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for your live and funded accounts.',
+    tagline: 'Automate your journal with power.',
+    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for up to 6 trading accounts with priority processing.',
   },
   price_ngn_sync_plus_monthly: {
     id: 'price_ngn_sync_plus_monthly',
     planId: 'SYNC_PLUS',
     region: 'NG',
     currency: 'NGN',
-    amountInMinor: PRO_SYNC_NGN_KOBO, // ₦38,000.00
-    amountFormatted: `₦${PRO_SYNC_NGN_PRICE.toLocaleString()} / month`,
+    amountInMinor: STARTER_SYNC_NGN_KOBO, // ₦38,000.00
+    amountFormatted: `₦${STARTER_SYNC_NGN_PRICE.toLocaleString()} / month`,
     billingInterval: 'MONTHLY',
     provider: 'PAYSTACK',
-    providerPlanCode: process.env.PAYSTACK_SYNC_PLUS_PLAN || null,
+    providerPlanCode: process.env.PAYSTACK_STARTER_SYNC_PLAN || process.env.PAYSTACK_SYNC_PLUS_PLAN || null,
     active: true,
     checkoutAvailable: true,
     isReferenceOnly: false,
     isApproximate: false,
-    tagline: 'Automate your journal.',
-    description: 'Everything in Pro plus automated MetaTrader 4/5 Cloud Sync for your live and funded accounts.',
+    tagline: 'Automate your core accounts.',
+    description: 'Full Pro features plus automated MetaTrader 4/5 Cloud Sync for up to 2 active trading accounts.',
   },
 
   // -------------------------------------------------------------
@@ -360,7 +381,8 @@ function getDefaultPriceForPlan(planKey, regionCode = 'NG', mentorTier = 'PRIVAT
   if (targetRegion === 'NG') {
     if (normalizedPlan === 'STARTER') return REGIONAL_PRICES.price_ngn_starter_monthly;
     if (normalizedPlan === 'PRO') return REGIONAL_PRICES.price_ngn_pro_monthly;
-    if (normalizedPlan === 'SYNC_PLUS' || normalizedPlan === 'PRO_SYNC') return REGIONAL_PRICES.price_ngn_sync_plus_monthly;
+    if (normalizedPlan === 'STARTER_SYNC' || normalizedPlan === 'SYNC_PLUS') return REGIONAL_PRICES.price_ngn_starter_sync_monthly;
+    if (normalizedPlan === 'PRO_SYNC') return REGIONAL_PRICES.price_ngn_pro_sync_monthly;
     if (normalizedPlan === 'MENTOR') {
       if (mentorTier === 'GROWTH') return REGIONAL_PRICES.price_ngn_mentor_growth_monthly;
       if (mentorTier === 'MEGA') return REGIONAL_PRICES.price_ngn_mentor_mega_monthly;
@@ -512,6 +534,8 @@ function detectCountry(req) {
 
 module.exports = {
   isInternationalCheckoutEnabled,
+  STARTER_SYNC_NGN_PRICE,
+  STARTER_SYNC_NGN_KOBO,
   PRO_SYNC_NGN_PRICE,
   PRO_SYNC_NGN_KOBO,
   REGIONS,

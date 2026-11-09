@@ -176,11 +176,12 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
               <div className="space-y-3 bg-gray-950 border border-emerald-500/30 p-4 rounded-xl">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-2">Trader Tiers</span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                     {[
                       { id: 'FREE', label: 'Free Plan' },
                       { id: 'STARTER', label: 'Starter Plan' },
                       { id: 'PRO', label: 'Pro Plan' },
+                      { id: 'STARTER_SYNC', label: 'Starter Sync' },
                       { id: 'PRO_SYNC', label: 'Pro Sync' },
                     ].map(plan => {
                       const isChecked = (formData.applicablePlans || []).includes(plan.id);

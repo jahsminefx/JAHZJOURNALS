@@ -4,12 +4,17 @@ export const ADSENSE_SCRIPT_ID = 'jahzjournals-adsense-script';
 
 /**
  * Checks if the current page is eligible for advertising.
- * Ads are only allowed on public pages.
+ * Ads are allowed on:
+ * 1. All public pages (homepage, blog, pricing, etc.)
+ * 2. Authenticated dashboard pages for FREE-tier users only
+ * 
+ * Paid subscribers (Starter, Pro, Pro Sync, Mentor) never see ads on dashboard pages.
  * 
  * @param {string} [pathname] - The path to check. Defaults to window.location.pathname.
+ * @param {string|null} [userPlan] - The user's subscription plan (e.g. 'FREE', 'STARTER', 'PRO'). Null if not logged in.
  * @returns {boolean} True if eligible for advertising, false otherwise.
  */
-export const isAdvertisingEligiblePage = (pathname = window.location.pathname) => {
+export const isAdvertisingEligiblePage = (pathname = window.location.pathname, userPlan = null) => {
   // Use exact matches for root and specific public routes
   const exactEligibleRoutes = new Set([
     '/',
@@ -38,23 +43,29 @@ export const isAdvertisingEligiblePage = (pathname = window.location.pathname) =
     return true;
   }
 
-  // All other routes (especially authenticated ones like /dashboard, /trades, etc.) are FALSE
+  // For authenticated dashboard pages: only show ads to FREE-tier users
+  if (userPlan && userPlan.toUpperCase() === 'FREE') {
+    return true;
+  }
+
+  // All other routes for paid subscribers are FALSE
   return false;
 };
 
 /**
  * Loads the AdSense script if consent is granted and the page is eligible.
+ * @param {string|null} [userPlan] - The user's subscription plan for determining dashboard ad eligibility.
  * @returns {boolean} True if loaded or already present, false if not loaded.
  */
-export const loadAdSense = () => {
+export const loadAdSense = (userPlan = null) => {
   try {
     // 1. Check if user consented to advertising
     if (!isConsentCategory('advertising')) {
       return false;
     }
 
-    // 2. Check if current page is eligible for ads (no private app pages)
-    if (!isAdvertisingEligiblePage()) {
+    // 2. Check if current page is eligible for ads
+    if (!isAdvertisingEligiblePage(window.location.pathname, userPlan)) {
       return false;
     }
 

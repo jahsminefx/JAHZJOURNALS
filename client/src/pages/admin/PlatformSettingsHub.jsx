@@ -131,7 +131,7 @@ const PlatformSettingsHub = () => {
                                   >
                                       <option value="EVERYONE">Enabled for Everyone</option>
                                       <option value="STARTER_AND_ABOVE">Starter & Above</option>
-                                      <option value="PRO_AND_ABOVE">Pro & Above (Pro, Pro Sync)</option>
+                                      <option value="PRO_AND_ABOVE">Pro & Above (Pro, Starter Sync, Pro Sync)</option>
                                       <option value="PRO_SYNC_ONLY">Pro Sync Only (MT4/MT5 Automated)</option>
                                       <option value="MENTOR_ALL">All Mentors (Private Cohort, Growth, Mega)</option>
                                       <option value="MEGA_MENTORS_ONLY">Mega Academy Mentors Only</option>

@@ -198,6 +198,7 @@ const EmailCampaignsTab = () => {
                     <option value="FREE">Free Plan Users Only</option>
                     <option value="STARTER">Starter Plan Users Only</option>
                     <option value="PRO">Pro Plan Subscribers Only</option>
+                    <option value="STARTER_SYNC">Starter Sync Subscribers Only</option>
                     <option value="PRO_SYNC">Pro Sync Subscribers Only</option>
                   </optgroup>
                   <optgroup label="Mentor Tiers">
