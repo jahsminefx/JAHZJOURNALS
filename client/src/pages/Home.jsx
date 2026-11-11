@@ -1,9 +1,11 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
   Brain,
+  Calendar,
   Camera,
   CheckCircle2,
   ClipboardList,
@@ -45,7 +47,8 @@ const features = [
   ['Rule Violation Tracker', ShieldCheck, 'Track the exact rules you break so you can stop repeating the same account-damaging errors.'],
   ['Emotion Tracking', Brain, 'Record mindset before, during, and after trades to identify emotional patterns.'],
   ['Forex Analytics Dashboard', BarChart3, 'See win rate, equity curve, pair performance, session quality, and execution trends.'],
-  ['Risk Calculator', Target, 'Calculate risk and position size before execution so every trade starts with structure.'],
+  ['Economic News Calendar', Calendar, 'Track high-impact macroeconomic releases, NFP, CPI, and central bank rate decisions in real-time.', '/calendar'],
+  ['Risk Calculator', Target, 'Calculate risk and position size before execution so every trade starts with structure.', '/risk-calculator'],
   ['Weekly Review', CheckCircle2, 'Turn each week into lessons, focus areas, and discipline improvements.'],
   ['Prop Firm Tracker', Wallet, 'Track challenge progress, drawdown pressure, trading days, and rule discipline.'],
   ['Automated Reviews', LineChart, 'Turn structured trade data into rule-based feedback and weekly review prompts.'],
@@ -200,6 +203,16 @@ const Home = () => {
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:mx-0 font-medium">
               Track every trade, screenshot, emotion, mistake, and setup, then discover what actually makes you profitable.
             </p>
+            <div className="mt-4 flex items-center justify-center lg:justify-start">
+              <Link
+                to="/calendar"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-xs font-bold transition-all shadow-sm group"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Live Economic News Calendar (Free)</span>
+                <ArrowRight size={13} className="text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
             {user ? (
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
                 <Button to="/dashboard" size="lg" className="w-full sm:w-auto">Go to Dashboard</Button>
@@ -272,8 +285,8 @@ const Home = () => {
             description="Built for forex, gold, indices, prop firm challenges, and screenshot-heavy smart money review."
           />
           <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {features.map(([title, Icon, description]) => (
-              <FeatureCard key={title} icon={Icon} title={title} description={description} />
+            {features.map(([title, Icon, description, to]) => (
+              <FeatureCard key={title} icon={Icon} title={title} description={description} to={to} />
             ))}
           </div>
         </div>

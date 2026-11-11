@@ -13,9 +13,9 @@ const {
   getSupportedCurrencies,
 } = require('../controllers/calendarController');
 
-// All calendar endpoints require authenticated user
-router.get('/', protect, getCalendarEvents);
-router.get('/upcoming', protect, getUpcomingEvents);
+// Public calendar data endpoints (accessible to visitors without logging in & authenticated users)
+router.get('/', getCalendarEvents);
+router.get('/upcoming', getUpcomingEvents);
 router.post('/check-trade-news', protect, checkTradeNews);
 
 // Personal Economic News Alert Endpoints (V1.1)

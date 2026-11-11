@@ -145,6 +145,7 @@ function App() {
               <Route path="/trading-psychology" element={<TradingPsychology />} />
               <Route path="/risk-management" element={<RiskManagementPage />} />
               <Route path="/risk-calculator" element={<RiskCalculator />} />
+              <Route path="/calendar" element={<EconomicCalendarPage />} />
             </Route>
 
             <Route element={<ProtectedRoute />}>
@@ -178,7 +179,6 @@ function App() {
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/weekly-review" element={<WeeklyReview />} />
                 <Route path="/daily-review" element={<DailyReviewPage />} />
-                <Route path="/calendar" element={<EconomicCalendarPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/promotions" element={<PromotionsPage />} />
                 <Route path="/promotions/:id" element={<PromotionDetailPage />} />

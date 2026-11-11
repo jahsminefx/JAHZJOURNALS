@@ -9,6 +9,7 @@ const links = [
   { label: 'Home', to: '/' },
   { label: 'About', to: '/about' },
   { label: 'Features', to: '/features' },
+  { label: 'News Calendar', to: '/calendar' },
   { label: 'Risk Calculator', to: '/risk-calculator' },
   { label: 'Pricing', to: '/pricing' },
   { label: 'Contact', to: '/contact' },

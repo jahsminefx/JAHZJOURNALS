@@ -8,6 +8,11 @@ import api from '../utils/api';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import NewsAlertPreferencesModal from '../components/calendar/NewsAlertPreferencesModal';
+import { useAuth } from '../context/useAuth';
+import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const CURRENCIES = ['ALL', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD'];
 
@@ -27,6 +32,8 @@ const RANGE_TABS = [
 ];
 
 export default function EconomicCalendarPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,8 +88,10 @@ export default function EconomicCalendarPage() {
 
   useEffect(() => {
     fetchEvents();
-    fetchAlertPreferences();
-  }, [fetchEvents, fetchAlertPreferences]);
+    if (user) {
+      fetchAlertPreferences();
+    }
+  }, [fetchEvents, fetchAlertPreferences, user]);
 
   // Group events by local date string
   const groupedEvents = useMemo(() => {
@@ -221,14 +230,14 @@ export default function EconomicCalendarPage() {
     return count;
   }, [selectedImpact, selectedCurrency, selectedRange, search]);
 
-  return (
+  const calendarContent = (
     <div className="space-y-6 max-w-full">
       <SEO
         title="Economic Calendar | Forex & Global News | JAHZJOURNALS"
         description="Live economic calendar tracking high-impact central bank announcements, CPI, NFP, interest rate decisions, and prop-firm news windows."
       />
 
-      <Breadcrumbs items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Economic Calendar' }]} />
+      <Breadcrumbs items={user ? [{ label: 'Dashboard', path: '/dashboard' }, { label: 'Economic Calendar' }] : [{ label: 'Home', path: '/' }, { label: 'Economic Calendar' }]} />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -253,8 +262,15 @@ export default function EconomicCalendarPage() {
         <div className="flex items-center gap-2 self-start md:self-center flex-wrap">
           <button
             type="button"
-            onClick={() => setIsAlertModalOpen(true)}
-            className="h-9 px-3.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition flex items-center gap-2 shadow-2xs hover:border-emerald-500/30 active:scale-98"
+            onClick={() => {
+              if (user) {
+                setIsAlertModalOpen(true);
+              } else {
+                toast('Create a free account or log in to enable custom alerts for your watchlist.', { icon: '🔔' });
+                navigate('/register');
+              }
+            }}
+            className="h-9 px-3.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition flex items-center gap-2 shadow-2xs hover:border-emerald-500/30 active:scale-98 cursor-pointer"
             title="Configure personal news alerts for your currency pairs"
           >
             <Bell size={14} className={alertPrefs?.isEnabled ? 'text-emerald-400' : 'text-muted'} />
@@ -787,6 +803,51 @@ export default function EconomicCalendarPage() {
         onClose={() => setIsAlertModalOpen(false)}
         onPreferencesUpdated={(updated) => setAlertPrefs(updated)}
       />
+
+      {/* Anonymous Trader Callout Banner */}
+      {!user && (
+        <div className="mt-8 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-surface to-surface p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="space-y-2 max-w-2xl">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+              <span>⚡</span> Free Forex Journaling
+            </span>
+            <h3 className="text-xl sm:text-2xl font-black text-foreground">
+              Never get blindsided by high-impact news spikes again.
+            </h3>
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+              JAHZJOURNALS automatically correlates your trade entries with this economic calendar, tags news spikes in your review, and enforces strict prop-firm drawdown rules.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black shadow-md shadow-emerald-500/20 transition-all text-center whitespace-nowrap"
+            >
+              Start Journaling Free →
+            </Link>
+            <Link
+              to="/risk-calculator"
+              className="inline-flex items-center justify-center px-4 py-3 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-bold transition-all text-center whitespace-nowrap"
+            >
+              Position Size Calculator
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 w-full flex-1">
+          {calendarContent}
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  return calendarContent;
 }
