@@ -95,9 +95,19 @@ const UpcomingNewsTicker = ({ className = '' }) => {
 
             <p className="text-xs sm:text-sm font-bold text-foreground mt-1 truncate">
               {primaryEvent.title}
-              {primaryEvent.forecast && (
+              {(primaryEvent.actual || primaryEvent.forecast) && (
                 <span className="font-normal text-muted ml-2 text-xs">
-                  Forecast: <strong className="text-foreground">{primaryEvent.forecast}</strong>
+                  {primaryEvent.actual && (
+                    <>
+                      Actual: <strong className="text-emerald-400">{primaryEvent.actual}</strong>
+                      {primaryEvent.forecast ? ' | ' : ''}
+                    </>
+                  )}
+                  {primaryEvent.forecast && (
+                    <>
+                      Forecast: <strong className="text-foreground">{primaryEvent.forecast}</strong>
+                    </>
+                  )}
                   {primaryEvent.previous && ` | Prev: ${primaryEvent.previous}`}
                 </span>
               )}

@@ -45,6 +45,15 @@ export default function EconomicCalendarPage() {
   const [fetchError, setFetchError] = useState(null);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [alertPrefs, setAlertPrefs] = useState(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  // Live 1-second clock tick for accurate real-time countdowns
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchAlertPreferences = useCallback(async () => {
     try {
@@ -57,10 +66,12 @@ export default function EconomicCalendarPage() {
     }
   }, []);
 
-  const fetchEvents = useCallback(async (isManual = false) => {
-    if (isManual) setRefreshing(true);
-    else setLoading(true);
-    setFetchError(null);
+  const fetchEvents = useCallback(async (isManual = false, isSilent = false) => {
+    if (!isSilent) {
+      if (isManual) setRefreshing(true);
+      else setLoading(true);
+      setFetchError(null);
+    }
 
     try {
       const params = new URLSearchParams();
@@ -68,7 +79,7 @@ export default function EconomicCalendarPage() {
       if (selectedCurrency !== 'ALL') params.append('currency', selectedCurrency);
       if (selectedRange !== 'this_week') params.append('range', selectedRange);
       if (search.trim()) params.append('search', search.trim());
-      if (isManual) params.append('force', 'true');
+      if (isManual || isSilent) params.append('force', 'true');
 
       const res = await api.get(`/calendar?${params.toString()}`);
       setEvents(res.data?.data || []);
@@ -78,11 +89,15 @@ export default function EconomicCalendarPage() {
         setLastSyncedAt(new Date().toISOString());
       }
     } catch (err) {
-      console.error('Failed to load economic events:', err);
-      setFetchError(err.response?.data?.message || 'Unable to retrieve economic calendar feed. Please try again.');
+      if (!isSilent) {
+        console.error('Failed to load economic events:', err);
+        setFetchError(err.response?.data?.message || 'Unable to retrieve economic calendar feed. Please try again.');
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!isSilent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [selectedImpact, selectedCurrency, selectedRange, search]);
 
@@ -92,6 +107,24 @@ export default function EconomicCalendarPage() {
       fetchAlertPreferences();
     }
   }, [fetchEvents, fetchAlertPreferences, user]);
+
+  // Detect if any event is actively releasing right now (0 to 3 mins after scheduled time without an actual value yet)
+  const hasActivelyReleasingEvent = useMemo(() => {
+    return events.some((ev) => {
+      if (ev.actual || ev.impact === 'Holiday') return false;
+      const diffMs = new Date(ev.date).getTime() - nowMs;
+      return diffMs <= 5000 && diffMs >= -3 * 60 * 1000;
+    });
+  }, [events, nowMs]);
+
+  // Auto-poll every 15s during an active release window to grab Actual numbers immediately, or every 2m otherwise
+  useEffect(() => {
+    const intervalMs = hasActivelyReleasingEvent ? 15000 : 120000;
+    const poll = setInterval(() => {
+      fetchEvents(false, true);
+    }, intervalMs);
+    return () => clearInterval(poll);
+  }, [hasActivelyReleasingEvent, fetchEvents]);
 
   // Group events by local date string
   const groupedEvents = useMemo(() => {
@@ -112,26 +145,24 @@ export default function EconomicCalendarPage() {
     return groups;
   }, [events]);
 
-  // Statistics derived purely from existing data
+  // Statistics derived purely from existing data + live clock
   const stats = useMemo(() => {
     const total = events.length;
     const high = events.filter((e) => e.impact === 'High').length;
     const medium = events.filter((e) => e.impact === 'Medium').length;
-    const now = Date.now();
-    const upcomingNext = events.find((e) => new Date(e.date).getTime() > now);
+    const upcomingNext = events.find((e) => new Date(e.date).getTime() > nowMs);
 
     return { total, high, medium, upcomingNext };
-  }, [events]);
+  }, [events, nowMs]);
 
   // Prop firm restriction status based on upcoming high-impact events
   const propFirmStatus = useMemo(() => {
-    const now = Date.now();
     const highEvents = events.filter((e) => e.impact === 'High');
-    
+
     // Check if an event is currently within ±5 minutes
     const activeRestricted = highEvents.find((e) => {
       const t = new Date(e.date).getTime();
-      return Math.abs(t - now) <= 5 * 60 * 1000;
+      return Math.abs(t - nowMs) <= 5 * 60 * 1000;
     });
 
     if (activeRestricted) {
@@ -140,25 +171,25 @@ export default function EconomicCalendarPage() {
         title: 'Active Prohibited News Window',
         badge: 'Stand Down Active (±5m buffer)',
         badgeClass: 'bg-rose-500/15 text-rose-400 border-rose-500/30 animate-pulse font-bold',
-        description: `High-impact release (${activeRestricted.country} - ${activeRestricted.title}) is actively releasing. Prop firm evaluation entries and closures are prohibited.`,
+        description: `High-impact release (${activeRestricted.country} - ${activeRestricted.title}) is within the ±5m news window. Prop firm evaluation entries and closures are prohibited.`,
       };
     }
 
     // Check if an event is within the next 60 minutes
     const imminentRestricted = highEvents.find((e) => {
       const t = new Date(e.date).getTime();
-      const diff = t - now;
+      const diff = t - nowMs;
       return diff > 0 && diff <= 60 * 60 * 1000;
     });
 
     if (imminentRestricted) {
-      const minsLeft = Math.round((new Date(imminentRestricted.date).getTime() - now) / 60000);
+      const minsLeft = Math.max(1, Math.ceil((new Date(imminentRestricted.date).getTime() - nowMs) / 60000));
       return {
         level: 'WARNING',
         title: 'Restricted Window Imminent',
         badge: `Restricted in ${minsLeft}m`,
         badgeClass: 'bg-amber-500/15 text-amber-400 border-amber-500/30 font-bold',
-        description: `High-impact release (${imminentRestricted.country} - ${imminentRestricted.title}) scheduled in ${minsLeft} minutes. Prepare to flatten positions or secure stop losses.`,
+        description: `High-impact release (${imminentRestricted.country} - ${imminentRestricted.title}) scheduled in ${minsLeft} minute${minsLeft === 1 ? '' : 's'}. Prepare to flatten positions or secure stop losses.`,
       };
     }
 
@@ -169,7 +200,7 @@ export default function EconomicCalendarPage() {
       badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-semibold',
       description: 'Standard execution conditions. No high-impact red-folder catalysts scheduled in the immediate 60-minute window.',
     };
-  }, [events]);
+  }, [events, nowMs]);
 
   const formatEventTime = (isoString) => {
     try {
@@ -193,25 +224,89 @@ export default function EconomicCalendarPage() {
     }
   };
 
-  const getTimeStatus = (isoString) => {
-    const diffMs = new Date(isoString).getTime() - Date.now();
-    const diffMins = Math.round(diffMs / (60 * 1000));
+  const getTimeStatus = useCallback((ev) => {
+    if (!ev || !ev.date) return null;
+    const diffMs = new Date(ev.date).getTime() - nowMs;
 
-    if (diffMins < -15) {
-      return { label: 'Passed', className: 'text-muted/60 bg-surface-muted/40 border-border/40 font-medium' };
+    if (ev.impact === 'Holiday') {
+      return { label: 'All Day', className: 'text-sky-400 bg-sky-500/10 border-sky-500/25 font-medium' };
     }
-    if (diffMins >= -15 && diffMins <= 5) {
-      return { label: 'Releasing Now', className: 'text-rose-400 bg-rose-500/15 border-rose-500/30 animate-pulse font-bold' };
+
+    // Upcoming event: live countdown
+    if (diffMs > 0) {
+      if (diffMs < 60 * 1000) {
+        const secs = Math.max(1, Math.ceil(diffMs / 1000));
+        return {
+          label: `in ${secs}s`,
+          className: 'text-rose-400 bg-rose-500/15 border-rose-500/30 animate-pulse font-bold font-mono tabular-nums',
+        };
+      }
+      if (diffMs < 10 * 60 * 1000) {
+        const mins = Math.floor(diffMs / 60000);
+        const secs = Math.floor((diffMs % 60000) / 1000);
+        return {
+          label: `in ${mins}m ${secs}s`,
+          className: 'text-amber-400 bg-amber-500/15 border-amber-500/30 font-bold font-mono tabular-nums',
+        };
+      }
+      if (diffMs < 60 * 60 * 1000) {
+        const mins = Math.ceil(diffMs / 60000);
+        return {
+          label: `in ${mins}m`,
+          className: 'text-amber-400 bg-amber-500/10 border-amber-500/30 font-bold font-mono tabular-nums',
+        };
+      }
+      if (diffMs < 24 * 60 * 60 * 1000) {
+        const totalMins = Math.floor(diffMs / 60000);
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        return {
+          label: `in ${h}h ${m}m`,
+          className: 'text-emerald-400/90 bg-emerald-500/10 border-emerald-500/20 font-semibold font-mono tabular-nums',
+        };
+      }
+      const totalHours = Math.floor(diffMs / 3600000);
+      const d = Math.floor(totalHours / 24);
+      const h = totalHours % 24;
+      return {
+        label: `in ${d}d ${h}h`,
+        className: 'text-muted bg-surface-muted/60 border-border/60 font-medium font-mono tabular-nums',
+      };
     }
-    if (diffMins < 60) {
-      return { label: `in ${diffMins}m`, className: 'text-amber-400 bg-amber-500/10 border-amber-500/30 font-bold' };
+
+    // Event release time has arrived (diffMs <= 0)
+    if (ev.actual) {
+      return {
+        label: 'Released',
+        className: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25 font-semibold',
+      };
     }
-    if (diffMins < 1440) {
-      const h = Math.floor(diffMins / 60);
-      const m = diffMins % 60;
-      return { label: `in ${h}h ${m}m`, className: 'text-emerald-400/90 bg-emerald-500/10 border-emerald-500/20 font-semibold' };
+
+    // Only show "Releasing..." for up to 3 minutes after scheduled time while waiting for numeric actual
+    if (diffMs >= -3 * 60 * 1000) {
+      if (ev.forecast || ev.previous) {
+        return {
+          label: 'Releasing...',
+          className: 'text-rose-400 bg-rose-500/15 border-rose-500/30 animate-pulse font-bold',
+        };
+      }
+      return {
+        label: 'Live Now',
+        className: 'text-amber-400 bg-amber-500/15 border-amber-500/30 font-bold',
+      };
     }
-    return null;
+
+    return {
+      label: 'Completed',
+      className: 'text-muted/60 bg-surface-muted/40 border-border/40 font-medium',
+    };
+  }, [nowMs]);
+
+  const getActualColorClass = (ev) => {
+    if (!ev.actual) return 'text-muted/40 font-normal';
+    if (ev.actualVsForecast === 'ABOVE') return 'text-emerald-400 font-extrabold';
+    if (ev.actualVsForecast === 'BELOW') return 'text-rose-400 font-extrabold';
+    return 'text-foreground font-extrabold';
   };
 
   const handleResetFilters = () => {
@@ -405,9 +500,9 @@ export default function EconomicCalendarPage() {
                   <span className="text-xs font-mono font-bold text-foreground">
                     {formatEventTime(stats.upcomingNext.date)}
                   </span>
-                  {getTimeStatus(stats.upcomingNext.date) && (
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded border ${getTimeStatus(stats.upcomingNext.date)?.className}`}>
-                      {getTimeStatus(stats.upcomingNext.date)?.label}
+                  {getTimeStatus(stats.upcomingNext) && (
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded border ${getTimeStatus(stats.upcomingNext)?.className}`}>
+                      {getTimeStatus(stats.upcomingNext)?.label}
                     </span>
                   )}
                 </div>
@@ -415,7 +510,7 @@ export default function EconomicCalendarPage() {
             ) : (
               <>
                 <p className="text-xs sm:text-sm font-bold text-muted truncate">No releases pending</p>
-                <p className="text-[11px] text-muted/70 mt-0.5">All scheduled events passed</p>
+                <p className="text-[11px] text-muted/70 mt-0.5">All scheduled events completed</p>
               </>
             )}
           </div>
@@ -542,6 +637,7 @@ export default function EconomicCalendarPage() {
               <div className="h-4 flex-1 bg-surface-muted rounded" />
               <div className="h-4 w-16 bg-surface-muted rounded" />
               <div className="h-4 w-16 bg-surface-muted rounded" />
+              <div className="h-4 w-16 bg-surface-muted rounded" />
               <div className="h-4 w-20 bg-surface-muted rounded" />
             </div>
           ))}
@@ -591,11 +687,12 @@ export default function EconomicCalendarPage() {
               </div>
 
               {/* Desktop Table Column Header */}
-              <div className="hidden sm:grid grid-cols-[72px_56px_96px_1fr_80px_80px_110px] gap-3 px-5 py-2 text-[10px] font-bold uppercase tracking-wider text-muted/70 border-b border-border/40 bg-surface-muted/20 select-none">
+              <div className="hidden sm:grid grid-cols-[72px_56px_96px_1fr_80px_80px_80px_110px] gap-3 px-5 py-2 text-[10px] font-bold uppercase tracking-wider text-muted/70 border-b border-border/40 bg-surface-muted/20 select-none">
                 <div>Time</div>
                 <div>Curr</div>
                 <div>Impact</div>
                 <div>Event Title</div>
+                <div className="text-right">Actual</div>
                 <div className="text-right">Forecast</div>
                 <div className="text-right">Previous</div>
                 <div className="text-right">Status</div>
@@ -607,7 +704,8 @@ export default function EconomicCalendarPage() {
                   const isHigh = ev.impact === 'High';
                   const isMedium = ev.impact === 'Medium';
                   const isHoliday = ev.impact === 'Holiday';
-                  const status = getTimeStatus(ev.date);
+                  const status = getTimeStatus(ev);
+                  const isReleasingPending = status?.label === 'Releasing...' && !ev.actual;
 
                   return (
                     <div
@@ -621,7 +719,7 @@ export default function EconomicCalendarPage() {
                       }`}
                     >
                       {/* Desktop Grid Row (sm+) */}
-                      <div className="hidden sm:grid grid-cols-[72px_56px_96px_1fr_80px_80px_110px] gap-3 px-5 py-3 items-center">
+                      <div className="hidden sm:grid grid-cols-[72px_56px_96px_1fr_80px_80px_80px_110px] gap-3 px-5 py-3 items-center">
                         {/* 1. Time */}
                         <div className="font-mono text-xs font-bold text-foreground/90 tabular-nums">
                           {formatEventTime(ev.date)}
@@ -660,17 +758,28 @@ export default function EconomicCalendarPage() {
                           </p>
                         </div>
 
-                        {/* 5. Forecast */}
-                        <div className="text-right font-mono text-xs font-bold text-foreground tabular-nums">
+                        {/* 5. Actual */}
+                        <div className={`text-right font-mono text-xs tabular-nums ${getActualColorClass(ev)}`}>
+                          {ev.actual ? (
+                            ev.actual
+                          ) : isReleasingPending ? (
+                            <span className="text-[10px] text-amber-400 animate-pulse font-semibold">Pending</span>
+                          ) : (
+                            <span className="text-muted/40 font-normal">—</span>
+                          )}
+                        </div>
+
+                        {/* 6. Forecast */}
+                        <div className="text-right font-mono text-xs font-bold text-foreground/85 tabular-nums">
                           {ev.forecast ? ev.forecast : <span className="text-muted/40 font-normal">—</span>}
                         </div>
 
-                        {/* 6. Previous */}
+                        {/* 7. Previous */}
                         <div className="text-right font-mono text-xs text-muted tabular-nums">
                           {ev.previous ? ev.previous : <span className="text-muted/40 font-normal">—</span>}
                         </div>
 
-                        {/* 7. Status / Countdown */}
+                        {/* 8. Status / Countdown */}
                         <div className="text-right">
                           {status ? (
                             <span className={`px-2 py-0.5 rounded text-[10px] border whitespace-nowrap inline-block ${status.className}`}>
@@ -720,9 +829,19 @@ export default function EconomicCalendarPage() {
                           {ev.title}
                         </p>
 
-                        {/* Mobile Forecast & Previous values */}
-                        {(ev.forecast || ev.previous) && (
-                          <div className="flex items-center gap-3 text-[11px] pt-1 text-muted font-mono">
+                        {/* Mobile Actual, Forecast & Previous values */}
+                        {(ev.actual || ev.forecast || ev.previous || isReleasingPending) && (
+                          <div className="flex items-center gap-3 flex-wrap text-[11px] pt-1 text-muted font-mono">
+                            {(ev.actual || isReleasingPending) && (
+                              <span>
+                                Actual:{' '}
+                                {ev.actual ? (
+                                  <strong className={getActualColorClass(ev)}>{ev.actual}</strong>
+                                ) : (
+                                  <span className="text-amber-400 animate-pulse font-semibold">Pending</span>
+                                )}
+                              </span>
+                            )}
                             {ev.forecast && (
                               <span>
                                 Forecast: <strong className="text-foreground">{ev.forecast}</strong>
