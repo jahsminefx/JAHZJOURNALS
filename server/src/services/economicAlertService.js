@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const calendarService = require('./calendarService');
+const { sendPushToUser } = require('./pushNotificationService');
 const {
   cleanPairString,
   cleanCurrencyString,
@@ -13,6 +14,107 @@ const {
   TARGETING_MODES,
   normalizeImpact,
 } = require('./currencyMatchingService');
+
+const ALLOWED_CATEGORY_IDS = calendarService.EVENT_CATEGORIES.map((c) => c.id);
+const ALLOWED_CALENDAR_IMPACTS = ['High', 'Medium', 'Low', 'Holiday'];
+const ALLOWED_DEFAULT_VIEWS = ['today', 'tomorrow', 'this_week', 'upcoming'];
+
+const DEFAULT_CALENDAR_PREFERENCES = {
+  useDeviceTimezone: true,
+  timezone: 'UTC',
+  timeFormat: '12h',
+  defaultView: 'this_week',
+  showCompleted: true,
+  density: 'comfortable',
+  currencies: [],
+  impacts: [],
+  categories: [],
+  watchedPairsOnly: false,
+  includeCorrelatedCurrencies: false,
+  watchedPairs: [],
+  preNewsBufferMinutes: 5,
+  postNewsBufferMinutes: 5,
+};
+
+function clampBufferMinutes(val, fallback = 5) {
+  const num = Number.parseInt(val, 10);
+  if (Number.isNaN(num) || num < 1 || num > 60) return fallback;
+  return num;
+}
+
+function normalizeCalendarImpactLabel(val) {
+  if (!val || typeof val !== 'string') return null;
+  const lower = val.trim().toLowerCase();
+  if (lower === 'high') return 'High';
+  if (lower === 'medium') return 'Medium';
+  if (lower === 'low') return 'Low';
+  if (lower === 'holiday' || lower === 'holidays') return 'Holiday';
+  return null;
+}
+
+/**
+ * Validates and sanitizes calendar preferences with safe fallbacks for invalid/unsupported inputs.
+ */
+function validateAndSanitizeCalendarPreferences(input = {}, fallback = DEFAULT_CALENDAR_PREFERENCES) {
+  const src = input && typeof input === 'object' ? input : {};
+  const fb = fallback && typeof fallback === 'object' ? fallback : DEFAULT_CALENDAR_PREFERENCES;
+
+  const useDeviceTimezone =
+    typeof src.useDeviceTimezone === 'boolean' ? src.useDeviceTimezone : Boolean(fb.useDeviceTimezone);
+
+  let timezone = typeof src.timezone === 'string' ? src.timezone.trim() : fb.timezone;
+  if (!calendarService.isValidTimeZone(timezone)) {
+    timezone = calendarService.isValidTimeZone(fb.timezone) ? fb.timezone : 'UTC';
+  }
+
+  const timeFormat = src.timeFormat === '24h' || src.timeFormat === '12h' ? src.timeFormat : fb.timeFormat;
+  const defaultView = ALLOWED_DEFAULT_VIEWS.includes(src.defaultView) ? src.defaultView : fb.defaultView;
+  const showCompleted = typeof src.showCompleted === 'boolean' ? src.showCompleted : Boolean(fb.showCompleted);
+  const density = src.density === 'compact' || src.density === 'comfortable' ? src.density : fb.density;
+
+  const currencies = Array.isArray(src.currencies)
+    ? [...new Set(src.currencies.map(cleanCurrencyString).filter((c) => SUPPORTED_CURRENCIES.includes(c)))]
+    : [...(fb.currencies || [])];
+
+  const impacts = Array.isArray(src.impacts)
+    ? [...new Set(src.impacts.map(normalizeCalendarImpactLabel).filter((i) => ALLOWED_CALENDAR_IMPACTS.includes(i)))]
+    : [...(fb.impacts || [])];
+
+  const categories = Array.isArray(src.categories)
+    ? [...new Set(src.categories.map((c) => String(c || '').trim().toUpperCase()).filter((c) => ALLOWED_CATEGORY_IDS.includes(c)))]
+    : [...(fb.categories || [])];
+
+  const watchedPairsOnly =
+    typeof src.watchedPairsOnly === 'boolean' ? src.watchedPairsOnly : Boolean(fb.watchedPairsOnly);
+  const includeCorrelatedCurrencies =
+    typeof src.includeCorrelatedCurrencies === 'boolean'
+      ? src.includeCorrelatedCurrencies
+      : Boolean(fb.includeCorrelatedCurrencies);
+
+  const watchedPairs = Array.isArray(src.watchedPairs)
+    ? [...new Set(src.watchedPairs.map(cleanPairString).filter(Boolean))]
+    : [...(fb.watchedPairs || [])];
+
+  const preNewsBufferMinutes = clampBufferMinutes(src.preNewsBufferMinutes, fb.preNewsBufferMinutes);
+  const postNewsBufferMinutes = clampBufferMinutes(src.postNewsBufferMinutes, fb.postNewsBufferMinutes);
+
+  return {
+    useDeviceTimezone,
+    timezone,
+    timeFormat,
+    defaultView,
+    showCompleted,
+    density,
+    currencies,
+    impacts,
+    categories,
+    watchedPairsOnly,
+    includeCorrelatedCurrencies,
+    watchedPairs,
+    preNewsBufferMinutes,
+    postNewsBufferMinutes,
+  };
+}
 
 const DEFAULT_PREFERENCE = {
   isEnabled: true,
@@ -102,6 +204,14 @@ async function updateUserAlertPreferences(userId, updates = {}) {
       .map(m => Number.parseInt(m, 10))
       .filter(m => !Number.isNaN(m) && m > 0 && m <= 1440); // 1 min to 24h
     dataToUpdate.leadTimesMinutes = validTimes.length > 0 ? validTimes : [30];
+  }
+
+  if (Array.isArray(updates.categories)) {
+    dataToUpdate.categories = [...new Set(
+      updates.categories
+        .map((c) => String(c || '').trim().toUpperCase())
+        .filter((c) => ALLOWED_CATEGORY_IDS.includes(c))
+    )];
   }
 
   return await prisma.economicNewsAlertPreference.upsert({
@@ -346,14 +456,177 @@ async function getUserAlertHistory(userId, { limit = 30, offset = 0 } = {}) {
   return { logs, total };
 }
 
+/**
+ * Retrieves unified Calendar Preferences + Alert Preferences + user's watched pairs
+ */
+async function getUserCalendarPreferences(userId) {
+  if (!userId) throw new Error('User ID is required');
+
+  const [alertPreference, userRecord, userSettings] = await Promise.all([
+    getUserAlertPreferences(userId),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { mainTradingPairs: true, timezone: true },
+    }),
+    prisma.userSettings.findUnique({
+      where: { userId },
+      select: { mainPairs: true },
+    }),
+  ]);
+
+  const settingsPairs = userSettings?.mainPairs
+    ? String(userSettings.mainPairs).split(/[,;\s]+/).map(cleanPairString).filter(Boolean)
+    : [];
+  const profilePairs = Array.isArray(userRecord?.mainTradingPairs)
+    ? userRecord.mainTradingPairs.map(cleanPairString).filter(Boolean)
+    : [];
+  const alertPairs = Array.isArray(alertPreference?.pairs)
+    ? alertPreference.pairs.map(cleanPairString).filter(Boolean)
+    : [];
+
+  const userWatchedPairs = [...new Set([...profilePairs, ...settingsPairs, ...alertPairs])];
+  const hasSavedCalendarPreferences = Boolean(alertPreference?.calendarPreferences);
+  const rawCalPrefs = alertPreference?.calendarPreferences || {};
+
+  // If user has a profile timezone saved and hasn't explicitly configured calendarPreferences yet, seed fallback
+  const fallbackWithUserTz = {
+    ...DEFAULT_CALENDAR_PREFERENCES,
+    timezone:
+      userRecord?.timezone && calendarService.isValidTimeZone(userRecord.timezone)
+        ? userRecord.timezone
+        : DEFAULT_CALENDAR_PREFERENCES.timezone,
+  };
+
+  const calendarPreferences = validateAndSanitizeCalendarPreferences(rawCalPrefs, fallbackWithUserTz);
+  if (calendarPreferences.watchedPairs.length === 0 && userWatchedPairs.length > 0) {
+    calendarPreferences.watchedPairs = userWatchedPairs;
+  }
+
+  return {
+    calendarPreferences,
+    alertPreferences: alertPreference,
+    userWatchedPairs,
+    hasSavedCalendarPreferences,
+  };
+}
+
+/**
+ * Updates unified Calendar Preferences (and optional Alert Preferences) in the user's account
+ */
+async function updateUserCalendarPreferences(userId, payload = {}) {
+  if (!userId) throw new Error('User ID is required');
+
+  const existing = await getUserCalendarPreferences(userId);
+  const calInput = payload.calendarPreferences && typeof payload.calendarPreferences === 'object'
+    ? payload.calendarPreferences
+    : payload;
+
+  const sanitizedCalendarPrefs = validateAndSanitizeCalendarPreferences(
+    calInput,
+    existing.calendarPreferences
+  );
+
+  // Sync alert preferences if provided in payload
+  let updatedAlertPrefs = existing.alertPreferences;
+  if (payload.alertPreferences && typeof payload.alertPreferences === 'object') {
+    updatedAlertPrefs = await updateUserAlertPreferences(userId, payload.alertPreferences);
+  }
+
+  const saved = await prisma.economicNewsAlertPreference.update({
+    where: { userId },
+    data: {
+      calendarPreferences: sanitizedCalendarPrefs,
+    },
+  });
+
+  // Also persist user timezone preference if explicit IANA zone chosen
+  if (!sanitizedCalendarPrefs.useDeviceTimezone && calendarService.isValidTimeZone(sanitizedCalendarPrefs.timezone)) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { timezone: sanitizedCalendarPrefs.timezone },
+    }).catch(() => {});
+  }
+
+  return {
+    calendarPreferences: sanitizedCalendarPrefs,
+    alertPreferences: updatedAlertPrefs || saved,
+    userWatchedPairs: existing.userWatchedPairs,
+    hasSavedCalendarPreferences: true,
+  };
+}
+
+/**
+ * Sends a real in-app (+ Web Push if subscribed) test economic alert to the user
+ */
+async function sendTestEconomicAlert(userId) {
+  if (!userId) throw new Error('User ID is required');
+
+  const [pref, user] = await Promise.all([
+    getUserAlertPreferences(userId),
+    prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, timezone: true } }),
+  ]);
+
+  const currenciesStr = (pref.currencies || ['USD']).slice(0, 4).join(', ') || 'USD';
+  const impactsStr = (pref.impactLevels || ['HIGH']).join(', ') || 'HIGH';
+  const leadStr = (pref.leadTimesMinutes || [30]).map((m) => `${m}m`).join(', ') || '30m';
+
+  const title = 'Test Economic News Alert — JAHZJOURNALS';
+  const message = `Your news alert delivery is working. Monitoring ${currenciesStr} (${impactsStr} impact) with ${leadStr} lead time.`;
+
+  const notification = await prisma.notification.create({
+    data: {
+      type: 'ECONOMIC_NEWS',
+      category: 'ECONOMIC_ALERT',
+      title,
+      message,
+      actionUrl: '/calendar',
+      isGlobal: false,
+      senderId: 'SYSTEM',
+      targetUsers: [userId],
+    },
+  });
+
+  await prisma.notificationRecipient.create({
+    data: {
+      notificationId: notification.id,
+      userId,
+      status: 'UNREAD',
+    },
+  });
+
+  let pushResult = { count: 0, sent: 0 };
+  try {
+    pushResult = await sendPushToUser(userId, {
+      title,
+      body: message,
+      url: '/calendar',
+      tag: 'jahz-calendar-test-alert',
+    });
+  } catch (err) {
+    console.warn('[EconomicAlerts] Push delivery skipped during test alert:', err.message);
+  }
+
+  return {
+    notificationId: notification.id,
+    deliveredInApp: true,
+    pushResult,
+    recipientName: user?.name || 'Trader',
+  };
+}
+
 module.exports = {
   DEFAULT_PREFERENCE,
+  DEFAULT_CALENDAR_PREFERENCES,
+  validateAndSanitizeCalendarPreferences,
   getUserAlertPreferences,
   updateUserAlertPreferences,
   toggleGlobalAlerts,
   dispatchAlertToUser,
   processEconomicAlerts,
   getUserAlertHistory,
+  getUserCalendarPreferences,
+  updateUserCalendarPreferences,
+  sendTestEconomicAlert,
   formatReleaseTime,
   formatLeadTimeString,
 };

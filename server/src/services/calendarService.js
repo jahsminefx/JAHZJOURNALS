@@ -1,19 +1,24 @@
 const { getInstrumentConfig } = require('./instrumentService');
-
-// In-memory caches for economic schedule + live actuals feed
-let cachedBaseEvents = [];
-let lastBaseFetchedAt = 0;
-let lastBaseAttemptAt = 0;
-const BASE_CACHE_TTL_MS = 20 * 60 * 1000; // 20 minutes for weekly schedule
-const BASE_RETRY_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes minimum between FF requests to avoid 429 rate-limit
-
-let cachedTvEvents = [];
-let lastTvFetchedAt = 0;
-const TV_CACHE_TTL_MS = 60 * 1000; // 60 seconds for live actuals
-const TV_FORCE_COOLDOWN_MS = 10 * 1000; // 10 seconds minimum on manual force-sync
+const {
+  defaultScheduleProvider,
+  defaultActualsProvider,
+  defaultObservationStore,
+} = require('./calendarProviders');
 
 let cachedMergedEvents = [];
 let lastMergedAt = 0;
+
+const EVENT_CATEGORIES = [
+  { id: 'INFLATION', label: 'Inflation' },
+  { id: 'EMPLOYMENT', label: 'Employment' },
+  { id: 'CENTRAL_BANKS', label: 'Central Banks & Speeches' },
+  { id: 'GROWTH_GDP', label: 'Growth / GDP' },
+  { id: 'PMI_BUSINESS', label: 'PMI / Business Activity' },
+  { id: 'CONSUMER_SENTIMENT', label: 'Consumer Sentiment' },
+  { id: 'TRADE', label: 'Trade' },
+  { id: 'HOUSING', label: 'Housing' },
+  { id: 'HOLIDAYS', label: 'Holidays' },
+];
 
 const FALLBACK_EVENTS = [
   {
@@ -109,6 +114,273 @@ const SUBJECT_GROUPS = [
   ['watchers'],
   ['visitor'],
 ];
+
+/**
+ * Validates an IANA time zone string using Intl.DateTimeFormat
+ */
+function isValidTimeZone(tz) {
+  if (!tz || typeof tz !== 'string') return false;
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz.trim() });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extracts YYYY, MM, DD calendar date parts in a given IANA time zone
+ */
+function getDatePartsInTimeZone(dateInput, timeZone = 'UTC') {
+  const tz = isValidTimeZone(timeZone) ? timeZone : 'UTC';
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(d);
+  const year = Number(parts.find((p) => p.type === 'year')?.value);
+  const month = Number(parts.find((p) => p.type === 'month')?.value);
+  const day = Number(parts.find((p) => p.type === 'day')?.value);
+  const key = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return { year, month, day, key };
+}
+
+/**
+ * Shifts a YYYY-MM-DD calendar date key by deltaDays cleanly
+ */
+function addDaysToDateKey(dateKey, deltaDays) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d + deltaDays, 12, 0, 0));
+  const yy = utc.getUTCFullYear();
+  const mm = String(utc.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(utc.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+/**
+ * Classifies an economic event into one of the 9 standard categories
+ */
+function classifyEventCategory(title = '', impact = '') {
+  const imp = String(impact || '').trim().toLowerCase();
+  const t = String(title || '').trim();
+
+  if (imp === 'holiday' || /\b(bank holiday|holiday|market closed|all day)\b/i.test(t)) {
+    return 'HOLIDAYS';
+  }
+  if (/\b(cpi|ppi|pce|inflation|price index|rpi|hpi|house price|wage|average hourly earnings|average earnings|deflator|import prices|export prices)\b/i.test(t)) {
+    return 'INFLATION';
+  }
+  if (/\b(nfp|non-farm|nonfarm|non farm|unemployment|employment|jobless|initial claims|continuing claims|adp|jolts|payrolls|labor|labour|claimant count|participation rate)\b/i.test(t)) {
+    return 'EMPLOYMENT';
+  }
+  if (/\b(fomc|fed|ecb|boe|boj|rba|rbnz|boc|snb|pboc|central bank|interest rate|rate decision|rate statement|monetary policy|policy rate|cash rate|official bank rate|mpc|minutes|speaks|speech|testifies|testimony|press conference|powell|lagarde|bailey|ueda|macklem|bullock|jordan|schlegel|kugler|waller|williams|bostic|barkin|daly|kashkari|goolsbee|bowman)\b/i.test(t)) {
+    return 'CENTRAL_BANKS';
+  }
+  if (/\b(building permits|housing starts|existing home|new home|pending home|construction|nahb|mortgage|home sales|rics)\b/i.test(t)) {
+    return 'HOUSING';
+  }
+  if (/\b(trade balance|balance of trade|current account|exports|imports|tic long-term|foreign investment|goods trade)\b/i.test(t)) {
+    return 'TRADE';
+  }
+  if (/\b(consumer confidence|consumer sentiment|michigan|uom|cb consumer|gfk|westpac|sentix|household confidence|business confidence)\b/i.test(t)) {
+    return 'CONSUMER_SENTIMENT';
+  }
+  if (/\b(pmi|ism|manufacturing|services|business climate|ifo|zew|tankan|empire state|philly fed|philadelphia fed|chicago pmi|richmond|dallas|kansas|nfib|flash)\b/i.test(t)) {
+    return 'PMI_BUSINESS';
+  }
+  if (/\b(gdp|gross domestic|industrial production|capacity utilization|factory orders|durable goods|retail sales|leading index|economic optimism|personal spending|personal income|core durable)\b/i.test(t)) {
+    return 'GROWTH_GDP';
+  }
+
+  // Fallback for general fiscal/economic releases
+  return 'GROWTH_GDP';
+}
+
+/**
+ * Computes canonical release state for transparency:
+ * - SCHEDULED
+ * - AWAITING_RELEASE
+ * - DELAYED (Delayed / time tentative)
+ * - RELEASED
+ * - REVISED
+ */
+function computeEventReleaseState(event, nowMs = Date.now()) {
+  if (!event || !event.date) {
+    return {
+      state: 'SCHEDULED',
+      label: 'Scheduled',
+      isAwaiting: false,
+      isDelayed: false,
+      isReleased: false,
+      isRevised: false,
+    };
+  }
+
+  const scheduledMs = new Date(event.date).getTime();
+  const hasActual = Boolean(event.actual && String(event.actual).trim() !== '');
+  const isHoliday = String(event.impact || '').toLowerCase() === 'holiday';
+  const hasNumericExpectation = Boolean(
+    (event.forecast && String(event.forecast).trim() !== '') ||
+    (event.previous && String(event.previous).trim() !== '')
+  );
+
+  if (Boolean(event.isRevised) && hasActual) {
+    return {
+      state: 'REVISED',
+      label: 'Revised',
+      isAwaiting: false,
+      isDelayed: false,
+      isReleased: true,
+      isRevised: true,
+    };
+  }
+
+  if (hasActual) {
+    return {
+      state: 'RELEASED',
+      label: 'Released',
+      isAwaiting: false,
+      isDelayed: false,
+      isReleased: true,
+      isRevised: false,
+    };
+  }
+
+  if (Boolean(event.isTentative) && nowMs >= scheduledMs) {
+    return {
+      state: 'DELAYED',
+      label: 'Delayed / time tentative',
+      isAwaiting: false,
+      isDelayed: true,
+      isReleased: false,
+      isRevised: false,
+    };
+  }
+
+  if (nowMs < scheduledMs) {
+    return {
+      state: 'SCHEDULED',
+      label: 'Scheduled',
+      isAwaiting: false,
+      isDelayed: false,
+      isReleased: false,
+      isRevised: false,
+    };
+  }
+
+  if (isHoliday) {
+    return {
+      state: 'RELEASED',
+      label: 'All Day',
+      isAwaiting: false,
+      isDelayed: false,
+      isReleased: true,
+      isRevised: false,
+    };
+  }
+
+  const elapsedMs = nowMs - scheduledMs;
+
+  // Speeches/statements without forecast/previous do not publish numeric actuals
+  if (!hasNumericExpectation) {
+    if (elapsedMs <= 5 * 60 * 1000) {
+      return {
+        state: 'AWAITING_RELEASE',
+        label: 'Awaiting release',
+        isAwaiting: true,
+        isDelayed: false,
+        isReleased: false,
+        isRevised: false,
+      };
+    }
+    return {
+      state: 'RELEASED',
+      label: 'Completed',
+      isAwaiting: false,
+      isDelayed: false,
+      isReleased: true,
+      isRevised: false,
+    };
+  }
+
+  // Quantitative releases typically arrive 1-3 minutes (up to 15m) after scheduled timestamp
+  if (elapsedMs <= 15 * 60 * 1000) {
+    return {
+      state: 'AWAITING_RELEASE',
+      label: 'Awaiting release',
+      isAwaiting: true,
+      isDelayed: false,
+      isReleased: false,
+      isRevised: false,
+    };
+  }
+
+  return {
+    state: 'DELAYED',
+    label: 'Delayed / time tentative',
+    isAwaiting: false,
+    isDelayed: true,
+    isReleased: false,
+    isRevised: false,
+  };
+}
+
+/**
+ * Computes adaptive poll plan on server/client:
+ * - High-impact window [-30s, +5m]: 4000ms (with backoff on error)
+ * - Medium-impact window [-30s, +5m]: 15000ms (with backoff on error)
+ * - Normal browsing: 120000ms
+ */
+function computeAdaptivePollPlan(events = [], nowMs = Date.now(), consecutiveErrors = 0) {
+  let hasHighWindow = false;
+  let hasMediumWindow = false;
+
+  for (const ev of events) {
+    if (!ev || !ev.date || ev.impact === 'Holiday') continue;
+    const hasActual = Boolean(ev.actual && String(ev.actual).trim() !== '');
+    if (hasActual) continue;
+
+    const scheduledMs = new Date(ev.date).getTime();
+    const diffFromScheduled = nowMs - scheduledMs;
+    const inReleaseWindow = diffFromScheduled >= -30 * 1000 && diffFromScheduled <= 5 * 60 * 1000;
+
+    if (!inReleaseWindow) continue;
+    if (ev.impact === 'High') {
+      hasHighWindow = true;
+      break;
+    }
+    if (ev.impact === 'Medium') {
+      hasMediumWindow = true;
+    }
+  }
+
+  const backoffMult = Math.min(8, Math.pow(2, Math.max(0, consecutiveErrors)));
+
+  if (hasHighWindow) {
+    return {
+      mode: 'HIGH_IMPACT_WINDOW',
+      baseIntervalMs: 4000,
+      intervalMs: Math.min(60000, 4000 * backoffMult),
+    };
+  }
+
+  if (hasMediumWindow) {
+    return {
+      mode: 'MEDIUM_IMPACT_WINDOW',
+      baseIntervalMs: 15000,
+      intervalMs: Math.min(120000, 15000 * backoffMult),
+    };
+  }
+
+  return {
+    mode: 'NORMAL',
+    baseIntervalMs: 120000,
+    intervalMs: Math.min(600000, 120000 * backoffMult),
+  };
+}
 
 /**
  * Parses a formatted string like "0.3%", "194K", "-19.2B" into numeric value + scale + unit metadata
@@ -283,7 +555,6 @@ function findMatchingTvEvent(ffEvent, tvEvents) {
     }
     if (wordMatches === 0) continue;
 
-    // Prefer candidates that already have an actual value populated
     if (c.actual !== null && c.actual !== undefined) {
       score += 2;
     }
@@ -295,48 +566,6 @@ function findMatchingTvEvent(ffEvent, tvEvents) {
   }
 
   return best && bestScore >= 9 ? best : null;
-}
-
-/**
- * Fetches live economic events (including real-time actuals) from TradingView Economic Calendar API
- */
-async function fetchLiveTvEvents(forceRefresh = false) {
-  const now = Date.now();
-  const minInterval = forceRefresh ? TV_FORCE_COOLDOWN_MS : TV_CACHE_TTL_MS;
-  if (cachedTvEvents.length > 0 && now - lastTvFetchedAt < minInterval) {
-    return cachedTvEvents;
-  }
-
-  try {
-    const d = new Date(now);
-    const dayOfWeek = d.getUTCDay();
-    const startOfWeek = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dayOfWeek - 1, 0, 0, 0));
-    const endOfWeek = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + (8 - dayOfWeek), 23, 59, 59));
-    const countries = 'US,EU,GB,JP,AU,CA,CH,NZ,CN,DE,FR,IT,ES,ZA,NG';
-    const url = `https://economic-calendar.tradingview.com/events?from=${encodeURIComponent(startOfWeek.toISOString())}&to=${encodeURIComponent(endOfWeek.toISOString())}&countries=${countries}`;
-
-    const res = await fetch(url, {
-      headers: {
-        Origin: 'https://www.tradingview.com',
-        Referer: 'https://www.tradingview.com/',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-      signal: AbortSignal.timeout(6000),
-    });
-
-    if (res.ok) {
-      const json = await res.json();
-      if (Array.isArray(json.result) && json.result.length > 0) {
-        cachedTvEvents = json.result;
-        lastTvFetchedAt = now;
-        return cachedTvEvents;
-      }
-    }
-  } catch (err) {
-    console.warn('[CalendarService] Live actuals feed fetch warning:', err.message);
-  }
-
-  return cachedTvEvents;
 }
 
 /**
@@ -399,17 +628,15 @@ function getCurrenciesForPair(pair) {
       list.push(cfg.quoteCurrency);
     }
     if (cfg.baseCurrency === 'XAU' || cfg.baseCurrency === 'XAG') {
-      list.push('USD'); // Gold/Silver are USD driven
+      list.push('USD');
     }
     if (list.length > 0) return [...new Set(list)];
   }
 
-  // 6-character FX pair fallback (e.g. EURUSD, GBPJPY)
   if (clean.length === 6 && /^[A-Z]{6}$/.test(clean)) {
     return [clean.slice(0, 3), clean.slice(3, 6)];
   }
 
-  // Indices / Commodities
   if (['US30', 'NAS100', 'SPX500', 'DJ30', 'NDX', 'GOLD', 'DXY', 'OIL', 'WTI'].some((s) => clean.includes(s))) {
     return ['USD'];
   }
@@ -427,70 +654,52 @@ function getCurrenciesForPair(pair) {
 }
 
 /**
- * Fetches events from ForexFactory schedule + enriches with real-time actuals from TradingView
+ * Enriches normalized event objects with category, observation timestamps, revision status, and release state
  */
-async function fetchCalendarEvents(forceRefresh = false) {
-  const now = Date.now();
+function enrichEventMetadata(ev, nowMs = Date.now(), isLiveUpdate = false) {
+  const category = classifyEventCategory(ev.title, ev.impact);
+  const observation = defaultObservationStore.observe(ev, nowMs, { isLiveUpdate });
+  const enriched = {
+    ...ev,
+    category,
+    receivedAt: ev.receivedAt || observation.receivedAt || null,
+    isRevised: Boolean(ev.isRevised || observation.isRevised),
+    previousActual: ev.previousActual || observation.previousActual || null,
+  };
+  enriched.releaseState = computeEventReleaseState(enriched, nowMs);
+  return enriched;
+}
 
-  // Check if any cached event just crossed its release time in the last 10 minutes without an actual value
+/**
+ * Fetches events via provider interface + enriches with live actuals, categories, and release state
+ */
+async function fetchCalendarEvents(forceRefresh = false, options = {}) {
+  const now = Date.now();
+  const scheduleProvider = options.scheduleProvider || defaultScheduleProvider;
+  const actualsProvider = options.actualsProvider || defaultActualsProvider;
+
+  // Detect active release window (-30s to +5m without actual) to automatically bypass normal 60s TV TTL
   const hasReleasingEventWithoutActual = cachedMergedEvents.some((ev) => {
     if (ev.actual || ev.impact === 'Holiday') return false;
     const diffMs = now - new Date(ev.date).getTime();
-    return diffMs >= -15 * 1000 && diffMs <= 10 * 60 * 1000;
+    return diffMs >= -30 * 1000 && diffMs <= 5 * 60 * 1000;
   });
 
-  const needBaseRefresh =
-    (cachedBaseEvents.length === 0 && now - lastBaseAttemptAt >= BASE_RETRY_COOLDOWN_MS) ||
-    now - lastBaseFetchedAt >= BASE_CACHE_TTL_MS ||
-    (forceRefresh && now - lastBaseAttemptAt >= BASE_RETRY_COOLDOWN_MS);
+  const [scheduleRes, actualsRes] = await Promise.all([
+    scheduleProvider.fetch({ force: forceRefresh, nowMs: now }),
+    actualsProvider.fetch({
+      force: forceRefresh,
+      bypassNormalTtl: hasReleasingEventWithoutActual,
+      nowMs: now,
+    }),
+  ]);
 
-  const needTvRefresh =
-    forceRefresh ||
-    hasReleasingEventWithoutActual ||
-    cachedTvEvents.length === 0 ||
-    now - lastTvFetchedAt >= TV_CACHE_TTL_MS;
+  const baseEvents = scheduleRes?.data || [];
+  const tvEvents = actualsRes?.data || [];
+  const hadPriorCache = cachedMergedEvents.length > 0;
 
-  if (!needBaseRefresh && !needTvRefresh && cachedMergedEvents.length > 0) {
-    return cachedMergedEvents;
-  }
-
-  // 1. Refresh base weekly schedule if needed (respecting rate-limit cooldown)
-  if (needBaseRefresh) {
-    lastBaseAttemptAt = now;
-    try {
-      const res = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) JAHZJOURNALS/1.0' },
-        signal: AbortSignal.timeout(6000),
-      });
-
-      if (res.ok) {
-        const text = await res.text();
-        const data = JSON.parse(text);
-        if (Array.isArray(data) && data.length > 0) {
-          cachedBaseEvents = data.map((item, index) => ({
-            id: `${item.country || 'GLOBAL'}-${item.title || 'event'}-${item.date || index}`.replace(/\s+/g, '-'),
-            title: item.title || 'Economic Event',
-            country: (item.country || 'ALL').toUpperCase(),
-            date: item.date ? new Date(item.date).toISOString() : new Date().toISOString(),
-            impact: item.impact || 'Low', // 'High' | 'Medium' | 'Low' | 'Holiday'
-            actual: item.actual || '',
-            forecast: item.forecast || '',
-            previous: item.previous || '',
-          }));
-          lastBaseFetchedAt = now;
-        }
-      }
-    } catch (err) {
-      console.warn('[CalendarService] Base schedule fetch warning, using cached/live fallback:', err.message);
-    }
-  }
-
-  // 2. Refresh live actuals feed
-  const tvEvents = await fetchLiveTvEvents(forceRefresh || hasReleasingEventWithoutActual);
-
-  // 3. Merge base schedule with live actuals
-  if (cachedBaseEvents.length > 0) {
-    cachedMergedEvents = cachedBaseEvents.map((ev) => {
+  if (baseEvents.length > 0) {
+    cachedMergedEvents = baseEvents.map((ev) => {
       const matchedTv = findMatchingTvEvent(ev, tvEvents);
       const refStr = ev.forecast || ev.previous;
       const actual =
@@ -509,60 +718,97 @@ async function fetchCalendarEvents(forceRefresh = false) {
           ? formatTvValue(matchedTv.previous, matchedTv, ev.forecast)
           : '');
 
-      return {
-        ...ev,
-        actual,
-        forecast,
-        previous,
-        actualVsForecast: compareActualToForecast(actual, forecast, previous),
-      };
+      return enrichEventMetadata(
+        {
+          ...ev,
+          actual,
+          forecast,
+          previous,
+          actualVsForecast: compareActualToForecast(actual, forecast, previous),
+        },
+        now,
+        hadPriorCache
+      );
     });
     lastMergedAt = now;
     return cachedMergedEvents;
   }
 
-  // 4. If base FF schedule was rate-limited, use live TradingView events directly
   const tvFallback = buildEventsFromTvFallback(tvEvents);
   if (tvFallback.length > 0) {
-    cachedMergedEvents = tvFallback;
+    cachedMergedEvents = tvFallback.map((ev) => enrichEventMetadata(ev, now, hadPriorCache));
     lastMergedAt = now;
     return cachedMergedEvents;
   }
 
   if (cachedMergedEvents.length > 0) {
-    return cachedMergedEvents;
+    // Recompute release states dynamically against current nowMs
+    return cachedMergedEvents.map((ev) => ({
+      ...ev,
+      releaseState: computeEventReleaseState(ev, now),
+    }));
   }
 
-  // 5. Offline fallback
-  cachedMergedEvents = FALLBACK_EVENTS.map((item, index) => ({
-    id: `fallback-${index}-${item.country}`,
-    ...item,
-    actualVsForecast: null,
-  }));
+  cachedMergedEvents = FALLBACK_EVENTS.map((item, index) =>
+    enrichEventMetadata(
+      {
+        id: `fallback-${index}-${item.country}`,
+        ...item,
+        actualVsForecast: null,
+      },
+      now,
+      false
+    )
+  );
   lastMergedAt = now;
   return cachedMergedEvents;
 }
 
 /**
- * Filters calendar events based on client query
+ * Filters calendar events based on client query (with IANA timezone support and category filtering)
  */
 async function getEvents(query = {}) {
   const allEvents = await fetchCalendarEvents(query.force === 'true');
-  let filtered = [...allEvents];
+  const nowMs = Date.now();
+  const timeZone = isValidTimeZone(query.timezone) ? query.timezone : 'UTC';
+
+  // Ensure releaseState is evaluated against current timestamp
+  let filtered = allEvents.map((ev) => ({
+    ...ev,
+    category: ev.category || classifyEventCategory(ev.title, ev.impact),
+    releaseState: computeEventReleaseState(ev, nowMs),
+  }));
 
   // Filter by impact (e.g. 'High', 'Medium', 'Low', 'Holiday' or comma-separated)
   if (query.impact && query.impact !== 'ALL') {
-    const impacts = query.impact.split(',').map((s) => s.trim().toLowerCase());
-    filtered = filtered.filter((ev) => impacts.includes(String(ev.impact).toLowerCase()));
+    const impacts = String(query.impact).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+    if (impacts.length > 0) {
+      filtered = filtered.filter((ev) => impacts.includes(String(ev.impact).toLowerCase()));
+    }
   }
 
   // Filter by country / currency (e.g. 'USD,EUR,GBP')
   if (query.currency && query.currency !== 'ALL') {
-    const currencies = query.currency.split(',').map((s) => s.trim().toUpperCase());
-    filtered = filtered.filter((ev) => currencies.includes(ev.country));
+    const currencies = String(query.currency).split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+    if (currencies.length > 0) {
+      filtered = filtered.filter((ev) => currencies.includes(ev.country));
+    }
   }
 
-  // Search keyword in title
+  // Filter by category (e.g. 'INFLATION,EMPLOYMENT')
+  if (query.category && query.category !== 'ALL') {
+    const cats = String(query.category).split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+    if (cats.length > 0) {
+      filtered = filtered.filter((ev) => cats.includes(ev.category));
+    }
+  }
+
+  // Filter out completed releases if showCompleted === 'false'
+  if (query.showCompleted === 'false') {
+    filtered = filtered.filter((ev) => !ev.releaseState?.isReleased);
+  }
+
+  // Search keyword in title or country
   if (query.search && query.search.trim()) {
     const q = query.search.trim().toLowerCase();
     filtered = filtered.filter((ev) =>
@@ -570,24 +816,16 @@ async function getEvents(query = {}) {
     );
   }
 
-  // Range filter
-  const now = new Date();
+  // Timezone-aware Range filter
   if (query.range === 'today') {
-    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
-    filtered = filtered.filter((ev) => {
-      const d = new Date(ev.date);
-      return d >= startOfDay && d <= endOfDay;
-    });
+    const todayKey = getDatePartsInTimeZone(nowMs, timeZone).key;
+    filtered = filtered.filter((ev) => getDatePartsInTimeZone(ev.date, timeZone).key === todayKey);
   } else if (query.range === 'tomorrow') {
-    const startOfTomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
-    const endOfTomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 23, 59, 59, 999));
-    filtered = filtered.filter((ev) => {
-      const d = new Date(ev.date);
-      return d >= startOfTomorrow && d <= endOfTomorrow;
-    });
+    const todayKey = getDatePartsInTimeZone(nowMs, timeZone).key;
+    const tomorrowKey = addDaysToDateKey(todayKey, 1);
+    filtered = filtered.filter((ev) => getDatePartsInTimeZone(ev.date, timeZone).key === tomorrowKey);
   } else if (query.range === 'upcoming') {
-    filtered = filtered.filter((ev) => new Date(ev.date) >= now);
+    filtered = filtered.filter((ev) => new Date(ev.date).getTime() >= nowMs || ev.releaseState?.isAwaiting);
   }
 
   // Sort chronologically
@@ -603,7 +841,7 @@ async function getUpcomingHighImpactEvents(windowMinutes = 240) {
   const allEvents = await fetchCalendarEvents();
   const now = Date.now();
   const windowEnd = now + windowMinutes * 60 * 1000;
-  const recentPast = now - 15 * 60 * 1000; // Include events that started in the last 15 minutes
+  const recentPast = now - 15 * 60 * 1000;
 
   const upcoming = allEvents
     .filter((ev) => {
@@ -619,8 +857,8 @@ async function getUpcomingHighImpactEvents(windowMinutes = 240) {
       if (diffMs <= 0) {
         if (ev.actual) {
           countdown = `Actual: ${ev.actual}`;
-        } else if (diffMs >= -3 * 60 * 1000) {
-          countdown = 'Releasing now';
+        } else if (diffMs >= -15 * 60 * 1000) {
+          countdown = 'Awaiting release';
         } else {
           countdown = 'Released';
         }
@@ -682,14 +920,29 @@ async function correlateTradeWithNews(tradeTime, pair, windowMinutes = 15) {
 }
 
 function getLastFetchedAt() {
-  return lastMergedAt || lastBaseFetchedAt || lastTvFetchedAt;
+  return lastMergedAt || Date.now();
+}
+
+function getProviderHealth() {
+  return {
+    schedule: defaultScheduleProvider.getHealth(),
+    actuals: defaultActualsProvider.getHealth(),
+  };
 }
 
 module.exports = {
+  EVENT_CATEGORIES,
+  classifyEventCategory,
+  computeEventReleaseState,
+  computeAdaptivePollPlan,
+  isValidTimeZone,
+  getDatePartsInTimeZone,
+  addDaysToDateKey,
   fetchCalendarEvents,
   getEvents,
   getUpcomingHighImpactEvents,
   correlateTradeWithNews,
   getCurrenciesForPair,
   getLastFetchedAt,
+  getProviderHealth,
 };

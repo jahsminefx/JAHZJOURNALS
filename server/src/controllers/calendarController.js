@@ -18,6 +18,7 @@ const getCalendarEvents = async (req, res) => {
       success: true,
       count: events.length,
       lastSyncedAt: lastSyncedAt ? new Date(lastSyncedAt).toISOString() : null,
+      providerHealth: calendarService.getProviderHealth(),
       data: events,
     });
   } catch (error) {
@@ -202,6 +203,71 @@ const getSupportedCurrencies = (req, res) => {
   });
 };
 
+/**
+ * GET /api/calendar/preferences
+ * Returns unified calendar preferences + alert preferences + user watched pairs
+ */
+const getCalendarPreferences = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const data = await economicAlertService.getUserCalendarPreferences(userId);
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Error fetching calendar preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve calendar preferences.',
+    });
+  }
+};
+
+/**
+ * PUT /api/calendar/preferences
+ * Updates unified calendar preferences (and optional alert preferences)
+ */
+const updateCalendarPreferences = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const data = await economicAlertService.updateUserCalendarPreferences(userId, req.body);
+    res.json({
+      success: true,
+      message: 'Calendar preferences saved.',
+      data,
+    });
+  } catch (error) {
+    console.error('Error updating calendar preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update calendar preferences.',
+    });
+  }
+};
+
+/**
+ * POST /api/calendar/alerts/test
+ * Sends an immediate test alert through the active in-app and push channels
+ */
+const sendTestAlert = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await economicAlertService.sendTestEconomicAlert(userId);
+    res.json({
+      success: true,
+      message: 'Test alert sent to your notification center.',
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error sending test economic alert:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send test alert.',
+    });
+  }
+};
+
 module.exports = {
   getCalendarEvents,
   getUpcomingEvents,
@@ -212,4 +278,7 @@ module.exports = {
   getAlertHistory,
   getSupportedPairs,
   getSupportedCurrencies,
+  getCalendarPreferences,
+  updateCalendarPreferences,
+  sendTestAlert,
 };

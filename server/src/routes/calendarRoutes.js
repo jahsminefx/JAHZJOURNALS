@@ -11,6 +11,9 @@ const {
   getAlertHistory,
   getSupportedPairs,
   getSupportedCurrencies,
+  getCalendarPreferences,
+  updateCalendarPreferences,
+  sendTestAlert,
 } = require('../controllers/calendarController');
 
 // Public calendar data endpoints (accessible to visitors without logging in & authenticated users)
@@ -18,10 +21,15 @@ router.get('/', getCalendarEvents);
 router.get('/upcoming', getUpcomingEvents);
 router.post('/check-trade-news', protect, checkTradeNews);
 
+// Personalized Calendar Preferences
+router.get('/preferences', protect, getCalendarPreferences);
+router.put('/preferences', protect, updateCalendarPreferences);
+
 // Personal Economic News Alert Endpoints (V1.1)
 router.get('/alerts/preferences', protect, getAlertPreferences);
 router.put('/alerts/preferences', protect, updateAlertPreferences);
 router.patch('/alerts/toggle', protect, toggleAlerts);
+router.post('/alerts/test', protect, sendTestAlert);
 router.get('/alerts/history', protect, getAlertHistory);
 router.get('/alerts/supported-pairs', protect, getSupportedPairs);
 router.get('/alerts/supported-currencies', protect, getSupportedCurrencies);

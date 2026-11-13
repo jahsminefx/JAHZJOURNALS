@@ -1860,17 +1860,19 @@ model WebhookEvent {
 }
 
 model EconomicNewsAlertPreference {
-  id               String   @id @default(uuid())
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId           String   @unique
-  isEnabled        Boolean  @default(true)
-  targetingMode    String   @default("CURRENCIES_AND_PAIRS") // CURRENCIES_ONLY, PAIRS_ONLY, CURRENCIES_AND_PAIRS
-  currencies       String[] @default(["USD", "EUR", "GBP"])
-  pairs            String[] @default(["EURUSD", "GBPUSD", "USDJPY", "XAUUSD"])
-  impactLevels     String[] @default(["HIGH"])
-  leadTimesMinutes Int[]    @default([30])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String   @unique
+  isEnabled           Boolean  @default(true)
+  targetingMode       String   @default("CURRENCIES_AND_PAIRS") // CURRENCIES_ONLY, PAIRS_ONLY, CURRENCIES_AND_PAIRS
+  currencies          String[] @default(["USD", "EUR", "GBP"])
+  pairs               String[] @default(["EURUSD", "GBPUSD", "USDJPY", "XAUUSD"])
+  impactLevels        String[] @default(["HIGH"])
+  leadTimesMinutes    Int[]    @default([30])
+  categories          String[] @default([])
+  calendarPreferences Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([userId, isEnabled])
 }

@@ -1,5 +1,31 @@
 const crypto = require('crypto');
 const { getInstrumentConfig } = require('./instrumentService');
+const { classifyEventCategory } = require('./calendarService');
+
+const CORRELATED_CURRENCY_MAP = {
+  EUR: ['CHF', 'GBP'],
+  CHF: ['EUR'],
+  GBP: ['EUR'],
+  AUD: ['NZD', 'CAD'],
+  NZD: ['AUD'],
+  CAD: ['USD'],
+  USD: ['CAD'],
+  JPY: ['CHF'],
+};
+
+function getCorrelatedCurrencies(currencies = []) {
+  const result = new Set();
+  for (const c of currencies) {
+    const clean = cleanCurrencyString(c);
+    if (!clean) continue;
+    result.add(clean);
+    const correlated = CORRELATED_CURRENCY_MAP[clean] || [];
+    for (const corr of correlated) {
+      result.add(corr);
+    }
+  }
+  return [...result];
+}
 
 const SUPPORTED_CURRENCIES = [
   'USD',
@@ -212,6 +238,15 @@ function matchEventToUserPreferences(event, preference) {
     return { matched: false, reason: 'IMPACT_NOT_SUBSCRIBED', eventImpact };
   }
 
+  // Optional category filter check (backwards compatible when categories is omitted or empty)
+  if (Array.isArray(preference.categories) && preference.categories.length > 0) {
+    const eventCategory = event.category || classifyEventCategory(event.title, event.impact);
+    const allowedCategories = preference.categories.map((c) => String(c).trim().toUpperCase()).filter(Boolean);
+    if (allowedCategories.length > 0 && !allowedCategories.includes(eventCategory)) {
+      return { matched: false, reason: 'CATEGORY_NOT_SUBSCRIBED', eventCategory, eventImpact };
+    }
+  }
+
   // 3. Currency check
   const eventCurrency = (event.country || event.currency || '').trim().toUpperCase();
   if (!eventCurrency) {
@@ -318,4 +353,5 @@ module.exports = {
   matchEventToUserPreferences,
   buildAlertNotificationContent,
   buildDeduplicationKey,
+  getCorrelatedCurrencies,
 };
