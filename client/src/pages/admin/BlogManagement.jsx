@@ -126,25 +126,25 @@ const BlogManagement = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-            <BookOpen className="text-emerald-500" size={26} />
-            Blog & Education Management
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
+            <BookOpen className="text-emerald-500 shrink-0" size={24} />
+            <span>Blog &amp; Education Management</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Publish educational trading guides, manage SEO metadata, and optimize organic reader acquisition.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={() => {
               fetchMetrics();
               fetchArticles();
             }}
-            className="p-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-muted-foreground hover:text-foreground transition"
+            className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-border bg-surface hover:bg-surface-muted text-muted-foreground hover:text-foreground transition shrink-0"
             title="Refresh articles"
           >
             <RefreshCw size={16} />
@@ -152,18 +152,18 @@ const BlogManagement = () => {
           <button
             onClick={handleDispatchUnreadReminders}
             disabled={dispatchingReminders}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground text-sm font-semibold transition disabled:opacity-50"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2.5 min-h-[44px] rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground text-xs sm:text-sm font-semibold transition disabled:opacity-50"
             title="Dispatch browser push reminders for unread articles to traders"
           >
-            <Bell size={16} className={dispatchingReminders ? 'animate-bounce text-emerald-400' : 'text-emerald-400'} />
-            {dispatchingReminders ? 'Dispatching...' : 'Remind Unread'}
+            <Bell size={16} className={dispatchingReminders ? 'animate-bounce text-emerald-400 shrink-0' : 'text-emerald-400 shrink-0'} />
+            <span>{dispatchingReminders ? 'Dispatching...' : 'Remind Unread'}</span>
           </button>
           <Link
             to="/admin/blog/new"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 text-gray-950 font-bold text-sm hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/10"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-emerald-500 text-gray-950 font-bold text-xs sm:text-sm hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/10"
           >
-            <Plus size={18} />
-            Write New Article
+            <Plus size={18} className="shrink-0" />
+            <span>Write New Article</span>
           </Link>
         </div>
       </div>
@@ -230,9 +230,9 @@ const BlogManagement = () => {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 w-full md:w-auto">
             {/* Status Tabs */}
-            <div className="flex items-center p-1 bg-surface-muted border border-border rounded-lg text-xs font-medium">
+            <div className="flex items-center p-1 bg-surface-muted border border-border rounded-lg text-xs font-medium overflow-x-auto max-w-full">
               {['ALL', 'PUBLISHED', 'DRAFT', 'ARCHIVED'].map((st) => (
                 <button
                   key={st}
@@ -240,7 +240,7 @@ const BlogManagement = () => {
                     setStatusFilter(st);
                     setPage(1);
                   }}
-                  className={`px-3 py-1 rounded-md transition capitalize ${
+                  className={`px-3 py-1.5 rounded-md transition capitalize whitespace-nowrap ${
                     statusFilter === st
                       ? 'bg-surface text-foreground font-bold shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -312,7 +312,123 @@ const BlogManagement = () => {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile Article Cards */}
+          <div className="md:hidden divide-y divide-border/60">
+            {articles.map((article) => {
+              const isPublished = article.status === 'PUBLISHED';
+              const isDraft = article.status === 'DRAFT';
+
+              return (
+                <div key={article.id} className="p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    {article.coverImage ? (
+                      <img
+                        src={article.coverImage}
+                        alt={article.altText || article.title}
+                        className="h-12 w-16 object-cover rounded-md border border-border shrink-0 bg-surface-muted"
+                      />
+                    ) : (
+                      <div className="h-12 w-16 rounded-md border border-border/80 bg-surface-muted flex items-center justify-center shrink-0 text-muted-foreground">
+                        <FileText size={18} />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to={`/admin/blog/edit/${article.id}`}
+                        className="font-bold text-sm text-foreground hover:text-emerald-500 transition line-clamp-2"
+                      >
+                        {article.title}
+                      </Link>
+                      <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">/blog/{article.slug}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-md font-semibold bg-surface-muted border border-border text-foreground">
+                        {article.category}
+                      </span>
+                      <select
+                        value={article.status}
+                        onChange={(e) => handleStatusChange(article.id, e.target.value)}
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none transition ${
+                          isPublished
+                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                            : isDraft
+                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                            : 'bg-slate-500/10 text-slate-400 border-slate-500/30'
+                        }`}
+                      >
+                        <option value="PUBLISHED">Published</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="ARCHIVED">Archived</option>
+                      </select>
+                    </div>
+                    <span className="text-muted-foreground">
+                      {(article.views || 0).toLocaleString()} views
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                    <span className="text-xs text-muted-foreground">
+                      {article.updatedAt
+                        ? new Date(article.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                        : '—'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleToggleFeatured(article.id, article.featured)}
+                        title={article.featured ? 'Remove from featured banner' : 'Set as featured banner'}
+                        className={`p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg border transition ${
+                          article.featured
+                            ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
+                            : 'border-border text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Star size={15} fill={article.featured ? 'currentColor' : 'none'} />
+                      </button>
+                      {isPublished ? (
+                        <a
+                          href={`/blog/${article.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="View published article"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center border border-border text-muted-foreground hover:text-emerald-500 rounded-lg transition"
+                        >
+                          <ExternalLink size={15} />
+                        </a>
+                      ) : (
+                        <Link
+                          to={`/admin/blog/edit/${article.id}?preview=true`}
+                          title="Preview draft"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center border border-border text-muted-foreground hover:text-amber-500 rounded-lg transition"
+                        >
+                          <Eye size={15} />
+                        </Link>
+                      )}
+                      <Link
+                        to={`/admin/blog/edit/${article.id}`}
+                        title="Edit article"
+                        className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center border border-border text-muted-foreground hover:text-foreground rounded-lg transition"
+                      >
+                        <Edit size={15} />
+                      </Link>
+                      <button
+                        onClick={() => setDeleteModal({ open: true, article, loading: false })}
+                        title="Delete article"
+                        className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center border border-border text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-muted/80 border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                 <tr>
@@ -464,11 +580,12 @@ const BlogManagement = () => {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {/* Pagination Bar */}
         {pagination.pages > 1 && (
-          <div className="p-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+          <div className="p-4 border-t border-border flex flex-col sm:flex-row gap-3 items-center justify-between text-xs text-muted-foreground">
             <span>
               Showing {(page - 1) * pagination.limit + 1} to{' '}
               {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} articles
@@ -477,7 +594,7 @@ const BlogManagement = () => {
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed text-foreground"
+                className="px-3 py-1.5 min-h-[36px] rounded-lg border border-border bg-surface hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed text-foreground"
               >
                 Previous
               </button>
@@ -487,7 +604,7 @@ const BlogManagement = () => {
               <button
                 disabled={page >= pagination.pages}
                 onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
-                className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed text-foreground"
+                className="px-3 py-1.5 min-h-[36px] rounded-lg border border-border bg-surface hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed text-foreground"
               >
                 Next
               </button>

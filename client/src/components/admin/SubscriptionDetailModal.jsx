@@ -113,32 +113,32 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
   const { subscription, history, payments = [] } = data;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-sm">
-      <div className="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl bg-surface shadow-2xl text-foreground">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6 backdrop-blur-sm">
+      <div className="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl bg-surface shadow-2xl text-foreground overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border p-6 font-bold">
-          <div className="flex items-center gap-3">
-             <div className="h-10 w-10 bg-emerald-500/10 text-emerald-500 flex items-center justify-center rounded-lg">
+        <div className="flex items-center justify-between gap-3 border-b border-border p-4 sm:p-6 font-bold">
+          <div className="flex items-center gap-3 min-w-0">
+             <div className="h-10 w-10 bg-emerald-500/10 text-emerald-500 flex items-center justify-center rounded-lg shrink-0">
                 <Activity size={20} />
              </div>
-             <div>
-                <h2 className="text-xl leading-none tracking-tight">Manage User Subscription</h2>
-                <p className="text-xs text-muted-foreground mt-1 tracking-wide font-medium">{subscription.user?.name} • {subscription.user?.email}</p>
+             <div className="min-w-0">
+                <h2 className="text-base sm:text-xl leading-none tracking-tight">Manage User Subscription</h2>
+                <p className="text-xs text-muted-foreground mt-1 tracking-wide font-medium break-all">{subscription.user?.name} • {subscription.user?.email}</p>
              </div>
           </div>
-          <button onClick={onClose} className="p-2 text-muted-foreground hover:bg-surface-muted rounded-full">
+          <button onClick={onClose} className="p-2 text-muted-foreground hover:bg-surface-muted rounded-full shrink-0">
             <X size={20} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto grid lg:grid-cols-2">
+        <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-2">
           
           {/* EDIT FORM */}
-          <div className="p-6 border-b lg:border-b-0 lg:border-r border-border">
+          <div className="p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-border">
             <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Edit Subscription Details</h3>
             <form onSubmit={handleUpdate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div className="space-y-1.5">
                    <label className="text-xs font-semibold text-muted-foreground">Subscription Plan</label>
                    <select value={editPlan} onChange={e => handlePlanSelect(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none font-bold">
@@ -167,7 +167,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                  </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div className="space-y-1.5">
                    <label className="text-xs font-semibold text-muted-foreground">Source</label>
                    <select value={editSource} onChange={e => setEditSource(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
@@ -183,8 +183,8 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                  </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1.5 flex flex-col justify-center col-span-2">
+              <div className="grid grid-cols-1 gap-4">
+                 <div className="space-y-1.5 flex flex-col justify-center">
                    <label className="text-xs font-semibold text-muted-foreground">Auto-Renewal</label>
                    <select value={editAutoRenew} onChange={e => setEditAutoRenew(e.target.value)} className="w-full bg-surface-muted border border-border px-3 py-2 rounded-lg text-sm focus:border-emerald-500 outline-none">
                      <option value="true">Enabled (Auto-renews at end of billing period)</option>
@@ -194,9 +194,9 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
               </div>
 
               {subscription.paymentReference && (
-                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs flex items-center justify-between">
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs flex flex-wrap items-center justify-between gap-2">
                   <span className="text-muted-foreground font-semibold">Latest Payment Reference:</span>
-                  <span className="font-mono font-bold text-emerald-400">{subscription.paymentReference}</span>
+                  <span className="font-mono font-bold text-emerald-500 dark:text-emerald-400 break-all">{subscription.paymentReference}</span>
                 </div>
               )}
 
@@ -220,7 +220,7 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
           </div>
 
           {/* HISTORY & PAYMENTS ZONE */}
-          <div className="p-6 bg-surface-muted/30 space-y-6">
+          <div className="p-4 sm:p-6 bg-surface-muted/30 space-y-6">
             {/* Paystack Receipts */}
             <div>
               <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center justify-between">
@@ -284,14 +284,14 @@ const SubscriptionDetailModal = ({ subscriptionId, onClose, onMutate }) => {
                            <span>Plan Change</span>
                            <span className="text-[10px] uppercase font-bold tracking-widest text-amber-500">{hs.source}</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                            <div className="flex border border-border rounded overflow-hidden">
-                             <span className="bg-surface-muted px-2 py-1 text-muted-foreground w-12 text-center">From</span>
-                             <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1">{hs.previousPlan || 'NONE'}</span>
+                             <span className="bg-surface-muted px-2 py-1 text-muted-foreground w-12 text-center shrink-0">From</span>
+                             <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1 truncate">{hs.previousPlan || 'NONE'}</span>
                            </div>
                            <div className="flex border border-border rounded overflow-hidden">
-                             <span className="bg-emerald-500/10 px-2 py-1 text-emerald-500 w-12 text-center font-bold border-r border-border">To</span>
-                             <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1 font-bold">{hs.newPlan}</span>
+                             <span className="bg-emerald-500/10 px-2 py-1 text-emerald-500 w-12 text-center font-bold border-r border-border shrink-0">To</span>
+                             <span className="px-2 py-1 bg-surface font-mono text-foreground flex-1 font-bold truncate">{hs.newPlan}</span>
                            </div>
                         </div>
                         {hs.paymentReference && (

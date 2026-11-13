@@ -43,7 +43,49 @@ const BugReports = () => {
            </div>
 
            <div className="rounded-xl border border-border bg-surface overflow-hidden">
-               <div className="overflow-x-auto">
+               {/* Mobile Bug Cards */}
+               <div className="md:hidden divide-y divide-border">
+                  {loading ? (
+                     <div className="p-6 text-center text-muted-foreground text-sm">Loading bug reports...</div>
+                  ) : bugs.length === 0 ? (
+                     <div className="p-6 text-center text-muted-foreground text-sm">No bug reports found.</div>
+                  ) : bugs.map(b => (
+                     <div key={b.id} className="p-4 space-y-3 text-xs">
+                        <div className="flex items-start justify-between gap-2">
+                           <div className="min-w-0">
+                              {b.reporter ? (
+                                <>
+                                   <div className="font-bold text-sm text-foreground truncate">{b.reporter.name}</div>
+                                   <div className="text-muted-foreground truncate">{b.reporter.email}</div>
+                                </>
+                              ) : <span className="text-muted-foreground italic">Anonymous Trader</span>}
+                           </div>
+                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest shrink-0 ${b.severity === 'CRITICAL' ? 'bg-red-500/10 text-red-500' : 'bg-surface-muted text-muted-foreground'}`}>{b.severity}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-muted-foreground">
+                           <span>{b.device || 'Unknown Device'} • <span className="font-mono">{b.browser || 'Browser'}</span></span>
+                           <span className="font-bold uppercase text-[10px]">{b.relatedModule || 'GENERAL'}</span>
+                        </div>
+                        <select 
+                           value={b.status}
+                           onChange={e => handleStatusUpdate(b.id, e.target.value)}
+                           className={`w-full text-xs px-3 py-2 min-h-[38px] rounded-lg border font-bold ${
+                              b.status === 'NEW' ? 'bg-red-500/10 text-red-500 border-red-500/20' 
+                              : b.status === 'RESOLVED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                              : 'bg-purple-500/10 text-purple-500 border-purple-500/20'
+                           }`}
+                        >
+                           <option value="NEW">New</option>
+                           <option value="ASSIGNED">In Progress</option>
+                           <option value="VERIFYING">Testing / QA</option>
+                           <option value="RESOLVED">Resolved / Fixed</option>
+                           <option value="ARCHIVED">Archived</option>
+                        </select>
+                     </div>
+                  ))}
+               </div>
+
+               <div className="hidden md:block overflow-x-auto">
                  <table className="w-full text-left text-sm whitespace-nowrap">
                     <thead className="bg-surface-muted text-muted-foreground text-xs uppercase tracking-wider">
                        <tr>
@@ -100,11 +142,11 @@ const BugReports = () => {
                </div>
                
                {!loading && total > 15 && (
-                  <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+                  <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row gap-3 items-center justify-between">
                      <span className="text-xs text-muted-foreground">Showing {(page - 1) * 15 + 1} to {Math.min(page * 15, total)} of {total} bugs</span>
                      <div className="flex gap-2">
-                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded border border-border text-xs hover:bg-surface-muted">Previous</button>
-                        <button disabled={page * 15 >= total} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded border border-border text-xs hover:bg-surface-muted">Next</button>
+                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 min-h-[36px] rounded border border-border text-xs disabled:opacity-50 hover:bg-surface-muted">Previous</button>
+                        <button disabled={page * 15 >= total} onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 min-h-[36px] rounded border border-border text-xs disabled:opacity-50 hover:bg-surface-muted">Next</button>
                      </div>
                   </div>
                )}

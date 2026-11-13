@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
-import { X, Activity, BrainCircuit, ShieldAlert } from 'lucide-react';
+import { X, BrainCircuit, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 
 const UserAiModal = ({ user, onClose }) => {
@@ -18,80 +18,98 @@ const UserAiModal = ({ user, onClose }) => {
    const totalBurn = requests.reduce((acc, req) => acc + (req.estimatedCost || 0), 0);
    const totalTokens = requests.reduce((acc, req) => acc + (req.inputTokens || 0) + (req.outputTokens || 0), 0);
    
-   // Frequencies
    const features = requests.map(r => r.featureType);
    const favorite = features.sort((a,b) => features.filter(v => v===a).length - features.filter(v => v===b).length).pop() || 'None';
 
    return (
-     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-sm overflow-y-auto">
-        <div className="relative flex w-full max-w-3xl flex-col rounded-2xl bg-surface shadow-2xl text-foreground my-8">
-           <div className="flex items-center justify-between border-b border-border p-6 font-bold bg-purple-500/10 rounded-t-2xl">
-              <div>
-                <h2 className="text-xl text-purple-500 flex items-center gap-2"><BrainCircuit size={20}/> AI Usage: {user.name}</h2>
-                <p className="text-xs text-purple-400/80 mt-1 uppercase tracking-widest">{user.email}</p>
+     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6 backdrop-blur-sm">
+        <div className="relative flex w-full max-w-3xl max-h-[90vh] flex-col rounded-2xl bg-surface shadow-2xl text-foreground overflow-hidden">
+           <div className="flex items-center justify-between gap-3 border-b border-border p-4 sm:p-6 font-bold bg-purple-500/10 shrink-0">
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-xl text-purple-500 flex items-center gap-2">
+                  <BrainCircuit size={20} className="shrink-0"/>
+                  <span className="truncate">AI Usage: {user.name}</span>
+                </h2>
+                <p className="text-xs text-purple-500/80 dark:text-purple-400/80 mt-1 uppercase tracking-widest break-all">{user.email}</p>
               </div>
-              <button onClick={onClose} className="p-2 text-muted-foreground hover:bg-surface-muted hover:text-foreground rounded-full transition">
+              <button onClick={onClose} className="p-2 text-muted-foreground hover:bg-surface-muted hover:text-foreground rounded-full transition shrink-0">
                 <X size={20} />
               </button>
            </div>
            
-           <div className="p-6">
+           <div className="p-4 sm:p-6 overflow-y-auto flex-1">
               {loading ? (
                 <div className="h-40 flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500 border-r-transparent"></div></div>
               ) : (
                 <div className="space-y-6">
-                   <div className="grid sm:grid-cols-4 gap-4">
-                      <div className="p-4 rounded-xl border border-border bg-surface-muted text-center">
-                         <div className="text-xs font-bold uppercase text-muted-foreground">Total AI Requests</div>
-                         <div className="text-2xl font-black mt-2">{requests.length}</div>
+                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                      <div className="p-3.5 sm:p-4 rounded-xl border border-border bg-surface-muted text-center">
+                         <div className="text-[11px] font-bold uppercase text-muted-foreground">Total AI Requests</div>
+                         <div className="text-xl sm:text-2xl font-black mt-1.5">{requests.length}</div>
                       </div>
-                      <div className="p-4 rounded-xl border border-border bg-surface-muted text-center">
-                         <div className="text-xs font-bold uppercase text-muted-foreground">Tokens Used</div>
-                         <div className="text-2xl font-black mt-2">{totalTokens.toLocaleString()}</div>
+                      <div className="p-3.5 sm:p-4 rounded-xl border border-border bg-surface-muted text-center">
+                         <div className="text-[11px] font-bold uppercase text-muted-foreground">Tokens Used</div>
+                         <div className="text-xl sm:text-2xl font-black mt-1.5">{totalTokens.toLocaleString()}</div>
                       </div>
-                      <div className="p-4 rounded-xl border border-purple-500/20 bg-purple-500/5 text-center">
-                         <div className="text-xs font-bold uppercase text-purple-500">Estimated Cost</div>
-                         <div className="text-2xl font-black text-purple-400 mt-2">${totalBurn.toFixed(4)}</div>
+                      <div className="p-3.5 sm:p-4 rounded-xl border border-purple-500/20 bg-purple-500/5 text-center">
+                         <div className="text-[11px] font-bold uppercase text-purple-500">Estimated Cost</div>
+                         <div className="text-xl sm:text-2xl font-black text-purple-500 dark:text-purple-400 mt-1.5">${totalBurn.toFixed(4)}</div>
                       </div>
-                      <div className="p-4 rounded-xl border border-border bg-surface-muted text-center">
-                         <div className="text-xs font-bold uppercase text-muted-foreground">Most Used Feature</div>
-                         <div className="text-xs font-bold capitalize mt-4">{favorite.replace('_', ' ')}</div>
+                      <div className="p-3.5 sm:p-4 rounded-xl border border-border bg-surface-muted text-center">
+                         <div className="text-[11px] font-bold uppercase text-muted-foreground">Most Used Feature</div>
+                         <div className="text-xs font-bold capitalize mt-2.5 break-words">{favorite.replace('_', ' ')}</div>
                       </div>
                    </div>
 
-                   <h3 className="font-bold border-b border-border pb-2">Recent AI Activity (Latest 100)</h3>
+                   <h3 className="font-bold border-b border-border pb-2 text-sm">Recent AI Activity (Latest 100)</h3>
                    {requests.length === 0 ? (
-                      <div className="text-center p-8 text-muted-foreground border border-dashed rounded-xl"><ShieldAlert className="mx-auto mb-2 opacity-50" size={30}/> No AI activity found for this user.</div>
+                      <div className="text-center p-8 text-muted-foreground border border-dashed border-border rounded-xl"><ShieldAlert className="mx-auto mb-2 opacity-50" size={30}/> No AI activity found for this user.</div>
                    ) : (
-                      <div className="overflow-x-auto border border-border rounded-xl">
+                      <>
+                      <div className="sm:hidden space-y-2.5">
+                        {requests.map(r => (
+                          <div key={r.id} className="p-3 rounded-xl border border-border bg-surface-muted/30 space-y-1.5 text-xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-bold text-foreground capitalize">{r.featureType.replace('_', ' ')}</span>
+                              <span className="text-purple-500 dark:text-purple-400 font-bold font-mono">${Number(r.estimatedCost || 0).toFixed(5)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-muted-foreground">
+                              <span className="font-mono truncate">{r.provider}</span>
+                              <span>{format(new Date(r.createdAt), 'MMM dd HH:mm')}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="hidden sm:block overflow-x-auto border border-border rounded-xl">
                         <table className="w-full text-sm text-left">
                            <thead className="bg-surface-muted text-muted-foreground">
                              <tr>
                                <th className="px-4 py-3">Feature</th>
                                <th className="px-4 py-3">AI Model / Provider</th>
-                               <th className="px-4 py-3 right">Cost</th>
-                               <th className="px-4 py-3">Date & Time</th>
+                               <th className="px-4 py-3">Cost</th>
+                               <th className="px-4 py-3">Date &amp; Time</th>
                              </tr>
                            </thead>
                            <tbody className="divide-y divide-border">
                              {requests.map(r => (
                                <tr key={r.id} className="hover:bg-surface-muted/50">
-                                 <td className="px-4 py-3 font-bold text-xs">{r.featureType.replace('_', ' ')}</td>
+                                 <td className="px-4 py-3 font-bold text-xs capitalize">{r.featureType.replace('_', ' ')}</td>
                                  <td className="px-4 py-3 font-mono text-xs">{r.provider}</td>
-                                 <td className="px-4 py-3 text-xs text-purple-400 font-bold">${Number(r.estimatedCost || 0).toFixed(5)}</td>
+                                 <td className="px-4 py-3 text-xs text-purple-500 dark:text-purple-400 font-bold">${Number(r.estimatedCost || 0).toFixed(5)}</td>
                                  <td className="px-4 py-3 text-xs text-muted-foreground">{format(new Date(r.createdAt), 'MMM dd HH:mm')}</td>
                                </tr>
                              ))}
                            </tbody>
                         </table>
                       </div>
+                      </>
                    )}
                 </div>
               )}
            </div>
         </div>
      </div>
-   )
+   );
 };
 
 export default UserAiModal;

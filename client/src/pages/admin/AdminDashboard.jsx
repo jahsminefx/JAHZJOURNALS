@@ -94,10 +94,10 @@ const AdminDashboard = () => {
     <div className="space-y-6 sm:space-y-8 pb-12">
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">Super Admin Dashboard</h1>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl sm:text-3xl font-black text-foreground tracking-tight">Super Admin Dashboard</h1>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-bold uppercase tracking-wider shrink-0">
               Live HQ
             </span>
           </div>
@@ -147,14 +147,14 @@ const AdminDashboard = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
           {/* Total Registered */}
-          <div className="p-4 rounded-2xl border border-border bg-surface shadow-xs">
+          <div className="p-3.5 sm:p-4 rounded-2xl border border-border bg-surface shadow-xs min-w-0">
             <div className="flex items-center justify-between text-muted-foreground mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Total Traders</span>
-              <Users size={16} className="text-foreground" />
+              <span className="text-[11px] font-bold uppercase tracking-wider truncate">Total Traders</span>
+              <Users size={16} className="text-foreground shrink-0" />
             </div>
-            <div className="flex items-baseline justify-between">
+            <div className="flex flex-wrap items-baseline justify-between gap-1">
               <h3 className="text-2xl sm:text-3xl font-black text-foreground">{users.totalUsers.toLocaleString()}</h3>
               <span className="text-xs font-bold text-emerald-500">+{users.newUsersToday} today</span>
             </div>
@@ -162,10 +162,10 @@ const AdminDashboard = () => {
           </div>
 
           {/* Free Tier */}
-          <div className="p-4 rounded-2xl border border-border bg-surface shadow-xs">
+          <div className="p-3.5 sm:p-4 rounded-2xl border border-border bg-surface shadow-xs min-w-0">
             <div className="flex items-center justify-between text-muted-foreground mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Free Tier</span>
-              <Layers size={16} className="text-slate-400" />
+              <span className="text-[11px] font-bold uppercase tracking-wider truncate">Free Tier</span>
+              <Layers size={16} className="text-slate-400 shrink-0" />
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-foreground">{subscriptions.freeUsers.toLocaleString()}</h3>
             <p className="mt-1 text-[11px] text-muted-foreground">
@@ -174,45 +174,45 @@ const AdminDashboard = () => {
           </div>
 
           {/* Starter Plan */}
-          <div className="p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 shadow-xs">
+          <div className="p-3.5 sm:p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 shadow-xs min-w-0">
             <div className="flex items-center justify-between text-blue-500 mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Starter Tier</span>
-              <CreditCard size={16} />
+              <span className="text-[11px] font-bold uppercase tracking-wider truncate">Starter Tier</span>
+              <CreditCard size={16} className="shrink-0" />
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-foreground">{subscriptions.starterUsers.toLocaleString()}</h3>
             <p className="mt-1 text-[11px] text-blue-500 font-semibold">Active subscribers</p>
           </div>
 
           {/* Pro Plan */}
-          <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 shadow-xs">
+          <div className="p-3.5 sm:p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 shadow-xs min-w-0">
             <div className="flex items-center justify-between text-emerald-500 mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Pro Tier</span>
-              <Sparkles size={16} />
+              <span className="text-[11px] font-bold uppercase tracking-wider truncate">Pro Tier</span>
+              <Sparkles size={16} className="shrink-0" />
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-foreground">{subscriptions.proUsers.toLocaleString()}</h3>
             <p className="mt-1 text-[11px] text-emerald-500 font-semibold">Full AI & multi-account</p>
           </div>
 
           {/* Pro Sync Plan */}
-          <div className="p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-xs">
-            <div className="flex items-center justify-between text-cyan-400 mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Pro Sync Tier</span>
-              <RefreshCw size={16} />
+          <div className="p-3.5 sm:p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-xs min-w-0">
+            <div className="flex items-center justify-between text-cyan-500 mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider truncate">Pro Sync Tier</span>
+              <RefreshCw size={16} className="shrink-0" />
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-foreground">
               {(subscriptions.proSyncUsers || 0).toLocaleString()}
             </h3>
-            <p className="mt-1 text-[11px] text-cyan-400 font-semibold">MT4/MT5 Cloud Sync</p>
+            <p className="mt-1 text-[11px] text-cyan-500 font-semibold">MT4/MT5 Cloud Sync</p>
           </div>
 
           {/* Mentor Tiers Overview */}
-          <div className="p-4 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 shadow-xs col-span-2 sm:col-span-1">
-            <div className="flex items-center justify-between text-indigo-400 mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Mentors (3 Tiers)</span>
-              <GraduationCap size={18} />
+          <div className="p-3.5 sm:p-4 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 shadow-xs min-w-0">
+            <div className="flex items-center justify-between text-indigo-500 mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider truncate">Mentors (3 Tiers)</span>
+              <GraduationCap size={18} className="shrink-0" />
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-foreground">{subscriptions.mentorUsers.toLocaleString()}</h3>
-            <p className="mt-1 text-[11px] text-indigo-400 font-semibold">
+            <p className="mt-1 text-[11px] text-indigo-500 font-semibold">
               {subscriptions.privateCohortMentors || 0} Cohort • {subscriptions.growthCommunityMentors || 0} Growth • {subscriptions.megaAcademyMentors || 0} Mega
             </p>
           </div>
@@ -285,9 +285,9 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Recent Cohorts Table */}
+        {/* Recent Cohorts Table & Mobile Cards */}
         <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Active Academy Cohorts Overview</h3>
             <span className="text-[11px] text-muted-foreground">Latest created groups</span>
           </div>
@@ -297,60 +297,106 @@ const AdminDashboard = () => {
               No mentor cohorts created yet.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-border">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-surface-muted/60 text-muted-foreground font-semibold border-b border-border">
-                  <tr>
-                    <th className="px-4 py-2.5">Cohort & Academy</th>
-                    <th className="px-4 py-2.5">Mentor</th>
-                    <th className="px-4 py-2.5">Enrolled Traders</th>
-                    <th className="px-4 py-2.5">Access Fee</th>
-                    <th className="px-4 py-2.5 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border bg-surface">
-                  {mentorship.recentCohorts.map((cohort) => (
-                    <tr key={cohort.id} className="hover:bg-surface-muted/30 transition">
-                      <td className="px-4 py-3">
-                        <div className="font-bold text-foreground truncate max-w-[180px] sm:max-w-xs">{cohort.name}</div>
+            <>
+              {/* Mobile Cards (< 768px) */}
+              <div className="md:hidden space-y-3">
+                {mentorship.recentCohorts.map((cohort) => (
+                  <div key={cohort.id} className="p-3.5 rounded-xl border border-border bg-surface space-y-2.5 text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-bold text-foreground truncate">{cohort.name}</div>
                         {cohort.academyName && (
                           <div className="text-[11px] text-muted-foreground truncate">{cohort.academyName}</div>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-foreground">{cohort.mentorName}</div>
-                        <div className="text-[10px] text-muted-foreground">{cohort.mentorEmail}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-semibold px-2 py-0.5 rounded-full bg-surface-muted text-foreground border border-border">
-                          {cohort.studentCount} trader{cohort.studentCount === 1 ? '' : 's'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-semibold">
+                      </div>
+                      <span className="shrink-0 font-semibold px-2 py-0.5 rounded-full bg-surface-muted text-foreground border border-border">
+                        {cohort.studentCount} trader{cohort.studentCount === 1 ? '' : 's'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/60">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-foreground truncate">{cohort.mentorName}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">{cohort.mentorEmail}</div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
                         {cohort.isPaid ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                             {cohort.currency === 'NGN' ? '₦' : '$'}{cohort.price}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">Free</span>
+                          <span className="text-muted-foreground font-semibold">Free</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
                         <a
                           href={`/join/cohort/${cohort.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-emerald-500 hover:underline font-semibold"
                         >
-                          <span>Invite Page</span>
+                          <span>Invite</span>
                           <ArrowUpRight size={13} />
                         </a>
-                      </td>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table (>= 768px) */}
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-muted/60 text-muted-foreground font-semibold border-b border-border">
+                    <tr>
+                      <th className="px-4 py-2.5">Cohort & Academy</th>
+                      <th className="px-4 py-2.5">Mentor</th>
+                      <th className="px-4 py-2.5">Enrolled Traders</th>
+                      <th className="px-4 py-2.5">Access Fee</th>
+                      <th className="px-4 py-2.5 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border bg-surface">
+                    {mentorship.recentCohorts.map((cohort) => (
+                      <tr key={cohort.id} className="hover:bg-surface-muted/30 transition">
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-foreground truncate max-w-[180px] sm:max-w-xs">{cohort.name}</div>
+                          {cohort.academyName && (
+                            <div className="text-[11px] text-muted-foreground truncate">{cohort.academyName}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-foreground">{cohort.mentorName}</div>
+                          <div className="text-[10px] text-muted-foreground">{cohort.mentorEmail}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-semibold px-2 py-0.5 rounded-full bg-surface-muted text-foreground border border-border">
+                            {cohort.studentCount} trader{cohort.studentCount === 1 ? '' : 's'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-semibold">
+                          {cohort.isPaid ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                              {cohort.currency === 'NGN' ? '₦' : '$'}{cohort.price}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Free</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <a
+                            href={`/join/cohort/${cohort.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-emerald-500 hover:underline font-semibold"
+                          >
+                            <span>Invite Page</span>
+                            <ArrowUpRight size={13} />
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -377,17 +423,17 @@ const AdminDashboard = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 rounded-xl border border-border bg-surface-muted/30 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Campaigns</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl border border-border bg-surface-muted/30 text-center min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Total Campaigns</span>
               <div className="text-xl font-black text-foreground mt-1">{promotions.total}</div>
             </div>
-            <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Active Live</span>
+            <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 block">Active Live</span>
               <div className="text-xl font-black text-emerald-500 mt-1">{promotions.active}</div>
             </div>
-            <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Expired / Inactive</span>
+            <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-center min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 block">Expired / Inactive</span>
               <div className="text-xl font-black text-amber-500 mt-1">{promotions.expired}</div>
             </div>
           </div>

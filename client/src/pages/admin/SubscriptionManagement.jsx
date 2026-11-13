@@ -299,11 +299,11 @@ const SubscriptionManagement = () => {
       )}
 
       {/* Tab Switcher */}
-      <div className="flex items-center gap-2 border-b border-border pb-2">
+      <div className="flex items-center gap-2 border-b border-border pb-2 overflow-x-auto hide-scrollbar max-w-full">
         <button
           type="button"
           onClick={() => setActiveTab('subscriptions')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap shrink-0 ${
             activeTab === 'subscriptions'
               ? 'bg-emerald-500 text-slate-950 shadow-sm'
               : 'bg-surface border border-border text-muted-foreground hover:text-foreground'
@@ -315,22 +315,22 @@ const SubscriptionManagement = () => {
         <button
           type="button"
           onClick={() => setActiveTab('payments')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap shrink-0 ${
             activeTab === 'payments'
               ? 'bg-emerald-500 text-slate-950 shadow-sm'
               : 'bg-surface border border-border text-muted-foreground hover:text-foreground'
           }`}
         >
           <Receipt size={15} />
-          <span>Paystack Transactions & Receipts ({paymentSummary?.totalCount ?? payments.length})</span>
+          <span>Paystack Receipts ({paymentSummary?.totalCount ?? payments.length})</span>
         </button>
       </div>
 
       {activeTab === 'subscriptions' ? (
         <div className="rounded-xl border border-border bg-surface flex flex-col overflow-hidden">
           {/* Filters Top Bar */}
-          <div className="p-4 border-b border-border bg-surface-muted/30 flex flex-wrap gap-4 items-center justify-between">
-            <div className="relative w-full sm:w-64">
+          <div className="p-3 sm:p-4 border-b border-border bg-surface-muted/30 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+            <div className="relative w-full lg:w-64">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={search}
@@ -339,19 +339,19 @@ const SubscriptionManagement = () => {
                   setPage(1);
                 }}
                 placeholder="Search by name or email..."
-                className="pl-9 pr-3 py-1.5 bg-surface border border-border rounded-lg text-sm w-full outline-none focus:border-emerald-500 transition"
+                className="pl-9 pr-3 py-2 bg-surface border border-border rounded-lg text-sm w-full outline-none focus:border-emerald-500 transition text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
-            <div className="flex flex-wrap gap-3 items-center">
-              <Filter size={16} className="text-muted-foreground hidden sm:block" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex gap-2.5 items-center w-full lg:w-auto">
+              <Filter size={16} className="text-muted-foreground hidden lg:block shrink-0" />
               <select
                 value={planFilter}
                 onChange={(e) => {
                   setPlanFilter(e.target.value);
                   setPage(1);
                 }}
-                className="text-sm bg-surface border border-border rounded-lg px-2 py-1.5 outline-none focus:border-emerald-500"
+                className="text-xs sm:text-sm bg-surface border border-border rounded-lg px-2.5 py-2 outline-none focus:border-emerald-500 w-full lg:w-auto text-foreground"
               >
                 <option value="">All Plans</option>
                 <optgroup label="Trader Tiers">
@@ -375,7 +375,7 @@ const SubscriptionManagement = () => {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="text-sm bg-surface border border-border rounded-lg px-2 py-1.5 outline-none focus:border-emerald-500"
+                className="text-xs sm:text-sm bg-surface border border-border rounded-lg px-2.5 py-2 outline-none focus:border-emerald-500 w-full lg:w-auto text-foreground"
               >
                 <option value="">All Statuses</option>
                 <option value="ACTIVE">Active</option>
@@ -389,7 +389,7 @@ const SubscriptionManagement = () => {
                   setSourceFilter(e.target.value);
                   setPage(1);
                 }}
-                className="text-sm bg-surface border border-border rounded-lg px-2 py-1.5 outline-none focus:border-emerald-500"
+                className="text-xs sm:text-sm bg-surface border border-border rounded-lg px-2.5 py-2 outline-none focus:border-emerald-500 w-full lg:w-auto text-foreground"
               >
                 <option value="">All Sources</option>
                 <option value="PAYMENT">Paid (Paystack)</option>
@@ -399,7 +399,59 @@ const SubscriptionManagement = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Subscription Cards (< 768px) */}
+          <div className="md:hidden divide-y divide-border">
+            {loading ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Loading subscriptions...</div>
+            ) : subscriptions.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">No subscriptions matched your search.</div>
+            ) : subscriptions.map((sub) => (
+              <div
+                key={sub.id}
+                onClick={() => setSelectedSubId(sub.id)}
+                className="p-4 space-y-2.5 hover:bg-surface-muted/40 transition cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-bold text-sm text-foreground truncate">{sub.user?.name}</div>
+                    <div className="text-xs text-muted-foreground break-all">{sub.user?.email}</div>
+                  </div>
+                  <ChevronRight size={18} className="text-muted-foreground shrink-0 mt-0.5" />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${getPlanBadge(sub.plan)}`}>
+                    {sub.plan === 'MENTOR'
+                      ? (sub.user?.mentorTier === 'MEGA' || sub.user?.mentorTier === 'MEGA_ACADEMY' ? 'Mega Academy'
+                        : sub.user?.mentorTier === 'GROWTH' || sub.user?.mentorTier === 'GROWTH_COMMUNITY' ? 'Growth Community'
+                        : 'Private Cohort')
+                      : sub.plan}
+                  </span>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full border text-xs font-bold ${getStatusColor(sub.status)}`}>
+                    {sub.status}
+                  </span>
+                  <span className="text-xs text-muted-foreground capitalize font-medium">
+                    {sub.source?.toLowerCase()}
+                  </span>
+                </div>
+
+                {sub.promotion && <div className="text-xs text-amber-500 font-medium">🏅 {sub.promotion.name}</div>}
+                {sub.paymentReference && (
+                  <div className="text-[11px] font-mono text-emerald-500 break-all">Ref: {sub.paymentReference}</div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1 border-t border-border/50">
+                  <span className="text-muted-foreground">Since {format(new Date(sub.startedAt), 'MMM dd, yyyy')}</span>
+                  <span className={sub.expiresAt ? (new Date(sub.expiresAt) > new Date() ? 'text-emerald-500 font-medium' : 'text-red-500 font-medium') : 'text-foreground font-medium'}>
+                    {sub.expiresAt ? `Ends ${format(new Date(sub.expiresAt), 'MMM dd, yyyy')}` : 'Auto-renews'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table (>= 768px) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-muted text-muted-foreground">
                 <tr>
@@ -488,8 +540,8 @@ const SubscriptionManagement = () => {
 
           {/* Pagination */}
           {!loading && total > 20 && (
-            <div className="px-6 py-4 border-t border-border flex flex-wrap items-center justify-between gap-4">
-              <span className="text-xs text-muted-foreground">
+            <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span className="text-xs text-muted-foreground text-center sm:text-left">
                 Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, total)} of {total} records
               </span>
               <div className="flex gap-2">
@@ -514,22 +566,22 @@ const SubscriptionManagement = () => {
       ) : (
         /* PAYSTACK TRANSACTIONS & RECEIPTS TAB */
         <div className="rounded-xl border border-border bg-surface flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-border bg-surface-muted/30 flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex flex-wrap gap-3 items-center flex-1">
+          <div className="p-3 sm:p-4 border-b border-border bg-surface-muted/30 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center flex-1">
               <div className="relative w-full sm:w-64">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={paymentSearch}
                   onChange={(e) => setPaymentSearch(e.target.value)}
                   placeholder="Search reference, name, email..."
-                  className="pl-9 pr-3 py-1.5 bg-surface border border-border rounded-lg text-sm w-full outline-none focus:border-emerald-500 transition"
+                  className="pl-9 pr-3 py-2 bg-surface border border-border rounded-lg text-sm w-full outline-none focus:border-emerald-500 transition text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
               <select
                 value={paymentStatusFilter}
                 onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                className="text-sm bg-surface border border-border rounded-lg px-3 py-1.5 outline-none focus:border-emerald-500"
+                className="text-xs sm:text-sm bg-surface border border-border rounded-lg px-3 py-2 outline-none focus:border-emerald-500 w-full sm:w-auto text-foreground"
               >
                 <option value="">All Payment Statuses</option>
                 <option value="SUCCESS">Success / Paid</option>
@@ -545,25 +597,85 @@ const SubscriptionManagement = () => {
                 e.preventDefault();
                 handleVerifyReference(manualReferenceInput);
               }}
-              className="flex items-center gap-2 w-full sm:w-auto"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto"
             >
               <input
                 value={manualReferenceInput}
                 onChange={(e) => setManualReferenceInput(e.target.value)}
                 placeholder="Verify Paystack Ref (e.g. T0073...)"
-                className="px-3 py-1.5 bg-surface border border-border rounded-lg text-xs font-mono w-full sm:w-56 outline-none focus:border-emerald-500"
+                className="px-3 py-2 bg-surface border border-border rounded-lg text-xs font-mono w-full sm:w-56 outline-none focus:border-emerald-500 text-foreground placeholder:text-muted-foreground"
               />
               <button
                 type="submit"
                 disabled={!manualReferenceInput.trim() || verifyingRef === manualReferenceInput.trim()}
-                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition disabled:opacity-50 shrink-0"
+                className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition disabled:opacity-50 shrink-0"
               >
                 Verify Ref
               </button>
             </form>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Payment Cards (< 768px) */}
+          <div className="md:hidden divide-y divide-border">
+            {loadingPayments ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Loading Paystack transactions...</div>
+            ) : payments.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                No payment records found. Click &quot;Sync Paystack&quot; to pull transactions from Paystack.
+              </div>
+            ) : payments.map((pmt) => {
+              const isSuccess = (pmt.status || '').toUpperCase() === 'SUCCESS';
+              return (
+                <div key={pmt.id} className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-bold text-sm text-foreground truncate">{pmt.user?.name || 'Trader'}</div>
+                      <div className="text-xs text-muted-foreground break-all">{pmt.user?.email}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-black text-sm text-foreground">
+                        {pmt.currency === 'USD' ? `$${Number(pmt.amount).toLocaleString()}` : `₦${Number(pmt.amount).toLocaleString()}`}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground uppercase">{pmt.provider || 'PAYSTACK'}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${getPaymentStatusBadge(pmt.status)}`}>
+                      {pmt.status}
+                    </span>
+                    <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${getPlanBadge(pmt.user?.subscriptionPlan)}`}>
+                      {pmt.user?.subscriptionPlan || 'FREE'}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {format(new Date(pmt.paidAt || pmt.createdAt), 'MMM dd, yyyy HH:mm')}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
+                    <span className="font-mono text-[11px] text-muted-foreground break-all">{pmt.reference}</span>
+                    {isSuccess ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 shrink-0">
+                        <CheckCircle2 size={14} /> Verified
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleVerifyReference(pmt.reference)}
+                        disabled={verifyingRef === pmt.reference}
+                        className="px-3 py-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-bold transition disabled:opacity-50 shrink-0"
+                      >
+                        {verifyingRef === pmt.reference ? 'Checking...' : 'Re-verify'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Payments Table (>= 768px) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-muted text-muted-foreground text-xs uppercase">
                 <tr>

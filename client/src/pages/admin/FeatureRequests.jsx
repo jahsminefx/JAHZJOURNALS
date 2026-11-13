@@ -43,7 +43,53 @@ const FeatureRequests = () => {
            </div>
 
            <div className="rounded-xl border border-border bg-surface overflow-hidden">
-               <div className="overflow-x-auto">
+               {/* Mobile Feature Request Cards */}
+               <div className="md:hidden divide-y divide-border">
+                  {loading ? (
+                     <div className="p-6 text-center text-muted-foreground text-sm">Loading feature requests...</div>
+                  ) : features.length === 0 ? (
+                     <div className="p-6 text-center text-muted-foreground text-sm">No feature requests submitted yet.</div>
+                  ) : features.map(f => (
+                     <div key={f.id} className="p-4 space-y-3 text-xs">
+                        <div className="flex items-start gap-3">
+                           <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-500/10 text-purple-500 rounded-lg font-black font-mono shrink-0">
+                              <ArrowUp size={14} /> {f.votes}
+                           </div>
+                           <div className="min-w-0 flex-1">
+                              <div className="font-bold text-sm text-foreground break-words">{f.description}</div>
+                              <div className="text-[11px] text-muted-foreground font-bold mt-1 uppercase tracking-widest">{f.category}</div>
+                           </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-border/60">
+                           <div className="min-w-0">
+                              {f.user ? (
+                                <>
+                                   <span className="font-bold text-foreground">{f.user.name}</span>{' '}
+                                   <span className="text-muted-foreground truncate">({f.user.email})</span>
+                                </>
+                              ) : <span className="text-muted-foreground italic">System Idea</span>}
+                           </div>
+                           <select 
+                              value={f.status}
+                              onChange={e => handleStatusUpdate(f.id, e.target.value)}
+                              className={`w-full sm:w-auto text-xs px-3 py-2 min-h-[38px] rounded-lg border font-bold ${
+                                 f.status === 'UNDER_REVIEW' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                                 : f.status === 'RELEASED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                 : 'bg-purple-500/10 text-purple-500 border-purple-500/20'
+                              }`}
+                           >
+                              <option value="UNDER_REVIEW">Under Review</option>
+                              <option value="PLANNED">Planned</option>
+                              <option value="DEVELOPMENT">In Development</option>
+                              <option value="RELEASED">Released / Live</option>
+                              <option value="DECLINED">Declined</option>
+                           </select>
+                        </div>
+                     </div>
+                  ))}
+               </div>
+
+               <div className="hidden md:block overflow-x-auto">
                  <table className="w-full text-left text-sm whitespace-nowrap">
                     <thead className="bg-surface-muted text-muted-foreground text-xs uppercase tracking-wider">
                        <tr>
@@ -101,11 +147,11 @@ const FeatureRequests = () => {
                </div>
                
                {!loading && total > 15 && (
-                  <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+                  <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row gap-3 items-center justify-between">
                      <span className="text-xs text-muted-foreground">Showing {(page - 1) * 15 + 1} to {Math.min(page * 15, total)} of {total} features</span>
                      <div className="flex gap-2">
-                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded border border-border text-xs hover:bg-surface-muted">Previous</button>
-                        <button disabled={page * 15 >= total} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded border border-border text-xs hover:bg-surface-muted">Next</button>
+                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 min-h-[36px] rounded border border-border text-xs disabled:opacity-50 hover:bg-surface-muted">Previous</button>
+                        <button disabled={page * 15 >= total} onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 min-h-[36px] rounded border border-border text-xs disabled:opacity-50 hover:bg-surface-muted">Next</button>
                      </div>
                   </div>
                )}

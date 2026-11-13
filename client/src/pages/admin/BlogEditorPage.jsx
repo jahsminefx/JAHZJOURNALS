@@ -398,19 +398,19 @@ const BlogEditorPage = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 pb-8">
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <Link
             to="/admin/blog"
-            className="p-2 rounded-lg border border-border bg-surface hover:bg-surface-muted text-muted-foreground hover:text-foreground transition"
+            className="p-2.5 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg border border-border bg-surface hover:bg-surface-muted text-muted-foreground hover:text-foreground transition shrink-0"
           >
             <ArrowLeft size={18} />
           </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-foreground">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-black text-foreground">
                 {isEditing ? 'Edit Article' : 'Write New Article'}
               </h1>
               <span
@@ -432,25 +432,25 @@ const BlogEditorPage = () => {
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           <button
             type="button"
             disabled={saving}
             onClick={() => handleSave('DRAFT')}
-            className="px-4 py-2 rounded-lg border border-border bg-surface hover:bg-surface-muted text-sm font-semibold text-foreground transition disabled:opacity-50 flex items-center gap-2"
+            className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[40px] rounded-lg border border-border bg-surface hover:bg-surface-muted text-sm font-semibold text-foreground transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Save size={16} />
-            Save Draft
+            <span>Save Draft</span>
           </button>
 
           <button
             type="button"
             disabled={saving}
             onClick={() => handleSave('PUBLISHED')}
-            className="px-4 py-2 rounded-lg bg-emerald-500 text-gray-950 text-sm font-bold hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/10 disabled:opacity-50 flex items-center gap-2"
+            className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[40px] rounded-lg bg-emerald-500 text-gray-950 text-sm font-bold hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/10 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Send size={16} />
-            {status === 'PUBLISHED' ? 'Update & Publish' : 'Publish Article'}
+            <span>{status === 'PUBLISHED' ? 'Update & Publish' : 'Publish Article'}</span>
           </button>
         </div>
       </div>
@@ -660,7 +660,7 @@ const BlogEditorPage = () => {
                   ref={visualEditorRef}
                   contentEditable
                   onInput={handleVisualInput}
-                  className="outline-none min-h-[380px] text-foreground leading-relaxed font-sans prose prose-invert max-w-none focus:ring-0 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-white [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-1 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-4 [&_a]:text-emerald-400 [&_a]:underline"
+                  className="outline-none min-h-[380px] text-foreground leading-relaxed font-sans prose dark:prose-invert max-w-none focus:ring-0 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-foreground [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-1 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-4 [&_a]:text-emerald-500 dark:[&_a]:text-emerald-400 [&_a]:underline"
                   placeholder="Start writing your article here..."
                 />
               )}
@@ -697,7 +697,7 @@ const BlogEditorPage = () => {
 
                   {/* Sanitized Body Render */}
                   <div
-                    className="prose prose-invert max-w-none text-foreground leading-relaxed [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-white [&_h2]:mt-8 [&_h2]:mb-3 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-emerald-400"
+                    className="prose dark:prose-invert max-w-none text-foreground leading-relaxed [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mt-8 [&_h2]:mb-3 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-emerald-500 dark:[&_a]:text-emerald-400"
                     dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(content) }}
                   />
 
@@ -728,7 +728,7 @@ const BlogEditorPage = () => {
             </h3>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">
                   Listing Card Excerpt (Teaser on /blog)
                 </label>
@@ -751,7 +751,7 @@ const BlogEditorPage = () => {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">
                   Search Engine Meta Description (Google snippet)
                 </label>
@@ -994,7 +994,7 @@ const BlogEditorPage = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-muted-foreground mb-1">
                       Button Label

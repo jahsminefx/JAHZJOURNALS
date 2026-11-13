@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Cookie, Shield, BarChart3, Megaphone, X, Settings2 } from 'lucide-react';
 import { useConsent } from '../context/ConsentProvider';
 
 const CookieConsentBanner = () => {
+  const location = useLocation();
   const { 
     showBanner, 
     acceptAll, 
@@ -59,6 +60,7 @@ const CookieConsentBanner = () => {
     savePreferences(toggles);
   };
 
+  if (location.pathname.startsWith('/admin') && !preferencesOpen) return null;
   if (!showBanner && !preferencesOpen) return null;
 
   return (

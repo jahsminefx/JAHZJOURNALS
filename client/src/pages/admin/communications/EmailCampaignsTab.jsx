@@ -81,30 +81,30 @@ const EmailCampaignsTab = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-700 pb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-100 flex items-center gap-2">
-            <Mailbox className="text-emerald-400" size={22} /> Brevo Email Campaigns
+          <h2 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
+            <Mailbox className="text-emerald-500 shrink-0" size={22} /> Brevo Email Campaigns
           </h2>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Dispatch mass email campaigns and product updates directly via Brevo API.
           </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all"
+          className="w-full sm:w-auto justify-center px-4 py-2.5 min-h-[40px] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all"
         >
           <Plus size={16} /> Create Campaign
         </button>
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-xs text-gray-400">Loading campaigns...</div>
+        <div className="p-12 text-center text-xs text-muted-foreground">Loading campaigns...</div>
       ) : campaigns.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 text-center bg-gray-800/40 border border-dashed border-gray-700 rounded-2xl">
-          <Mailbox className="text-gray-500 mb-3" size={40} />
-          <h3 className="text-sm font-bold text-gray-200">No Email Campaigns Found</h3>
-          <p className="text-xs text-gray-400 max-w-sm mt-1 mb-4">
+        <div className="flex flex-col items-center justify-center p-10 sm:p-12 text-center bg-surface-muted/30 border border-dashed border-border rounded-2xl">
+          <Mailbox className="text-muted-foreground mb-3" size={40} />
+          <h3 className="text-sm font-bold text-foreground">No Email Campaigns Found</h3>
+          <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
             Create your first mass email draft to reach Pro traders, Starter members, or your entire user base.
           </p>
           <button
@@ -117,39 +117,39 @@ const EmailCampaignsTab = () => {
       ) : (
         <div className="grid gap-4">
           {campaigns.map((c) => (
-            <div key={c.id} className="bg-gray-900 border border-gray-700 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
-              <div className="space-y-1.5 flex-1">
-                <div className="flex items-center gap-2">
+            <div key={c.id} className="bg-surface-muted/30 border border-border rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                    c.status === 'SENT' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                    c.status === 'SENT' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
                   }`}>
                     {c.status}
                   </span>
-                  <span className="bg-gray-800 text-gray-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-gray-700">
+                  <span className="bg-surface text-foreground text-[10px] font-bold px-2 py-0.5 rounded-md border border-border">
                     Segment: {c.segment}
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-gray-100">{c.title}</h3>
-                <p className="text-xs text-gray-400">Subject: <span className="text-gray-300 font-medium">{c.subject}</span></p>
-                <div className="flex items-center gap-4 text-[11px] text-gray-400 pt-1">
+                <h3 className="text-base font-bold text-foreground break-words">{c.title}</h3>
+                <p className="text-xs text-muted-foreground break-words">Subject: <span className="text-foreground font-medium">{c.subject}</span></p>
+                <div className="flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground pt-1">
                   <span className="flex items-center gap-1"><Users size={13} /> {c.recipientCount || 0} Recipients</span>
                   <span className="flex items-center gap-1"><Clock size={13} /> Created {new Date(c.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+              <div className="flex items-center gap-2 w-full md:w-auto justify-end shrink-0">
                 {c.status !== 'SENT' && (
                   <button
                     onClick={() => handleSend(c.id)}
                     disabled={sendingId === c.id}
-                    className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold rounded-xl text-xs flex items-center gap-1.5 transition disabled:opacity-50"
+                    className="flex-1 md:flex-initial justify-center px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 font-bold rounded-xl text-xs flex items-center gap-1.5 transition disabled:opacity-50"
                   >
                     <Send size={14} /> {sendingId === c.id ? 'Sending...' : 'Send Campaign'}
                   </button>
                 )}
                 <button
                   onClick={() => handleDelete(c.id)}
-                  className="p-2 text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition"
+                  className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition border border-border"
                   title="Delete Campaign"
                 >
                   <Trash2 size={16} />
@@ -162,36 +162,36 @@ const EmailCampaignsTab = () => {
 
       {/* New Campaign Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-gray-800 border border-gray-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-gray-700 pb-3">
-              <h3 className="text-base font-bold text-gray-100 flex items-center gap-2">
-                <Mailbox size={18} className="text-emerald-400" /> Draft New Email Campaign
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-surface border border-border rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-border p-4 sm:p-5 bg-surface-muted/50 shrink-0">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                <Mailbox size={18} className="text-emerald-500" /> Draft New Email Campaign
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white">
+              <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground p-1">
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-4">
+            <form onSubmit={handleCreate} className="p-4 sm:p-6 space-y-4 overflow-y-auto">
               <div>
-                <label className="block text-xs font-bold text-gray-300 uppercase mb-1">Campaign Internal Title</label>
+                <label className="block text-xs font-bold text-foreground uppercase mb-1">Campaign Internal Title</label>
                 <input
                   type="text"
                   placeholder="e.g. August Pro Trader Newsletter"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:border-emerald-500 focus:outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-300 uppercase mb-1">Target Audience Segment</label>
+                <label className="block text-xs font-bold text-foreground uppercase mb-1">Target Audience Segment</label>
                 <select
                   value={form.segment}
                   onChange={(e) => setForm({ ...form, segment: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none font-bold"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:border-emerald-500 focus:outline-none font-bold"
                 >
                   <option value="ALL">All Active Users</option>
                   <optgroup label="Trader Tiers">
@@ -211,43 +211,43 @@ const EmailCampaignsTab = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-300 uppercase mb-1">Email Subject Line</label>
+                <label className="block text-xs font-bold text-foreground uppercase mb-1">Email Subject Line</label>
                 <input
                   type="text"
                   placeholder="e.g. New AI Risk Rules & Weekly Performance Breakdown"
                   value={form.subject}
                   onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs text-foreground focus:border-emerald-500 focus:outline-none"
                   required
                 />
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-gray-300 uppercase">Email HTML Content</label>
-                  <span className="text-[10px] text-emerald-400 font-semibold">Supports {"{{user.name}}"} tag</span>
+                <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                  <label className="block text-xs font-bold text-foreground uppercase">Email HTML Content</label>
+                  <span className="text-[10px] text-emerald-500 font-semibold">Supports {"{{user.name}}"} tag</span>
                 </div>
                 <textarea
                   rows={6}
                   placeholder="<h2>Hello {{user.name}},</h2><p>Here is your weekly update...</p>"
                   value={form.contentHtml}
                   onChange={(e) => setForm({ ...form, contentHtml: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-background border border-border rounded-xl p-3 text-xs text-foreground font-mono focus:border-emerald-500 focus:outline-none"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-xl text-xs font-bold transition"
+                  className="w-full sm:w-auto px-4 py-2.5 bg-surface-muted hover:bg-border text-foreground rounded-xl text-xs font-bold transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs shadow-md transition"
+                  className="w-full sm:w-auto px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs shadow-sm transition"
                 >
                   Save Campaign Draft
                 </button>

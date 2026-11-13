@@ -131,7 +131,40 @@ const ExplorerTab = () => {
            </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Activity Cards */}
+        <div className="md:hidden divide-y divide-border">
+           {loading ? (
+              <div className="p-8 text-center text-muted-foreground text-sm">Loading AI activity...</div>
+           ) : requests.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground text-sm">No AI activity found.</div>
+           ) : requests.map(req => (
+              <div key={req.id} className="p-4 space-y-2.5">
+                 <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                       {req.user ? (
+                         <>
+                           <div className="font-bold text-sm text-foreground truncate">{req.user.name}</div>
+                           <div className="text-xs text-muted-foreground truncate">{req.user.email}</div>
+                         </>
+                       ) : <div className="text-sm text-muted-foreground italic">Anonymous / System</div>}
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold shrink-0 ${req.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500' : req.status === 'FAILED' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                      {req.status === 'COMPLETED' ? 'Completed' : req.status === 'FAILED' ? 'Failed' : req.status}
+                    </span>
+                 </div>
+                 <div className="text-xs">
+                    <div className="font-bold text-purple-400 capitalize">{req.featureType.replace('_', ' ')}</div>
+                    <div className="text-muted-foreground font-mono truncate">{req.provider} • {req.model}</div>
+                 </div>
+                 <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/60">
+                    <span><strong className="text-foreground">${Number(req.estimatedCost || 0).toFixed(6)}</strong> ({(req.inputTokens + req.outputTokens).toLocaleString()} tok)</span>
+                    <span>{format(new Date(req.createdAt), 'MMM dd, HH:mm')}</span>
+                 </div>
+              </div>
+           ))}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm">
              <thead className="bg-surface-muted text-muted-foreground text-xs uppercase tracking-wider">
                <tr>
@@ -180,11 +213,11 @@ const ExplorerTab = () => {
         </div>
         
         {!loading && total > 15 && (
-          <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row gap-3 items-center justify-between">
              <span className="text-xs text-muted-foreground">Showing {(page - 1) * 15 + 1} to {Math.min(page * 15, total)} of {total} requests</span>
              <div className="flex gap-2">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-md border border-border hover:bg-surface-muted transition text-xs">Previous</button>
-                <button disabled={page * 15 >= total} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-md border border-border hover:bg-surface-muted transition text-xs">Next</button>
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 min-h-[36px] rounded-md border border-border hover:bg-surface-muted transition text-xs disabled:opacity-50">Previous</button>
+                <button disabled={page * 15 >= total} onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 min-h-[36px] rounded-md border border-border hover:bg-surface-muted transition text-xs disabled:opacity-50">Next</button>
              </div>
           </div>
         )}
@@ -304,9 +337,9 @@ const HealthTab = () => {
            ))}
         </div>
         
-        <div className="p-6 rounded-xl border border-border bg-red-500/5">
-           <h3 className="font-bold border-b border-red-500/20 pb-4 mb-6 flex items-center gap-2 text-red-500"><ShieldCheck size={18}/> Security & Safety Filter</h3>
-           <div className="flex gap-12">
+        <div className="p-4 sm:p-6 rounded-xl border border-border bg-red-500/5">
+           <h3 className="font-bold border-b border-red-500/20 pb-4 mb-6 flex items-center gap-2 text-red-500"><ShieldCheck size={18}/> Security &amp; Safety Filter</h3>
+           <div className="flex flex-wrap gap-6 sm:gap-12">
               <div>
                 <div className="text-3xl font-black text-foreground">{health.safety.sanitizationEvents}</div>
                 <div className="text-xs uppercase font-bold text-muted-foreground mt-1">Content Sanitized</div>

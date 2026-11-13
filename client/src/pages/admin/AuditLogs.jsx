@@ -35,10 +35,36 @@ const AuditLogs = () => {
       </div>
 
       <div className="rounded-xl border border-border bg-surface overflow-hidden">
-        <div className="p-4 border-b border-border bg-surface flex items-center gap-2 text-amber-500 text-sm">
-           <ShieldCheck size={16} /> <strong>Security Notice:</strong> Audit Logs are immutable and cannot be deleted or modified through the UI.
+        <div className="p-4 border-b border-border bg-surface flex items-start sm:items-center gap-2 text-amber-500 text-xs sm:text-sm">
+           <ShieldCheck size={16} className="shrink-0 mt-0.5 sm:mt-0" /> <span><strong>Security Notice:</strong> Audit Logs are immutable and cannot be deleted or modified through the UI.</span>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Mobile Audit Cards */}
+        <div className="md:hidden divide-y divide-border">
+          {loading ? (
+            <div className="p-6 text-center text-muted-foreground text-sm">Loading audit logs...</div>
+          ) : logs.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground text-sm">No audit logs found.</div>
+          ) : logs.map(log => (
+            <div key={log.id} className="p-4 space-y-2 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="px-2 py-0.5 bg-surface-muted text-emerald-500 dark:text-emerald-400 font-semibold rounded-md border border-border">
+                  {log.action}
+                </span>
+                <span className="text-muted-foreground">{format(new Date(log.createdAt), 'MMM dd, yyyy HH:mm')}</span>
+              </div>
+              <div className="font-bold text-foreground">{log.admin?.name || 'System Admin'} <span className="text-muted-foreground font-normal">({log.ipAddress || 'Unknown IP'})</span></div>
+              <div className="text-muted-foreground break-all">
+                Resource: <span className="text-foreground font-medium">{log.resource}</span> <span className="font-mono">[{log.resourceId}]</span>
+              </div>
+              <div className="text-muted-foreground break-words">
+                {log.newValue ? <>Changed to <strong className="text-foreground">{log.newValue}</strong></> : 'Logged securely.'}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-surface-muted text-muted-foreground">
               <tr>
@@ -90,20 +116,20 @@ const AuditLogs = () => {
         
         {/* Pagination */
         !loading && total > 50 && (
-          <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row gap-3 items-center justify-between">
              <span className="text-xs text-muted-foreground">Showing {(page - 1) * 50 + 1} to {Math.min(page * 50, total)} of {total} logs</span>
              <div className="flex gap-2">
                 <button 
                   disabled={page === 1} 
                   onClick={() => setPage(p => p - 1)}
-                  className="px-3 py-1 rounded-md border border-border text-xs disabled:opacity-50 hover:bg-surface-muted"
+                  className="px-3 py-1.5 min-h-[36px] rounded-md border border-border text-xs disabled:opacity-50 hover:bg-surface-muted"
                 >
                   Previous
                 </button>
                 <button 
                   disabled={page * 50 >= total}
                   onClick={() => setPage(p => p + 1)}
-                  className="px-3 py-1 rounded-md border border-border text-xs disabled:opacity-50 hover:bg-surface-muted"
+                  className="px-3 py-1.5 min-h-[36px] rounded-md border border-border text-xs disabled:opacity-50 hover:bg-surface-muted"
                 >
                   Next
                 </button>

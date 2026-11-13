@@ -170,82 +170,206 @@ const UserManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">User Management</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage platform users, roles, and subscriptions across all account tiers.</p>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">User Management</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Manage platform users, roles, and subscriptions across all account tiers.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row lg:flex-nowrap flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+          <div className="relative w-full lg:w-64">
+             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
              <input 
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
                placeholder="Search by name or email..."
-               className="pl-10 pr-4 py-2 bg-surface border border-border rounded-lg text-sm w-full sm:w-56 focus:outline-none focus:border-emerald-500"
+               className="pl-9 pr-4 py-2 bg-surface border border-border rounded-lg text-sm w-full focus:outline-none focus:border-emerald-500 text-foreground placeholder:text-muted-foreground"
              />
           </div>
 
-          {/* Plan Filter */}
-          <select
-            value={planFilter}
-            onChange={(e) => setPlanFilter(e.target.value)}
-            className="px-3 py-2 bg-surface border border-border rounded-lg text-xs font-bold text-foreground focus:outline-none focus:border-emerald-500 cursor-pointer"
-            title="Filter by subscription tier"
-          >
-            <option value="">All Plans</option>
-            <optgroup label="Trader Tiers">
-              <option value="FREE">Free</option>
-              <option value="STARTER">Starter</option>
-              <option value="PRO">Pro</option>
-              <option value="STARTER_SYNC">Starter Sync</option>
-              <option value="PRO_SYNC">Pro Sync</option>
-            </optgroup>
-            <optgroup label="Mentor Tiers">
-              <option value="MENTOR">All Mentors</option>
-              <option value="MENTOR_PRIVATE_COHORT">Private Cohort (80 Max)</option>
-              <option value="MENTOR_GROWTH">Growth Community (200 Max)</option>
-              <option value="MENTOR_MEGA">Mega Academy (1,000 Max)</option>
-            </optgroup>
-          </select>
-
-          {/* Role Filter */}
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-2 bg-surface border border-border rounded-lg text-xs font-bold text-foreground focus:outline-none focus:border-emerald-500 cursor-pointer"
-            title="Filter by user role"
-          >
-            <option value="">All Roles</option>
-            <option value="TRADER">Trader</option>
-            <option value="MENTOR">Mentor</option>
-            <option value="MODERATOR">Moderator</option>
-            <option value="SUPPORT">Support</option>
-            <option value="ADMIN">Admin</option>
-            <option value="SUPER_ADMIN">Super Admin</option>
-          </select>
-
-          {(planFilter || roleFilter || searchTerm) && (
-            <button
-              onClick={() => { setPlanFilter(''); setRoleFilter(''); setSearchTerm(''); }}
-              className="px-2.5 py-2 bg-surface border border-border hover:bg-surface-muted rounded-lg text-xs text-muted-foreground hover:text-foreground transition flex items-center gap-1"
-              title="Clear all filters"
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex gap-2.5 w-full lg:w-auto">
+            {/* Plan Filter */}
+            <select
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value)}
+              className="px-3 py-2 bg-surface border border-border rounded-lg text-xs font-bold text-foreground focus:outline-none focus:border-emerald-500 cursor-pointer w-full lg:w-auto"
+              title="Filter by subscription tier"
             >
-              <X size={14} /> Clear
-            </button>
-          )}
+              <option value="">All Plans</option>
+              <optgroup label="Trader Tiers">
+                <option value="FREE">Free</option>
+                <option value="STARTER">Starter</option>
+                <option value="PRO">Pro</option>
+                <option value="STARTER_SYNC">Starter Sync</option>
+                <option value="PRO_SYNC">Pro Sync</option>
+              </optgroup>
+              <optgroup label="Mentor Tiers">
+                <option value="MENTOR">All Mentors</option>
+                <option value="MENTOR_PRIVATE_COHORT">Private Cohort (80 Max)</option>
+                <option value="MENTOR_GROWTH">Growth Community (200 Max)</option>
+                <option value="MENTOR_MEGA">Mega Academy (1,000 Max)</option>
+              </optgroup>
+            </select>
 
-          <button
-            onClick={() => fetchUsers(searchTerm, page, planFilter, roleFilter)}
-            className="p-2 bg-surface border border-border hover:bg-surface-muted rounded-lg text-muted-foreground hover:text-foreground transition"
-            title="Refresh Users"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin text-emerald-500' : ''} />
-          </button>
+            {/* Role Filter */}
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-3 py-2 bg-surface border border-border rounded-lg text-xs font-bold text-foreground focus:outline-none focus:border-emerald-500 cursor-pointer w-full lg:w-auto"
+              title="Filter by user role"
+            >
+              <option value="">All Roles</option>
+              <option value="TRADER">Trader</option>
+              <option value="MENTOR">Mentor</option>
+              <option value="MODERATOR">Moderator</option>
+              <option value="SUPPORT">Support</option>
+              <option value="ADMIN">Admin</option>
+              <option value="SUPER_ADMIN">Super Admin</option>
+            </select>
+
+            <div className="flex items-center gap-2">
+              {(planFilter || roleFilter || searchTerm) && (
+                <button
+                  onClick={() => { setPlanFilter(''); setRoleFilter(''); setSearchTerm(''); }}
+                  className="flex-1 lg:flex-initial px-2.5 py-2 bg-surface border border-border hover:bg-surface-muted rounded-lg text-xs text-muted-foreground hover:text-foreground transition flex items-center justify-center gap-1"
+                  title="Clear all filters"
+                >
+                  <X size={14} /> Clear
+                </button>
+              )}
+
+              <button
+                onClick={() => fetchUsers(searchTerm, page, planFilter, roleFilter)}
+                className="flex-1 lg:flex-initial p-2 bg-surface border border-border hover:bg-surface-muted rounded-lg text-muted-foreground hover:text-foreground transition flex items-center justify-center gap-1.5"
+                title="Refresh Users"
+                aria-label="Refresh Users"
+              >
+                <RefreshCw size={16} className={loading ? 'animate-spin text-emerald-500' : ''} />
+                <span className="lg:hidden text-xs font-semibold">Refresh</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="rounded-xl border border-border bg-surface overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Record Cards (< 768px) */}
+        <div className="md:hidden divide-y divide-border">
+          {loading ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">Loading users...</div>
+          ) : users.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">No users found.</div>
+          ) : users.map((user) => {
+            const isMentor = user.subscriptionPlan === 'MENTOR' || user.role === 'MENTOR';
+            const currentVal = isMentor
+              ? (user.mentorTier === 'MEGA' || user.mentorTier === 'MEGA_ACADEMY' ? 'MENTOR_MEGA'
+                : user.mentorTier === 'GROWTH' || user.mentorTier === 'GROWTH_COMMUNITY' ? 'MENTOR_GROWTH'
+                : 'MENTOR_PRIVATE_COHORT')
+              : (user.subscriptionPlan || 'FREE');
+
+            return (
+              <div key={user.id} className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-bold text-sm text-foreground truncate">{user.name}</div>
+                    <div className="text-xs text-muted-foreground break-all">{user.email}</div>
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      Joined {format(new Date(user.createdAt), 'MMM dd, yyyy')}
+                    </div>
+                  </div>
+                  {user.isDisabled ? (
+                    <span className="shrink-0 inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 font-semibold">
+                      <ShieldAlert size={12} /> Suspended
+                    </span>
+                  ) : (
+                    <span className="shrink-0 inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-semibold">
+                      <ShieldCheck size={12} /> Active
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-muted-foreground mb-1">Role</label>
+                    <select 
+                      value={user.role} 
+                      onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                      disabled={isModifyingRole === user.id}
+                      className={`w-full text-xs px-2.5 py-2 rounded-lg border font-bold ${
+                         user.role === 'SUPER_ADMIN' ? 'bg-red-500/10 text-red-500 border-red-500/20' 
+                       : user.role === 'ADMIN' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                       : 'bg-surface-muted text-foreground border-border'
+                      }`}
+                    >
+                      <option value="TRADER">Trader</option>
+                      <option value="MENTOR">Mentor</option>
+                      <option value="MODERATOR">Moderator</option>
+                      <option value="SUPPORT">Support</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="SUPER_ADMIN">Super Admin</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-muted-foreground mb-1">Subscription Plan</label>
+                    <select
+                      value={currentVal}
+                      onChange={(e) => handlePlanChange(user, e.target.value)}
+                      disabled={isModifyingPlan === user.id}
+                      className={`w-full text-xs px-2.5 py-2 rounded-lg border font-extrabold outline-none cursor-pointer ${getPlanBadgeClass(user.subscriptionPlan, user.mentorTier)}`}
+                    >
+                      <optgroup label="Trader Tiers">
+                        <option value="FREE">FREE</option>
+                        <option value="STARTER">STARTER</option>
+                        <option value="PRO">PRO</option>
+                        <option value="STARTER_SYNC">STARTER SYNC</option>
+                        <option value="PRO_SYNC">PRO SYNC</option>
+                      </optgroup>
+                      <optgroup label="Mentor Tiers">
+                        <option value="MENTOR_PRIVATE_COHORT">Private Cohort (80 Max)</option>
+                        <option value="MENTOR_GROWTH">Growth Community (200 Max)</option>
+                        <option value="MENTOR_MEGA">Mega Academy (1,000 Max)</option>
+                      </optgroup>
+                    </select>
+                    {isMentor && (
+                      <span className="block text-[10px] text-muted-foreground font-semibold mt-1">
+                        Cap: {user.mentorMaxStudents || 80} students • {user.mentorMaxCohorts || 2} cohorts
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/60">
+                  <button
+                    onClick={() => executeImpersonation(user)}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-semibold text-red-500 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition"
+                  >
+                    <UserSquare2 size={14} /> Login As
+                  </button>
+                  <button
+                    onClick={() => setSelectedUserTimeline(user)}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-semibold text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition"
+                  >
+                    <ScanLine size={14} /> History
+                  </button>
+                  <button
+                    onClick={() => setSelectedUserAi(user)}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-semibold text-purple-500 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg transition"
+                  >
+                    <BrainCircuit size={14} /> AI Usage
+                  </button>
+                  <button
+                    onClick={() => window.location.href = `mailto:${user.email}`}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-semibold text-foreground bg-surface-muted hover:bg-surface-muted/80 border border-border rounded-lg transition"
+                  >
+                    <Mail size={14} /> Email
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table (>= 768px) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-surface-muted text-muted-foreground">
               <tr>
@@ -369,20 +493,20 @@ const UserManagement = () => {
         
         {/* Pagination */
         !loading && total > 20 && (
-          <div className="px-6 py-4 border-t border-border flex items-center justify-between">
-             <span className="text-xs text-muted-foreground">Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, total)} of {total} users</span>
+          <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+             <span className="text-xs text-muted-foreground text-center sm:text-left">Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, total)} of {total} users</span>
              <div className="flex gap-2">
                 <button 
                   disabled={page === 1} 
                   onClick={() => { setPage(p => p - 1); fetchUsers(searchTerm, page - 1); }}
-                  className="px-3 py-1 rounded-md border border-border text-xs disabled:opacity-50 hover:bg-surface-muted"
+                  className="px-3 py-1.5 rounded-md border border-border text-xs font-semibold disabled:opacity-50 hover:bg-surface-muted"
                 >
                   Previous
                 </button>
                 <button 
                   disabled={page * 20 >= total}
                   onClick={() => { setPage(p => p + 1); fetchUsers(searchTerm, page + 1); }}
-                  className="px-3 py-1 rounded-md border border-border text-xs disabled:opacity-50 hover:bg-surface-muted"
+                  className="px-3 py-1.5 rounded-md border border-border text-xs font-semibold disabled:opacity-50 hover:bg-surface-muted"
                 >
                   Next
                 </button>

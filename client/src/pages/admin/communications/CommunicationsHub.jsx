@@ -1,7 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Mail, Megaphone, Bell, Mailbox, FileText, BarChart2, Settings } from 'lucide-react';
-import PageHeader from '../../../components/PageHeader';
+import { Mail, Megaphone, Bell, Mailbox, FileText, BarChart2, Settings, MessageSquare } from 'lucide-react';
 
 // Tab Components
 import ContactMessagesTab from './ContactMessagesTab';
@@ -54,15 +53,22 @@ const CommunicationsHub = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader 
-        title="Enterprise Communications Hub" 
-        subtitle="Manage contact messages, announcements, global notifications, and email campaigns from one place."
-      />
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-black text-foreground flex items-center gap-2.5">
+            <MessageSquare size={22} className="text-indigo-500 shrink-0" />
+            <span>Communications Hub</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Manage contact messages, announcements, global notifications, and email campaigns from one place.
+          </p>
+        </div>
+      </div>
 
-      <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
         {/* Hub Navigation Tabs */}
-        <div className="flex overflow-x-auto border-b border-gray-700 hide-scrollbar">
+        <div className="flex overflow-x-auto border-b border-border hide-scrollbar">
           {tabs.map((t) => {
             const Icon = t.icon;
             const isActive = activeTab === t.id;
@@ -71,13 +77,13 @@ const CommunicationsHub = () => {
               <button
                 key={t.id}
                 onClick={() => handleTabChange(t.id)}
-                className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+                className={`flex items-center gap-2 px-4 sm:px-5 py-3.5 min-h-[44px] text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
                   isActive 
-                  ? 'border-indigo-500 text-indigo-400 bg-gray-700/30' 
-                  : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+                  ? 'border-indigo-500 text-indigo-500 dark:text-indigo-400 bg-indigo-500/10' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-muted'
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={16} className="shrink-0" />
                 <span>{t.label}</span>
               </button>
             );
@@ -86,7 +92,7 @@ const CommunicationsHub = () => {
       </div>
 
       {/* Dynamic Content Loading Box */}
-      <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-sm min-h-[600px] p-6 lg:p-8 relative">
+      <div className="bg-surface border border-border rounded-xl shadow-sm min-h-[500px] p-3 sm:p-6 relative">
         {renderTabContent()}
       </div>
     </div>
