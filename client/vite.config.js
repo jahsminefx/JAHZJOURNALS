@@ -5,6 +5,19 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    port: parseInt(process.env.VITE_PORT, 10) || 5175,
+    proxy: {
+      '/api': {
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:5005',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:5005',
+        changeOrigin: true,
+      },
+    },
+  },
   plugins: [
     tailwindcss(),
     react(),

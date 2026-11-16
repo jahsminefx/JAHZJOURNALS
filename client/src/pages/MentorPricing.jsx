@@ -17,7 +17,9 @@ import {
   Flame,
   Check,
   X,
-  Minus
+  Minus,
+  LayoutGrid,
+  Table as TableIcon
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -354,6 +356,8 @@ const MentorPricing = () => {
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [megaProSyncSelected, setMegaProSyncSelected] = useState(false);
   const [activePublicPromo, setActivePublicPromo] = useState(null);
+  const [mobileCompareTier, setMobileCompareTier] = useState('growth'); // 'private' | 'growth' | 'mega'
+  const [mobileCompareMode, setMobileCompareMode] = useState('cards'); // 'cards' | 'table'
 
   // Fetch active promo & URL query params
   useEffect(() => {
@@ -532,24 +536,24 @@ const MentorPricing = () => {
 
         {/* 14-Day Private Cohort Free Trial Banner for unregistered or eligible non-mentor users */}
         {(!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) && (
-          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-950/40 via-surface to-slate-950 p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-5 shadow-xl">
-            <div className="flex items-center gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-400 font-bold text-xl border border-blue-500/30">
+          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-950/40 via-surface to-slate-950 p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-5 shadow-xl">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <span className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-400 font-bold text-lg sm:text-xl border border-blue-500/30 mt-0.5 sm:mt-0">
                 ⏳
               </span>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-400">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-blue-400">
                     Two Weeks Complimentary + 12h Grace
                   </span>
-                  <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                  <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-400">
                     Private Cohort Exclusive
                   </span>
                 </div>
-                <h3 className="text-base sm:text-lg font-black text-foreground mt-1">
+                <h3 className="text-base sm:text-lg font-black text-foreground mt-1.5">
                   Try the Private Cohort Free for 14 Days
                 </h3>
-                <p className="text-xs text-muted max-w-xl mt-0.5 leading-relaxed">
+                <p className="text-xs text-muted max-w-xl mt-1 leading-relaxed">
                   Already registered as a trader? You can activate a 14-day complimentary trial of the Private Cohort plan (manage up to 80 students, create 2 cohorts, and test Strategy Risk Guards) with a 12-hour grace buffer. Free trials are strictly exclusive to the Private Cohort tier; Growth Community and Mega Academy require a direct subscription. No credit card required. Strictly one trial per user.
                 </p>
               </div>
@@ -557,7 +561,7 @@ const MentorPricing = () => {
             <button
               onClick={handleStartTrial}
               disabled={activatingTrial}
-              className="shrink-0 flex items-center justify-center gap-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white py-3 px-6 text-xs font-bold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 cursor-pointer"
+              className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white py-3 px-6 text-xs sm:text-sm font-bold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 cursor-pointer min-h-[44px]"
             >
               {activatingTrial ? (
                 <span>Activating Trial...</span>
@@ -573,21 +577,21 @@ const MentorPricing = () => {
 
         {/* Active Trial Notice if currently in 14-day window */}
         {user?.mentorTrialExpiresAt && new Date(user.mentorTrialExpiresAt) > new Date() && user?.role === 'MENTOR' && (
-          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-blue-500/30 bg-blue-500/[0.05] p-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">⚡</span>
+          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-blue-500/30 bg-blue-500/[0.05] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0 mt-0.5">⚡</span>
               <div>
                 <p className="text-xs font-bold text-blue-400 uppercase tracking-wide">
                   Active 14-Day Mentor Trial
                 </p>
-                <p className="text-xs text-muted">
+                <p className="text-xs text-muted mt-0.5 leading-relaxed">
                   Your trial ends on {new Date(user.mentorTrialExpiresAt).toLocaleDateString()} (about {Math.max(1, Math.ceil((new Date(user.mentorTrialExpiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))} day(s) remaining, plus a 12-hour grace period). Choose a plan below to keep cohort access uninterrupted.
                 </p>
               </div>
             </div>
             <Link
               to="/mentors/groups"
-              className="shrink-0 text-xs font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-lg hover:bg-blue-500/20"
+              className="w-full sm:w-auto text-center shrink-0 text-xs font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-lg hover:bg-blue-500/20"
             >
               Go to Cohorts →
             </Link>
@@ -599,14 +603,14 @@ const MentorPricing = () => {
           new Date(user.mentorTrialExpiresAt) <= new Date() && 
           new Date() <= new Date(new Date(user.mentorTrialExpiresAt).getTime() + 12 * 60 * 60 * 1000) && 
           user?.role === 'MENTOR' && (
-          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-surface to-surface p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl ring-1 ring-amber-500/30">
-            <div className="flex items-center gap-3.5">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400 font-bold text-xl border border-amber-500/30">
+          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-surface to-surface p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl ring-1 ring-amber-500/30">
+            <div className="flex items-start gap-3 sm:gap-3.5">
+              <span className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400 font-bold text-lg sm:text-xl border border-amber-500/30 mt-0.5 sm:mt-0">
                 ⚠️
               </span>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-400">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-amber-400">
                     12-Hour Grace Period Active
                   </span>
                   <span className="text-xs font-bold text-amber-300">
@@ -623,7 +627,7 @@ const MentorPricing = () => {
             </div>
             <button
               onClick={() => handleCheckout(80)}
-              className="shrink-0 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-5 text-xs transition-all shadow-md cursor-pointer"
+              className="w-full sm:w-auto shrink-0 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-5 text-xs transition-all shadow-md cursor-pointer min-h-[44px]"
             >
               Upgrade Now
             </button>
@@ -633,19 +637,19 @@ const MentorPricing = () => {
         {/* Free Trial Already Claimed / Expired Notice */}
         {user?.hasUsedMentorTrial && 
           (!user?.mentorTrialExpiresAt || new Date() > new Date(new Date(user.mentorTrialExpiresAt).getTime() + 12 * 60 * 60 * 1000) || user.role !== 'MENTOR') && (
-          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-border bg-surface-muted/50 p-4 sm:p-5 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🔒</span>
+          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-border bg-surface-muted/50 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0 mt-0.5">🔒</span>
               <div>
                 <p className="text-xs font-bold text-foreground">
                   One-Time 14-Day Free Trial Already Used
                 </p>
-                <p className="text-xs text-muted">
+                <p className="text-xs text-muted mt-0.5 leading-relaxed">
                   Each account is eligible for one complimentary 14-day trial. Select a package below to subscribe and start managing student cohorts.
                 </p>
               </div>
             </div>
-            <span className="shrink-0 text-[11px] font-bold text-muted bg-surface border border-border px-3 py-1 rounded-lg">
+            <span className="self-start sm:self-auto shrink-0 text-[11px] font-bold text-muted bg-surface border border-border px-3 py-1 rounded-lg">
               Trial Claimed
             </span>
           </div>
@@ -653,21 +657,21 @@ const MentorPricing = () => {
 
         {/* Promo Banner if Active */}
         {(activePublicPromo || appliedPromo) && (
-          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-surface to-slate-950 p-4 sm:p-5 flex items-center justify-between gap-4 shadow-lg">
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-sm">
+          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-surface to-slate-950 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-lg">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-sm shrink-0">
                 🎉
               </span>
               <div>
                 <p className="text-xs font-black uppercase tracking-wider text-emerald-400">
                   {appliedPromo?.discountPercent || 50}% Launch Discount Active
                 </p>
-                <p className="text-xs text-muted">
+                <p className="text-xs text-muted mt-0.5 leading-relaxed">
                   Your Mentor plan rate automatically includes your {appliedPromo?.discountPercent || 50}% discount at checkout.
                 </p>
               </div>
             </div>
-            <span className="shrink-0 font-mono text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
+            <span className="self-start sm:self-auto shrink-0 font-mono text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
               CODE: {(appliedPromo?.code || 'LAUNCH50').toUpperCase()}
             </span>
           </div>
@@ -698,7 +702,7 @@ const MentorPricing = () => {
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
+          <div className="grid gap-5 sm:gap-6 grid-cols-1 md:grid-cols-3 max-w-5xl mx-auto">
             {PRESET_TIERS.map((tier) => {
               let finalPrice = tier.priceNgn;
               let origPrice = null;
@@ -711,28 +715,28 @@ const MentorPricing = () => {
               return (
                 <div
                   key={tier.name}
-                  className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-1 ${
+                  className={`relative flex flex-col rounded-2xl border p-5 sm:p-6 transition-all duration-200 hover:-translate-y-1 ${
                     tier.highlighted
                       ? 'border-emerald-400/60 bg-emerald-500/10 shadow-xl ring-1 ring-emerald-400/50'
                       : 'border-border bg-surface shadow-sm'
                   }`}
                 >
                   {tier.highlighted && (
-                    <div className="absolute -top-3.5 right-6 rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-slate-950 shadow-md">
+                    <div className="absolute -top-3.5 right-4 sm:right-6 rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-slate-950 shadow-md">
                       Most Popular
                     </div>
                   )}
                   {tier.isWaitlist && (
-                    <div className="absolute -top-3.5 right-6 rounded-full bg-sky-400 px-3 py-1 text-xs font-black text-slate-950 shadow-md">
+                    <div className="absolute -top-3.5 right-4 sm:right-6 rounded-full bg-sky-400 px-3 py-1 text-xs font-black text-slate-950 shadow-md max-w-[calc(100%-2rem)] truncate">
                       {tier.badgeText || 'Early Access • Jan 2027'}
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-muted border border-border text-emerald-400">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-muted border border-border text-emerald-400 mt-0.5">
                       <Icon size={20} />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h3 className="text-lg font-black text-foreground tracking-tight">{tier.name}</h3>
                       <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wide">
                         {tier.studentRange}
@@ -764,7 +768,7 @@ const MentorPricing = () => {
                       <button
                         type="button"
                         onClick={() => setMegaProSyncSelected(false)}
-                        className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                        className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] sm:text-[11px] font-bold transition cursor-pointer text-center whitespace-nowrap ${
                           !megaProSyncSelected
                             ? 'bg-sky-500 text-slate-950 shadow-sm'
                             : 'text-muted hover:text-foreground'
@@ -775,7 +779,7 @@ const MentorPricing = () => {
                       <button
                         type="button"
                         onClick={() => setMegaProSyncSelected(true)}
-                        className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                        className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] sm:text-[11px] font-bold transition cursor-pointer text-center whitespace-nowrap ${
                           megaProSyncSelected
                             ? 'bg-purple-500 text-white shadow-sm'
                             : 'text-muted hover:text-foreground'
@@ -786,21 +790,21 @@ const MentorPricing = () => {
                     </div>
                   )}
 
-                  <div className="mt-5 flex items-baseline gap-2">
+                  <div className="mt-5 flex flex-wrap items-baseline gap-2">
                     {origPrice && (
-                      <span className="text-base line-through text-muted/70 font-semibold">
+                      <span className="text-sm sm:text-base line-through text-muted/70 font-semibold">
                         ₦{(tier.name === 'Mega Academy' && megaProSyncSelected ? 120000 : origPrice).toLocaleString()}
                       </span>
                     )}
-                    <span className="text-3xl font-black text-foreground">
+                    <span className="text-2xl sm:text-3xl font-black text-foreground">
                       ₦{(tier.name === 'Mega Academy' && megaProSyncSelected ? 120000 : finalPrice).toLocaleString()}
                     </span>
                     <span className="text-xs text-muted font-medium">/month</span>
                   </div>
                   {tier.isWaitlist && waitlistCounts?.MENTOR_MEGA && (
-                    <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[11px] font-bold">
-                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
-                      <span>{waitlistCounts.MENTOR_MEGA.count} academy leaders on waitlist</span>
+                    <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] sm:text-[11px] font-bold max-w-full">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse shrink-0"></span>
+                      <span className="truncate">{waitlistCounts.MENTOR_MEGA.count} academy leaders on waitlist</span>
                     </div>
                   )}
 
@@ -809,9 +813,9 @@ const MentorPricing = () => {
                       ? tier.features.map(f => f.includes('2 accounts max') ? 'MetaTrader 4/5 Cloud Sync included (up to 5 accounts max)' : f)
                       : tier.features
                     ).map((feat) => (
-                      <li key={feat} className="flex gap-2.5 text-xs text-muted">
+                      <li key={feat} className="flex items-start gap-2.5 text-xs text-muted">
                         <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-emerald-400" />
-                        <span>{feat}</span>
+                        <span className="leading-relaxed">{feat}</span>
                       </li>
                     ))}
                   </ul>
@@ -822,13 +826,13 @@ const MentorPricing = () => {
                         type="button"
                         disabled={joiningWaitlist}
                         onClick={() => handleJoinWaitlist(megaProSyncSelected ? 'MENTOR_MEGA_PRO_SYNC' : 'MENTOR_MEGA')}
-                        className={`w-full py-2.5 px-4 rounded-xl text-xs font-black transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5 ${
+                        className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5 min-h-[44px] ${
                           megaProSyncSelected
                             ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40'
                             : 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30'
                         }`}
                       >
-                        <Sparkles size={13} className={megaProSyncSelected ? 'text-purple-400' : 'text-sky-400'} />
+                        <Sparkles size={14} className={megaProSyncSelected ? 'text-purple-400' : 'text-sky-400'} />
                         <span>
                           {joiningWaitlist
                             ? 'Reserving Spot...'
@@ -841,7 +845,7 @@ const MentorPricing = () => {
                         <button
                           type="button"
                           onClick={() => setMegaProSyncSelected(!megaProSyncSelected)}
-                          className="w-full text-center text-[10px] font-bold text-muted hover:text-foreground transition underline cursor-pointer"
+                          className="w-full text-center text-[10px] sm:text-[11px] font-bold text-muted hover:text-foreground transition underline cursor-pointer py-1"
                         >
                           {megaProSyncSelected
                             ? '← Switch to Base Mega Academy (2 Sync • ₦85,000/mo)'
@@ -855,7 +859,7 @@ const MentorPricing = () => {
                         type="button"
                         disabled={activatingTrial}
                         onClick={handleStartTrial}
-                        className="w-full py-2.5 px-4 rounded-xl text-xs font-black bg-blue-500 hover:bg-blue-400 text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+                        className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-black bg-blue-500 hover:bg-blue-400 text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5 min-h-[44px]"
                       >
                         {activatingTrial ? (
                           <span>Activating Trial...</span>
@@ -886,7 +890,7 @@ const MentorPricing = () => {
                         setStudentCount(tier.studentsDefault);
                         handleCheckout(tier.studentsDefault);
                       }}
-                      className={`mt-7 w-full py-2.5 px-4 rounded-xl text-xs font-black transition shadow-sm cursor-pointer ${
+                      className={`mt-7 w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition shadow-sm cursor-pointer flex items-center justify-center min-h-[44px] ${
                         tier.highlighted
                           ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
                           : 'bg-surface-muted hover:bg-surface border border-border text-foreground'
@@ -901,14 +905,14 @@ const MentorPricing = () => {
           </div>
 
           {/* 1.5% Platform Fee Highlight Note */}
-          <div className="mt-6 max-w-5xl mx-auto rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5">
-              <Sparkles size={18} className="text-emerald-400 shrink-0" />
+          <div className="mt-6 max-w-5xl mx-auto rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-start gap-2.5">
+              <Sparkles size={18} className="text-emerald-400 shrink-0 mt-0.5" />
               <p className="text-muted leading-relaxed">
                 <strong>Hosting Paid Cohorts on JahzJournal?</strong> JahzJournal only charges a modest <strong>1.5% platform fee</strong> on paid student registrations. Student fees are processed seamlessly via Paystack and settled directly to your Nigerian bank account.
               </p>
             </div>
-            <span className="font-mono text-[11px] font-bold text-emerald-400 bg-surface px-2.5 py-1 rounded border border-border whitespace-nowrap">
+            <span className="self-start sm:self-auto shrink-0 font-mono text-[11px] font-bold text-emerald-400 bg-surface px-2.5 py-1 rounded border border-border whitespace-nowrap">
               1.5% Commission Fee
             </span>
           </div>
@@ -917,35 +921,35 @@ const MentorPricing = () => {
         {/* ========================================================================= */}
         {/* INTERACTIVE STUDENT-CAPACITY PRICING CALCULATOR (BELOW PRESETS)           */}
         {/* ========================================================================= */}
-        <section className="my-10 border-t border-border pt-12">
-          <div className="max-w-4xl mx-auto rounded-3xl border border-emerald-500/30 bg-surface/90 backdrop-blur-xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+        <section className="my-8 sm:my-10 border-t border-border pt-8 sm:pt-12">
+          <div className="max-w-4xl mx-auto rounded-2xl sm:rounded-3xl border border-emerald-500/30 bg-surface/90 backdrop-blur-xl p-4 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden">
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
             <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 space-y-8">
+            <div className="relative z-10 space-y-6 sm:space-y-8">
               {/* Calculator Header */}
               <div className="text-center space-y-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[11px] font-black uppercase tracking-wider text-emerald-400">
                   <Sliders size={13} /> Custom Capacity Estimator
                 </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-foreground tracking-tight">
                   How Many Students Do You Manage?
                 </h2>
-                <p className="text-xs sm:text-sm text-muted max-w-xl mx-auto">
+                <p className="text-xs sm:text-sm text-muted max-w-xl mx-auto leading-relaxed">
                   Type or slide your approximate student count below. Your price automatically adjusts to the nearest bracket tier with an unlimited flat cap for 500+ students.
                 </p>
               </div>
 
               {/* Student Input & Slider Controls */}
-              <div className="bg-surface-muted/50 border border-border rounded-2xl p-6 space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="bg-surface-muted/50 border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <label htmlFor="student-input" className="text-xs font-bold uppercase tracking-wider text-muted">
                       Active Student Capacity
                     </label>
-                    <p className="text-xs text-muted">Students who can submit trade journals to your workspace</p>
+                    <p className="text-xs text-muted mt-0.5">Students who can submit trade journals to your workspace</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5 sm:gap-3 self-start sm:self-auto">
                     <input
                       id="student-input"
                       type="number"
@@ -956,9 +960,9 @@ const MentorPricing = () => {
                         const val = parseInt(e.target.value, 10);
                         setStudentCount(isNaN(val) ? 25 : Math.max(25, Math.min(2000, val)));
                       }}
-                      className="w-28 px-3 py-2 text-center text-xl font-black font-mono rounded-xl border border-emerald-500/50 bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                      className="w-24 sm:w-28 px-2.5 sm:px-3 py-2 text-center text-lg sm:text-xl font-black font-mono rounded-xl border border-emerald-500/50 bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-400"
                     />
-                    <span className="text-sm font-bold text-muted">Students</span>
+                    <span className="text-xs sm:text-sm font-bold text-muted">Students</span>
                   </div>
                 </div>
 
@@ -973,37 +977,37 @@ const MentorPricing = () => {
                     onChange={(e) => setStudentCount(parseInt(e.target.value, 10))}
                     className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer accent-emerald-400"
                   />
-                  <div className="flex justify-between text-[11px] font-semibold text-muted font-mono">
-                    <span>Up to 80 (₦14.5k)</span>
-                    <span>Up to 200 (₦25k)</span>
-                    <span>Up to 1,000 (₦85k Flat)</span>
+                  <div className="flex justify-between text-[10px] sm:text-[11px] font-semibold text-muted font-mono gap-1">
+                    <span>≤80 (₦14.5k)</span>
+                    <span>≤200 (₦25k)</span>
+                    <span>≤1k (₦85k Flat)</span>
                   </div>
                 </div>
 
                 {/* Quick Presets */}
-                <div className="pt-2 flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-muted mr-1">Quick Select:</span>
+                <div className="pt-1 sm:pt-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-muted mr-1 w-full sm:w-auto">Quick Select:</span>
                   {[50, 80, 100, 150, 200, 500, 1000].map((num) => (
                     <button
                       key={num}
                       type="button"
                       onClick={() => setStudentCount(num)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                         studentCount === num
                           ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
                           : 'bg-surface border border-border text-muted hover:text-foreground hover:bg-surface-muted'
                       }`}
                     >
-                      {num} Students
+                      {num}
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Live Calculation Output Card */}
-              <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-surface to-emerald-950/20 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl">
+              <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-surface to-emerald-950/20 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6 shadow-xl">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
                       Matching Tier
                     </span>
@@ -1011,29 +1015,29 @@ const MentorPricing = () => {
                       {currentPricing.tierName}
                     </span>
                   </div>
-                  <h3 className="text-xl font-black text-foreground">
+                  <h3 className="text-lg sm:text-xl font-black text-foreground">
                     Mentor Plan for {studentCount} Students
                   </h3>
-                  <div className="text-xs text-muted space-y-1">
-                    <p className="flex items-center gap-1.5">
-                      <CheckCircle2 size={13} className="text-emerald-400" />
+                  <div className="text-xs text-muted space-y-1.5">
+                    <p className="flex items-start gap-1.5">
+                      <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                       <span>Includes student trade journals, strategy risk guards & reviews</span>
                     </p>
-                    <p className="flex items-center gap-1.5">
-                      <CheckCircle2 size={13} className="text-emerald-400" />
+                    <p className="flex items-start gap-1.5">
+                      <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                       <span>Effective rate: <strong>{currentPricing.symbol}{currentPricing.perStudentEffective.toLocaleString()} / student per month</strong></span>
                     </p>
                   </div>
                 </div>
 
                 {/* Price & Action */}
-                <div className="text-right flex flex-col md:items-end justify-center shrink-0 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6">
+                <div className="text-left md:text-right flex flex-col items-start md:items-end justify-center shrink-0 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 w-full md:w-auto">
                   {currentPricing.originalPrice && (
                     <span className="text-sm line-through text-muted/70 font-semibold">
                       {currentPricing.symbol}{currentPricing.originalPrice.toLocaleString()} / month
                     </span>
                   )}
-                  <div className="flex items-baseline gap-1 md:justify-end">
+                  <div className="flex items-baseline gap-1">
                     <span className="text-3xl sm:text-4xl font-black text-foreground">
                       {currentPricing.symbol}{currentPricing.finalPrice.toLocaleString()}
                     </span>
@@ -1044,7 +1048,7 @@ const MentorPricing = () => {
                     type="button"
                     disabled={loadingCheckout}
                     onClick={() => handleCheckout()}
-                    className="mt-4 w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-6 py-3 text-sm font-black text-slate-950 transition shadow-lg shadow-emerald-500/20 disabled:opacity-60"
+                    className="mt-4 w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-6 py-3 text-sm font-black text-slate-950 transition shadow-lg shadow-emerald-500/20 disabled:opacity-60 cursor-pointer min-h-[44px]"
                   >
                     {loadingCheckout ? (
                       <>
@@ -1058,7 +1062,7 @@ const MentorPricing = () => {
                       </>
                     )}
                   </button>
-                  <span className="text-[10px] text-muted mt-1.5 text-center md:text-right">
+                  <span className="text-[10px] text-muted mt-1.5 text-left md:text-right w-full">
                     Instant Paystack authorization • Cancel anytime
                   </span>
                 </div>
@@ -1068,116 +1072,348 @@ const MentorPricing = () => {
         </section>
 
         {/* ========================================================================= */}
-        {/* COMPREHENSIVE MENTOR PLAN COMPARISON TABLE                                */}
+        {/* COMPREHENSIVE MENTOR PLAN COMPARISON SECTION                              */}
         {/* ========================================================================= */}
-        <section id="compare-mentor-plans" className="py-12 border-t border-border scroll-mt-20">
-          <div className="text-center mb-10 space-y-2">
+        <section id="compare-mentor-plans" className="py-10 sm:py-12 border-t border-border scroll-mt-20">
+          <div className="text-center mb-8 sm:mb-10 space-y-2">
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
               Side-by-Side Comparison
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-foreground">
               Compare Mentor & Academy Plans
             </h2>
-            <p className="text-xs sm:text-sm text-muted max-w-2xl mx-auto">
+            <p className="text-xs sm:text-sm text-muted max-w-2xl mx-auto leading-relaxed">
               A comprehensive breakdown of student journal capacities, cohort controls, automated risk guards, and community monetization tools.
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-xl max-w-6xl mx-auto">
-            <table className="w-full text-xs text-left border-collapse">
-              <thead className="bg-surface-muted text-muted uppercase tracking-wider border-b border-border font-bold">
-                <tr>
-                  <th className="p-4 border-r border-border sticky left-0 bg-surface-muted z-10 min-w-[240px]">
-                    Capability / Feature
-                  </th>
-                  <th className="p-4 text-center border-r border-border min-w-[160px]">
-                    <div className="font-bold text-foreground">Private Cohort</div>
-                    <div className="text-[11px] font-normal text-muted normal-case mt-0.5">Up to 80 Students</div>
-                  </th>
-                  <th className="p-4 text-center border-r border-border min-w-[180px] text-emerald-500 dark:text-emerald-400 font-extrabold bg-emerald-500/5">
-                    <div className="flex items-center justify-center gap-1.5 font-bold text-emerald-400">
-                      <span>Growth Community</span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-400 font-bold uppercase tracking-wider">
-                        Popular
-                      </span>
+          {/* Mobile View Switcher (Visible only on < md screens) */}
+          <div className="md:hidden mb-6 flex flex-col items-center gap-3">
+            {/* View Mode Toggle: Card View vs Table View */}
+            <div className="inline-flex p-1 rounded-xl bg-surface-muted border border-border">
+              <button
+                type="button"
+                onClick={() => setMobileCompareMode('cards')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  mobileCompareMode === 'cards'
+                    ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                    : 'text-muted hover:text-foreground'
+                }`}
+              >
+                <LayoutGrid size={14} />
+                <span>Card View</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileCompareMode('table')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  mobileCompareMode === 'table'
+                    ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                    : 'text-muted hover:text-foreground'
+                }`}
+              >
+                <TableIcon size={14} />
+                <span>Table View</span>
+              </button>
+            </div>
+
+            {/* Mobile Tier Tabs (Active in Card View) */}
+            {mobileCompareMode === 'cards' && (
+              <div className="grid grid-cols-3 w-full gap-1.5 p-1 rounded-xl bg-surface-muted border border-border">
+                <button
+                  type="button"
+                  onClick={() => setMobileCompareTier('private')}
+                  className={`py-2 px-1 text-center rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                    mobileCompareTier === 'private'
+                      ? 'bg-surface text-foreground shadow-sm border border-border'
+                      : 'text-muted hover:text-foreground'
+                  }`}
+                >
+                  <div>Private</div>
+                  <div className="text-[9px] font-normal opacity-80">80 Students</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileCompareTier('growth')}
+                  className={`py-2 px-1 text-center rounded-lg text-[11px] font-bold transition cursor-pointer relative ${
+                    mobileCompareTier === 'growth'
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-extrabold shadow-sm'
+                      : 'text-muted hover:text-foreground'
+                  }`}
+                >
+                  <span className="absolute -top-1.5 right-1 px-1 py-0.2 rounded bg-emerald-400 text-slate-950 text-[8px] font-black uppercase">
+                    ★ Pop
+                  </span>
+                  <div>Growth</div>
+                  <div className="text-[9px] font-normal opacity-80">200 Students</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileCompareTier('mega')}
+                  className={`py-2 px-1 text-center rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                    mobileCompareTier === 'mega'
+                      ? 'bg-surface text-foreground shadow-sm border border-border'
+                      : 'text-muted hover:text-foreground'
+                  }`}
+                >
+                  <div>Mega</div>
+                  <div className="text-[9px] font-normal opacity-80">1,000 Flat</div>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* MOBILE CARD VIEW (< md screens when cards selected) */}
+          {mobileCompareMode === 'cards' && (
+            <div className="md:hidden space-y-4">
+              {/* Active Tier Summary Card */}
+              <div className={`p-4 rounded-2xl border ${
+                mobileCompareTier === 'growth'
+                  ? 'border-emerald-500/40 bg-emerald-500/10 shadow-lg'
+                  : 'border-border bg-surface'
+              }`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                      {mobileCompareTier === 'private' ? 'Starter Coaching' : mobileCompareTier === 'growth' ? 'Most Popular' : 'Institutional'}
+                    </span>
+                    <h3 className="text-lg font-black text-foreground">
+                      {mobileCompareTier === 'private' ? 'Private Cohort' : mobileCompareTier === 'growth' ? 'Growth Community' : 'Mega Academy'}
+                    </h3>
+                    <p className="text-xs text-muted">
+                      {mobileCompareTier === 'private' ? 'Up to 80 student journals' : mobileCompareTier === 'growth' ? 'Up to 200 student journals' : 'Up to 1,000 student journals'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-black text-foreground">
+                      {mobileCompareTier === 'private'
+                        ? (selectedRegion === 'GLOBAL' ? '$59' : `₦${(appliedPromo?.discountPercent ? Math.round(14500 * (1 - appliedPromo.discountPercent / 100)) : 14500).toLocaleString()}`)
+                        : mobileCompareTier === 'growth'
+                        ? (selectedRegion === 'GLOBAL' ? '$99' : `₦${(appliedPromo?.discountPercent ? Math.round(25000 * (1 - appliedPromo.discountPercent / 100)) : 25000).toLocaleString()}`)
+                        : (selectedRegion === 'GLOBAL' ? '$249' : `₦${(appliedPromo?.discountPercent ? Math.round(85000 * (1 - appliedPromo.discountPercent / 100)) : 85000).toLocaleString()}`)}
                     </div>
-                    <div className="text-[11px] font-normal text-emerald-400/80 normal-case mt-0.5">Up to 200 Students</div>
-                  </th>
-                  <th className="p-4 text-center min-w-[160px]">
-                    <div className="font-bold text-foreground">Mega Academy</div>
-                    <div className="text-[11px] font-normal text-muted normal-case mt-0.5">Up to 1,000 Students</div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border text-muted">
-                {mentorFeatureMatrixCategories.map((cat, idx) => (
-                  <React.Fragment key={idx}>
-                    <tr className="bg-surface-muted/70 font-black text-foreground uppercase tracking-wider text-[11px]">
-                      <td colSpan={4} className="p-3 px-4 text-center border-y border-border/80 bg-surface-muted/90">
-                        {cat.category}
-                      </td>
-                    </tr>
-                    {cat.rows.map((row, rIdx) => (
-                      <tr key={rIdx} className="hover:bg-surface-muted/40 transition-colors">
-                        <td className="p-4 font-semibold text-foreground border-r border-border sticky left-0 bg-surface z-10 shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
-                          <div>{row.feature}</div>
-                          {row.subtext && <div className="text-[11px] text-muted font-normal mt-0.5 leading-relaxed">{row.subtext}</div>}
-                        </td>
-                        <td className="p-4 text-center border-r border-border">
-                          {row.private === 'Included' ? (
-                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
-                          ) : row.private === 'Not included' ? (
-                            <Minus size={16} className="mx-auto text-muted/40" />
-                          ) : (
-                            <span className="font-semibold text-foreground">{row.private}</span>
-                          )}
-                        </td>
-                        <td className="p-4 text-center border-r border-border bg-emerald-500/5 font-semibold text-foreground">
-                          {row.growth === 'Included' ? (
-                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
-                          ) : row.growth === 'Not included' ? (
-                            <Minus size={16} className="mx-auto text-muted/40" />
-                          ) : (
-                            <span className="font-bold text-emerald-500 dark:text-emerald-400">{row.growth}</span>
-                          )}
-                        </td>
-                        <td className="p-4 text-center font-semibold text-foreground">
-                          {row.mega === 'Included' ? (
-                            <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
-                          ) : row.mega === 'Not included' ? (
-                            <Minus size={16} className="mx-auto text-muted/40" />
-                          ) : (
-                            <span className="font-bold text-foreground">{row.mega}</span>
-                          )}
+                    <span className="text-[10px] text-muted">/month</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Categorized Features Accordion / Grouped Cards */}
+              {mentorFeatureMatrixCategories.map((cat, cIdx) => (
+                <div key={cIdx} className="rounded-2xl border border-border bg-surface overflow-hidden shadow-sm">
+                  <div className="px-4 py-3 bg-surface-muted/90 border-b border-border font-black text-foreground text-xs uppercase tracking-wider">
+                    {cat.category}
+                  </div>
+                  <div className="divide-y divide-border/60">
+                    {cat.rows.map((row, rIdx) => {
+                      const val = mobileCompareTier === 'private' ? row.private : mobileCompareTier === 'growth' ? row.growth : row.mega;
+                      const isIncluded = val === 'Included' || (typeof val === 'string' && val.startsWith('Included'));
+                      const isNotIncluded = val === 'Not included';
+
+                      return (
+                        <div key={rIdx} className="p-3.5 flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-foreground leading-snug">{row.feature}</div>
+                            {row.subtext && (
+                              <div className="text-[11px] text-muted mt-0.5 leading-relaxed">{row.subtext}</div>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-right">
+                            {isIncluded ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-bold text-[11px] border border-emerald-500/30">
+                                <Check size={12} />
+                                <span>{val === 'Included' ? 'Included' : val.replace('Included ', '').replace('(', '').replace(')', '')}</span>
+                              </span>
+                            ) : isNotIncluded ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-muted text-muted/60 text-[11px]">
+                                <Minus size={12} />
+                                <span>No</span>
+                              </span>
+                            ) : (
+                              <span className="inline-block px-2 py-0.5 rounded-md bg-surface-muted border border-border text-foreground font-semibold text-[11px]">
+                                {val}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Bottom Action for Active Mobile Tier */}
+              <div className="pt-2">
+                {mobileCompareTier === 'private' && (!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) ? (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled={activatingTrial}
+                      onClick={handleStartTrial}
+                      className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-black bg-blue-500 hover:bg-blue-400 text-white transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5 min-h-[44px]"
+                    >
+                      {activatingTrial ? <span>Activating Trial...</span> : <><span>Try Private Cohort Free (14 Days)</span><ArrowRight size={14} /></>}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loadingCheckout}
+                      onClick={() => {
+                        setStudentCount(80);
+                        handleCheckout(80);
+                      }}
+                      className="w-full py-1 text-[11px] font-bold text-muted hover:text-foreground text-center underline cursor-pointer"
+                    >
+                      or subscribe directly
+                    </button>
+                  </div>
+                ) : mobileCompareTier === 'mega' ? (
+                  <button
+                    type="button"
+                    disabled={joiningWaitlist}
+                    onClick={() => handleJoinWaitlist(megaProSyncSelected ? 'MENTOR_MEGA_PRO_SYNC' : 'MENTOR_MEGA')}
+                    className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-black bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5 min-h-[44px]"
+                  >
+                    <Sparkles size={14} className="text-sky-400" />
+                    <span>{joiningWaitlist ? 'Reserving Spot...' : 'Join Mega Academy Waitlist'}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={loadingCheckout}
+                    onClick={() => {
+                      const count = mobileCompareTier === 'private' ? 80 : 200;
+                      setStudentCount(count);
+                      handleCheckout(count);
+                    }}
+                    className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition shadow-sm cursor-pointer flex items-center justify-center min-h-[44px] ${
+                      mobileCompareTier === 'growth'
+                        ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
+                        : 'bg-surface hover:bg-surface-muted border border-border text-foreground'
+                    }`}
+                  >
+                    Select {mobileCompareTier === 'private' ? 'Private Cohort (80)' : 'Growth Community (200)'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TABLE VIEW (Visible on >= md screens OR when mobileCompareMode === 'table') */}
+          <div className={`${mobileCompareMode === 'table' ? 'block' : 'hidden md:block'}`}>
+            {/* Mobile swipe hint */}
+            <div className="md:hidden flex items-center justify-center gap-1.5 py-1.5 px-3 mb-3 rounded-full bg-surface-muted border border-border text-[11px] text-muted mx-auto w-fit">
+              <span>←</span>
+              <span>Swipe horizontally to compare columns</span>
+              <span>→</span>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-xl max-w-6xl mx-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead className="bg-surface-muted text-muted uppercase tracking-wider border-b border-border font-bold">
+                  <tr>
+                    <th className="p-3 sm:p-4 border-r border-border sticky left-0 bg-surface-muted z-10 w-[125px] sm:w-[190px] md:min-w-[240px] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.3)]">
+                      Capability / Feature
+                    </th>
+                    <th className="p-3 sm:p-4 text-center border-r border-border min-w-[125px] sm:min-w-[160px]">
+                      <div className="font-bold text-foreground">Private Cohort</div>
+                      <div className="text-[10px] sm:text-[11px] font-normal text-muted normal-case mt-0.5">Up to 80 Students</div>
+                    </th>
+                    <th className="p-3 sm:p-4 text-center border-r border-border min-w-[135px] sm:min-w-[180px] text-emerald-500 dark:text-emerald-400 font-extrabold bg-emerald-500/5">
+                      <div className="flex items-center justify-center gap-1.5 font-bold text-emerald-400">
+                        <span>Growth Community</span>
+                        <span className="text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-400 font-bold uppercase tracking-wider">
+                          Popular
+                        </span>
+                      </div>
+                      <div className="text-[10px] sm:text-[11px] font-normal text-emerald-400/80 normal-case mt-0.5">Up to 200 Students</div>
+                    </th>
+                    <th className="p-3 sm:p-4 text-center min-w-[125px] sm:min-w-[160px]">
+                      <div className="font-bold text-foreground">Mega Academy</div>
+                      <div className="text-[10px] sm:text-[11px] font-normal text-muted normal-case mt-0.5">Up to 1,000 Students</div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border text-muted">
+                  {mentorFeatureMatrixCategories.map((cat, idx) => (
+                    <React.Fragment key={idx}>
+                      <tr className="bg-surface-muted/70 font-black text-foreground uppercase tracking-wider text-[10px] sm:text-[11px]">
+                        <td colSpan={4} className="p-2.5 sm:p-3 px-3 sm:px-4 text-center border-y border-border/80 bg-surface-muted/90">
+                          {cat.category}
                         </td>
                       </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-              <tfoot className="border-t-2 border-border bg-surface-muted/50 font-bold">
-                <tr>
-                  <td className="p-4 border-r border-border sticky left-0 bg-surface-muted/90 z-10">
-                    <span className="font-extrabold text-foreground text-xs uppercase tracking-wider">Select Package</span>
-                    <p className="text-[11px] text-muted font-normal mt-0.5">Includes student journal access and coaching workspace</p>
-                  </td>
-                  <td className="p-4 text-center border-r border-border">
-                    <div className="text-sm font-black text-foreground mb-2">
-                      {selectedRegion === 'GLOBAL'
-                        ? '$59'
-                        : `₦${(appliedPromo?.discountPercent ? Math.round(14500 * (1 - appliedPromo.discountPercent / 100)) : 14500).toLocaleString()}`}
-                      <span className="text-[10px] text-muted font-normal"> / mo</span>
-                    </div>
-                    {(!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) ? (
-                      <div className="space-y-1.5">
-                        <button
-                          type="button"
-                          disabled={activatingTrial}
-                          onClick={handleStartTrial}
-                          className="w-full py-2 px-3 rounded-xl text-xs font-black bg-blue-500 hover:bg-blue-400 text-white transition shadow-sm cursor-pointer"
-                        >
-                          Try Free (14 Days)
-                        </button>
+                      {cat.rows.map((row, rIdx) => (
+                        <tr key={rIdx} className="hover:bg-surface-muted/40 transition-colors">
+                          <td className="p-3 sm:p-4 font-semibold text-foreground border-r border-border sticky left-0 bg-surface z-10 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.3)]">
+                            <div className="text-xs font-bold sm:font-semibold">{row.feature}</div>
+                            {row.subtext && <div className="text-[10px] sm:text-[11px] text-muted font-normal mt-0.5 leading-relaxed">{row.subtext}</div>}
+                          </td>
+                          <td className="p-3 sm:p-4 text-center border-r border-border">
+                            {row.private === 'Included' ? (
+                              <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
+                            ) : row.private === 'Not included' ? (
+                              <Minus size={16} className="mx-auto text-muted/40" />
+                            ) : (
+                              <span className="font-semibold text-foreground text-[11px] sm:text-xs">{row.private}</span>
+                            )}
+                          </td>
+                          <td className="p-3 sm:p-4 text-center border-r border-border bg-emerald-500/5 font-semibold text-foreground">
+                            {row.growth === 'Included' ? (
+                              <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
+                            ) : row.growth === 'Not included' ? (
+                              <Minus size={16} className="mx-auto text-muted/40" />
+                            ) : (
+                              <span className="font-bold text-emerald-500 dark:text-emerald-400 text-[11px] sm:text-xs">{row.growth}</span>
+                            )}
+                          </td>
+                          <td className="p-3 sm:p-4 text-center font-semibold text-foreground">
+                            {row.mega === 'Included' ? (
+                              <Check size={16} className="mx-auto text-emerald-500 dark:text-emerald-400 font-bold" />
+                            ) : row.mega === 'Not included' ? (
+                              <Minus size={16} className="mx-auto text-muted/40" />
+                            ) : (
+                              <span className="font-bold text-foreground text-[11px] sm:text-xs">{row.mega}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+                <tfoot className="border-t-2 border-border bg-surface-muted/50 font-bold">
+                  <tr>
+                    <td className="p-3 sm:p-4 border-r border-border sticky left-0 bg-surface-muted/90 z-10 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.3)]">
+                      <span className="font-extrabold text-foreground text-xs uppercase tracking-wider">Select Package</span>
+                      <p className="text-[10px] sm:text-[11px] text-muted font-normal mt-0.5">Includes student journal access and coaching workspace</p>
+                    </td>
+                    <td className="p-3 sm:p-4 text-center border-r border-border">
+                      <div className="text-xs sm:text-sm font-black text-foreground mb-2">
+                        {selectedRegion === 'GLOBAL'
+                          ? '$59'
+                          : `₦${(appliedPromo?.discountPercent ? Math.round(14500 * (1 - appliedPromo.discountPercent / 100)) : 14500).toLocaleString()}`}
+                        <span className="text-[10px] text-muted font-normal"> / mo</span>
+                      </div>
+                      {(!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) ? (
+                        <div className="space-y-1.5">
+                          <button
+                            type="button"
+                            disabled={activatingTrial}
+                            onClick={handleStartTrial}
+                            className="w-full py-2 px-2.5 sm:px-3 rounded-xl text-xs font-black bg-blue-500 hover:bg-blue-400 text-white transition shadow-sm cursor-pointer"
+                          >
+                            Try Free (14 Days)
+                          </button>
+                          <button
+                            type="button"
+                            disabled={loadingCheckout}
+                            onClick={() => {
+                              setStudentCount(80);
+                              handleCheckout(80);
+                            }}
+                            className="text-[10px] text-muted hover:text-foreground font-semibold underline cursor-pointer"
+                          >
+                            or Subscribe Directly
+                          </button>
+                        </div>
+                      ) : (
                         <button
                           type="button"
                           disabled={loadingCheckout}
@@ -1185,70 +1421,58 @@ const MentorPricing = () => {
                             setStudentCount(80);
                             handleCheckout(80);
                           }}
-                          className="text-[10px] text-muted hover:text-foreground font-semibold underline cursor-pointer"
+                          className="w-full py-2 px-2.5 sm:px-3 rounded-xl text-xs font-bold bg-surface hover:bg-surface-muted border border-border text-foreground transition shadow-sm cursor-pointer"
                         >
-                          or Subscribe Directly
+                          Choose Private Cohort
                         </button>
+                      )}
+                    </td>
+                    <td className="p-3 sm:p-4 text-center border-r border-border bg-emerald-500/5">
+                      <div className="text-xs sm:text-sm font-black text-emerald-400 mb-2">
+                        {selectedRegion === 'GLOBAL'
+                          ? '$99'
+                          : `₦${(appliedPromo?.discountPercent ? Math.round(25000 * (1 - appliedPromo.discountPercent / 100)) : 25000).toLocaleString()}`}
+                        <span className="text-[10px] text-emerald-400/80 font-normal"> / mo</span>
                       </div>
-                    ) : (
                       <button
                         type="button"
                         disabled={loadingCheckout}
                         onClick={() => {
-                          setStudentCount(80);
-                          handleCheckout(80);
+                          setStudentCount(200);
+                          handleCheckout(200);
                         }}
-                        className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-surface hover:bg-surface-muted border border-border text-foreground transition shadow-sm cursor-pointer"
+                        className="w-full py-2 px-2.5 sm:px-3 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shadow-md shadow-emerald-500/20 cursor-pointer"
                       >
-                        Choose Private Cohort
+                        Choose Growth Community
                       </button>
-                    )}
-                  </td>
-                  <td className="p-4 text-center border-r border-border bg-emerald-500/5">
-                    <div className="text-sm font-black text-emerald-400 mb-2">
-                      {selectedRegion === 'GLOBAL'
-                        ? '$99'
-                        : `₦${(appliedPromo?.discountPercent ? Math.round(25000 * (1 - appliedPromo.discountPercent / 100)) : 25000).toLocaleString()}`}
-                      <span className="text-[10px] text-emerald-400/80 font-normal"> / mo</span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={loadingCheckout}
-                      onClick={() => {
-                        setStudentCount(200);
-                        handleCheckout(200);
-                      }}
-                      className="w-full py-2 px-3 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shadow-md shadow-emerald-500/20 cursor-pointer"
-                    >
-                      Choose Growth Community
-                    </button>
-                  </td>
-                  <td className="p-4 text-center">
-                    <div className="text-sm font-black text-foreground mb-2">
-                      {selectedRegion === 'GLOBAL'
-                        ? '$249'
-                        : `₦${(appliedPromo?.discountPercent ? Math.round(85000 * (1 - appliedPromo.discountPercent / 100)) : 85000).toLocaleString()}`}
-                      <span className="text-[10px] text-muted font-normal"> / mo flat</span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={loadingCheckout}
-                      onClick={() => {
-                        setStudentCount(1000);
-                        handleCheckout(1000);
-                      }}
-                      className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-surface hover:bg-surface-muted border border-border text-foreground transition shadow-sm cursor-pointer"
-                    >
-                      Choose Mega Academy
-                    </button>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                    </td>
+                    <td className="p-3 sm:p-4 text-center">
+                      <div className="text-xs sm:text-sm font-black text-foreground mb-2">
+                        {selectedRegion === 'GLOBAL'
+                          ? '$249'
+                          : `₦${(appliedPromo?.discountPercent ? Math.round(85000 * (1 - appliedPromo.discountPercent / 100)) : 85000).toLocaleString()}`}
+                        <span className="text-[10px] text-muted font-normal"> / mo flat</span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={loadingCheckout}
+                        onClick={() => {
+                          setStudentCount(1000);
+                          handleCheckout(1000);
+                        }}
+                        className="w-full py-2 px-2.5 sm:px-3 rounded-xl text-xs font-bold bg-surface hover:bg-surface-muted border border-border text-foreground transition shadow-sm cursor-pointer"
+                      >
+                        Choose Mega Academy
+                      </button>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
 
           <div className="mt-4 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted px-2">
-            <p>
+            <p className="text-center sm:text-left">
               All tiers include unlimited trade logging for the mentor, Strategy Risk Guard enforcement, and zero per-student fees for your members.
             </p>
             <button
@@ -1267,39 +1491,40 @@ const MentorPricing = () => {
         {/* ========================================================================= */}
         {/* TELEGRAM VS JAHZJOURNALS FEATURE HIGHLIGHT SECTION                        */}
         {/* ========================================================================= */}
-        <section className="py-12 border-t border-border">
-          <div className="text-center mb-10 space-y-2">
+        <section className="py-10 sm:py-12 border-t border-border">
+          <div className="text-center mb-8 sm:mb-10 space-y-2">
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
               Why Mentors Upgrade
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-foreground">
               Telegram Chat vs. JAHZJOURNALS Academy
             </h2>
-            <p className="text-xs sm:text-sm text-muted max-w-xl mx-auto">
+            <p className="text-xs sm:text-sm text-muted max-w-xl mx-auto leading-relaxed">
               Keep your Telegram channel for community chat and announcements. Use JAHZJOURNALS to review real trades, verify risk discipline, and protect your reputation.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-5xl mx-auto">
             {/* Telegram Column */}
-            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-6 space-y-4">
-              <div className="flex items-center gap-2.5 text-rose-400 font-black text-sm uppercase tracking-wider">
-                <MessageCircle size={18} /> Managing on Telegram Only
+            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 sm:p-6 space-y-3.5 sm:space-y-4">
+              <div className="flex items-center gap-2.5 text-rose-400 font-black text-xs sm:text-sm uppercase tracking-wider">
+                <MessageCircle size={18} className="shrink-0" />
+                <span>Managing on Telegram Only</span>
               </div>
               <ul className="space-y-3 text-xs text-muted leading-relaxed">
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
                   <span><strong>Messy chat threads:</strong> 500 students sending screenshots in one endless feed where questions get lost.</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
                   <span><strong>Mentors get blamed for blown accounts:</strong> When a student gambles with 12% risk on Gold, you have zero proof of what they actually did.</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
                   <span><strong>Exhausting DMs:</strong> Mentors burn out reviewing screenshots scattered across WhatsApp and Telegram.</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
                   <span><strong>Manual payment checking:</strong> Verifying bank transfer receipts manually before adding students to private links.</span>
                 </li>
@@ -1307,24 +1532,25 @@ const MentorPricing = () => {
             </div>
 
             {/* JahzJournal Column */}
-            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-6 space-y-4 shadow-lg">
-              <div className="flex items-center gap-2.5 text-emerald-400 font-black text-sm uppercase tracking-wider">
-                <ShieldCheck size={18} /> Telegram + JAHZJOURNALS Academy
+            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 sm:p-6 space-y-3.5 sm:space-y-4 shadow-lg">
+              <div className="flex items-center gap-2.5 text-emerald-400 font-black text-xs sm:text-sm uppercase tracking-wider">
+                <ShieldCheck size={18} className="shrink-0" />
+                <span>Telegram + JAHZJOURNALS Academy</span>
               </div>
               <ul className="space-y-3 text-xs text-muted leading-relaxed">
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
                   <span><strong>Organized student portfolios:</strong> Click any student's name to view their complete trade log, win rate, and equity curve.</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
                   <span><strong>Automatic Strategy Risk Violation Guard:</strong> The system automatically flags trades where a student exceeded your taught 1.0% risk rule.</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
                   <span><strong>Direct trade grading:</strong> Leave timestamped comments and grades directly on the student's entry/exit chart screenshot.</span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2.5">
                   <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
                   <span><strong>Automated Paystack student enrollments:</strong> Students pay to join and funds land in your Nigerian bank account with just a 1.5% platform fee.</span>
                 </li>
@@ -1336,7 +1562,7 @@ const MentorPricing = () => {
         {/* ========================================================================= */}
         {/* FREQUENTLY ASKED QUESTIONS FOR MENTORS                                    */}
         {/* ========================================================================= */}
-        <section className="py-12 border-t border-border">
+        <section className="py-10 sm:py-12 border-t border-border">
           <div className="text-center mb-8 space-y-2">
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
               Clear Answers
