@@ -18,6 +18,7 @@ import {
   EyeOff,
   Briefcase,
   Tag,
+  Lock,
 } from 'lucide-react';
 import api from '../utils/api';
 import SEO from '../components/SEO';
@@ -102,6 +103,19 @@ export default function EconomicCalendarPage() {
   const settingsTriggerRef = useRef(null);
   const activeFetchControllerRef = useRef(null);
   const hasLoadedPrefsRef = useRef(false);
+
+  // Guard calendar preferences access for authenticated users only
+  const handleOpenSettings = useCallback((initialSection = 'timezone') => {
+    if (user) {
+      setSettingsInitialSection(initialSection);
+      setIsSettingsModalOpen(true);
+    } else {
+      toast('Please log in or create a free account to customize calendar settings.', {
+        icon: '🔒',
+      });
+      navigate('/login');
+    }
+  }, [user, navigate]);
 
   // Live 1-second clock tick for accurate real-time countdowns and state transitions
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -556,16 +570,22 @@ export default function EconomicCalendarPage() {
           <button
             ref={settingsTriggerRef}
             type="button"
-            onClick={() => {
-              setSettingsInitialSection('timezone');
-              setIsSettingsModalOpen(true);
-            }}
+            onClick={() => handleOpenSettings('timezone')}
             aria-label="Open Calendar Preferences"
             className="h-9 px-3.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition flex items-center gap-2 shadow-2xs hover:border-emerald-500/30 active:scale-98 cursor-pointer"
-            title="Configure timezone, saved filters, display density, safeguard buffers, and alerts"
+            title={user ? "Configure timezone, saved filters, display density, safeguard buffers, and alerts" : "Sign in to customize calendar settings"}
           >
-            <Settings size={14} className="text-emerald-400" />
+            {user ? (
+              <Settings size={14} className="text-emerald-400" />
+            ) : (
+              <Lock size={14} className="text-muted" />
+            )}
             <span>Calendar Settings</span>
+            {!user && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/20 text-muted font-bold uppercase tracking-wider">
+                Sign In
+              </span>
+            )}
           </button>
 
           <button
@@ -999,7 +1019,7 @@ export default function EconomicCalendarPage() {
           </p>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {differsFromSavedPrefs && (
+            {user && differsFromSavedPrefs && (
               <button
                 type="button"
                 onClick={handleApplySavedPreferences}
@@ -1028,16 +1048,13 @@ export default function EconomicCalendarPage() {
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <button
           type="button"
-          onClick={() => {
-            setSettingsInitialSection('timezone');
-            setIsSettingsModalOpen(true);
-          }}
+          onClick={() => handleOpenSettings('timezone')}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/80 bg-surface hover:bg-surface-muted text-xs text-foreground font-semibold transition cursor-pointer"
-          title="Change calendar display time zone"
+          title={user ? "Change calendar display time zone" : "Sign in to customize display time zone"}
         >
           <Globe size={13} className="text-emerald-400 shrink-0" />
           <span data-testid="timezone-indicator">Times shown in {timeZoneBadge}</span>
-          <span className="text-[10px] text-emerald-400 font-bold ml-1">Change</span>
+          <span className="text-[10px] text-emerald-400 font-bold ml-1">{user ? 'Change' : 'Sign in to customize'}</span>
         </button>
 
         <span className="text-[11px] text-muted">
@@ -1364,11 +1381,9 @@ export default function EconomicCalendarPage() {
             </span>
             <button
               type="button"
-              onClick={() => {
-                setSettingsInitialSection('safeguards');
-                setIsSettingsModalOpen(true);
-              }}
+              onClick={() => handleOpenSettings('safeguards')}
               className="px-2.5 py-1 rounded-xl border border-border bg-surface-muted/40 hover:bg-surface-muted text-[11px] font-semibold text-foreground transition cursor-pointer"
+              title={user ? "Adjust Buffer" : "Sign in to customize safeguard buffers"}
             >
               Adjust Buffer
             </button>
@@ -1407,20 +1422,22 @@ export default function EconomicCalendarPage() {
         </div>
       </div>
 
-      {/* Calendar Preferences Modal */}
-      <CalendarPreferencesModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        user={user}
-        initialPreferences={savedPrefs}
-        initialAlertPreferences={alertPrefs}
-        userWatchedPairs={userWatchedPairs}
-        onSavePreferences={handleSavePreferences}
-        onResetPreferences={handleResetSavedPreferences}
-        onAlertPreferencesUpdated={(updated) => setAlertPrefs(updated)}
-        initialSection={settingsInitialSection}
-        triggerRef={settingsTriggerRef}
-      />
+      {/* Calendar Preferences Modal - Protected for authenticated users */}
+      {user && (
+        <CalendarPreferencesModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          user={user}
+          initialPreferences={savedPrefs}
+          initialAlertPreferences={alertPrefs}
+          userWatchedPairs={userWatchedPairs}
+          onSavePreferences={handleSavePreferences}
+          onResetPreferences={handleResetSavedPreferences}
+          onAlertPreferencesUpdated={(updated) => setAlertPrefs(updated)}
+          initialSection={settingsInitialSection}
+          triggerRef={settingsTriggerRef}
+        />
+      )}
 
       {/* News Alert Preferences Modal */}
       <NewsAlertPreferencesModal

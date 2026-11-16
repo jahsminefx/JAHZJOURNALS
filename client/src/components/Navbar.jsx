@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Menu, 
@@ -359,47 +360,47 @@ const Navbar = () => {
           </Button>
           <button
             type="button"
-            onClick={() => setDrawerOpen(true)}
+            onClick={() => setDrawerOpen((prev) => !prev)}
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-surface text-foreground hover:bg-surface-muted hover:text-emerald-500 dark:hover:text-emerald-400 transition cursor-pointer"
             aria-label="Open navigation menu"
             aria-expanded={drawerOpen}
           >
-            <Menu size={20} />
+            {drawerOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </nav>
 
-      {/* Slide-out Navigation Drawer for Mobile & Tablet Portrait */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+      {/* Slide-out Navigation Drawer for Mobile & Tablet Portrait rendered outside header via Portal */}
+      {drawerOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] lg:hidden">
           {/* Backdrop with Blur */}
           <div
             onClick={() => setDrawerOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300"
             aria-hidden="true"
           />
 
           {/* Drawer Panel */}
           <aside
-            className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-surface dark:bg-slate-950 border-l border-border dark:border-slate-800 shadow-2xl p-5 sm:p-6 flex flex-col justify-between overflow-y-auto transition-transform duration-300 ease-in-out"
+            className="fixed inset-y-0 right-0 z-[101] w-full max-w-xs sm:max-w-sm h-full h-[100dvh] bg-surface dark:bg-slate-950 border-l border-border dark:border-slate-800 shadow-2xl flex flex-col justify-between overflow-hidden transition-transform duration-300 ease-in-out"
             aria-label="Mobile navigation"
           >
-            <div>
-              {/* Drawer Top Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-border/70 dark:border-slate-800">
-                <BrandLogo />
-                <button
-                  type="button"
-                  onClick={() => setDrawerOpen(false)}
-                  className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted dark:hover:bg-slate-900 transition cursor-pointer"
-                  aria-label="Close navigation"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+            {/* Drawer Top Header (Pinned) */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border/70 dark:border-slate-800 shrink-0">
+              <BrandLogo />
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted dark:hover:bg-slate-900 transition cursor-pointer"
+                aria-label="Close navigation"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-              {/* Navigation Items List */}
-              <nav className="mt-5 space-y-2">
+            {/* Scrollable Navigation Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 overscroll-contain">
+              <nav className="space-y-2">
                 {navigationItems.map((item) => {
                   if (item.type === 'link') {
                     const active = isItemActive(item.to);
@@ -501,13 +502,13 @@ const Navbar = () => {
               </nav>
             </div>
 
-            {/* Drawer Bottom Actions */}
-            <div className="pt-6 border-t border-border/70 dark:border-slate-800 space-y-3">
+            {/* Drawer Bottom Actions (Pinned) */}
+            <div className="p-5 border-t border-border/70 dark:border-slate-800 bg-surface/95 dark:bg-slate-950/95 backdrop-blur shrink-0 space-y-3">
               <Button
                 to="/login"
-                variant="secondary"
+                variant="ghost"
                 size="md"
-                className="w-full justify-center"
+                className="w-full justify-center !border !border-border/80 !text-foreground dark:!text-slate-100 hover:!bg-surface-muted dark:hover:!bg-slate-900"
                 onClick={() => setDrawerOpen(false)}
               >
                 Login
@@ -516,14 +517,15 @@ const Navbar = () => {
                 to="/register"
                 variant="primary"
                 size="md"
-                className="w-full justify-center"
+                className="w-full justify-center shadow-lg shadow-emerald-500/20"
                 onClick={() => setDrawerOpen(false)}
               >
                 Start Free
               </Button>
             </div>
           </aside>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );
