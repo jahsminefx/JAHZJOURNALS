@@ -25,6 +25,7 @@ logs/
 *.log
 *.err
 server/uploads/
+server/src/services/calendarProviders/*_cache.json
 
 # Local automation/workspace artifacts
 .codex/

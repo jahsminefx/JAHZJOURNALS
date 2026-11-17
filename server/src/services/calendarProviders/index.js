@@ -201,6 +201,11 @@ class ManagedFeedProvider {
   }
 }
 
+const fs = require('fs');
+const path = require('path');
+
+const FF_CACHE_FILE = path.join(__dirname, 'ff_schedule_cache.json');
+
 function createForexFactoryProvider() {
   return new ManagedFeedProvider({
     name: 'forexfactory-schedule',
@@ -208,41 +213,75 @@ function createForexFactoryProvider() {
     minCooldownMs: DEFAULT_FF_COOLDOWN_MS,
     maxBackoffMs: 30 * 60 * 1000,
     fetcher: async ({ fetchImpl }) => {
-      const res = await fetchImpl(FF_SCHEDULE_URL, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) JAHZJOURNALS/1.0' },
-        signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(7000) : undefined,
-      });
+      try {
+        const res = await fetchImpl(FF_SCHEDULE_URL, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) JAHZJOURNALS/1.0' },
+          signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(7000) : undefined,
+        });
 
-      if (res.status === 429) {
-        const err = new Error('ForexFactory upstream rate limit (429)');
-        err.status = 429;
+        if (res.status === 429) {
+          if (fs.existsSync(FF_CACHE_FILE)) {
+            try {
+              const cachedData = JSON.parse(fs.readFileSync(FF_CACHE_FILE, 'utf8'));
+              if (Array.isArray(cachedData) && cachedData.length > 0) {
+                return cachedData;
+              }
+            } catch (_) {}
+          }
+          const err = new Error('ForexFactory upstream rate limit (429)');
+          err.status = 429;
+          throw err;
+        }
+
+        if (!res.ok) {
+          if (fs.existsSync(FF_CACHE_FILE)) {
+            try {
+              const cachedData = JSON.parse(fs.readFileSync(FF_CACHE_FILE, 'utf8'));
+              if (Array.isArray(cachedData) && cachedData.length > 0) {
+                return cachedData;
+              }
+            } catch (_) {}
+          }
+          const err = new Error(`ForexFactory HTTP ${res.status}`);
+          err.status = res.status;
+          throw err;
+        }
+
+        const text = await res.text();
+        const data = JSON.parse(text);
+        if (!Array.isArray(data) || data.length === 0) {
+          return [];
+        }
+
+        const mapped = data.map((item, index) => ({
+          id: `${item.country || 'GLOBAL'}-${item.title || 'event'}-${item.date || index}`.replace(/\s+/g, '-'),
+          title: item.title || 'Economic Event',
+          country: (item.country || 'ALL').toUpperCase(),
+          date: item.date ? new Date(item.date).toISOString() : new Date().toISOString(),
+          impact: item.impact || 'Low',
+          actual: item.actual || '',
+          forecast: item.forecast || '',
+          previous: item.previous || '',
+          isTentative: /tentative/i.test(String(item.time || item.title || '')),
+          provider: 'forexfactory',
+        }));
+
+        try {
+          fs.writeFileSync(FF_CACHE_FILE, JSON.stringify(mapped), 'utf8');
+        } catch (_) {}
+
+        return mapped;
+      } catch (err) {
+        if (fs.existsSync(FF_CACHE_FILE)) {
+          try {
+            const cachedData = JSON.parse(fs.readFileSync(FF_CACHE_FILE, 'utf8'));
+            if (Array.isArray(cachedData) && cachedData.length > 0) {
+              return cachedData;
+            }
+          } catch (_) {}
+        }
         throw err;
       }
-
-      if (!res.ok) {
-        const err = new Error(`ForexFactory HTTP ${res.status}`);
-        err.status = res.status;
-        throw err;
-      }
-
-      const text = await res.text();
-      const data = JSON.parse(text);
-      if (!Array.isArray(data) || data.length === 0) {
-        return [];
-      }
-
-      return data.map((item, index) => ({
-        id: `${item.country || 'GLOBAL'}-${item.title || 'event'}-${item.date || index}`.replace(/\s+/g, '-'),
-        title: item.title || 'Economic Event',
-        country: (item.country || 'ALL').toUpperCase(),
-        date: item.date ? new Date(item.date).toISOString() : new Date().toISOString(),
-        impact: item.impact || 'Low',
-        actual: item.actual || '',
-        forecast: item.forecast || '',
-        previous: item.previous || '',
-        isTentative: /tentative/i.test(String(item.time || item.title || '')),
-        provider: 'forexfactory',
-      }));
     },
   });
 }

@@ -86,7 +86,6 @@ const SUBJECT_GROUPS = [
   ['services'],
   ['retail'],
   ['wholesale'],
-  ['core'],
   ['cpi', 'inflation rate', 'consumer price'],
   ['ppi', 'producer price', 'corp goods price'],
   ['gdp', 'gross domestic'],
@@ -345,7 +344,7 @@ function computeAdaptivePollPlan(events = [], nowMs = Date.now(), consecutiveErr
 
     const scheduledMs = new Date(ev.date).getTime();
     const diffFromScheduled = nowMs - scheduledMs;
-    const inReleaseWindow = diffFromScheduled >= -30 * 1000 && diffFromScheduled <= 5 * 60 * 1000;
+    const inReleaseWindow = diffFromScheduled >= -30 * 1000 && diffFromScheduled <= 15 * 60 * 1000;
 
     if (!inReleaseWindow) continue;
     if (ev.impact === 'High') {
@@ -461,6 +460,8 @@ function expandKeywords(title) {
   t = t.replace(/\btrade balance\b/g, 'balance of trade trade balance');
   t = t.replace(/\b10-y\b/g, '10-year 10y');
   t = t.replace(/\b30-y\b/g, '30-year 30y');
+  t = t.replace(/\bcore retail sales\b/g, 'core retail sales ex autos ex-autos');
+  t = t.replace(/\bcore durable goods\b/g, 'core durable goods ex trans transportation');
   return t.replace(/[^a-z0-9/ -]/g, ' ').split(/\s+/).filter((w) => w.length > 1);
 }
 
@@ -509,9 +510,10 @@ function findMatchingTvEvent(ffEvent, tvEvents) {
     }
     if (subjectConflict) continue;
 
-    // Core vs non-Core guard
-    const fIsCore = /\bcore\b/i.test(fLower);
-    const cIsCore = /\b(core|ex\s*food)\b/i.test(cText);
+    // Comprehensive Core vs non-Core guard (handles Core, Ex-Autos, Ex-Food, Ex-Energy, Ex-Transport)
+    const CORE_PATTERN = /\b(core|ex[-\s]*(autos?|motor|food|energy|transport(?:ation)?|trans\b|defense|aircraft|tobacco|fresh))\b/i;
+    const fIsCore = CORE_PATTERN.test(fLower);
+    const cIsCore = CORE_PATTERN.test(cText);
     if (fIsCore !== cIsCore) continue;
 
     // Periodicity guard (YoY vs MoM vs QoQ)
@@ -678,11 +680,11 @@ async function fetchCalendarEvents(forceRefresh = false, options = {}) {
   const scheduleProvider = options.scheduleProvider || defaultScheduleProvider;
   const actualsProvider = options.actualsProvider || defaultActualsProvider;
 
-  // Detect active release window (-30s to +5m without actual) to automatically bypass normal 60s TV TTL
+  // Detect active release window (-30s to +15m without actual) to automatically bypass normal 60s TV TTL
   const hasReleasingEventWithoutActual = cachedMergedEvents.some((ev) => {
     if (ev.actual || ev.impact === 'Holiday') return false;
     const diffMs = now - new Date(ev.date).getTime();
-    return diffMs >= -30 * 1000 && diffMs <= 5 * 60 * 1000;
+    return diffMs >= -30 * 1000 && diffMs <= 15 * 60 * 1000;
   });
 
   const [scheduleRes, actualsRes] = await Promise.all([

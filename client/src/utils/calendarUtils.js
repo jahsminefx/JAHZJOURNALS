@@ -899,7 +899,7 @@ export function getAdaptiveRefreshPlan(events = [], nowMs = Date.now(), errorCou
     if (Number.isNaN(scheduledMs)) continue;
 
     const diffFromScheduled = nowMs - scheduledMs;
-    const inWindow = diffFromScheduled >= -30 * 1000 && diffFromScheduled <= 5 * 60 * 1000;
+    const inWindow = diffFromScheduled >= -30 * 1000 && diffFromScheduled <= 15 * 60 * 1000;
     if (!inWindow) continue;
 
     if (ev.impact === 'High') {
