@@ -59,29 +59,22 @@ export const getSoftwareApplicationSchema = () => ({
   applicationCategory: 'FinanceApplication',
   offers: {
     '@type': 'AggregateOffer',
-    priceCurrency: 'USD',
+    priceCurrency: 'NGN',
     lowPrice: '0',
-    highPrice: '49',
+    highPrice: '8500',
     offerCount: '3',
-  },
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.9',
-    ratingCount: '1250',
-    bestRating: '5',
-    worstRating: '1',
   },
   description: SEO_DEFAULTS.DEFAULT_DESCRIPTION,
 });
 
 /**
- * Product Schema for Pricing Tier Offers
+ * Product Schema for Live Pricing Tier Offers
  */
 export const getProductSchema = () => ({
   '@context': 'https://schema.org',
   '@type': 'Product',
-  name: 'JAHZJOURNALS Trader Subscription',
-  description: 'AI-powered trading journal, automated analytics, and prop firm risk management suite.',
+  name: 'JAHZJOURNALS Forex Trading Journal',
+  description: 'Discipline-focused forex trading journal, risk calculator, and prop firm analytics suite.',
   brand: {
     '@type': 'Brand',
     name: 'JAHZJOURNALS',
@@ -89,23 +82,26 @@ export const getProductSchema = () => ({
   offers: [
     {
       '@type': 'Offer',
-      name: 'Free Trader',
+      name: 'Free Plan',
       price: '0.00',
-      priceCurrency: 'USD',
+      priceCurrency: 'NGN',
+      description: '₦0 forever; 20 trades/month; 1 trading account; 1 screenshot/trade',
       availability: 'https://schema.org/InStock',
     },
     {
       '@type': 'Offer',
-      name: 'Pro Trader',
-      price: '19.00',
-      priceCurrency: 'USD',
+      name: 'Starter Plan',
+      price: '4000.00',
+      priceCurrency: 'NGN',
+      description: '₦4,000/month; 100 trades/month; 3 accounts; 3 screenshots/trade',
       availability: 'https://schema.org/InStock',
     },
     {
       '@type': 'Offer',
-      name: 'Founding Trader Lifetime',
-      price: '49.00',
-      priceCurrency: 'USD',
+      name: 'Pro Plan',
+      price: '8500.00',
+      priceCurrency: 'NGN',
+      description: '₦8,500/month; unlimited trades/accounts; 10 screenshots/trade',
       availability: 'https://schema.org/InStock',
     },
   ],

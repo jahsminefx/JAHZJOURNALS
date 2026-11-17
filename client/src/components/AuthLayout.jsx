@@ -4,7 +4,15 @@ import { ArrowLeft } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import authTradingBg from '../assets/auth-trading-bg.jpg';
 
-const AuthLayout = ({ title, subtitle, backTo = '/', backLabel, showBack = true, children }) => {
+const AuthLayout = ({
+  title,
+  subtitle,
+  backTo = '/',
+  backLabel,
+  showBack = true,
+  sidePanel,
+  children,
+}) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -27,16 +35,26 @@ const AuthLayout = ({ title, subtitle, backTo = '/', backLabel, showBack = true,
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_25%,rgba(52,211,153,0.16),transparent_38%)]" aria-hidden="true" />
 
             <BrandLogo size="md" className="relative z-10" />
-            <div className="relative z-10">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-400">Your trading sanctuary</p>
-              <h2 className="mt-4 text-4xl font-black tracking-tight text-white leading-tight">
-                Clarity begins with honest reflection.
-              </h2>
-              <p className="mt-4 text-sm font-medium text-slate-200 leading-relaxed">
-                Your journal, your charts, your emotions, your growth — all in one sacred space.
-              </p>
-            </div>
-            <p className="relative z-10 text-xs font-semibold text-slate-300">Not signals. Not hype. Just honest, structured self-review.</p>
+
+            {sidePanel ? (
+              <div className="relative z-10 my-auto py-6">
+                {sidePanel}
+              </div>
+            ) : (
+              <div className="relative z-10">
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-400">Your trading sanctuary</p>
+                <h2 className="mt-4 text-4xl font-black tracking-tight text-white leading-tight">
+                  Clarity begins with honest reflection.
+                </h2>
+                <p className="mt-4 text-sm font-medium text-slate-200 leading-relaxed">
+                  Your journal, your charts, your emotions, your growth — all in one sacred space.
+                </p>
+              </div>
+            )}
+
+            <p className="relative z-10 text-xs font-semibold text-slate-300">
+              Not signals. Not hype. Just honest, structured self-review.
+            </p>
           </div>
           <div className="p-6 sm:p-8 lg:p-10">
             <div className="mb-6 flex items-center justify-between">

@@ -98,7 +98,7 @@ const PromotionsPage = () => {
 
   return (
     <div className="space-y-8 text-foreground font-sans">
-      <SEO title="Active Promotions & Offers | JAHZJOURNALS" description="Discover active promotional offers, founding trader discounts, and redeem exclusive tier access." />
+      <SEO title="Active Promotions & Offers | JAHZJOURNALS" description="Discover active promotional offers, discounts, and redeem exclusive tier access." />
       
       <div className="space-y-6">
         <Breadcrumbs />
@@ -106,7 +106,7 @@ const PromotionsPage = () => {
         <PageHeader
           eyebrow="Exclusive Offers"
           title="Promotions & Trader Benefits"
-          description="Discover live promotions, founding trader codes, and complimentary tier upgrades."
+          description="Discover live promotions, promotional discount codes, and complimentary tier upgrades."
         />
 
         {/* Promo Code Input Section */}

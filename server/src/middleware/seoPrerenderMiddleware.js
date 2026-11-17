@@ -269,14 +269,15 @@ const STATIC_ROUTES = {
     `
   },
   '/pricing': {
-    title: 'Pricing Plans — Free & Pro Forex Trading Journal Subscriptions | JAHZJOURNALS',
-    description: 'Compare JAHZJOURNALS Free, Pro, and Academy plans. Flexible USD and NGN billing for retail traders, prop firm traders, and mentors.',
+    title: 'Pricing Plans — Free, Starter & Pro Forex Trading Journal | JAHZJOURNALS',
+    description: 'Transparent pricing for disciplined forex traders. Start free with 20 trades/month (₦0 forever) or upgrade to Starter (₦4,000/mo) and Pro (₦8,500/mo).',
     body: `
       <h1>Transparent Pricing for Every Stage of Your Trading Journey</h1>
-      <p>Start journaling for free with core trade logging and our public Position Size Calculator, or upgrade to Pro for unlimited trading accounts, automated MT4/MT5 synchronization, Prop Firm challenge tracking, and AI performance coaching.</p>
+      <p>Start journaling for free with structured trade logging, position sizing, and habit building, or upgrade to Starter or Pro for psychology tracking, prop firm guards, and AI reviews.</p>
       <ul>
-        <li><strong>Starter (Free Plan):</strong> Core trade logging, basic performance dashboard, position size calculator, and educational resources.</li>
-        <li><strong>Pro Trader Plan:</strong> Unlimited multi-currency accounts (USD, NGN, GBP, EUR), Prop Firm evaluation tracker, full analytics suite, AI Trading Coach, and PDF performance exports.</li>
+        <li><strong>Free Plan (₦0 forever):</strong> 20 trades/month, 1 trading account, 1 screenshot per trade, risk calculator, and basic analytics.</li>
+        <li><strong>Starter Plan (₦4,000/month):</strong> 100 trades/month, 3 trading accounts, 3 screenshots per trade, psychology tracking, rule violation tags, and session analysis.</li>
+        <li><strong>Pro Plan (₦8,500/month):</strong> Unlimited trades/month, unlimited trading accounts, 10 screenshots per trade, prop firm challenge tracking &amp; drawdown guards, AI Trade Review, and PDF performance report exports.</li>
       </ul>
     `
   },

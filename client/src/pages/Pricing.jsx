@@ -5,7 +5,6 @@ import Footer from '../components/Footer';
 import PricingCard from '../components/PricingCard';
 import FAQItem from '../components/FAQItem';
 import CTASection from '../components/CTASection';
-import FoundingTraderBadge from '../components/FoundingTraderBadge';
 import Button from '../components/Button';
 import { useAuth } from '../context/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -835,18 +834,36 @@ const Pricing = () => {
         name: 'Free Plan',
         price: '0',
         priceCurrency: 'NGN',
+        description: '₦0 forever; 20 trades/month; 1 trading account; 1 screenshot/trade',
+        availability: 'https://schema.org/InStock',
       },
       {
         '@type': 'Offer',
         name: 'Starter Plan',
         price: '4000',
         priceCurrency: 'NGN',
+        priceSpecification: {
+          '@type': 'UnitPriceSpecification',
+          price: '4000',
+          priceCurrency: 'NGN',
+          unitText: 'MONTH',
+        },
+        description: '₦4,000/month; 100 trades/month; 3 accounts; 3 screenshots/trade',
+        availability: 'https://schema.org/InStock',
       },
       {
         '@type': 'Offer',
         name: 'Pro Plan',
         price: '8500',
         priceCurrency: 'NGN',
+        priceSpecification: {
+          '@type': 'UnitPriceSpecification',
+          price: '8500',
+          priceCurrency: 'NGN',
+          unitText: 'MONTH',
+        },
+        description: '₦8,500/month; unlimited trades/accounts; 10 screenshots/trade',
+        availability: 'https://schema.org/InStock',
       },
     ],
   };

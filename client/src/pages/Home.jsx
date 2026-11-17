@@ -28,7 +28,6 @@ import DashboardMockup from '../components/DashboardMockup';
 import PropFirmMockup from '../components/PropFirmMockup';
 import MentorMockup from '../components/MentorMockup';
 import StatCard from '../components/StatCard';
-import TestimonialCard from '../components/TestimonialCard';
 import SEO from '../components/SEO';
 import { useAuth } from '../context/useAuth';
 
@@ -55,18 +54,84 @@ const features = [
 ];
 
 const faqs = [
-  ['Is JAHZJOURNALS a signal service?', 'No. JAHZJOURNALS does not provide signals or tell you what to trade. It helps you review your own trading with structure.'],
-  ['Does it guarantee profit?', 'No trading journal can guarantee profit. The goal is to help you understand behavior, risk, mistakes, and repeatable edge.'],
-  ['Can I upload screenshots?', 'Yes. The product is designed around screenshot-based trade review for chart-focused forex traders.'],
-  ['Can I use it on mobile?', 'Yes. The interface is mobile-first for traders who journal from phones, tablets, and laptops.'],
-  ['Is it good for prop firm traders?', 'Yes. Prop firm traders can track drawdown, profit target progress, and discipline around challenge rules.'],
-  ['Will AI features be added?', 'Yes. The data model is AI-ready, with future reviews planned around structured journal data.'],
+  [
+    'What is JAHZJOURNALS?',
+    'JAHZJOURNALS is a trading journal and analytics platform that helps you log trades, review screenshots, track discipline, and identify recurring mistakes in your execution.',
+  ],
+  [
+    'Is JAHZJOURNALS a signal service or financial adviser?',
+    'No. JAHZJOURNALS does not provide trade signals, tell you what to trade, predict markets, or guarantee outcomes. It helps you review your own execution with structure.',
+  ],
+  [
+    'Can I start free without a card?',
+    'Yes. The Free plan is free forever and does not require a credit or debit card. You can log up to 20 trades per month, use one trading account, and upload one screenshot per trade.',
+  ],
+  [
+    'Can I upload chart screenshots?',
+    'Yes. JAHZJOURNALS is built for screenshot-based trade review. Your screenshot limit depends on your plan: Free includes 1 screenshot per trade, Starter includes 3, and Pro includes 10.',
+  ],
+  [
+    'Can it help with prop-firm evaluations?',
+    'Yes. You can track drawdown limits, profit-target progress, trading days, and rule discipline while preparing for prop-firm evaluations. JAHZJOURNALS cannot guarantee that you will pass.',
+  ],
+  [
+    'Does it work on mobile?',
+    'Yes. JAHZJOURNALS is mobile-first and works across phones, tablets, and laptops, so you can log and review trades wherever you trade.',
+  ],
+  [
+    'How does JAHZ AI work?',
+    'JAHZ AI analyses your journal data, submitted screenshots, rules, and trading behaviour to highlight patterns and possible mistakes. It is designed for self-review—not trade signals, market predictions, or financial advice.',
+  ],
 ];
 
 const pricing = [
-  ['Free', '₦0', 'Start journaling without pressure.', ['20 trades per month', '1 trading account', 'Basic trade journal & analytics', '1 screenshot per trade', 'Position-size risk calculator']],
-  ['Starter', '₦4,000/mo', 'Build disciplined execution & habits.', ['100 trades / month', '3 trading accounts', 'Weekly AI coaching summaries', 'Emotion & rule tracking', 'Session analysis', '3 screenshots / trade']],
-  ['Pro', '₦8,500/mo', 'For serious traders & prop firm candidates.', ['Unlimited trades & accounts', 'Prop firm challenge tracker & guards', 'AI Trade Review & Edge Finder', 'PDF performance reports', '10 screenshots / trade'], true],
+  {
+    name: 'Free',
+    price: '₦0',
+    description: 'Start journaling without pressure.',
+    limits: ['20 trades / month', '1 trading account', '1 screenshot per trade'],
+    features: [
+      'Manual trade entry & execution notes',
+      'Basic equity curve & P&L stats',
+      'Position-size risk calculator',
+      'Weekly review template',
+    ],
+    to: '/register',
+    cta: 'Start Free',
+  },
+  {
+    name: 'Starter',
+    price: '₦4,000',
+    period: '/month',
+    description: 'Build disciplined execution & habits.',
+    limits: ['100 trades / month', '3 trading accounts', '3 screenshots per trade'],
+    features: [
+      'All Free plan capabilities',
+      'Weekly AI coaching summaries',
+      'Trading psychology & emotion tracking',
+      'Rule violation & mistake tagging',
+      'Session analysis (London, NY, Asian)',
+    ],
+    to: '/register?plan=starter',
+    cta: 'Choose Starter',
+  },
+  {
+    name: 'Pro',
+    price: '₦8,500',
+    period: '/month',
+    description: 'For serious traders & prop firm candidates.',
+    highlighted: true,
+    limits: ['Unlimited trades / month', 'Unlimited trading accounts', '10 screenshots per trade'],
+    features: [
+      'All Starter plan capabilities',
+      'Prop-firm challenge tracker & drawdown guards',
+      'AI Trade Review & Edge Finder analytics',
+      'PDF performance report exports',
+      'Priority review processing',
+    ],
+    to: '/register?plan=pro',
+    cta: 'Choose Pro',
+  },
 ];
 
 const disciplineData = {
@@ -177,214 +242,316 @@ const Home = () => {
   };
 
   return (
-  <div className="min-h-screen bg-background text-foreground">
-    <SEO />
-    <Navbar />
+    <div className="min-h-screen bg-background text-foreground">
+      <SEO />
+      <Navbar />
 
-    <main>
-      <section className="relative overflow-hidden px-4 pb-16 pt-28 sm:px-6 lg:px-8 lg:pt-32">
-        <img
-          src="/heroes/hero-home.png"
-          alt="JAHZJOURNALS forex journal dashboard"
-          className="hero-media absolute inset-0 z-0 h-full w-full object-cover brightness-[1.6]"
-          style={{
-            '--hero-position-mobile': '64% top',
-            '--hero-position-tablet': '58% top',
-            '--hero-position-desktop': 'center top',
-          }}
-        />
-        <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.18),transparent_33%),linear-gradient(180deg,rgba(2,6,23,0.76),rgba(17,24,39,0.82)_70%,rgba(2,6,23,0.92))]" />
-        <div className="relative z-20 mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="text-center lg:text-left">
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-400">Forex journal and analytics</p>
-            <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-6xl drop-shadow-sm">
-              Stop Guessing. Start Journaling Like a Disciplined Forex Trader.
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:mx-0 font-medium">
-              Track every trade, screenshot, emotion, mistake, and setup, then discover what actually makes you profitable.
-            </p>
-            <div className="mt-4 flex items-center justify-center lg:justify-start">
-              <Link
-                to="/calendar"
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-xs font-bold transition-all shadow-sm group"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Live Economic News Calendar (Free)</span>
-                <ArrowRight size={13} className="text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            </div>
-            {user ? (
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                <Button to="/dashboard" size="lg" className="w-full sm:w-auto">Go to Dashboard</Button>
-                <Button to="/trades/new" variant="secondary" size="lg" className="w-full sm:w-auto">Log New Trade</Button>
-              </div>
-            ) : (
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                <Button to="/register" size="lg" className="w-full sm:w-auto">Start Journaling Free</Button>
-                <Button to="/features" variant="secondary" size="lg" className="w-full sm:w-auto">View Features</Button>
-              </div>
-            )}
-            <p className="mt-5 text-sm font-medium text-slate-300">No signals. No hype. Built for structured review.</p>
-          </div>
-          <DashboardMockup />
-        </div>
-      </section>
-
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionHeader
-            eyebrow="The trader problem"
-            title="Most traders do not need more noise. They need better review."
-            description="If you cannot see your patterns, your journal cannot help you improve them."
+      <main>
+        <section className="relative overflow-hidden px-4 pb-16 pt-28 sm:px-6 lg:px-8 lg:pt-32">
+          <img
+            src="/heroes/hero-home.png"
+            alt="JAHZJOURNALS forex journal dashboard"
+            className="hero-media absolute inset-0 z-0 h-full w-full object-cover brightness-[1.6]"
+            style={{
+              '--hero-position-mobile': '64% top',
+              '--hero-position-tablet': '58% top',
+              '--hero-position-desktop': 'center top',
+            }}
           />
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {problems.map((problem) => (
-              <div key={problem} className="flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 dark:border-red-400/20 dark:bg-red-400/[0.06]">
-                <AlertTriangle size={20} className="shrink-0 text-rose-500 dark:text-rose-400" />
-                <span className="text-sm font-semibold text-foreground">{problem}</span>
+          <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.18),transparent_33%),linear-gradient(180deg,rgba(2,6,23,0.76),rgba(17,24,39,0.82)_70%,rgba(2,6,23,0.92))]" />
+          <div className="relative z-20 mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="text-center lg:text-left">
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-400">Forex journal and analytics</p>
+              <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-6xl drop-shadow-sm">
+                Stop Guessing. Start Journaling Like a Disciplined Forex Trader.
+              </h1>
+              <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:mx-0 font-medium">
+                Track every trade, screenshot, emotion, mistake, and setup, then discover what actually makes you profitable.
+              </p>
+              <div className="mt-4 flex items-center justify-center lg:justify-start">
+                <Link
+                  to="/calendar"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-xs font-bold transition-all shadow-sm group"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Live Economic News Calendar (Free)</span>
+                  <ArrowRight size={13} className="text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
               </div>
-            ))}
+              {user ? (
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                  <Button to="/dashboard" size="lg" className="w-full sm:w-auto">Go to Dashboard</Button>
+                  <Button to="/trades/new" variant="secondary" size="lg" className="w-full sm:w-auto">Log New Trade</Button>
+                </div>
+              ) : (
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                  <Button to="/register" size="lg" className="w-full sm:w-auto">Start Journaling Free</Button>
+                  <Button to="/features" variant="secondary" size="lg" className="w-full sm:w-auto">View Features</Button>
+                </div>
+              )}
+              <p className="mt-5 text-sm font-medium text-slate-300">No signals. No hype. Built for structured review.</p>
+            </div>
+            <DashboardMockup />
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2">
-          <div>
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
             <SectionHeader
-              align="left"
-              eyebrow="The solution"
-              title="A disciplined trading review system in one place."
-              description="JAHZJOURNALS brings your trade log, screenshots, rules, emotions, performance metrics, and review process into one clean workflow."
+              eyebrow="The trader problem"
+              title="Most traders do not need more noise. They need better review."
+              description="If you cannot see your patterns, your journal cannot help you improve them."
             />
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              {['Log trades', 'Upload chart screenshots', 'Track rules', 'Track emotions', 'Analyze performance', 'Prepare smart reviews'].map((item) => (
-                <div key={item} className="flex items-center gap-3 text-sm font-semibold text-foreground">
-                  <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  {item}
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {problems.map((problem) => (
+                <div key={problem} className="flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 dark:border-red-400/20 dark:bg-red-400/[0.06]">
+                  <AlertTriangle size={20} className="shrink-0 text-rose-500 dark:text-rose-400" />
+                  <span className="text-sm font-semibold text-foreground">{problem}</span>
                 </div>
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-6 shadow-sm dark:shadow-none">
-            <div className="grid grid-cols-2 gap-4">
-              <StatCard label="Best pair" value="GBPUSD" />
-              <StatCard label="Worst pair" value="XAUUSD" tone="red" />
-              <StatCard label="Best session" value="London" tone="cyan" />
-              <StatCard label="Most broken rule" value="Early entry" tone="white" />
+        </section>
+
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2">
+            <div>
+              <SectionHeader
+                align="left"
+                eyebrow="The solution"
+                title="A disciplined trading review system in one place."
+                description="JAHZJOURNALS brings your trade log, screenshots, rules, emotions, performance metrics, and review process into one clean workflow."
+              />
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                {['Log trades', 'Upload chart screenshots', 'Track rules', 'Track emotions', 'Analyze performance', 'Prepare smart reviews'].map((item) => (
+                  <div key={item} className="flex items-center gap-3 text-sm font-semibold text-foreground">
+                    <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-6 shadow-sm dark:shadow-none">
+              <div className="grid grid-cols-2 gap-4">
+                <StatCard label="Best pair" value="GBPUSD" />
+                <StatCard label="Worst pair" value="XAUUSD" tone="red" />
+                <StatCard label="Best session" value="London" tone="cyan" />
+                <StatCard label="Most broken rule" value="Early entry" tone="white" />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionHeader
-            eyebrow="Core features"
-            title="Everything serious traders need to know what works and what hurts."
-            description="Built for forex, gold, indices, prop firm challenges, and screenshot-heavy smart money review."
-          />
-          <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {features.map(([title, Icon, description, to]) => (
-              <FeatureCard key={title} icon={Icon} title={title} description={description} to={to} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionHeader eyebrow="How it works" title="Five steps from execution to insight." />
-          <div className="mt-10 grid gap-5 md:grid-cols-5">
-            {['Log your trade', 'Upload screenshots', 'Track emotions and rules', 'Review analytics', 'Discover your edge'].map((step, index) => (
-              <div key={step} className="rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-5 shadow-sm dark:shadow-none">
-                <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">0{index + 1}</span>
-                <p className="mt-4 font-semibold text-foreground">{step}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-8 shadow-sm dark:shadow-none">
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
             <SectionHeader
-              align="left"
-              eyebrow="Discipline"
-              title="Your problem may not be your strategy. It may be your discipline."
-              description="Use scores, rule tracking, and emotion logs to separate strategy problems from behavior problems."
+              eyebrow="Core features"
+              title="Everything serious traders need to know what works and what hurts."
+              description="Built for forex, gold, indices, prop firm challenges, and screenshot-heavy smart money review."
             />
-            <div className="mt-8 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-foreground">Discipline score</span>
-                <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">{disciplineData.score}/100</span>
-              </div>
-              <div
-                className="mt-4 h-3 overflow-hidden rounded-full bg-surface-muted"
-                role="progressbar"
-                aria-label="Discipline score"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                aria-valuenow={disciplineData.score}
-              >
-                <div className="h-full rounded-full bg-emerald-400" style={{ width: `${disciplineData.score}%` }} />
-              </div>
-            </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {disciplineData.metrics.map((metric) => (
-                <DisciplineMetric key={metric.label} label={metric.label} value={metric.value} />
+            <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {features.map(([title, Icon, description, to]) => (
+                <FeatureCard key={title} icon={Icon} title={title} description={description} to={to} />
               ))}
             </div>
-            <DisciplineTrend trend={disciplineData.trend} weeklyChange={disciplineData.weeklyChange} />
-            <DisciplineStreak days={disciplineData.streak.days} description={disciplineData.streak.description} />
-            <DisciplineFocusArea focusArea={disciplineData.focusArea} onReviewViolations={handleReviewViolations} />
           </div>
-          <div className="space-y-5">
-            <PropFirmMockup />
-            <MentorMockup />
+        </section>
+
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <SectionHeader eyebrow="How it works" title="Five steps from execution to insight." />
+            <div className="mt-10 grid gap-5 md:grid-cols-5">
+              {['Log your trade', 'Upload screenshots', 'Track emotions and rules', 'Review analytics', 'Discover your edge'].map((step, index) => (
+                <div key={step} className="rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-5 shadow-sm dark:shadow-none">
+                  <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">0{index + 1}</span>
+                  <p className="mt-4 font-semibold text-foreground">{step}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionHeader eyebrow="Pricing preview" title="Start free. Upgrade when your review process grows." />
-          <div className="mt-10 grid gap-5 lg:grid-cols-3">
-            {pricing.map(([name, price, description, planFeatures, highlighted]) => (
-              <PricingCard key={name} name={name} price={price} description={description} features={planFeatures} highlighted={highlighted} />
-            ))}
+        {/* Economic News Calendar Acquisition Section */}
+        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-surface-muted/30 border-y border-border">
+          <div className="mx-auto max-w-7xl">
+            <div className="grid gap-10 lg:grid-cols-2 items-center">
+              <div>
+                <SectionHeader
+                  align="left"
+                  eyebrow="Economic event awareness"
+                  title="Disciplined traders do not gamble through red folder news."
+                  description="Plan your trading week around high-impact macroeconomic releases, and review how news volatility impacts your personal execution."
+                />
+                <div className="mt-8 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 size={18} className="text-emerald-500 mt-1 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Plan XAUUSD trades around high-impact USD events</p>
+                      <p className="text-xs text-muted mt-0.5">Know exactly when NFP, CPI, and FOMC drop so you avoid holding blind exposure during spread expansion.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 size={18} className="text-emerald-500 mt-1 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Avoid revenge trading around CPI and NFP volatility</p>
+                      <p className="text-xs text-muted mt-0.5">Configure safeguard buffers before and after major releases to enforce sitting on your hands when whipsaws occur.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 size={18} className="text-emerald-500 mt-1 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Review whether trade entries occurred during news volatility</p>
+                      <p className="text-xs text-muted mt-0.5">Tag macroeconomic catalysts in your post-trade journal to verify whether a loss came from strategy or news slippage.</p>
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-6 text-xs text-muted font-medium">For trade planning and structured review. Not trading advice or a promise of outcomes.</p>
+                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                  <Button to="/calendar" variant="secondary" size="md">
+                    Explore Live Economic Calendar (Free)
+                  </Button>
+                  <Button to="/register" size="md">
+                    Start Journaling Free
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+                <div className="flex items-center justify-between border-b border-border pb-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={18} className="text-emerald-400" />
+                    <span className="text-sm font-bold text-foreground">High-Impact Event Safeguard</span>
+                  </div>
+                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    High Impact (USD)
+                  </span>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div className="p-3.5 rounded-xl border border-border bg-surface-muted/60">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-xs font-bold text-foreground">Non-Farm Employment Change (NFP)</p>
+                        <p className="text-[11px] text-muted">Bureau of Labor Statistics • USD</p>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-foreground">13:30 UTC</span>
+                    </div>
+                    <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
+                      <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20">
+                        ±15m buffer recommended
+                      </span>
+                      <span>Spread expansion expected</span>
+                    </div>
+                  </div>
+                  <div className="p-3.5 rounded-xl border border-border bg-surface-muted/60">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-xs font-bold text-foreground">Consumer Price Index (CPI m/m)</p>
+                        <p className="text-[11px] text-muted">Bureau of Labor Statistics • USD</p>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-foreground">13:30 UTC</span>
+                    </div>
+                    <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
+                        Journal news tag ready
+                      </span>
+                      <span>Catalyst review tracking</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-muted">
+                  <span>Synced with ForexFactory & TradingView</span>
+                  <Link to="/calendar" className="text-emerald-400 font-semibold hover:underline">
+                    View Live Calendar →
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionHeader eyebrow="Early feedback" title="Built for traders who care about process." />
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
-            <TestimonialCard quote="This is the kind of structure beginners need before they start blaming the market." name="Forex mentor" role="Academy founder placeholder" />
-            <TestimonialCard quote="The screenshot workflow makes review feel serious, not scattered." name="Gold trader" role="XAUUSD trader placeholder" />
-            <TestimonialCard quote="Prop challenge tracking is exactly where discipline matters most." name="Challenge trader" role="Funded account placeholder" />
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-8 shadow-sm dark:shadow-none">
+              <SectionHeader
+                align="left"
+                eyebrow="Discipline"
+                title="Your problem may not be your strategy. It may be your discipline."
+                description="Use scores, rule tracking, and emotion logs to separate strategy problems from behavior problems."
+              />
+              <div className="mt-8 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-foreground">Discipline score</span>
+                  <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">{disciplineData.score}/100</span>
+                </div>
+                <div
+                  className="mt-4 h-3 overflow-hidden rounded-full bg-surface-muted"
+                  role="progressbar"
+                  aria-label="Discipline score"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow={disciplineData.score}
+                >
+                  <div className="h-full rounded-full bg-emerald-400" style={{ width: `${disciplineData.score}%` }} />
+                </div>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {disciplineData.metrics.map((metric) => (
+                  <DisciplineMetric key={metric.label} label={metric.label} value={metric.value} />
+                ))}
+              </div>
+              <DisciplineTrend trend={disciplineData.trend} weeklyChange={disciplineData.weeklyChange} />
+              <DisciplineStreak days={disciplineData.streak.days} description={disciplineData.streak.description} />
+              <DisciplineFocusArea focusArea={disciplineData.focusArea} onReviewViolations={handleReviewViolations} />
+            </div>
+            <div className="space-y-5">
+              <PropFirmMockup />
+              <MentorMockup />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <SectionHeader eyebrow="FAQ" title="Responsible answers before you start." />
-          <div className="mt-10 space-y-4">
-            {faqs.map(([question, answer]) => (
-              <FAQItem key={question} question={question} answer={answer} />
-            ))}
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <SectionHeader eyebrow="Pricing preview" title="Start free. Upgrade when your review process grows." />
+            <div className="mt-10 grid gap-5 lg:grid-cols-3">
+              {pricing.map((plan) => (
+                <PricingCard
+                  key={plan.name}
+                  name={plan.name}
+                  price={plan.price}
+                  period={plan.period}
+                  description={plan.description}
+                  limits={plan.limits}
+                  features={plan.features}
+                  highlighted={plan.highlighted}
+                  to={plan.to}
+                  cta={plan.cta}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <CTASection />
-    </main>
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-4xl">
+            <SectionHeader eyebrow="FAQ" title="Responsible answers before you start." />
+            <div className="mt-10 space-y-4">
+              {faqs.map(([question, answer], index) => (
+                <FAQItem
+                  key={question}
+                  question={question}
+                  answer={answer}
+                  defaultOpen={index === 0}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
 
-    <Footer />
-  </div>
+        <CTASection />
+      </main>
+
+      <Footer />
+    </div>
   );
 };
 

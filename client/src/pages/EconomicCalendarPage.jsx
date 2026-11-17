@@ -25,6 +25,7 @@ import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import NewsAlertPreferencesModal from '../components/calendar/NewsAlertPreferencesModal';
 import CalendarPreferencesModal from '../components/calendar/CalendarPreferencesModal';
+import CalendarDataDisclosure from '../components/calendar/CalendarDataDisclosure';
 import { useAuth } from '../context/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -624,6 +625,9 @@ export default function EconomicCalendarPage() {
           </button>
         </div>
       </div>
+
+      {/* Prominent Data Source & Timing Disclosure */}
+      <CalendarDataDisclosure />
 
       {/* Guest-to-Account Migration Prompt Banner */}
       {user && guestMigrationCandidate && (
@@ -1449,27 +1453,41 @@ export default function EconomicCalendarPage() {
       {/* Anonymous Trader Callout Banner */}
       {!user && (
         <div className="mt-8 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-surface to-surface p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-          <div className="space-y-2 max-w-2xl">
+          <div className="space-y-3 max-w-2xl">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider">
               <span>⚡</span> Free Forex Journaling
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-foreground">
-              Never get blindsided by high-impact news spikes again.
+              Connect Economic News to Disciplined Journaling
             </h3>
-            <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              JAHZJOURNALS automatically correlates your trade entries with this economic calendar, tags news catalysts in your review, and syncs your calendar preferences across devices.
+            <div className="space-y-1.5 text-xs text-muted leading-relaxed">
+              <p className="flex items-center gap-2 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                <span>Plan XAUUSD trades around high-impact USD events</span>
+              </p>
+              <p className="flex items-center gap-2 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                <span>Avoid revenge trading around CPI and NFP volatility</span>
+              </p>
+              <p className="flex items-center gap-2 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                <span>Review whether trade entries occurred during news volatility</span>
+              </p>
+            </div>
+            <p className="text-[11px] text-muted/80">
+              For trade planning and structured review. Not trading advice or financial recommendations.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
             <Link
               to="/register"
-              className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black shadow-md shadow-emerald-500/20 transition-all text-center whitespace-nowrap"
+              className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black shadow-md shadow-emerald-500/20 transition-all text-center whitespace-nowrap cursor-pointer"
             >
               Start Journaling Free →
             </Link>
             <Link
               to="/risk-calculator"
-              className="inline-flex items-center justify-center px-4 py-3 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-bold transition-all text-center whitespace-nowrap"
+              className="inline-flex items-center justify-center px-4 py-3 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-bold transition-all text-center whitespace-nowrap cursor-pointer"
             >
               Position Size Calculator
             </Link>

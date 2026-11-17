@@ -19,23 +19,39 @@ export const PAGE_SEO = {
       getFaqSchema([
         {
           question: 'What is JAHZJOURNALS?',
-          answer: 'JAHZJOURNALS is an AI-powered Forex and financial market trading journal designed to help traders log trades, track emotions, enforce risk management rules, and analyze performance with institutional-grade metrics.'
+          answer: 'JAHZJOURNALS is a trading journal and analytics platform that helps you log trades, review screenshots, track discipline, and identify recurring mistakes in your execution.'
         },
         {
-          question: 'How does the AI Trade Review work?',
-          answer: 'JAHZJOURNALS AI analyzes entry/exit prices, risk-to-reward ratios, drawdown percentages, trade screenshots, and discipline rules to give traders personalized coaching recommendations.'
+          question: 'Is JAHZJOURNALS a signal service or financial adviser?',
+          answer: 'No. JAHZJOURNALS does not provide trade signals, tell you what to trade, predict markets, or guarantee outcomes. It helps you review your own execution with structure.'
         },
         {
-          question: 'Does JAHZJOURNALS support Prop Firm accounts?',
-          answer: 'Yes! JAHZJOURNALS has built-in prop firm challenge rules tracking max daily drawdown, overall trailing drawdown, profit targets, and minimum trading days for FTMO, FundedNext, MyForexFunds, and custom prop firm challenges.'
+          question: 'Can I start free without a card?',
+          answer: 'Yes. The Free plan is free forever and does not require a credit or debit card. You can log up to 20 trades per month, use one trading account, and upload one screenshot per trade.'
+        },
+        {
+          question: 'Can I upload chart screenshots?',
+          answer: 'Yes. JAHZJOURNALS is built for screenshot-based trade review. Your screenshot limit depends on your plan: Free includes 1 screenshot per trade, Starter includes 3, and Pro includes 10.'
+        },
+        {
+          question: 'Can it help with prop-firm evaluations?',
+          answer: 'Yes. You can track drawdown limits, profit-target progress, trading days, and rule discipline while preparing for prop-firm evaluations. JAHZJOURNALS cannot guarantee that you will pass.'
+        },
+        {
+          question: 'Does it work on mobile?',
+          answer: 'Yes. JAHZJOURNALS is mobile-first and works across phones, tablets, and laptops, so you can log and review trades wherever you trade.'
+        },
+        {
+          question: 'How does JAHZ AI work?',
+          answer: 'JAHZ AI analyses your journal data, submitted screenshots, rules, and trading behaviour to highlight patterns and possible mistakes. It is designed for self-review—not trade signals, market predictions, or financial advice.'
         }
       ])
     ]
   },
   '/features': {
-    title: 'Features | AI Trade Reviews, Edge Finder & Performance Analytics',
-    description: 'Explore JAHZJOURNALS features: AI trade review, edge finder, trade screenshot analysis, weekly coach, risk calculator, and prop firm rule monitors.',
-    keywords: 'AI Trade Review, Forex Edge Finder, Trade Screenshot Analyzer, Weekly Trading Coach, Prop Firm Rule Monitor',
+    title: 'Features | Trade Reviews, Edge Finder & Performance Analytics',
+    description: 'Explore JAHZJOURNALS features: trade review, edge finder, trade screenshot analysis, weekly coach, risk calculator, and prop firm rule monitors.',
+    keywords: 'Trade Review, Forex Edge Finder, Trade Screenshot Analyzer, Weekly Trading Coach, Prop Firm Rule Monitor',
     breadcrumbs: [
       { name: 'Home', path: '/' },
       { name: 'Features', path: '/features' }
@@ -48,28 +64,17 @@ export const PAGE_SEO = {
     ]
   },
   '/pricing': {
-    title: 'Pricing & Plans | Free, Pro & Founding Trader Lifetime Access',
-    description: 'Simple, transparent pricing for every trader. Start free or upgrade to Pro and Founding Trader lifetime tiers with unlimited AI trade reviews.',
-    keywords: 'Forex Trading Journal Pricing, Free Trading Journal, Founding Trader Lifetime Plan, JAHZJOURNALS Subscription',
+    title: 'Pricing & Plans | Free, Starter & Pro Forex Journaling — JAHZJOURNALS',
+    description: 'Simple, transparent pricing for disciplined forex traders. Start free with 20 trades/month, or upgrade to Starter (₦4,000/mo) and Pro (₦8,500/mo) for psychology tracking, prop-firm guards, and AI reviews.',
+    keywords: 'Forex Trading Journal Pricing, Free Trading Journal, Starter Plan, Pro Plan, JAHZJOURNALS Subscription',
     breadcrumbs: [
       { name: 'Home', path: '/' },
       { name: 'Pricing', path: '/pricing' }
     ],
     schemas: [
-      getProductSchema(),
       getBreadcrumbSchema([
         { name: 'Home', path: '/' },
         { name: 'Pricing', path: '/pricing' }
-      ]),
-      getFaqSchema([
-        {
-          question: 'Can I use JAHZJOURNALS for free?',
-          answer: 'Yes, our Free Trader plan allows you to log unlimited trades, track performance metrics, and access core analytics without a credit card.'
-        },
-        {
-          question: 'What is the Founding Trader tier?',
-          answer: 'The Founding Trader tier offers a one-time payment for lifetime access to all current and future AI features, unlimited screenshot reviews, and priority support.'
-        }
       ])
     ]
   },
@@ -104,8 +109,8 @@ export const PAGE_SEO = {
     ]
   },
   '/about': {
-    title: 'About JAHZJOURNALS | Empowering Traders with AI Intelligence',
-    description: 'Learn how JAHZJOURNALS was built by traders for traders to eliminate emotional mistakes, quantify edge, and accelerate trader profitability with AI.',
+    title: 'About JAHZJOURNALS | Empowering Traders with Structured Intelligence',
+    description: 'Learn how JAHZJOURNALS was built by traders for traders to eliminate emotional mistakes, quantify edge, and accelerate trader consistency.',
     keywords: 'About JAHZJOURNALS, Trading Journal Story, Forex Analytics Vision, Jahsmine Aninta Founder',
     breadcrumbs: [
       { name: 'Home', path: '/' },
