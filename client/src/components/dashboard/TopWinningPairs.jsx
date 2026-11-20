@@ -163,7 +163,7 @@ const TopWinningPairs = ({
                   </div>
 
                   {/* Visual ratio bar */}
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800/80 flex">
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800/80 flex">
                     <div
                       className="h-full bg-emerald-500 transition-all duration-500"
                       style={{ width: `${Math.min(winRate, 100)}%` }}

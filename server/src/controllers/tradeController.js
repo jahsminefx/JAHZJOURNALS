@@ -317,12 +317,18 @@ const createTrade = async (req, res) => {
     await syncMentorCohortTradeSharesForTrade(trade, req.user.id);
 
     // Automatically evaluate Strategy Risk Guard rules across all tiers
-    const { evaluateAndRecordTradeRules } = require('../services/riskGuardService');
-    const riskGuardViolations = await evaluateAndRecordTradeRules(trade.id, req.user.id);
+    // Automatically evaluate Strategy Risk Guard rules across all tiers
+    let riskGuardViolations = [];
+    try {
+      const { evaluateAndRecordTradeRules } = require('../services/riskGuardService');
+      riskGuardViolations = (await evaluateAndRecordTradeRules(trade.id, req.user.id)) || [];
+    } catch (rgError) {
+      console.warn('[createTrade] Non-critical risk guard evaluation warning:', rgError.message);
+    }
 
     res.status(201).json({
       ...trade,
-      riskGuardViolations: riskGuardViolations || [],
+      riskGuardViolations,
     });
   } catch (error) {
     console.error('Error in createTrade:', error);
@@ -359,12 +365,17 @@ const getTradeById = async (req, res) => {
     }
 
     // Automatically evaluate Strategy Risk Guard rules across all tiers
-    const { evaluateAndRecordTradeRules } = require('../services/riskGuardService');
-    const riskGuardViolations = await evaluateAndRecordTradeRules(trade.id, req.user.id);
+    let riskGuardViolations = [];
+    try {
+      const { evaluateAndRecordTradeRules } = require('../services/riskGuardService');
+      riskGuardViolations = (await evaluateAndRecordTradeRules(trade.id, req.user.id)) || [];
+    } catch (rgError) {
+      console.warn('[getTradeById] Non-critical risk guard evaluation warning:', rgError.message);
+    }
 
     res.json({
       ...trade,
-      riskGuardViolations: riskGuardViolations || [],
+      riskGuardViolations,
     });
   } catch (error) {
     console.error('Error in getTradeById:', error);

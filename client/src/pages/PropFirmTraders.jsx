@@ -33,8 +33,8 @@ const PropFirmTraders = () => (
             <SectionHeader align="left" eyebrow="Challenge pain points" title="Most challenge failures start before the trade is placed." />
             <div className="mt-8 grid gap-3">
               {pains.map((pain) => (
-                <div key={pain} className="flex gap-3 rounded-xl border border-red-400/15 bg-red-400/[0.04] p-4 text-sm text-gray-200">
-                  <AlertTriangle size={18} className="text-red-300" />
+                <div key={pain} className="flex gap-3 rounded-xl border border-red-400/20 bg-red-500/[0.06] dark:bg-red-400/[0.04] p-4 text-sm text-foreground">
+                  <AlertTriangle size={18} className="text-red-600 dark:text-red-300" />
                   {pain}
                 </div>
               ))}
@@ -49,7 +49,7 @@ const PropFirmTraders = () => (
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {helps.map((item) => (
               <div key={item} className="flex gap-3 rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-4 shadow-sm dark:shadow-none">
-                <CheckCircle2 size={18} className="text-emerald-300" />
+                <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-300" />
                 <span className="text-sm text-muted">{item}</span>
               </div>
             ))}

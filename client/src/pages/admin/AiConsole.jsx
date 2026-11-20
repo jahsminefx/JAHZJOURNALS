@@ -21,10 +21,10 @@ const AiConsole = () => {
              <Cpu size={250} />
            </div>
            <div className="relative z-10 w-full">
-             <h1 className="text-2xl font-black text-purple-400 tracking-wide flex items-center gap-3">
+             <h1 className="text-2xl font-black text-purple-700 dark:text-purple-400 tracking-wide flex items-center gap-3">
                <Cpu size={28} /> AI Operations & Control
              </h1>
-             <p className="text-purple-400/80 text-sm mt-2 font-medium max-w-2xl">
+             <p className="text-purple-700/85 dark:text-purple-400/80 text-sm mt-2 font-medium max-w-2xl">
                Monitor AI usage, track costs, configure model providers, and control feature access across all trading tools.
              </p>
              
@@ -33,7 +33,7 @@ const AiConsole = () => {
                  <button 
                    key={tab.id} 
                    onClick={() => setActiveTab(tab.id)}
-                   className={`px-4 py-2 rounded-md text-sm font-bold tracking-wide transition whitespace-nowrap ${activeTab === tab.id ? 'bg-purple-500 text-gray-950 shadow-md shadow-purple-500/20' : 'text-purple-400/60 hover:bg-purple-500/10 hover:text-purple-400'}`}
+                   className={`px-4 py-2 rounded-md text-sm font-bold tracking-wide transition whitespace-nowrap ${activeTab === tab.id ? 'bg-purple-600 text-white dark:bg-purple-500 dark:text-gray-950 shadow-md shadow-purple-500/20' : 'text-purple-700/75 dark:text-purple-400/60 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400'}`}
                  >
                    {tab.label}
                  </button>
@@ -71,7 +71,7 @@ const DashboardTab = () => {
             <div className="rounded-xl border border-border bg-surface p-4 shadow-sm flex flex-col justify-between">
               <div className="flex items-center gap-2 text-muted-foreground"><DollarSign size={16}/> <span className="text-xs font-bold uppercase">Estimated Cost ($)</span></div>
               <div className="mt-4 flex items-end justify-between">
-                 <h3 className="text-3xl font-black text-purple-400">${Number(data.costs.totalCost).toFixed(2)}</h3>
+                 <h3 className="text-3xl font-black text-purple-700 dark:text-purple-400">${Number(data.costs.totalCost).toFixed(2)}</h3>
                  <div className="text-xs text-muted-foreground">This Month: ${Number(data.costs.monthCost).toFixed(2)}</div>
               </div>
             </div>
@@ -153,7 +153,7 @@ const ExplorerTab = () => {
                     </span>
                  </div>
                  <div className="text-xs">
-                    <div className="font-bold text-purple-400 capitalize">{req.featureType.replace('_', ' ')}</div>
+                    <div className="font-bold text-purple-700 dark:text-purple-400 capitalize">{req.featureType.replace('_', ' ')}</div>
                     <div className="text-muted-foreground font-mono truncate">{req.provider} • {req.model}</div>
                  </div>
                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/60">
@@ -185,13 +185,13 @@ const ExplorerTab = () => {
                     <td className="px-6 py-4">
                        {req.user ? (
                          <>
-                           <div className="font-bold text-foreground">{req.user.name} <span className="font-mono text-[10px] text-purple-400 font-normal ml-2">{req.user.subscriptionPlan}</span></div>
+                           <div className="font-bold text-foreground">{req.user.name} <span className="font-mono text-[10px] text-purple-700 dark:text-purple-400 font-normal ml-2">{req.user.subscriptionPlan}</span></div>
                            <div className="text-xs text-muted-foreground mt-0.5">{req.user.email}</div>
                          </>
                        ) : <div className="text-muted-foreground italic">Anonymous / System</div>}
                     </td>
                     <td className="px-6 py-4">
-                       <div className="font-bold text-purple-400 capitalize">{req.featureType.replace('_', ' ')}</div>
+                       <div className="font-bold text-purple-700 dark:text-purple-400 capitalize">{req.featureType.replace('_', ' ')}</div>
                        <div className="text-xs text-muted-foreground mt-0.5 font-mono">{req.provider} • {req.model}</div>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -303,7 +303,7 @@ const ConfigTab = () => {
         </div>
 
         <div className="flex justify-end">
-           <button disabled={saving} onClick={saveConstraints} className="px-6 py-2.5 bg-purple-500 text-gray-950 font-black tracking-wide rounded-xl hover:bg-purple-400 disabled:opacity-50 transition">
+           <button disabled={saving} onClick={saveConstraints} className="px-6 py-2.5 bg-purple-600 text-white dark:bg-purple-500 dark:text-gray-950 font-black tracking-wide rounded-xl hover:bg-purple-500 dark:hover:bg-purple-400 disabled:opacity-50 transition">
               {saving ? 'Saving...' : 'Save AI Settings'}
            </button>
         </div>

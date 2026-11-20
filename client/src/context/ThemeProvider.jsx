@@ -1,10 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { loadSettings } from '../utils/settings';
+import { loadSettings, saveSettings } from '../utils/settings';
 
 export const THEMES = {
   LIGHT: 'light',
   DARK: 'dark',
   SYSTEM: 'system',
+};
+
+const resolveThemeValue = (targetTheme) => {
+  if (targetTheme === THEMES.SYSTEM) {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? THEMES.DARK : THEMES.LIGHT;
+    }
+    return THEMES.DARK;
+  }
+  return targetTheme === THEMES.LIGHT ? THEMES.LIGHT : THEMES.DARK;
 };
 
 const ThemeContext = createContext();
@@ -27,24 +37,29 @@ export const ThemeProvider = ({ children }) => {
     }
   });
 
-  const [resolvedTheme, setResolvedTheme] = useState(theme);
+  const [resolvedTheme, setResolvedTheme] = useState(() => resolveThemeValue(theme));
 
   useEffect(() => {
     try {
       localStorage.setItem('jahzjournals-theme', theme);
+      const currentSettings = loadSettings();
+      if (currentSettings?.appearance?.theme !== theme) {
+        saveSettings({
+          ...currentSettings,
+          appearance: {
+            ...(currentSettings?.appearance || {}),
+            theme,
+          },
+        });
+      }
     } catch (e) {}
 
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
 
-    if (theme === THEMES.SYSTEM) {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? THEMES.DARK : THEMES.LIGHT;
-      root.classList.add(systemTheme);
-      setResolvedTheme(systemTheme);
-    } else {
-      root.classList.add(theme);
-      setResolvedTheme(theme);
-    }
+    const nextResolved = resolveThemeValue(theme);
+    root.classList.add(nextResolved);
+    setResolvedTheme(nextResolved);
   }, [theme]);
 
   useEffect(() => {

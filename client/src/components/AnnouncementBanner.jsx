@@ -46,17 +46,17 @@ const AnnouncementBanner = () => {
         const isHigh = a.priority === 'HIGH';
 
         const borderColor = isUrgent 
-          ? 'border-rose-500/40 bg-rose-950/20' 
+          ? 'border-rose-500/40 bg-rose-500/10 dark:bg-rose-950/20' 
           : isHigh 
-          ? 'border-amber-500/40 bg-amber-950/20' 
-          : 'border-emerald-500/40 bg-emerald-950/20';
+          ? 'border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20' 
+          : 'border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-950/20';
 
-        const iconColor = isUrgent ? 'text-rose-400' : isHigh ? 'text-amber-400' : 'text-emerald-400';
+        const iconColor = isUrgent ? 'text-rose-600 dark:text-rose-400' : isHigh ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400';
 
         return (
           <div
             key={a.id}
-            className={`relative flex items-start gap-4 p-4 sm:p-5 rounded-2xl border ${borderColor} backdrop-blur-md transition-all shadow-lg shadow-black/20 group`}
+            className={`relative flex items-start gap-4 p-4 sm:p-5 rounded-2xl border ${borderColor} backdrop-blur-md transition-all shadow-sm dark:shadow-lg dark:shadow-black/20 group`}
           >
             {/* Megaphone Icon Badge */}
             <div className={`h-10 w-10 rounded-xl bg-surface-muted/80 flex items-center justify-center shrink-0 border border-border/50 ${iconColor}`}>
@@ -68,10 +68,10 @@ const AnnouncementBanner = () => {
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
                   isUrgent 
-                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' 
+                    ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30' 
                     : isHigh 
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' 
-                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' 
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                 }`}>
                   {a.priority || 'ANNOUNCEMENT'}
                 </span>
@@ -80,7 +80,7 @@ const AnnouncementBanner = () => {
                 </h4>
               </div>
 
-              <p className="text-xs sm:text-sm text-muted/90 leading-relaxed whitespace-pre-wrap">
+              <p className="text-xs sm:text-sm text-muted leading-relaxed whitespace-pre-wrap">
                 {a.content}
               </p>
 
@@ -90,7 +90,7 @@ const AnnouncementBanner = () => {
                     href={a.actionUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors"
                   >
                     Learn More
                     <ExternalLink className="w-3 h-3" />

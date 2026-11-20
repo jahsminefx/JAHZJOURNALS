@@ -174,7 +174,7 @@ const DisciplineTrend = ({ trend, weeklyChange }) => {
           <h3 className="font-semibold text-foreground">Discipline trend</h3>
           <p className="mt-1 text-sm text-gray-500">Last 7 trading days</p>
         </div>
-        <p className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm font-bold text-emerald-300">
+        <p className="rounded-full border border-emerald-500/30 dark:border-emerald-400/20 bg-emerald-500/10 dark:bg-emerald-400/10 px-3 py-1 text-sm font-bold text-emerald-700 dark:text-emerald-300">
           +{weeklyChange} points this week
         </p>
       </div>
@@ -182,22 +182,22 @@ const DisciplineTrend = ({ trend, weeklyChange }) => {
         <ResponsiveContainer width="100%" height="100%">
           <RechartsLineChart data={data} margin={{ top: 6, right: 4, bottom: 6, left: 4 }}>
             <Tooltip
-              cursor={{ stroke: 'rgba(52, 211, 153, 0.18)', strokeWidth: 2 }}
+              cursor={{ stroke: 'rgba(16, 185, 129, 0.25)', strokeWidth: 2 }}
               contentStyle={{
                 background: 'rgb(var(--surface))',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgb(var(--border))',
                 borderRadius: '10px',
-                color: '#f8fafc',
+                color: 'rgb(var(--foreground))',
               }}
-              labelStyle={{ color: '#94a3b8' }}
+              labelStyle={{ color: 'rgb(var(--muted-foreground))' }}
             />
             <Line
               type="monotone"
               dataKey="score"
-              stroke="#34d399"
+              stroke="#10b981"
               strokeWidth={3}
               dot={false}
-              activeDot={{ r: 5, fill: '#34d399', stroke: '#ecfdf5', strokeWidth: 2 }}
+              activeDot={{ r: 5, fill: '#10b981', stroke: 'rgb(var(--surface))', strokeWidth: 2 }}
             />
           </RechartsLineChart>
         </ResponsiveContainer>
@@ -207,8 +207,8 @@ const DisciplineTrend = ({ trend, weeklyChange }) => {
 };
 
 const DisciplineStreak = ({ days, description }) => (
-  <div className="mt-5 flex gap-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300">
+  <div className="mt-5 flex gap-4 rounded-xl border border-emerald-500/30 dark:border-emerald-400/20 bg-emerald-500/10 dark:bg-emerald-400/10 p-4">
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 dark:bg-emerald-400/15 text-emerald-700 dark:text-emerald-300">
       <Flame size={22} aria-hidden="true" />
     </div>
     <div>

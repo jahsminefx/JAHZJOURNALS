@@ -24,7 +24,7 @@ const RegisterReassurance = ({ isMobile = false }) => (
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400">
         Start Free
       </p>
-      <h2 className={`font-black text-foreground ${isMobile ? 'text-lg mt-1' : 'text-2xl sm:text-3xl mt-2 text-white'}`}>
+      <h2 className={`font-black ${isMobile ? 'text-lg mt-1 text-foreground' : 'text-2xl sm:text-3xl mt-2 text-white'}`}>
         Review your trading with structure.
       </h2>
       <p className={`mt-2 text-xs sm:text-sm leading-relaxed ${isMobile ? 'text-muted' : 'text-slate-300'}`}>

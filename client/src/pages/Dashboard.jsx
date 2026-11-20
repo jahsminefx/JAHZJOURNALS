@@ -299,14 +299,14 @@ const Dashboard = () => {
       <DashboardPromotionBanner />
 
       {/* Daily Review Prompt Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/70 to-slate-900 border border-indigo-800/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+      <div className="bg-gradient-to-r from-surface via-indigo-500/10 to-surface dark:from-slate-900 dark:via-indigo-950/70 dark:to-slate-900 border border-indigo-500/30 dark:border-indigo-800/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm dark:shadow-xl">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-xl shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/15 dark:bg-indigo-600/30 border border-indigo-500/30 dark:border-indigo-500/40 flex items-center justify-center text-xl shrink-0">
             📝
           </div>
           <div>
-            <h4 className="text-sm font-extrabold text-white">Complete Today's Daily Review</h4>
-            <p className="text-xs text-slate-300">
+            <h4 className="text-sm font-extrabold text-foreground">Complete Today's Daily Review</h4>
+            <p className="text-xs text-muted">
               Reflect on your trade execution, review metrics, and receive JAHZ AI performance coaching.
             </p>
           </div>
@@ -359,7 +359,7 @@ const Dashboard = () => {
               accountId={accountId}
             />
             <TradeOutcomeChart className="xl:col-span-3" outcomes={dashboard.tradeOutcomes || {}} />
-            <WeeklyGoalProgress className="xl:col-span-3" goals={dashboard.weeklyGoals || []} currency={currency} />
+            <WeeklyGoalProgress className="xl:col-span-3" goals={dashboard.weeklyGoals || []} currency={currency} accountId={accountId} />
             <div className="md:hidden">
               <UpgradeCard />
             </div>

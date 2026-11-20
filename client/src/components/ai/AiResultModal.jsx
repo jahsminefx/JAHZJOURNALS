@@ -84,7 +84,7 @@ const AiResultModal = ({ request, onClose }) => {
 
           {/* Failed Error Message */}
           {request.status === 'FAILED' && (
-            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs leading-relaxed">
+            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs leading-relaxed">
               <strong className="block mb-1 font-bold">Analysis Failed:</strong>
               {request.errorMessage || 'The AI request timed out or encountered an error. Please try generating again.'}
             </div>
@@ -98,7 +98,7 @@ const AiResultModal = ({ request, onClose }) => {
                 <div className="space-y-4">
                   {output.strengths?.length > 0 && (
                     <div>
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-400 mb-2">Key Strengths</h4>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">Key Strengths</h4>
                       <ul className="list-disc list-inside space-y-1 text-muted">
                         {output.strengths.map((s, i) => <li key={i}>{s}</li>)}
                       </ul>
@@ -107,7 +107,7 @@ const AiResultModal = ({ request, onClose }) => {
 
                   {(output.weaknesses?.length > 0 || output.mistakes?.length > 0) && (
                     <div>
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-rose-400 mb-2">Areas for Growth / Mistakes</h4>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-2">Areas for Growth / Mistakes</h4>
                       <ul className="list-disc list-inside space-y-1 text-muted">
                         {(output.weaknesses || output.mistakes || []).map((w, i) => <li key={i}>{w}</li>)}
                       </ul>
@@ -115,8 +115,8 @@ const AiResultModal = ({ request, onClose }) => {
                   )}
 
                   {(output.actionableAdvice || output.recommendedAction) && (
-                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-400 mb-1">Actionable Recommendation</h4>
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300">
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1">Actionable Recommendation</h4>
                       <p className="italic">"{output.actionableAdvice || output.recommendedAction}"</p>
                     </div>
                   )}
@@ -126,12 +126,12 @@ const AiResultModal = ({ request, onClose }) => {
               {/* Edge Finder Output */}
               {output.candidateEdges?.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-purple-400 mb-2">Discovered Edges</h4>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-purple-600 dark:text-purple-400 mb-2">Discovered Edges</h4>
                   {output.candidateEdges.map((edge, idx) => (
                     <div key={idx} className="p-3.5 rounded-xl bg-surface-muted border border-border/80">
                       <div className="flex justify-between items-center mb-1">
                         <span className="font-bold text-foreground text-sm">{edge.edgeTitle}</span>
-                        <span className="text-xs font-bold text-purple-400">Win Rate: {edge.historicalWinRate}%</span>
+                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400">Win Rate: {edge.historicalWinRate}%</span>
                       </div>
                       <p className="text-xs text-muted leading-relaxed">{edge.reasoning}</p>
                     </div>
@@ -155,7 +155,7 @@ const AiResultModal = ({ request, onClose }) => {
             <Link
               to={`/trades/${request.tradeId}`}
               onClick={onClose}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors"
             >
               View Full Trade Detail & Review <ArrowUpRight size={14} />
             </Link>

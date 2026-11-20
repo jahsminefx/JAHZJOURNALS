@@ -13,7 +13,10 @@ const {
   buildCalendar,
   buildSessionPerformance,
   buildTopPairs,
+  calculateWeeklyGoalItems,
   filterTradesByPeriod,
+  filterTradesForUtcWeek,
+  getCurrentUtcWeekWindow,
   getPreviousPeriod,
 } = require('../src/services/dashboardAnalyticsService');
 
@@ -339,4 +342,138 @@ test('dashboard analytics service preserves ownership and goal-query safeguards 
   assert.match(userController, /upsertWeeklyTradingGoal/);
   assert.match(userController, /where:\s*{\s*id: tradingAccountId,\s*userId: req\.user\.id\s*}/);
   assert.match(analyticsController, /Cache-Control', 'no-store'/);
+});
+
+test('weekly goal UTC week window uses Monday 00:00 UTC inclusive and following Monday 00:00 UTC exclusive', () => {
+  // Wednesday, July 8, 2026 -> week is Monday July 6 00:00:00Z to < Monday July 13 00:00:00Z
+  const { startOfWeek, endOfWeekExclusive, weekStart, weekEnd } = getCurrentUtcWeekWindow(
+    new Date('2026-07-08T14:30:00.000Z'),
+  );
+
+  assert.equal(startOfWeek.toISOString(), '2026-07-06T00:00:00.000Z');
+  assert.equal(endOfWeekExclusive.toISOString(), '2026-07-13T00:00:00.000Z');
+  assert.equal(weekStart, '2026-07-06');
+  assert.equal(weekEnd, '2026-07-12');
+
+  const trades = [
+    makeTrade({ id: 'before-week', exitTime: '2026-07-05T23:59:59.999Z' }),
+    makeTrade({ id: 'monday-start', exitTime: '2026-07-06T00:00:00.000Z' }),
+    makeTrade({ id: 'sunday-end', exitTime: '2026-07-12T23:59:59.999Z' }),
+    makeTrade({ id: 'next-monday', exitTime: '2026-07-13T00:00:00.000Z' }),
+  ];
+
+  assert.deepEqual(
+    filterTradesForUtcWeek(trades, startOfWeek, endOfWeekExclusive).map((t) => t.id),
+    ['monday-start', 'sunday-end'],
+  );
+});
+
+test('weekly goal calculation enforces authoritative account scope and handles all goal metrics', () => {
+  const accounts = [
+    makeAccount({ id: 'acc-1', name: 'FTMO Challenge', currency: 'USD' }),
+    makeAccount({ id: 'acc-2', name: 'Personal EUR', currency: 'EUR' }),
+  ];
+  const now = new Date('2026-07-08T12:00:00.000Z');
+  const trades = [
+    makeTrade({ id: 't1', tradingAccountId: 'acc-1', result: 'WIN', profitLossAmount: 600, exitTime: '2026-07-06T10:00:00Z' }),
+    makeTrade({ id: 't2', tradingAccountId: 'acc-1', result: 'LOSS', profitLossAmount: -250, exitTime: '2026-07-07T10:00:00Z' }),
+    makeTrade({ id: 't3', tradingAccountId: 'acc-1', result: 'BREAKEVEN', profitLossAmount: 0, exitTime: '2026-07-07T14:00:00Z' }),
+    makeTrade({ id: 't4-open', tradingAccountId: 'acc-1', result: 'OPEN', status: 'ACTIVE', profitLossAmount: 0, entryTime: '2026-07-08T09:00:00Z' }),
+    makeTrade({ id: 't5-prev-week', tradingAccountId: 'acc-1', result: 'WIN', profitLossAmount: 2000, exitTime: '2026-07-03T10:00:00Z' }),
+    makeTrade({ id: 't6-other-acc', tradingAccountId: 'acc-2', result: 'WIN', profitLossAmount: 1000, exitTime: '2026-07-07T12:00:00Z' }),
+  ];
+
+  // Scenario B: Account-specific goal remains visible on All Accounts and excludes acc-2 + prior week
+  const acc1Goal = {
+    id: 'goal-1',
+    tradingAccountId: 'acc-1',
+    active: true,
+    profitTarget: 1000,
+    tradeCountTarget: 5,
+    winRateTarget: 50,
+    maxLossTarget: 200,
+  };
+  const itemsOnAllAccounts = calculateWeeklyGoalItems({
+    goal: acc1Goal,
+    trades,
+    accounts,
+    dashboardAccountId: null,
+    now,
+  });
+
+  const profit = itemsOnAllAccounts.find((g) => g.key === 'profitTarget');
+  const count = itemsOnAllAccounts.find((g) => g.key === 'tradeCountTarget');
+  const winRate = itemsOnAllAccounts.find((g) => g.key === 'winRateTarget');
+  const maxLoss = itemsOnAllAccounts.find((g) => g.key === 'maxLossTarget');
+
+  assert.equal(profit.scopeLabel, 'FTMO Challenge');
+  assert.equal(profit.isDifferentFromDashboardAccount, false);
+  assert.equal(profit.currentValue, 350); // 600 - 250 (ignores acc-2 +1000 and prior week +2000)
+  assert.equal(profit.percentageComplete, 35);
+
+  assert.equal(count.currentValue, 4); // t1, t2, t3, t4-open
+  assert.equal(count.percentageComplete, 80);
+
+  // 1 WIN / 3 closed trades (WIN + LOSS + BREAKEVEN) = 33.3%
+  assert.equal(winRate.currentValue, 33.3);
+  assert.equal(winRate.percentageComplete, 66.6);
+
+  // Gross loss = 250 vs maxLossTarget 200 -> 125% exceeded
+  assert.equal(maxLoss.currentValue, 250);
+  assert.equal(maxLoss.percentageComplete, 125);
+  assert.equal(maxLoss.inverse, true);
+  assert.equal(maxLoss.isExceeded, true);
+
+  // Scenario D: When Dashboard is filtered to acc-2, acc-1 goal shows mismatch flag and still only uses acc-1 trades
+  const itemsOnDifferentAccount = calculateWeeklyGoalItems({
+    goal: acc1Goal,
+    trades,
+    accounts,
+    dashboardAccountId: 'acc-2',
+    now,
+  });
+  assert.equal(itemsOnDifferentAccount[0].isDifferentFromDashboardAccount, true);
+  assert.equal(itemsOnDifferentAccount[0].currentValue, 350);
+
+  // Scenario A: Account-wide goal aggregates acc-1 + acc-2 cleanly
+  const allAccountsGoal = {
+    id: 'goal-all',
+    tradingAccountId: null,
+    active: true,
+    profitTarget: 2000,
+    winRateTarget: 50,
+  };
+  const allItems = calculateWeeklyGoalItems({
+    goal: allAccountsGoal,
+    trades,
+    accounts,
+    dashboardAccountId: null,
+    now,
+  });
+  assert.equal(allItems[0].scopeType, 'ALL_ACCOUNTS');
+  assert.equal(allItems[0].scopeLabel, 'All Accounts');
+  assert.equal(allItems[0].currentValue, 1350); // 350 + 1000
+
+  // Negative net P/L + zero closed trades edge case
+  const negativeTrades = [
+    makeTrade({ id: 'neg-1', tradingAccountId: 'acc-1', result: 'LOSS', profitLossAmount: -400, exitTime: '2026-07-07T12:00:00Z' }),
+  ];
+  const negativeItems = calculateWeeklyGoalItems({
+    goal: { id: 'g-neg', tradingAccountId: 'acc-1', active: true, profitTarget: 500, winRateTarget: 60 },
+    trades: negativeTrades,
+    accounts,
+    now,
+  });
+  assert.equal(negativeItems[0].currentValue, -400);
+  assert.equal(negativeItems[0].isNegative, true);
+  assert.equal(negativeItems[0].percentageComplete, 0);
+
+  const zeroClosedItems = calculateWeeklyGoalItems({
+    goal: { id: 'g-zero', tradingAccountId: 'acc-1', active: true, winRateTarget: 60 },
+    trades: [makeTrade({ id: 'open-only', tradingAccountId: 'acc-1', result: 'OPEN', status: 'ACTIVE', entryTime: '2026-07-08T10:00:00Z' })],
+    accounts,
+    now,
+  });
+  assert.equal(zeroClosedItems[0].currentValue, 0);
+  assert.equal(zeroClosedItems[0].percentageComplete, 0);
 });

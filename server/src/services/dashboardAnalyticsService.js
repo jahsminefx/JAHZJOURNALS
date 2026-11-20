@@ -373,87 +373,233 @@ const buildRecentTrades = (trades) => [...trades]
     currency: trade.nativeCurrency || 'USD',
   }));
 
-const buildGoalProgress = async ({ userId, accountId, trades }) => {
+const getCurrentUtcWeekWindow = (referenceDate = new Date()) => {
+  const now = referenceDate instanceof Date ? new Date(referenceDate.getTime()) : new Date(referenceDate);
+  const day = now.getUTCDay() || 7; // Monday = 1, Sunday = 7
+  const startOfWeek = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() - day + 1,
+    0,
+    0,
+    0,
+    0,
+  ));
+  const endOfWeekExclusive = new Date(startOfWeek.getTime() + (7 * 24 * 60 * 60 * 1000));
+  const endOfWeekInclusive = new Date(endOfWeekExclusive.getTime() - 1);
+
+  return {
+    startOfWeek,
+    endOfWeekExclusive,
+    endOfWeekInclusive,
+    weekStart: toDateInput(startOfWeek),
+    weekEnd: toDateInput(endOfWeekInclusive),
+  };
+};
+
+const filterTradesForUtcWeek = (trades = [], startOfWeek, endOfWeekExclusive) => trades.filter((trade) => {
+  const rawTimestamp = getTradeTimestamp(trade);
+  if (!rawTimestamp) return false;
+  const timestamp = rawTimestamp instanceof Date ? rawTimestamp : new Date(rawTimestamp);
+  if (Number.isNaN(timestamp.getTime())) return false;
+  if (startOfWeek && timestamp < startOfWeek) return false;
+  if (endOfWeekExclusive && timestamp >= endOfWeekExclusive) return false;
+  return true;
+});
+
+const calculateWeeklyGoalItems = ({
+  goal,
+  trades = [],
+  accounts = [],
+  dashboardAccountId = null,
+  defaultCurrency = 'USD',
+  now = new Date(),
+}) => {
+  if (!goal || goal.active === false) return [];
+
+  let scopedTrades = Array.isArray(trades) ? trades : [];
+  let goalCurrency = defaultCurrency || 'USD';
+  let scopeType = 'ALL_ACCOUNTS';
+  let accountName = null;
+  let scopeLabel = 'All Accounts';
+  let isDifferentFromDashboardAccount = Boolean(dashboardAccountId);
+
+  if (goal.tradingAccountId) {
+    const goalAccount = accounts.find((a) => String(a.id) === String(goal.tradingAccountId)) || goal.tradingAccount || null;
+    if (accounts.length > 0 && !accounts.some((a) => String(a.id) === String(goal.tradingAccountId))) {
+      return [];
+    }
+
+    scopedTrades = scopedTrades.filter(
+      (t) => String(t.tradingAccountId || t.tradingAccount?.id || '') === String(goal.tradingAccountId),
+    );
+    goalCurrency = goalAccount?.currency || defaultCurrency || 'USD';
+    scopeType = 'ACCOUNT';
+    accountName = goalAccount?.name || 'Selected Account';
+    scopeLabel = accountName;
+    isDifferentFromDashboardAccount = Boolean(
+      dashboardAccountId && String(dashboardAccountId) !== String(goal.tradingAccountId),
+    );
+  } else {
+    if (accounts.length > 0) {
+      const validIds = new Set(accounts.map((a) => String(a.id)));
+      scopedTrades = scopedTrades.filter((t) => !t.tradingAccountId || validIds.has(String(t.tradingAccountId)));
+    }
+    goalCurrency = defaultCurrency || (accounts.length === 1 ? accounts[0]?.currency : 'USD') || 'USD';
+  }
+
+  const { startOfWeek, endOfWeekExclusive, weekStart, weekEnd } = getCurrentUtcWeekWindow(now);
+  const weeklyTrades = filterTradesForUtcWeek(scopedTrades, startOfWeek, endOfWeekExclusive);
+  const summary = calculateSummary(weeklyTrades);
+  const meta = {
+    goalId: goal.id || null,
+    tradingAccountId: goal.tradingAccountId || null,
+    accountName,
+    scopeType,
+    scopeLabel,
+    currency: goalCurrency,
+    isDifferentFromDashboardAccount,
+    weekStart,
+    weekEnd,
+  };
+  const items = [];
+
+  if (goal.profitTarget !== null && goal.profitTarget !== undefined) {
+    const target = Number(goal.profitTarget);
+    const current = summary.netProfitLoss;
+    const rawPct = target > 0 ? (current / target) * 100 : 0;
+    items.push({
+      ...meta,
+      key: 'profitTarget',
+      label: 'Profit Goal',
+      currentValue: current,
+      targetValue: target,
+      percentageComplete: target > 0 ? round(Math.max(0, rawPct), 1) : 0,
+      isCompleted: target > 0 && current >= target,
+      isNegative: current < 0,
+      format: 'currency',
+    });
+  }
+
+  if (goal.tradeCountTarget !== null && goal.tradeCountTarget !== undefined) {
+    const target = Number(goal.tradeCountTarget);
+    const current = summary.totalTrades;
+    items.push({
+      ...meta,
+      key: 'tradeCountTarget',
+      label: 'Trade Goal',
+      currentValue: current,
+      targetValue: target,
+      percentageComplete: target > 0 ? round((current / target) * 100, 1) : 0,
+      isCompleted: target > 0 && current >= target,
+      format: 'integer',
+    });
+  }
+
+  if (goal.winRateTarget !== null && goal.winRateTarget !== undefined) {
+    const target = Number(goal.winRateTarget);
+    const current = summary.winRate;
+    items.push({
+      ...meta,
+      key: 'winRateTarget',
+      label: 'Win Rate Goal',
+      currentValue: current,
+      targetValue: target,
+      percentageComplete: target > 0 ? round((current / target) * 100, 1) : 0,
+      isCompleted: summary.closedTrades > 0 && target > 0 && current >= target,
+      closedTrades: summary.closedTrades,
+      format: 'percent',
+    });
+  }
+
+  if (goal.maxLossTarget !== null && goal.maxLossTarget !== undefined) {
+    const target = Number(goal.maxLossTarget);
+    const current = summary.grossLoss;
+    items.push({
+      ...meta,
+      key: 'maxLossTarget',
+      label: 'Maximum Loss Goal',
+      currentValue: current,
+      targetValue: target,
+      percentageComplete: target > 0 ? round((current / target) * 100, 1) : 0,
+      format: 'currency',
+      inverse: true,
+      isExceeded: target > 0 && current > target,
+      isWarning: target > 0 && current >= target * 0.8 && current <= target,
+    });
+  }
+
+  return items;
+};
+
+const buildGoalProgress = async ({
+  userId,
+  accountId = null,
+  accounts = null,
+  rawTrades = null,
+  trades = [],
+  targetCurrency = 'USD',
+  now = new Date(),
+}) => {
+  const ownerAccounts = Array.isArray(accounts)
+    ? accounts
+    : await prisma.tradingAccount.findMany({
+      where: { userId },
+      select: { id: true, name: true, currency: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
   const goals = await prisma.tradingGoal.findMany({
     where: {
       userId,
       active: true,
       periodType: 'WEEKLY',
-      OR: [
-        { tradingAccountId: null },
-        ...(accountId ? [{ tradingAccountId: accountId }] : []),
-      ],
     },
-    orderBy: { createdAt: 'desc' },
-    take: 1,
+    include: {
+      tradingAccount: {
+        select: { id: true, name: true, currency: true },
+      },
+    },
+    orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
   });
 
-  const goal = goals[0];
-  if (!goal) return [];
+  const ownerAccountIds = new Set(ownerAccounts.map((a) => String(a.id)));
+  const validGoals = goals.filter(
+    (g) => !g.tradingAccountId || ownerAccountIds.has(String(g.tradingAccountId)),
+  );
+  if (validGoals.length === 0) return [];
 
-  const today = new Date();
-  const day = today.getUTCDay() || 7;
-  const startOfWeek = new Date(today);
-  startOfWeek.setUTCDate(today.getUTCDate() - day + 1);
-  startOfWeek.setUTCHours(0, 0, 0, 0);
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setUTCDate(startOfWeek.getUTCDate() + 6);
-  endOfWeek.setUTCHours(23, 59, 59, 999);
+  const goal = (accountId && validGoals.find((g) => String(g.tradingAccountId) === String(accountId)))
+    || validGoals[0];
 
-  const weeklyTrades = filterTradesByPeriod(trades, startOfWeek, endOfWeek);
-  const summary = calculateSummary(weeklyTrades);
-  const items = [];
+  let goalCurrency = targetCurrency || 'USD';
+  let goalTrades = [];
 
-  if (goal.profitTarget !== null) {
-    const target = Number(goal.profitTarget);
-    items.push({
-      key: 'profitTarget',
-      label: 'Profit Goal',
-      currentValue: summary.netProfitLoss,
-      targetValue: target,
-      percentageComplete: target ? round(Math.max(0, summary.netProfitLoss / target) * 100, 1) : 0,
-      format: 'currency',
-    });
+  if (goal.tradingAccountId) {
+    const goalAccount = ownerAccounts.find((a) => String(a.id) === String(goal.tradingAccountId)) || goal.tradingAccount;
+    goalCurrency = goalAccount?.currency || 'USD';
+    const matchingRawTrades = Array.isArray(rawTrades) && (!accountId || String(accountId) === String(goal.tradingAccountId))
+      ? rawTrades.filter((t) => String(t.tradingAccountId) === String(goal.tradingAccountId))
+      : await fetchTrades(userId, [goal.tradingAccountId]);
+    goalTrades = await normalizeTradesForAnalytics(matchingRawTrades, goalCurrency);
+  } else {
+    goalCurrency = ownerAccounts.length > 1 ? 'USD' : (ownerAccounts[0]?.currency || targetCurrency || 'USD');
+    if (!accountId && Array.isArray(trades) && goalCurrency === targetCurrency) {
+      goalTrades = trades;
+    } else {
+      const allUserRawTrades = await fetchTrades(userId, ownerAccounts.map((a) => a.id));
+      goalTrades = await normalizeTradesForAnalytics(allUserRawTrades, goalCurrency);
+    }
   }
 
-  if (goal.tradeCountTarget !== null) {
-    const target = Number(goal.tradeCountTarget);
-    items.push({
-      key: 'tradeCountTarget',
-      label: 'Trade Goal',
-      currentValue: summary.totalTrades,
-      targetValue: target,
-      percentageComplete: target ? round((summary.totalTrades / target) * 100, 1) : 0,
-      format: 'integer',
-    });
-  }
-
-  if (goal.winRateTarget !== null) {
-    const target = Number(goal.winRateTarget);
-    items.push({
-      key: 'winRateTarget',
-      label: 'Win Rate Goal',
-      currentValue: summary.winRate,
-      targetValue: target,
-      percentageComplete: target ? round((summary.winRate / target) * 100, 1) : 0,
-      format: 'percent',
-    });
-  }
-
-  if (goal.maxLossTarget !== null) {
-    const target = Number(goal.maxLossTarget);
-    items.push({
-      key: 'maxLossTarget',
-      label: 'Maximum Loss Goal',
-      currentValue: summary.grossLoss,
-      targetValue: target,
-      percentageComplete: target ? round((summary.grossLoss / target) * 100, 1) : 0,
-      format: 'currency',
-      inverse: true,
-    });
-  }
-
-  return items;
+  return calculateWeeklyGoalItems({
+    goal,
+    trades: goalTrades,
+    accounts: ownerAccounts,
+    dashboardAccountId: accountId,
+    defaultCurrency: goalCurrency,
+    now,
+  });
 };
 
 const buildDashboardAnalytics = async ({ userId, query }) => {
@@ -562,13 +708,24 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
       breakevens: currentSummary.breakevens,
       totalClosedTrades: currentSummary.closedTrades,
     },
-    weeklyGoals: await buildGoalProgress({ userId, accountId, trades: allTrades }),
+    weeklyGoals: await buildGoalProgress({
+      userId,
+      accountId,
+      accounts,
+      rawTrades,
+      trades: allTrades,
+      targetCurrency,
+    }),
     recentTrades: buildRecentTrades(currentTrades),
   };
 };
 
 module.exports = {
   buildDashboardAnalytics,
+  buildGoalProgress,
+  calculateWeeklyGoalItems,
+  getCurrentUtcWeekWindow,
+  filterTradesForUtcWeek,
   buildSessionPerformance,
   buildPairPerformance,
   buildCalendar,

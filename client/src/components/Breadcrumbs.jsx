@@ -13,7 +13,7 @@ const Breadcrumbs = ({ customItems }) => {
   return (
     <nav 
       aria-label="Breadcrumb"
-      className="flex items-center gap-2 text-xs text-gray-400 py-3 mb-4 border-b border-gray-800/60"
+      className="flex items-center gap-2 text-xs text-muted py-3 mb-4 border-b border-border/70"
     >
       <ol className="flex items-center gap-2 flex-wrap" itemScope itemType="https://schema.org/BreadcrumbList">
         {items.map((item, index) => {
@@ -27,19 +27,19 @@ const Breadcrumbs = ({ customItems }) => {
               itemScope
               itemType="https://schema.org/ListItem"
             >
-              {index > 0 && <ChevronRight size={12} className="text-gray-600 shrink-0" />}
+              {index > 0 && <ChevronRight size={12} className="text-muted/60 shrink-0" />}
               
               {isLast ? (
-                <span className="font-semibold text-gray-200" itemProp="name">
+                <span className="font-semibold text-foreground" itemProp="name">
                   {item.name}
                 </span>
               ) : (
                 <Link
                   to={item.path}
-                  className="hover:text-emerald-400 transition-colors flex items-center gap-1 font-medium"
+                  className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1 font-medium"
                   itemProp="item"
                 >
-                  {index === 0 && <Home size={13} className="shrink-0 text-gray-400" />}
+                  {index === 0 && <Home size={13} className="shrink-0 text-muted" />}
                   <span itemProp="name">{item.name}</span>
                 </Link>
               )}

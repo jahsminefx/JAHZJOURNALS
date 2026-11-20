@@ -39,7 +39,10 @@ export const getCachedData = (key) => {
   if (!entry) return null;
 
   const now = Date.now();
-  if (now > entry.expiresAt) {
+  const dataVersion = typeof window !== 'undefined'
+    ? Number(window.localStorage?.getItem('jahzjournal:data-version') || 0)
+    : 0;
+  if (now > entry.expiresAt || (Number.isFinite(dataVersion) && dataVersion > entry.timestamp)) {
     cacheStore.delete(key);
     return null;
   }
@@ -129,6 +132,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('jahzjournal:data-changed', (event) => {
     // Clear trade, account, and analytics caches on data changes
     invalidateCache('/analytics');
+    invalidateCache('/users/trading-goals');
     invalidateCache('/trades');
     invalidateCache('/accounts');
     invalidateCache('/emotions');

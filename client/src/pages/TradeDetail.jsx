@@ -206,13 +206,13 @@ const TradeDetail = () => {
             <Brain size={18} />
             {isGeneratingAi ? 'Analyzing...' : aiInsight ? 'Re-analyze' : 'AI Mentor'}
           </button>
-          <Link to={`/trades/${id}/review`} className="hidden sm:inline-flex items-center justify-center gap-2 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-bold text-green-400 hover:bg-green-500/20">
+          <Link to={`/trades/${id}/review`} className="hidden sm:inline-flex items-center justify-center gap-2 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-2 text-sm font-bold text-emerald-700 dark:text-green-400 hover:bg-green-500/20">
             Deep Review
           </Link>
           <button
             type="button"
             onClick={() => setShowShareModal(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-500/50 bg-indigo-500/10 px-4 py-2 text-sm font-bold text-indigo-300 hover:bg-indigo-500/20"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-500/50 bg-indigo-500/10 px-4 py-2 text-sm font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/20"
           >
             <Share2 size={18} />
             Share Trade
@@ -221,7 +221,7 @@ const TradeDetail = () => {
             <button
               type="button"
               onClick={() => setShowCohortShareModal(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-400 hover:bg-emerald-500/20 shadow-xs"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 shadow-xs"
               title="Broadcast this trade breakdown to your academy cohorts"
             >
               <GraduationCap size={18} />
@@ -238,7 +238,7 @@ const TradeDetail = () => {
             type="button"
             onClick={() => setShowDeleteDialog(true)}
             disabled={deletingTrade}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-700 dark:text-red-300 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Trash2 size={18} />
             {deletingTrade ? 'Removing...' : 'Remove'}
@@ -305,10 +305,10 @@ const TradeDetail = () => {
                   </div>
 
                   {fb.isViolationWarning && (
-                    <div className="mb-4 p-3.5 bg-rose-500/20 border border-rose-500/40 rounded-lg flex items-start gap-2.5 text-rose-300">
+                    <div className="mb-4 p-3.5 bg-rose-500/15 dark:bg-rose-500/20 border border-rose-500/40 rounded-lg flex items-start gap-2.5 text-rose-700 dark:text-rose-300">
                       <AlertTriangle className="shrink-0 mt-0.5" size={18} />
                       <div className="text-xs leading-relaxed">
-                        <strong className="font-semibold block text-sm text-rose-200">Academy Risk Guard Breach</strong>
+                        <strong className="font-semibold block text-sm text-rose-800 dark:text-rose-200">Academy Risk Guard Breach</strong>
                         {fb.violationDetails?.message || 'Trade executed in breach of Academy risk policies.'}
                       </div>
                     </div>
@@ -410,13 +410,13 @@ const TradeDetail = () => {
               )}
 
               <div className="mt-4 pt-4 border-t border-purple-500/30">
-                <h4 className="font-semibold text-purple-300 mb-2 flex justify-between">
+                <h4 className="font-semibold text-purple-700 dark:text-purple-300 mb-2 flex justify-between">
                   <span>Actionable Advice</span>
                   {aiInsight.disciplineScore !== undefined && (
                     <span className="text-sm font-normal">Discipline Score: {aiInsight.disciplineScore}/100</span>
                   )}
                 </h4>
-                <p className="text-sm text-purple-200/80 italic">"{aiInsight.actionableAdvice || aiInsight.recommendedAction}"</p>
+                <p className="text-sm text-purple-800/85 dark:text-purple-200/80 italic">"{aiInsight.actionableAdvice || aiInsight.recommendedAction}"</p>
                 {aiInsight.disclaimer && (
                   <p className="text-xs text-muted mt-2 opacity-70">Disclaimer: {aiInsight.disclaimer}</p>
                 )}
@@ -425,7 +425,7 @@ const TradeDetail = () => {
           )}
 
           <div className="bg-surface-muted p-6 rounded-xl border border-border shadow-lg">
-            <h3 className="text-lg font-bold text-green-400 border-b border-border pb-2 mb-4">Trade Context</h3>
+            <h3 className="text-lg font-bold text-emerald-600 dark:text-green-400 border-b border-border pb-2 mb-4">Trade Context</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div><span className="block text-muted">Setup</span><span className="font-medium text-foreground">{trade.setup?.name || 'N/A'}</span></div>
               <div><span className="block text-muted">Strategy</span><span className="font-medium text-foreground">{trade.strategy?.name || 'N/A'}</span></div>
@@ -447,10 +447,10 @@ const TradeDetail = () => {
           </div>
 
           <div className="bg-surface-muted p-6 rounded-xl border border-border shadow-lg">
-            <h3 className="text-lg font-bold text-green-400 border-b border-border pb-2 mb-4">Chart Screenshots</h3>
+            <h3 className="text-lg font-bold text-emerald-600 dark:text-green-400 border-b border-border pb-2 mb-4">Chart Screenshots</h3>
             {screenshots.length === 0 ? (
               <div className="text-center py-8">
-                <ImageIcon size={48} className="mx-auto text-gray-600 mb-3" />
+                <ImageIcon size={48} className="mx-auto text-muted/60 mb-3" />
                 <p className="text-muted">No charts attached yet. Add them in the review.</p>
               </div>
             ) : (
@@ -483,7 +483,7 @@ const TradeDetail = () => {
                            <button 
                              onClick={() => analyzeScreenshotImage(screenshot.id)}
                              disabled={isProcessing}
-                             className="text-xs flex items-center gap-1 text-purple-400 hover:text-purple-300 disabled:opacity-50"
+                             className="text-xs flex items-center gap-1 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 disabled:opacity-50"
                            >
                               <Brain size={12} /> {isProcessing ? 'Analyzing...' : 'Analyze with AI'}
                            </button>
@@ -493,13 +493,13 @@ const TradeDetail = () => {
                         {visionData && (
                            <div className="mt-2 p-3 bg-purple-500/10 rounded-md border border-purple-500/20 text-xs">
                              <div className="flex justify-between items-center mb-1">
-                               <p className="font-bold text-purple-400">AI Observation</p>
-                               {visionData.status === 'FAILED' && <span className="text-red-400">Failed</span>}
-                               {visionData.status === 'COMPLETED' && <span className="text-green-400 text-[10px]">Confidence: {visionData.structuredOutput?.confidenceLevel}</span>}
+                               <p className="font-bold text-purple-700 dark:text-purple-400">AI Observation</p>
+                               {visionData.status === 'FAILED' && <span className="text-red-600 dark:text-red-400">Failed</span>}
+                               {visionData.status === 'COMPLETED' && <span className="text-emerald-600 dark:text-green-400 text-[10px]">Confidence: {visionData.structuredOutput?.confidenceLevel}</span>}
                              </div>
                              {visionData.status === 'COMPLETED' && visionData.structuredOutput && (
                                <div className="space-y-2 mt-2">
-                                  <ul className="list-disc list-inside text-purple-200/90 leading-relaxed space-y-1">
+                                  <ul className="list-disc list-inside text-purple-900/85 dark:text-purple-200/90 leading-relaxed space-y-1">
                                     {visionData.structuredOutput.observations.map((obs, i) => {
                                       let text = obs;
                                       if (typeof obs === 'string' && (obs.startsWith('{') || obs.startsWith('['))) {
@@ -512,7 +512,7 @@ const TradeDetail = () => {
                                     })}
                                   </ul>
                                   {visionData.structuredOutput.patterns?.length > 0 && (
-                                    <p className="text-purple-300"><span className="font-semibold">Patterns:</span> {visionData.structuredOutput.patterns.join(', ')}</p>
+                                    <p className="text-purple-700 dark:text-purple-300"><span className="font-semibold">Patterns:</span> {visionData.structuredOutput.patterns.join(', ')}</p>
                                   )}
                                   <p className="text-muted opacity-75 mt-2 italic border-l-2 border-purple-500/30 pl-2">
                                     {visionData.structuredOutput.educationalDisclaimer} {visionData.structuredOutput.uncertaintyNotice}
@@ -638,11 +638,11 @@ const TradeDetail = () => {
                 {trade.riskGuardViolations && trade.riskGuardViolations.map((v, idx) => (
                   <div key={`rg-${idx}`} className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 space-y-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-bold text-rose-400 text-sm flex items-center gap-1.5">
-                        <AlertTriangle size={14} className="text-rose-400" />
+                      <p className="font-bold text-rose-600 dark:text-rose-400 text-sm flex items-center gap-1.5">
+                        <AlertTriangle size={14} className="text-rose-600 dark:text-rose-400" />
                         {v.title}
                       </p>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/15 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300">
                         Limit: {v.ruleLimit} vs Actual: {v.actualValue}
                       </span>
                     </div>

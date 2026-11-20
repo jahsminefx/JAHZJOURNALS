@@ -92,7 +92,7 @@ const TemplateSelector = ({ onApply }) => {
             type="button"
             disabled={!canApply}
             onClick={() => onApply(template.values)}
-            className="mt-4 rounded-lg border border-green-500/50 px-4 py-2 text-sm font-bold text-green-300 transition hover:bg-green-500/10 disabled:cursor-not-allowed disabled:border-border disabled:text-gray-500"
+            className="mt-4 rounded-lg border border-green-500/50 px-4 py-2 text-sm font-bold text-emerald-700 dark:text-green-300 transition hover:bg-green-500/10 disabled:cursor-not-allowed disabled:border-border disabled:text-muted/60"
           >
             Apply template
           </button>

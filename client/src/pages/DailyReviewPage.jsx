@@ -514,16 +514,16 @@ export default function DailyReviewPage() {
           <span>Loading daily review metrics...</span>
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-sm text-rose-400 font-medium">
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-sm text-rose-600 dark:text-rose-400 font-medium">
           {error}
         </div>
       ) : (
         <>
           {/* Multi-Currency Normalized Notice */}
           {metrics?.isMultiAccount && (
-            <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-indigo-300">
+            <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-indigo-700 dark:text-indigo-300">
               <div className="flex items-center gap-2">
-                <Layers size={16} className="text-indigo-400 shrink-0" />
+                <Layers size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
                 <span>
                   <strong>ALL ACCOUNTS View:</strong> Portfolio metrics normalized to USD using live FX rates. Individual trade records show native broker figures.
                 </span>
@@ -531,10 +531,10 @@ export default function DailyReviewPage() {
               <span
                 className={`self-start sm:self-auto px-2 py-0.5 rounded font-bold uppercase text-[10px] ${
                   metrics.fxStatus === 'LIVE'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                     : metrics.fxStatus === 'CACHED'
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30'
+                    : 'bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30'
                 }`}
               >
                 FX: {metrics.fxStatus}
@@ -955,11 +955,11 @@ export default function DailyReviewPage() {
           </div>
 
           {/* Section 3: JAHZ AI Daily Coaching */}
-          <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/20 via-surface to-surface p-6 shadow-sm space-y-6">
+          <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/10 via-surface to-surface dark:from-indigo-950/20 dark:via-surface dark:to-surface p-6 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <Sparkles size={18} className="text-indigo-400" />
+                  <Sparkles size={18} className="text-indigo-600 dark:text-indigo-400" />
                   <h2 className="text-lg font-bold text-foreground">
                     JAHZ AI Daily Performance Coaching
                   </h2>
@@ -983,11 +983,11 @@ export default function DailyReviewPage() {
             {/* AI Loading State */}
             {aiLoading && (
               <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 text-center space-y-3">
-                <RefreshCw size={24} className="animate-spin text-indigo-400 mx-auto" />
+                <RefreshCw size={24} className="animate-spin text-indigo-600 dark:text-indigo-400 mx-auto" />
                 <h3 className="text-sm font-bold text-foreground">
                   JAHZ AI is reviewing your trading day...
                 </h3>
-                <p className="text-xs text-indigo-300">
+                <p className="text-xs text-indigo-700 dark:text-indigo-300">
                   Status: <strong className="uppercase">{aiStatus || 'QUEUED'}</strong> — Analyzing trades, session execution, and risk control.
                 </p>
               </div>
@@ -995,7 +995,7 @@ export default function DailyReviewPage() {
 
             {/* AI Error State */}
             {aiError && (
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-400 flex items-center justify-between">
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-600 dark:text-rose-400 flex items-center justify-between">
                 <span>{aiError}</span>
                 <button
                   type="button"

@@ -236,12 +236,17 @@ export const fetchAndSyncSettings = async () => {
   try {
     const { data } = await api.get('/users/settings');
     const flatSettings = mapApiToSettings(data);
+    const localTheme =
+      typeof window !== 'undefined' ? window.localStorage.getItem('jahzjournals-theme') : null;
+    if (localTheme === 'light' || localTheme === 'dark') {
+      flatSettings.appearance.theme = localTheme;
+    }
     saveSettings(flatSettings);
-    
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('theme-sync', { detail: flatSettings.appearance.theme }));
     }
-    
+
     return flatSettings;
   } catch (error) {
     console.error('Failed to sync settings from server:', error);

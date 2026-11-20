@@ -115,17 +115,17 @@ export default function ShareTradeModal({ isOpen, onClose, trade }) {
   if (!isOpen || !trade) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative text-slate-100 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl relative text-foreground max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800"
+          className="absolute top-4 right-4 text-muted hover:text-foreground p-2 rounded-lg hover:bg-surface-muted transition-colors"
         >
           ✕
         </button>
 
-        <h3 className="text-xl font-bold text-white mb-1">Share Trade Result</h3>
-        <p className="text-xs text-slate-400 mb-5">
+        <h3 className="text-xl font-bold text-foreground mb-1">Share Trade Result</h3>
+        <p className="text-xs text-muted mb-5">
           Share your trade outcome securely. Private account details, broker logins, and email addresses are never exposed.
         </p>
 
@@ -149,15 +149,15 @@ export default function ShareTradeModal({ isOpen, onClose, trade }) {
 
         {/* Toggle options */}
         {trade.screenshots?.length > 0 && (
-          <div className="flex items-center space-x-3 mb-5 bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+          <div className="flex items-center space-x-3 mb-5 bg-surface-muted border border-border rounded-xl p-3">
             <input
               type="checkbox"
               id="includeScreenshotToggle"
               checked={includeScreenshot}
               onChange={handleToggleScreenshot}
-              className="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700 focus:ring-indigo-500"
+              className="w-4 h-4 rounded text-indigo-600 bg-surface border-border focus:ring-indigo-500"
             />
-            <label htmlFor="includeScreenshotToggle" className="text-xs font-medium text-slate-300 cursor-pointer">
+            <label htmlFor="includeScreenshotToggle" className="text-xs font-medium text-foreground cursor-pointer">
               Include chart screenshot in share preview
             </label>
           </div>
@@ -196,7 +196,7 @@ export default function ShareTradeModal({ isOpen, onClose, trade }) {
             <button
               onClick={handleNativeShare}
               disabled={loading || !shareData}
-              className="flex flex-col items-center justify-center p-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition border border-slate-700"
+              className="flex flex-col items-center justify-center p-3 bg-surface-muted hover:bg-surface-elevated disabled:opacity-50 text-foreground rounded-xl text-xs font-bold transition border border-border"
             >
               <span className="text-base mb-1">📲</span>
               Share
@@ -205,7 +205,7 @@ export default function ShareTradeModal({ isOpen, onClose, trade }) {
             <button
               onClick={handleCopyLink}
               disabled={loading || !shareData}
-              className="flex flex-col items-center justify-center p-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition border border-slate-700"
+              className="flex flex-col items-center justify-center p-3 bg-surface-muted hover:bg-surface-elevated disabled:opacity-50 text-foreground rounded-xl text-xs font-bold transition border border-border"
             >
               <span className="text-base mb-1">🔗</span>
               Share URL
@@ -215,27 +215,27 @@ export default function ShareTradeModal({ isOpen, onClose, trade }) {
 
         {/* Public URL Box */}
         {shareData?.shareToken && (
-          <div className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 mb-4 flex items-center justify-between">
-            <span className="text-[11px] font-mono text-slate-300 truncate pr-2">
+          <div className="bg-surface-muted border border-border rounded-xl p-2.5 mb-4 flex items-center justify-between">
+            <span className="text-[11px] font-mono text-muted truncate pr-2">
               {getFullPublicUrl()}
             </span>
             <button
               onClick={handleCopyLink}
-              className="text-xs text-indigo-400 font-semibold px-2 py-1 hover:bg-indigo-950/60 rounded"
+              className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold px-2 py-1 hover:bg-indigo-500/15 rounded"
             >
               {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
         )}
 
-        {error && <p className="text-xs text-rose-400 mb-3">{error}</p>}
+        {error && <p className="text-xs text-rose-600 dark:text-rose-400 mb-3">{error}</p>}
 
         {/* Revoke button */}
         {shareData?.isActive && (
-          <div className="flex justify-end pt-2 border-t border-slate-800/80">
+          <div className="flex justify-end pt-2 border-t border-border/80">
             <button
               onClick={handleRevokeShare}
-              className="text-xs text-rose-400 hover:text-rose-300 font-medium py-1 px-3"
+              className="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 font-medium py-1 px-3"
             >
               Revoke Share Link
             </button>

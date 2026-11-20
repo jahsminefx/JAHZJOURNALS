@@ -7,11 +7,11 @@ const ToggleGroup = ({ label, name, register, watchValue }) => {
     <div>
       <label className="block text-sm text-muted mb-2">{label}</label>
       <div className="flex bg-surface p-1 rounded-lg border border-border">
-        <label className={`flex-1 text-center py-2 text-sm font-medium rounded-md cursor-pointer transition ${isYes ? 'bg-green-500 text-gray-900' : 'text-muted hover:text-gray-200'}`}>
+        <label className={`flex-1 text-center py-2 text-sm font-medium rounded-md cursor-pointer transition ${isYes ? 'bg-green-500 text-gray-900' : 'text-muted hover:text-foreground'}`}>
           <input type="radio" value="true" {...register(name)} className="hidden" />
           Yes
         </label>
-        <label className={`flex-1 text-center py-2 text-sm font-medium rounded-md cursor-pointer transition ${isNo ? 'bg-red-500 text-white' : 'text-muted hover:text-gray-200'}`}>
+        <label className={`flex-1 text-center py-2 text-sm font-medium rounded-md cursor-pointer transition ${isNo ? 'bg-red-500 text-white' : 'text-muted hover:text-foreground'}`}>
           <input type="radio" value="false" {...register(name)} className="hidden" />
           No
         </label>

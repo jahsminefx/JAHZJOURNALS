@@ -19,7 +19,7 @@ const PropFirmPhaseForm = ({ phase, index, canMoveUp, canMoveDown, onChange, onR
           <button type="button" disabled={!canMoveDown} onClick={() => onMove(index, 1)} className="rounded-lg border border-border p-2 text-muted hover:bg-surface-muted disabled:opacity-40">
             <ArrowDown size={16} />
           </button>
-          <button type="button" onClick={() => onRemove(index)} className="rounded-lg border border-red-500/40 p-2 text-red-300 hover:bg-red-500/10">
+          <button type="button" onClick={() => onRemove(index)} className="rounded-lg border border-red-500/40 p-2 text-red-600 dark:text-red-300 hover:bg-red-500/10">
             <Trash2 size={16} />
           </button>
         </div>

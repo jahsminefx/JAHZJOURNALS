@@ -1,9 +1,16 @@
-import React, { useId, useMemo, useState } from 'react';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Info } from 'lucide-react';
 import { DashboardCard, CardHeader } from './DashboardShell';
 import { formatCurrency, formatNumber } from '../../utils/dashboard';
-import { getCurrencySymbol } from '../../services/currencyConversionService';
+import {
+  calculateYAxisDomain,
+  detectInitialDepositJump,
+  formatAxisCurrency,
+  formatAxisDate,
+  generateXAxisTicks,
+  prepareAccountBalanceDisplayPoints,
+} from '../../utils/chartAxis';
 
 const chartPeriods = [
   { label: '7D', range: '7d' },
@@ -18,19 +25,8 @@ const curveViews = [
   { key: 'accountBalance', label: 'Account Balance' },
 ];
 
-const formatChartYAxisTick = (val, curr) => {
-  const num = Number(val || 0);
-  const abs = Math.abs(num);
-  const sign = num < 0 ? '-' : '';
-  const sym = getCurrencySymbol(curr).trim();
-  if (abs >= 1_000_000_000) return `${sign}${sym}${(abs / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `${sign}${sym}${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 10_000) return `${sign}${sym}${(abs / 1_000).toFixed(1)}k`;
-  return `${sign}${sym}${abs.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-};
-
 const eventLabels = {
-  account_start: 'Account start',
+  account_start: 'Account created',
   period_start: 'Period start',
   period_end: 'Period end',
   deposit: 'Deposit',
@@ -61,21 +57,21 @@ const eventTextTones = {
   account_start: 'text-muted',
   period_start: 'text-muted',
   period_end: 'text-muted',
-  deposit: 'text-sky-300',
-  withdrawal: 'text-amber-300',
-  trade_win: 'text-emerald-300',
-  trade_loss: 'text-red-300',
+  deposit: 'text-sky-600 dark:text-sky-300',
+  withdrawal: 'text-amber-600 dark:text-amber-300',
+  trade_win: 'text-emerald-600 dark:text-emerald-300',
+  trade_loss: 'text-red-600 dark:text-red-300',
   trade_breakeven: 'text-foreground',
-  trade: 'text-emerald-300',
-  trade_day: 'text-emerald-300',
+  trade: 'text-emerald-600 dark:text-emerald-300',
+  trade_day: 'text-emerald-600 dark:text-emerald-300',
   balance_adjustment: 'text-foreground',
 };
 
 const eventTone = (point) => {
   if (eventTextTones[point.eventType]) return eventTextTones[point.eventType];
   const change = Number(point.change ?? point.tradePnl ?? 0);
-  if (change > 0) return 'text-emerald-300';
-  if (change < 0) return 'text-red-300';
+  if (change > 0) return 'text-emerald-600 dark:text-emerald-300';
+  if (change < 0) return 'text-red-600 dark:text-red-300';
   return 'text-foreground';
 };
 
@@ -113,87 +109,177 @@ const getRepeatedDateKeys = (points = []) => {
   return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key));
 };
 
-const getCumulativeDomain = (points = []) => {
-  const values = points.map((point) => Number(point.value)).filter(Number.isFinite);
-  if (!values.length) return [-10, 10];
-  const min = Math.min(0, ...values);
-  const max = Math.max(0, ...values);
-  const range = Math.max(max - min, 1);
-  const padding = Math.max(range * 0.15, 10);
-  return [min - padding, max + padding];
-};
+const getCumulativeDomain = (points = []) => calculateYAxisDomain(points, { mode: 'cumulativePnl' }).domain;
 
-const getBalanceDomain = (points = []) => {
-  const values = points.map((point) => Number(point.value)).filter(Number.isFinite);
-  if (!values.length) return [0, 50];
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  const range = Math.max(maxValue - minValue, 1);
-  const padding = Math.max(range * 0.08, 50);
-  return [
-    minValue >= 0 ? Math.max(0, minValue - padding) : minValue - padding,
-    maxValue + padding,
-  ];
-};
+const getBalanceDomain = (points = []) => calculateYAxisDomain(points, { mode: 'accountBalance' }).domain;
 
-const EventDot = ({ cx, cy, payload }) => {
+const EventDot = ({ cx, cy, payload, totalPoints = 0, isMobile = false }) => {
   if (cx === undefined || cy === undefined || !payload) return null;
+
+  const isFunding = payload.eventType === 'deposit'
+    || payload.eventType === 'withdrawal'
+    || payload.eventType === 'balance_adjustment';
+  const isBoundary = payload.eventType === 'account_start'
+    || payload.eventType === 'period_start'
+    || payload.eventType === 'period_end';
+
+  // Hide boundary anchors once multiple events exist to prevent overlapping start markers
+  if (isBoundary && totalPoints > 6) return null;
+
   const color = eventColors[payload.eventType] || '#94a3b8';
-  const isStart = payload.eventType === 'account_start' || payload.eventType === 'period_start';
+
+  if (isFunding) {
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={isMobile ? 3.5 : 4}
+        fill={color}
+        stroke="rgb(var(--surface))"
+        strokeWidth={1.75}
+      />
+    );
+  }
+
+  const denseThreshold = isMobile ? 16 : 24;
+  if (totalPoints > denseThreshold) return null;
+
+  const mediumThreshold = isMobile ? 9 : 14;
+  const radius = isBoundary ? 2.75 : (totalPoints > mediumThreshold ? 2.25 : 3.25);
+  const strokeWidth = totalPoints > mediumThreshold ? 1 : 1.5;
+
   return (
     <circle
       cx={cx}
       cy={cy}
-      r={isStart ? 3 : 3.75}
+      r={radius}
       fill={color}
-      stroke="rgb(var(--background))"
-      strokeWidth={1.5}
+      fillOpacity={totalPoints > mediumThreshold ? 0.88 : 1}
+      stroke="rgb(var(--surface))"
+      strokeWidth={strokeWidth}
     />
   );
 };
 
-const ActiveEventDot = ({ cx, cy, payload }) => {
+const ActiveEventDot = ({ cx, cy, payload, fallbackColor = '#10b981' }) => {
   if (cx === undefined || cy === undefined || !payload) return null;
-  const color = eventColors[payload.eventType] || '#10b981';
+  const color = eventColors[payload.eventType] || fallbackColor;
   return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={6}
-      fill={color}
-      stroke="rgb(var(--background))"
-      strokeWidth={2}
-    />
+    <g>
+      <circle cx={cx} cy={cy} r={9} fill={color} fillOpacity={0.2} />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={5}
+        fill={color}
+        stroke="rgb(var(--surface))"
+        strokeWidth={2}
+      />
+    </g>
   );
+};
+
+const formatResultBadge = (result) => {
+  if (!result) return '';
+  const upper = String(result).toUpperCase();
+  if (upper === 'WIN') return ' (Win)';
+  if (upper === 'LOSS') return ' (Loss)';
+  if (upper === 'BREAKEVEN') return ' (Breakeven)';
+  return '';
 };
 
 const PerformanceTooltip = ({ active, payload, view, currency }) => {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload || {};
   const isCumulative = view === 'cumulativePnl';
+  const eventType = String(point.eventType || '');
+  const isTrade = eventType.startsWith('trade');
+  const isFunding = eventType === 'deposit' || eventType === 'withdrawal' || eventType === 'balance_adjustment';
+  const isBoundary = eventType === 'account_start' || eventType === 'period_start' || eventType === 'period_end';
+  const changeAmount = Number(point.change || 0);
 
   return (
-    <div className="max-w-[min(17rem,calc(100vw-2rem))] rounded-lg border border-border bg-background px-3 py-2 text-xs shadow-[0_20px_45px_rgba(2,6,23,0.6)]">
-      <p className="font-bold text-foreground">{formatTimestamp(point.date, { includeTime: true, includeYear: true })}</p>
+    <div className="max-w-[min(18rem,calc(100vw-2rem))] rounded-lg border border-border bg-surface px-3 py-2.5 text-xs shadow-lg dark:shadow-[0_20px_45px_rgba(2,6,23,0.65)]">
+      <p className="font-bold text-foreground">
+        {formatTimestamp(point.date, { includeTime: true, includeYear: true })}
+      </p>
+
       {isCumulative ? (
-        <>
-          <p className={Number(point.value || 0) < 0 ? 'mt-2 text-red-300' : 'mt-2 text-emerald-300'}>
+        <div className="mt-1.5 space-y-0.5">
+          <p className={Number(point.value || 0) < 0 ? 'font-semibold text-red-600 dark:text-red-300' : 'font-semibold text-emerald-600 dark:text-emerald-300'}>
             Cumulative P/L: {formatCurrency(point.value, currency)}
           </p>
-          {(String(point.eventType || '').startsWith('trade') || point.eventType === 'trade_day') && (
+          {(isTrade || eventType === 'trade_day') && (
             <p className={eventTone(point)}>
-              {point.eventType === 'trade_day' ? 'Day result' : 'Trade result'}: {signedCurrency(point.tradePnl ?? point.change, currency)}
+              {eventType === 'trade_day'
+                ? `Day result${point.tradeCount > 1 ? ` (${point.tradeCount} trades)` : ''}`
+                : 'Trade result'}
+              : {signedCurrency(point.tradePnl ?? point.change, currency)}
             </p>
           )}
-        </>
+          {isBoundary && (
+            <p className="text-[11px] text-muted">{point.label || eventLabels[eventType]}</p>
+          )}
+          {point.accountName && (
+            <p className="text-[11px] text-muted">Account: {point.accountName}</p>
+          )}
+        </div>
       ) : (
-        <>
-          <p className="mt-2 text-emerald-300">Balance: {formatCurrency(point.value, currency)}</p>
-          <p className={eventTone(point)}>Event: {point.label || eventLabels[point.eventType] || 'Activity'}</p>
-          <p className={Number(point.change || 0) > 0 ? 'text-emerald-300' : Number(point.change || 0) < 0 ? 'text-red-300' : 'text-muted'}>
-            Change: {signedCurrency(point.change, currency)}
+        <div className="mt-1.5 space-y-0.5">
+          <p className="font-semibold text-emerald-600 dark:text-emerald-300">
+            Balance: {formatCurrency(point.value, currency)}
           </p>
-        </>
+          {eventType === 'deposit' && (
+            <>
+              <p className={eventTone(point)}>
+                Event: {(point.isInitialFundingStart || point.source === 'startingBalance') ? 'Initial deposit (Starting balance)' : (point.label || 'Deposit')}
+              </p>
+              <p className="text-sky-600 dark:text-sky-300">
+                {point.isInitialFundingStart ? 'Initial funding' : 'Deposit'}:{' '}
+                {point.isInitialFundingStart
+                  ? formatCurrency(point.initialFundingAmount ?? point.change ?? point.value, currency)
+                  : signedCurrency(point.change, currency)}
+              </p>
+            </>
+          )}
+          {eventType === 'withdrawal' && (
+            <>
+              <p className={eventTone(point)}>Event: {point.label || 'Withdrawal'}</p>
+              <p className="text-amber-600 dark:text-amber-300">
+                Withdrawal: {signedCurrency(point.change, currency)}
+              </p>
+            </>
+          )}
+          {eventType === 'balance_adjustment' && (
+            <>
+              <p className={eventTone(point)}>Event: {point.label || 'Balance adjustment'}</p>
+              <p className="text-muted">Adjustment: {signedCurrency(point.change, currency)}</p>
+            </>
+          )}
+          {isTrade && (
+            <>
+              <p className={eventTone(point)}>
+                Event: {point.label || 'Closed trade'}{formatResultBadge(point.result)}
+              </p>
+              <p className={Number(point.tradePnl ?? point.change ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-300' : Number(point.tradePnl ?? point.change ?? 0) < 0 ? 'text-red-600 dark:text-red-300' : 'text-muted'}>
+                Realized P/L: {signedCurrency(point.tradePnl ?? point.change, currency)}
+              </p>
+            </>
+          )}
+          {!isFunding && !isTrade && (
+            <>
+              <p className={eventTone(point)}>Event: {point.label || eventLabels[eventType] || 'Snapshot'}</p>
+              {!isBoundary && changeAmount !== 0 && (
+                <p className={changeAmount > 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}>
+                  Change: {signedCurrency(changeAmount, currency)}
+                </p>
+              )}
+            </>
+          )}
+          {point.accountName && (
+            <p className="text-[11px] text-muted">Account: {point.accountName}</p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -203,14 +289,14 @@ const SummaryStrip = ({ view, summary = {}, currency }) => {
   const isCumulative = view === 'cumulativePnl';
   const items = isCumulative
     ? [
-      { label: 'Net P/L', value: signedCurrency(summary.netTradingPnl, currency), tone: Number(summary.netTradingPnl || 0) < 0 ? 'text-red-300' : 'text-emerald-300' },
-      { label: 'Return', value: signedPercent(summary.tradingReturnPercentage), tone: Number(summary.tradingReturnPercentage || 0) < 0 ? 'text-red-300' : 'text-emerald-300' },
+      { label: 'Net P/L', value: signedCurrency(summary.netTradingPnl, currency), tone: Number(summary.netTradingPnl || 0) < 0 ? 'text-red-600 dark:text-red-300' : 'text-emerald-600 dark:text-emerald-300' },
+      { label: 'Return', value: signedPercent(summary.tradingReturnPercentage), tone: Number(summary.tradingReturnPercentage || 0) < 0 ? 'text-red-600 dark:text-red-300' : 'text-emerald-600 dark:text-emerald-300' },
       { label: 'Closed trades', value: formatNumber(summary.closedTrades || 0, 0), tone: 'text-foreground' },
     ]
     : [
-      { label: 'Total deposits', value: formatCurrency(summary.totalDeposits, currency), tone: Number(summary.totalDeposits || 0) > 0 ? 'text-sky-300' : 'text-muted' },
-      { label: 'Total withdrawals', value: formatCurrency(summary.totalWithdrawals, currency), tone: Number(summary.totalWithdrawals || 0) > 0 ? 'text-amber-300' : 'text-muted' },
-      { label: 'Current balance', value: formatCurrency(summary.currentBalance, currency), tone: Number(summary.currentBalance || 0) > 0 ? 'text-emerald-300' : Number(summary.currentBalance || 0) < 0 ? 'text-red-300' : 'text-foreground' },
+      { label: 'Total deposits', value: formatCurrency(summary.totalDeposits, currency), tone: Number(summary.totalDeposits || 0) > 0 ? 'text-sky-600 dark:text-sky-300' : 'text-muted' },
+      { label: 'Total withdrawals', value: formatCurrency(summary.totalWithdrawals, currency), tone: Number(summary.totalWithdrawals || 0) > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-muted' },
+      { label: 'Current balance', value: formatCurrency(summary.currentBalance, currency), tone: Number(summary.currentBalance || 0) > 0 ? 'text-emerald-600 dark:text-emerald-300' : Number(summary.currentBalance || 0) < 0 ? 'text-red-600 dark:text-red-300' : 'text-foreground' },
     ];
 
   return (
@@ -240,8 +326,48 @@ const EquityCurveChart = ({
   className = '',
 }) => {
   const [view, setView] = useState('cumulativePnl');
+  const [containerWidth, setContainerWidth] = useState(() => (
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  ));
+  const [isMobileViewport, setIsMobileViewport] = useState(() => (
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  ));
   const chartId = useId().replace(/:/g, '');
-  const points = useMemo(() => data?.[view] || [], [data, view]);
+  const rawPoints = useMemo(() => data?.[view] || [], [data, view]);
+  const points = useMemo(
+    () => (view === 'accountBalance' ? prepareAccountBalanceDisplayPoints(rawPoints) : rawPoints),
+    [rawPoints, view],
+  );
+  const chartPoints = useMemo(
+    () => points.map((point, index) => ({
+      ...point,
+      xKey: `${point.date || 'point'}__${index}`,
+    })),
+    [points],
+  );
+  const chartWrapperRef = useRef(null);
+
+  useEffect(() => {
+    const handleWindowKeyDown = (event) => {
+      if (event.key === 'Tab' || event.key?.startsWith('Arrow')) {
+        chartWrapperRef.current?.setAttribute('data-focus-source', 'keyboard');
+      }
+    };
+    const handleWindowPointer = () => {
+      chartWrapperRef.current?.setAttribute('data-focus-source', 'pointer');
+    };
+    window.addEventListener('keydown', handleWindowKeyDown, true);
+    window.addEventListener('pointerdown', handleWindowPointer, true);
+    window.addEventListener('touchstart', handleWindowPointer, true);
+    window.addEventListener('mousedown', handleWindowPointer, true);
+    return () => {
+      window.removeEventListener('keydown', handleWindowKeyDown, true);
+      window.removeEventListener('pointerdown', handleWindowPointer, true);
+      window.removeEventListener('touchstart', handleWindowPointer, true);
+      window.removeEventListener('mousedown', handleWindowPointer, true);
+    };
+  }, []);
+
   const repeatedDateKeys = useMemo(() => getRepeatedDateKeys(points), [points]);
   const summary = data?.summary || {};
   const hasFinancialActivity = Number(summary.totalDeposits || 0) > 0
@@ -251,6 +377,35 @@ const EquityCurveChart = ({
     || points.length > 1;
   const hasClosedTrades = Number(summary.closedTrades || 0) > 0;
   const isCumulative = view === 'cumulativePnl';
+  const shouldRenderChart = hasAccountSelection && hasFinancialActivity && points.length > 1;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const syncViewport = () => {
+      setIsMobileViewport(window.innerWidth < 640);
+      if (chartWrapperRef.current) {
+        const nextWidth = Math.round(chartWrapperRef.current.getBoundingClientRect().width);
+        if (nextWidth > 0) setContainerWidth(nextWidth);
+      }
+    };
+    syncViewport();
+
+    let observer;
+    if (typeof ResizeObserver !== 'undefined' && chartWrapperRef.current) {
+      observer = new ResizeObserver((entries) => {
+        const entryWidth = Math.round(entries?.[0]?.contentRect?.width || 0);
+        if (entryWidth > 0) setContainerWidth(entryWidth);
+      });
+      observer.observe(chartWrapperRef.current);
+    }
+
+    window.addEventListener('resize', syncViewport);
+    return () => {
+      window.removeEventListener('resize', syncViewport);
+      observer?.disconnect();
+    };
+  }, [shouldRenderChart]);
+
   const endingValue = Number(points[points.length - 1]?.value || 0);
   const isNegativePerformance = isCumulative && endingValue < 0;
   const stroke = isNegativePerformance ? '#ef4444' : '#10b981';
@@ -258,12 +413,47 @@ const EquityCurveChart = ({
   const cursorStroke = isNegativePerformance ? '#f87171' : '#34d399';
   const gradientId = `performanceFill-${view}-${chartId}`;
   const glowId = `performanceGlow-${view}-${chartId}`;
-  const yDomain = isCumulative ? getCumulativeDomain(points) : getBalanceDomain(points);
+
+  const yDomain = useMemo(
+    () => (isCumulative ? getCumulativeDomain(points) : getBalanceDomain(points)),
+    [isCumulative, points],
+  );
+  const yAxisConfig = useMemo(
+    () => calculateYAxisDomain(points, {
+      mode: view,
+      targetTickCount: isMobileViewport ? 5 : 5,
+      maxTickCount: 7,
+    }),
+    [points, view, isMobileViewport],
+  );
+  const yTicks = yAxisConfig.ticks;
+  const xAxisConfig = useMemo(
+    () => generateXAxisTicks(chartPoints, {
+      activeRange,
+      isMobile: isMobileViewport,
+      containerWidth,
+    }),
+    [chartPoints, activeRange, isMobileViewport, containerWidth],
+  );
+  const depositJumpInfo = useMemo(
+    () => (isCumulative ? { hasInitialDepositJump: false, fundingPoints: [] } : detectInitialDepositJump(chartPoints)),
+    [isCumulative, chartPoints],
+  );
+
+  const maxYTickLength = useMemo(() => {
+    const labels = yTicks.map((tick) => formatAxisCurrency(tick, currency, { step: yAxisConfig.step }).length);
+    return Math.max(4, ...labels);
+  }, [yTicks, currency, yAxisConfig.step]);
+  const yAxisWidth = Math.min(Math.max(maxYTickLength * 7 + 14, isMobileViewport ? 50 : 54), 84);
+  const showZeroReferenceLine = yDomain[0] <= 0 && yDomain[1] >= 0;
   const curveType = 'monotone';
-  const chartMargin = { left: 10, right: 15, top: 12, bottom: 4 };
-  const formatAxisTick = (value) => formatTimestamp(value, {
-    includeTime: !isCumulative && (activeRange === '7d' || repeatedDateKeys.has(getDateKey(value))),
+  const chartMargin = { left: 2, right: 16, top: 12, bottom: 6 };
+  const formatAxisTick = (value) => formatAxisDate(value, {
+    activeRange,
+    ...xAxisConfig.meta,
+    repeatedDateCount: repeatedDateKeys.size,
   });
+
   const statusMessage = !hasAccountSelection
     ? isCumulative ? 'Select an account to view its journey.' : 'Select an account to review deposits and withdrawals.'
     : !hasFinancialActivity
@@ -271,13 +461,12 @@ const EquityCurveChart = ({
       : isCumulative && !hasClosedTrades
         ? 'No closed trades yet. Your capital movements are tracked, but true performance requires execution.'
         : null;
-  const shouldRenderChart = hasAccountSelection && hasFinancialActivity && points.length > 1;
   const screenReaderSummary = isCumulative
     ? `Net trading P/L is ${formatCurrency(summary.netTradingPnl, currency)} across ${summary.closedTrades || 0} closed trades.`
     : `Current balance is ${formatCurrency(summary.currentBalance, currency)} from ${formatCurrency(summary.totalDeposits, currency)} in deposits, ${formatCurrency(summary.totalWithdrawals, currency)} in withdrawals, and ${formatCurrency(summary.balanceAdjustments, currency)} in balance adjustments.`;
 
   return (
-    <DashboardCard className={`p-5 ${className}`}>
+    <DashboardCard className={`p-4 sm:p-5 ${className}`}>
       <CardHeader
         title={(
           <span className="inline-flex items-center gap-2">
@@ -330,9 +519,61 @@ const EquityCurveChart = ({
               {statusMessage}
             </p>
           )}
-          <div className="h-72 min-w-0 rounded-lg border border-border/60 bg-surface-muted px-1 pt-3 sm:h-80">
+          {!isCumulative && (
+            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-surface-muted/50 px-3 py-1.5 text-[11px] text-muted">
+              {(depositJumpInfo.hasInitialFundingStart || depositJumpInfo.hasInitialDepositJump) && depositJumpInfo.initialDepositPoint ? (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-sky-500 dark:bg-sky-400" aria-hidden="true" />
+                    Initial deposit:{' '}
+                    <strong className="font-semibold text-foreground">
+                      {formatCurrency(
+                        depositJumpInfo.initialDepositPoint.initialFundingAmount
+                          ?? depositJumpInfo.initialDepositPoint.change
+                          ?? depositJumpInfo.initialDepositPoint.value,
+                        currency,
+                      )}
+                    </strong>{' '}
+                    ({formatTimestamp(depositJumpInfo.initialDepositPoint.date, { includeYear: true })})
+                  </span>
+                  {depositJumpInfo.postDepositMin !== null && depositJumpInfo.postDepositMax !== null && depositJumpInfo.postDepositMax > depositJumpInfo.postDepositMin && (
+                    <span>
+                      Post-funding range:{' '}
+                      <strong className="font-semibold text-foreground">
+                        {formatCurrency(depositJumpInfo.postDepositMin, currency)} – {formatCurrency(depositJumpInfo.postDepositMax, currency)}
+                      </strong>
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span>Reflects deposits, withdrawals, balance adjustments, and realized trading P/L.</span>
+              )}
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-sky-400" aria-hidden="true" />
+                  Deposit
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" />
+                  Withdrawal
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+                  Trade
+                </span>
+              </div>
+            </div>
+          )}
+          <div
+            ref={chartWrapperRef}
+            data-focus-source="pointer"
+            onPointerDownCapture={(e) => e.currentTarget.setAttribute('data-focus-source', 'pointer')}
+            onTouchStartCapture={(e) => e.currentTarget.setAttribute('data-focus-source', 'pointer')}
+            onMouseDownCapture={(e) => e.currentTarget.setAttribute('data-focus-source', 'pointer')}
+            className="h-[330px] min-[375px]:h-[350px] min-w-0 rounded-xl border border-border/60 bg-surface-muted/70 dark:bg-surface-muted px-1.5 sm:px-2 pt-3 pb-1 sm:h-80 [&_.recharts-wrapper:focus]:outline-none [&_.recharts-wrapper_*:focus]:outline-none [&_.recharts-surface:focus]:outline-none [&[data-focus-source='keyboard']_.recharts-surface:focus-visible]:outline-solid [&[data-focus-source='keyboard']_.recharts-surface:focus-visible]:outline-2 [&[data-focus-source='keyboard']_.recharts-surface:focus-visible]:outline-emerald-500/70 [&[data-focus-source='keyboard']_.recharts-surface:focus-visible]:-outline-offset-2"
+          >
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={points} margin={chartMargin}>
+              <AreaChart data={chartPoints} margin={chartMargin}>
                 <defs>
                   <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={stroke} stopOpacity={0.42} />
@@ -347,11 +588,46 @@ const EquityCurveChart = ({
                     </feMerge>
                   </filter>
                 </defs>
-                <CartesianGrid stroke="rgb(var(--border))" strokeOpacity={0.72} vertical={false} />
-                <XAxis dataKey="date" tickFormatter={formatAxisTick} stroke="rgb(var(--muted-foreground))" tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} minTickGap={32} />
-                <YAxis domain={yDomain} stroke="rgb(var(--muted-foreground))" tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(value) => formatChartYAxisTick(value, currency)} width={75} />
+                <CartesianGrid stroke="rgb(var(--border))" strokeOpacity={0.55} vertical={false} />
+                <XAxis
+                  dataKey="xKey"
+                  ticks={xAxisConfig.ticks}
+                  tickFormatter={formatAxisTick}
+                  stroke="rgb(var(--muted-foreground))"
+                  tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  minTickGap={isMobileViewport ? 18 : 24}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  domain={yDomain}
+                  ticks={yTicks}
+                  stroke="rgb(var(--muted-foreground))"
+                  tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => formatAxisCurrency(value, currency, { step: yAxisConfig.step })}
+                  width={yAxisWidth}
+                />
+                {showZeroReferenceLine && (
+                  <ReferenceLine
+                    y={0}
+                    stroke="rgb(var(--muted-foreground))"
+                    strokeOpacity={isCumulative ? 0.5 : 0.32}
+                    strokeDasharray="4 4"
+                  />
+                )}
+                {!isCumulative && !chartPoints[0]?.isInitialFundingStart && depositJumpInfo.hasInitialDepositJump && (depositJumpInfo.initialDepositPoint?.xKey || depositJumpInfo.initialDepositPoint?.date) && (
+                  <ReferenceLine
+                    x={depositJumpInfo.initialDepositPoint.xKey || depositJumpInfo.initialDepositPoint.date}
+                    stroke="#38bdf8"
+                    strokeOpacity={0.45}
+                    strokeDasharray="3 3"
+                  />
+                )}
                 <Tooltip
-                  cursor={{ stroke: cursorStroke, strokeOpacity: 0.42, strokeWidth: 1 }}
+                  cursor={{ stroke: cursorStroke, strokeOpacity: 0.45, strokeWidth: 1.25 }}
                   content={<PerformanceTooltip view={view} currency={currency} />}
                 />
                 <Area type={curveType} dataKey="value" stroke={stroke} strokeWidth={7} strokeOpacity={0.18} fill="none" dot={false} activeDot={false} filter={`url(#${glowId})`} isAnimationActive={false} />
@@ -359,10 +635,31 @@ const EquityCurveChart = ({
                   type={curveType}
                   dataKey="value"
                   stroke={stroke}
-                  strokeWidth={3}
+                  strokeWidth={2.75}
                   fill={`url(#${gradientId})`}
-                  dot={isCumulative ? false : <EventDot />}
-                  activeDot={isCumulative ? { r: 5, stroke: '#ecfdf5', strokeWidth: 2, fill: activeDotFill } : <ActiveEventDot />}
+                  dot={isCumulative
+                    ? false
+                    : (dotProps) => {
+                      const { key, ...rest } = dotProps;
+                      return (
+                        <EventDot
+                          key={key ?? rest.index}
+                          {...rest}
+                          totalPoints={points.length}
+                          isMobile={isMobileViewport}
+                        />
+                      );
+                    }}
+                  activeDot={(dotProps) => {
+                    const { key, ...rest } = dotProps;
+                    return (
+                      <ActiveEventDot
+                        key={key ?? rest.index}
+                        {...rest}
+                        fallbackColor={activeDotFill}
+                      />
+                    );
+                  }}
                   isAnimationActive={false}
                 />
               </AreaChart>

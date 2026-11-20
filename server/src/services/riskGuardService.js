@@ -1,4 +1,10 @@
-const prisma = require('../config/prisma');
+let prisma;
+try {
+  prisma = require('../config/prisma');
+} catch (_) {
+  const { PrismaClient } = require('@prisma/client');
+  prisma = new PrismaClient();
+}
 
 /**
  * Pure evaluation function: checks a trade against cohort Strategy Risk Guard rules.

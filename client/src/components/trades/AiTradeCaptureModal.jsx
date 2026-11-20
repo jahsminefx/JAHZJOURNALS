@@ -819,13 +819,20 @@ const AiTradeCaptureModal = ({
       setChatMessages((prev) =>
         prev.map((m) => {
           if (m.id !== msgId || !m.trades) return m;
+          let savedIdx = 0;
           return {
             ...m,
-            trades: m.trades.map((t) =>
-              unsavedTrades.some((u) => u.draftId === t.draftId)
-                ? { ...t, isSaved: true, savedTradeId: true }
-                : t
-            ),
+            trades: m.trades.map((t) => {
+              const wasUnsaved = unsavedTrades.some((u) => u.draftId === t.draftId);
+              if (!wasUnsaved) return t;
+              const matchingSaved = data.savedTrades?.[savedIdx] || data.savedTrades?.[0];
+              savedIdx += 1;
+              return {
+                ...t,
+                isSaved: true,
+                savedTradeId: matchingSaved?.id || true,
+              };
+            }),
           };
         })
       );
@@ -1004,7 +1011,7 @@ const AiTradeCaptureModal = ({
             <Sparkles size={32} />
           </div>
 
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/20 mx-auto mb-3">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 mx-auto mb-3">
             👑 Pro & Mentor Feature
           </span>
 
@@ -1319,12 +1326,12 @@ const AiTradeCaptureModal = ({
                     <div
                       className={`p-3.5 border rounded-2xl rounded-tl-none text-xs sm:text-sm leading-relaxed shadow-xs ${
                         msg.isError
-                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
                           : 'bg-surface-muted/70 border-border text-foreground'
                       }`}
                     >
                       <div className="flex items-start gap-2.5">
-                        {msg.isError && <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />}
+                        {msg.isError && <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />}
                         <p className="whitespace-pre-wrap flex-1">{msg.content}</p>
                       </div>
 
@@ -1344,7 +1351,7 @@ const AiTradeCaptureModal = ({
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 hover:bg-amber-500/15 text-amber-100 font-semibold text-xs transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 hover:bg-amber-500/15 text-amber-800 dark:text-amber-100 font-semibold text-xs transition-colors"
                           >
                             <Paperclip size={13} />
                             <span>Attach Different Screenshot</span>
@@ -1364,8 +1371,8 @@ const AiTradeCaptureModal = ({
                       {msg.trades.length > 1 && (
                         <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs">
                           <div className="flex items-center gap-2">
-                            <Layers size={16} className="text-indigo-400" />
-                            <span className="font-bold text-indigo-200">
+                            <Layers size={16} className="text-indigo-600 dark:text-indigo-400" />
+                            <span className="font-bold text-indigo-800 dark:text-indigo-200">
                               Batch Extraction ({msg.trades.length} candidates)
                             </span>
                           </div>
@@ -1382,7 +1389,7 @@ const AiTradeCaptureModal = ({
 
                       {/* Trade Cards List */}
                       {msg.trades.map((item, cardIdx) => {
-                        const { trade, draftId, fieldStatuses, duplicateInfo, accountResolution, currencyConflict, isSaved, isSaving } = item;
+                        const { trade, draftId, fieldStatuses, duplicateInfo, accountResolution, currencyConflict, isSaved, isSaving, savedTradeId } = item;
                         const accountCurrency = trade.accountCurrency || 'USD';
                         const beHelper = getBeHelper(trade);
                         const selectedAcc = accounts.find((a) => a.id === trade.tradingAccountId);
@@ -1407,8 +1414,8 @@ const AiTradeCaptureModal = ({
                                 <span
                                   className={`text-[10px] font-black px-2.5 py-0.5 rounded-md ${
                                     trade.direction === 'BUY'
-                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                      : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                      : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
                                   }`}
                                 >
                                   {trade.direction}
@@ -1450,7 +1457,7 @@ const AiTradeCaptureModal = ({
                                     onClick={() => handleRemoveCard(msg.id, draftId)}
                                     title="Exclude this candidate from batch"
                                     aria-label="Remove candidate"
-                                    className="p-1 rounded-lg text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                    className="p-1 rounded-lg text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
                                   >
                                     <Trash2 size={14} />
                                   </button>
@@ -1462,14 +1469,14 @@ const AiTradeCaptureModal = ({
                             {accountResolution?.status === 'CONFIRMATION_REQUIRED' && !isSaved && (
                               <div className="bg-amber-500/10 border-b border-amber-500/30 p-3.5 space-y-2 text-xs">
                                 <div className="flex items-start gap-2">
-                                  <AlertTriangle size={15} className="text-amber-400 shrink-0 mt-0.5" />
-                                  <p className="text-amber-300/90 leading-tight">
+                                  <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                  <p className="text-amber-800 dark:text-amber-300/90 leading-tight">
                                     Detected trade belongs to{' '}
-                                    <strong className="text-white underline">
+                                    <strong className="text-foreground underline">
                                       {accountResolution.suggestedAccountName}
                                     </strong>{' '}
                                     ({accountResolution.suggestedAccountCurrency}), but current selection is{' '}
-                                    <strong className="text-white">{trade.accountName || selectedAcc?.name}</strong>.
+                                    <strong className="text-foreground">{trade.accountName || selectedAcc?.name}</strong>.
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-2 pl-6">
@@ -1499,8 +1506,8 @@ const AiTradeCaptureModal = ({
                             {accountResolution?.status === 'AMBIGUOUS' && !isSaved && (
                               <div className="bg-indigo-500/10 border-b border-indigo-500/30 p-3 space-y-2 text-xs">
                                 <div className="flex items-center gap-2">
-                                  <HelpCircle size={15} className="text-indigo-400 shrink-0" />
-                                  <span className="font-bold text-indigo-200">
+                                  <HelpCircle size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                                  <span className="font-bold text-indigo-800 dark:text-indigo-200">
                                     Which trading account does this trade belong to?
                                   </span>
                                 </div>
@@ -1521,8 +1528,8 @@ const AiTradeCaptureModal = ({
 
                             {/* Currency Conflict Banner */}
                             {currencyConflict?.hasCurrencyConflict && !isSaved && (
-                              <div className="bg-amber-500/10 border-b border-amber-500/20 p-2.5 flex items-center gap-2 text-[11px] text-amber-300">
-                                <AlertTriangle size={14} className="text-amber-400 shrink-0" />
+                              <div className="bg-amber-500/10 border-b border-amber-500/20 p-2.5 flex items-center gap-2 text-[11px] text-amber-800 dark:text-amber-300">
+                                <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
                                 <span>
                                   Currency mismatch: Screenshot indicates {currencyConflict.screenshotCurrency}, but account operates in {currencyConflict.accountCurrency}. Amounts flagged for review.
                                 </span>
@@ -1531,8 +1538,8 @@ const AiTradeCaptureModal = ({
 
                             {/* Duplicate Warning */}
                             {duplicateInfo && !isSaved && (
-                              <div className="bg-amber-500/10 border-b border-amber-500/20 p-2.5 flex items-center gap-2 text-[11px] text-amber-300">
-                                <AlertCircle size={14} className="text-amber-400 shrink-0" />
+                              <div className="bg-amber-500/10 border-b border-amber-500/20 p-2.5 flex items-center gap-2 text-[11px] text-amber-800 dark:text-amber-300">
+                                <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
                                 <span>
                                   {duplicateInfo.isExactTicketMatch
                                     ? 'Confirmed ticket duplicate match.'
@@ -1703,8 +1710,8 @@ const AiTradeCaptureModal = ({
                                   <div
                                     className={`text-[10px] p-2 rounded-lg border flex items-center gap-1.5 ${
                                       beHelper.type === 'success'
-                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
-                                        : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                        : 'bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300'
                                     }`}
                                   >
                                     <Info size={12} className="shrink-0" />
@@ -1960,28 +1967,41 @@ const AiTradeCaptureModal = ({
                                     <CheckCircle2 size={16} />
                                     <span>Saved to Journal ✓</span>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRequestJournalEnrichment(trade.id || savedTradeResult?.id)}
-                                      disabled={journalLoading}
-                                      className="px-3 py-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 font-bold text-xs hover:bg-indigo-500/25 transition-colors flex items-center gap-1.5"
-                                    >
-                                      <Sparkles size={13} />
-                                      <span>{journalLoading ? 'Analyzing...' : 'Enrich Notes'}</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        onClose();
-                                        navigate(`/trades/${trade.id || savedTradeResult?.id}`);
-                                      }}
-                                      className="px-3 py-1.5 rounded-lg bg-surface border border-border text-foreground hover:bg-surface-muted font-bold text-xs transition-colors flex items-center gap-1"
-                                    >
-                                      <span>View Trade</span>
-                                      <ArrowRight size={13} />
-                                    </button>
-                                  </div>
+                                  {(() => {
+                                    const actualTradeId = (savedTradeId && savedTradeId !== true)
+                                      ? savedTradeId
+                                      : ((trade.id && !String(trade.id).startsWith('draft_'))
+                                          ? trade.id
+                                          : (Array.isArray(savedTradeResult) ? savedTradeResult[0]?.id : savedTradeResult?.id));
+                                    return (
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRequestJournalEnrichment(actualTradeId)}
+                                          disabled={journalLoading || !actualTradeId}
+                                          className="px-3 py-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-bold text-xs hover:bg-indigo-500/25 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                        >
+                                          <Sparkles size={13} />
+                                          <span>{journalLoading ? 'Analyzing...' : 'Enrich Notes'}</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            onClose();
+                                            if (actualTradeId) {
+                                              navigate(`/trades/${actualTradeId}`);
+                                            } else {
+                                              navigate('/trades');
+                                            }
+                                          }}
+                                          className="px-3 py-1.5 rounded-lg bg-surface border border-border text-foreground hover:bg-surface-muted font-bold text-xs transition-colors flex items-center gap-1"
+                                        >
+                                          <span>View Trade</span>
+                                          <ArrowRight size={13} />
+                                        </button>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               ) : (
                                 <>
@@ -2060,7 +2080,7 @@ const AiTradeCaptureModal = ({
                 <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
                 <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                 <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                <span className="text-xs text-indigo-300 ml-1">
+                <span className="text-xs text-indigo-600 dark:text-indigo-300 ml-1">
                   JAHZ AI is reading trade details & receipts...
                 </span>
               </div>

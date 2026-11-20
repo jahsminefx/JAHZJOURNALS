@@ -24,7 +24,7 @@ export const FxConversionStatus = ({
 
   if (status === 'UNAVAILABLE' || source === 'UNAVAILABLE' || usdAmount === null || usdAmount === undefined) {
     return (
-      <div className={`inline-flex items-center gap-2 text-xs text-rose-400 bg-rose-950/40 border border-rose-800/50 px-2.5 py-1 rounded-md ${className}`}>
+      <div className={`inline-flex items-center gap-2 text-xs text-rose-700 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-md ${className}`}>
         <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
         <span>USD conversion unavailable</span>
       </div>
@@ -33,19 +33,19 @@ export const FxConversionStatus = ({
 
   const isLive = source === 'LIVE';
   const badgeColor = isLive
-    ? 'bg-emerald-950/40 border-emerald-800/50 text-emerald-400'
-    : 'bg-amber-950/40 border-amber-800/50 text-amber-400';
-  const dotColor = isLive ? 'bg-emerald-400' : 'bg-amber-400';
+    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+    : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400';
+  const dotColor = isLive ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-amber-500 dark:bg-amber-400';
 
   return (
-    <div className={`inline-flex items-center gap-2 text-xs text-slate-300 ${className}`}>
+    <div className={`inline-flex items-center gap-2 text-xs text-muted ${className}`}>
       {showNative && nativeAmount !== null && (
-        <span className="font-semibold text-slate-100">
+        <span className="font-semibold text-foreground">
           {formatCurrency(nativeAmount, nativeCurrency)}
         </span>
       )}
 
-      <span className="text-slate-400 font-medium">
+      <span className="text-muted font-medium">
         ≈ {formatCurrency(usdAmount, 'USD')}
       </span>
 

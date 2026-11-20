@@ -241,37 +241,37 @@ export const BLOG_POSTS = [
       <p>While manual Excel spreadsheets and Notion templates were standard years ago, modern multi-asset Forex, Gold (XAU/USD), Indices, and prop firm traders require automated MT4/MT5 synchronization, multi-currency normalization, chart screenshot annotation, emotion tracking, and real-time risk-to-reward analytics.</p>
 
       <h2 id="comparison-matrix">2. Feature & Price Comparison Matrix</h2>
-      <table className="w-full text-xs text-left border border-gray-800 my-4">
-        <thead className="bg-gray-800 text-gray-200">
+      <table className="w-full text-xs text-left border border-border my-4">
+        <thead className="bg-surface-muted text-foreground">
           <tr>
-            <th className="p-2 border border-gray-700">Software</th>
-            <th className="p-2 border border-gray-700">Free Tier</th>
-            <th className="p-2 border border-gray-700">AI Review</th>
-            <th className="p-2 border border-gray-700">Prop Firm Safeguards</th>
-            <th className="p-2 border border-gray-700">Multi-Currency</th>
+            <th className="p-2 border border-border">Software</th>
+            <th className="p-2 border border-border">Free Tier</th>
+            <th className="p-2 border border-border">AI Review</th>
+            <th className="p-2 border border-border">Prop Firm Safeguards</th>
+            <th className="p-2 border border-border">Multi-Currency</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-800 text-gray-300">
+        <tbody className="divide-y divide-border text-muted">
           <tr>
-            <td className="p-2 border border-gray-800 font-bold text-emerald-400">JAHZJOURNALS</td>
-            <td className="p-2 border border-gray-800">Yes (Free Forever)</td>
-            <td className="p-2 border border-gray-800">Native AI Coach & Edge Finder</td>
-            <td className="p-2 border border-gray-800">Full Daily/Max Drawdown Suite</td>
-            <td className="p-2 border border-gray-800">15+ Currencies (USD, EUR, GBP, NGN, etc.)</td>
+            <td className="p-2 border border-border font-bold text-emerald-600 dark:text-emerald-400">JAHZJOURNALS</td>
+            <td className="p-2 border border-border">Yes (Free Forever)</td>
+            <td className="p-2 border border-border">Native AI Coach & Edge Finder</td>
+            <td className="p-2 border border-border">Full Daily/Max Drawdown Suite</td>
+            <td className="p-2 border border-border">15+ Currencies (USD, EUR, GBP, NGN, etc.)</td>
           </tr>
           <tr>
-            <td className="p-2 border border-gray-800">TraderSync</td>
-            <td className="p-2 border border-gray-800">7-Day Trial</td>
-            <td className="p-2 border border-gray-800">Basic Evaluator</td>
-            <td className="p-2 border border-gray-800">Limited</td>
-            <td className="p-2 border border-gray-800">USD Primary</td>
+            <td className="p-2 border border-border">TraderSync</td>
+            <td className="p-2 border border-border">7-Day Trial</td>
+            <td className="p-2 border border-border">Basic Evaluator</td>
+            <td className="p-2 border border-border">Limited</td>
+            <td className="p-2 border border-border">USD Primary</td>
           </tr>
           <tr>
-            <td className="p-2 border border-gray-800">Edgewonk</td>
-            <td className="p-2 border border-gray-800">No</td>
-            <td className="p-2 border border-gray-800">No</td>
-            <td className="p-2 border border-gray-800">Basic Rules</td>
-            <td className="p-2 border border-gray-800">Single Account Currency</td>
+            <td className="p-2 border border-border">Edgewonk</td>
+            <td className="p-2 border border-border">No</td>
+            <td className="p-2 border border-border">No</td>
+            <td className="p-2 border border-border">Basic Rules</td>
+            <td className="p-2 border border-border">Single Account Currency</td>
           </tr>
         </tbody>
       </table>
@@ -337,7 +337,7 @@ export const BLOG_POSTS = [
 
       <h2 id="discipline-score">3. Calculating Your Personal Discipline Score</h2>
       <p>In JAHZJOURNALS, every logged trade tracks whether your pre-trade checklist and risk rules were followed. Your <strong>Discipline Score</strong> is calculated as:</p>
-      <div className="bg-gray-800 p-4 rounded-xl font-mono text-emerald-400 my-4 text-xs">
+      <div className="bg-surface-muted border border-border p-4 rounded-xl font-mono text-emerald-700 dark:text-emerald-400 my-4 text-xs">
         Discipline Score (%) = (Trades Executed Strictly According to Plan / Total Trades Logged) * 100
       </div>
       <p>Traders who maintain a Discipline Score above 85% consistently achieve positive expectancy, even with a modest 40% to 50% win rate.</p>
@@ -392,7 +392,7 @@ export const BLOG_POSTS = [
 
       <h2 id="lot-size-formula">2. The Mathematical Lot Size Formula</h2>
       <p>Never guess your lot size. Because stop-loss distance varies from setup to setup (e.g., a 12-pip stop on EUR/USD vs. a 45-pip stop on GBP/JPY), your lot size must adjust dynamically so that your monetary risk remains constant:</p>
-      <div className="bg-gray-800 p-4 rounded-xl font-mono text-emerald-400 my-4 text-xs">
+      <div className="bg-surface-muted border border-border p-4 rounded-xl font-mono text-emerald-700 dark:text-emerald-400 my-4 text-xs">
         Position Size (Lots) = (Account Balance × Risk %) ÷ (Stop Loss Pips × Pip Value per Lot)
       </div>
       <p>Use the free <strong>JAHZJOURNALS Position Size & Risk Calculator</strong> at <code>/risk-calculator</code> to compute exact broker-safe lot sizes across 15 account currencies in seconds.</p>
@@ -605,7 +605,7 @@ export const BLOG_POSTS = [
 
       <h2 id="forex-pip-math">2. Forex Pip Value & Lot Size Calculation</h2>
       <p>Suppose you have a $10,000 USD account, want to risk 1% ($100), and your stop loss on EUR/USD is 25 pips away:</p>
-      <div className="bg-gray-800 p-4 rounded-xl font-mono text-emerald-400 my-4 text-xs">
+      <div className="bg-surface-muted border border-border p-4 rounded-xl font-mono text-emerald-700 dark:text-emerald-400 my-4 text-xs">
         Lot Size = $100 Risk ÷ (25 Pips × $10 per Pip) = 0.40 Standard Lots
       </div>
 

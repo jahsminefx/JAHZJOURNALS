@@ -721,7 +721,7 @@ const Analytics = () => {
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={equityCurve} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" strokeOpacity={0.7} vertical={false} />
                         <XAxis dataKey="label" stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} hide />
                         <YAxis stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} />
                         <Tooltip 
@@ -844,7 +844,7 @@ const Analytics = () => {
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={groupedData.slice(0, 12)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" strokeOpacity={0.7} vertical={false} />
                         <XAxis dataKey="label" stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} />
                         <YAxis stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} />
                         <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--surface-elevated))', borderColor: 'rgb(var(--border))', color: 'rgb(var(--foreground))', borderRadius: '0.75rem', fontSize: '12px' }} />
@@ -956,7 +956,7 @@ const Analytics = () => {
                         <div className="h-28">
                           <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={drawdownAnalysis.drawdownSeries} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" strokeOpacity={0.7} vertical={false} />
                               <XAxis dataKey="timestamp" hide />
                               <YAxis stroke="rgb(var(--muted-foreground))" axisLine={false} tickLine={false} tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 10 }} />
                               <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--surface-elevated))', borderColor: 'rgb(var(--border))', color: 'rgb(var(--foreground))', borderRadius: '0.5rem', fontSize: '11px' }} />

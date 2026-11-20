@@ -112,7 +112,16 @@ function App() {
       <ConsentProvider>
       <AuthProvider>
         <Router>
-        <Toaster position="top-right" />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: 'rgb(var(--surface))',
+              color: 'rgb(var(--foreground))',
+              border: '1px solid rgb(var(--border))',
+            },
+          }}
+        />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />

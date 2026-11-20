@@ -110,7 +110,7 @@ test('dashboard charts, pair links, goals, and responsive states are wired in co
   assert.match(equity, /balanceAdjustments/);
   assert.match(equity, /Total deposits/);
   assert.match(equity, /Total withdrawals/);
-  assert.match(equity, /Number\(summary\.totalWithdrawals \|\| 0\) > 0 \? 'text-amber-300' : 'text-muted'/);
+  assert.match(equity, /Number\(summary\.totalWithdrawals \|\| 0\) > 0 \? 'text-amber-600 dark:text-amber-300' : 'text-muted'/);
 
   assert.match(equity, /Info/);
   assert.match(equity, /sm:h-80/);
@@ -178,4 +178,59 @@ test('settings page can load and save weekly dashboard goals', async () => {
   assert.match(source, /api\.put\('\/users\/trading-goals\/weekly'/);
   assert.match(source, /Goal account/);
   assert.match(source, /Maximum loss goal/);
+});
+
+test('weekly goal settings invalidate analytics cache, display scope, and clear weekly goals', async () => {
+  const [settingsSource, apiCacheSource, apiSource, goalComponent] = await Promise.all([
+    read('../src/pages/Settings.jsx'),
+    read('../src/utils/apiCache.js'),
+    read('../src/utils/api.js'),
+    read('../src/components/dashboard/WeeklyGoalProgress.jsx'),
+  ]);
+
+  assert.match(apiSource, /url\.startsWith\(path\)\s*\|\|\s*url\.includes\(path\)/);
+  assert.match(apiCacheSource, /jahzjournal:data-version/);
+  assert.match(apiCacheSource, /invalidateCache\('\/users\/trading-goals'\)/);
+  assert.match(settingsSource, /invalidateCache\('\/analytics'\)/);
+  assert.match(settingsSource, /handleClearWeeklyGoals/);
+  assert.match(goalComponent, /scopeLabel/);
+  assert.match(goalComponent, /Current week \(UTC\)/);
+  assert.match(goalComponent, /Limit exceeded/);
+  assert.match(goalComponent, /isNegative/);
+});
+
+test('performance curve refines mobile height and suppresses pointer focus outline while preserving keyboard focus-visible', async () => {
+  const [chartSource, cssSource] = await Promise.all([
+    read('../src/components/dashboard/EquityCurveChart.jsx'),
+    read('../src/index.css'),
+  ]);
+
+  assert.match(chartSource, /h-\[330px\]/);
+  assert.match(chartSource, /min-\[375px\]:h-\[350px\]/);
+  assert.match(chartSource, /sm:h-80/);
+  assert.match(chartSource, /\[&_\.recharts-surface:focus\]:outline-none/);
+  assert.match(chartSource, /recharts-surface:focus-visible\]:outline-2/);
+  assert.match(chartSource, /data-focus-source/);
+  assert.match(cssSource, /\.recharts-wrapper \*:focus/);
+  assert.match(cssSource, /\.recharts-surface:focus/);
+  assert.match(cssSource, /\.recharts-surface:focus-visible/);
+});
+
+test('performance curve integrates shared chartAxis utilities, zero reference line, deposit jump context, and adaptive markers', async () => {
+  const [chartSource, axisSource] = await Promise.all([
+    read('../src/components/dashboard/EquityCurveChart.jsx'),
+    read('../src/utils/chartAxis.js'),
+  ]);
+
+  assert.match(chartSource, /from '\.\.\/\.\.\/utils\/chartAxis'/);
+  assert.match(chartSource, /calculateYAxisDomain/);
+  assert.match(chartSource, /prepareAccountBalanceDisplayPoints/);
+  assert.match(chartSource, /detectInitialDepositJump/);
+  assert.match(chartSource, /generateXAxisTicks/);
+  assert.match(chartSource, /formatAxisCurrency/);
+  assert.match(chartSource, /ReferenceLine/);
+  assert.match(chartSource, /Initial deposit:/);
+  assert.match(chartSource, /Post-funding range:/);
+  assert.match(axisSource, /selectNiceTickInterval/);
+  assert.match(axisSource, /generateYAxisTicks/);
 });

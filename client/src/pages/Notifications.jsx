@@ -408,43 +408,43 @@ const Notifications = () => {
       {/* Full Interactive Chat Thread Modal */}
       {selectedThreadId && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+          <div className="bg-surface border border-border text-foreground rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             {/* Modal Header */}
-            <div className="p-5 bg-gray-850 border-b border-gray-700 flex items-center justify-between">
+            <div className="p-5 bg-surface-muted/60 border-b border-border flex items-center justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                  <span className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
                     Support Conversation
                   </span>
                   {threadDetails && (
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                      threadDetails.status === 'RESOLVED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      threadDetails.status === 'RESOLVED' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30'
                     }`}>
                       {threadDetails.status}
                     </span>
                   )}
                 </div>
-                <h3 className="text-base font-bold text-gray-100">
+                <h3 className="text-base font-bold text-foreground">
                   {threadDetails?.subject || 'Support Conversation'}
                 </h3>
               </div>
 
               <button
                 onClick={() => { setSelectedThreadId(null); setThreadDetails(null); }}
-                className="p-2 text-gray-400 hover:text-white rounded-xl hover:bg-gray-800 transition"
+                className="p-2 text-muted hover:text-foreground rounded-xl hover:bg-surface-muted transition"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Chat Stream Body */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-950/80">
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-background/70">
               {loadingThread ? (
-                <div className="p-12 text-center text-xs text-gray-400 animate-pulse">
+                <div className="p-12 text-center text-xs text-muted animate-pulse">
                   Loading chat history...
                 </div>
               ) : !threadDetails ? (
-                <div className="p-8 text-center text-xs text-rose-400">
+                <div className="p-8 text-center text-xs text-rose-600 dark:text-rose-400">
                   Unable to load thread details.
                 </div>
               ) : (
@@ -488,8 +488,8 @@ const Notifications = () => {
                         key={msg.id}
                         className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1`}
                       >
-                        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 px-1 font-medium">
-                          {isUser ? <User size={12} className="text-emerald-400" /> : <ShieldCheck size={12} className="text-indigo-400" />}
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted px-1 font-medium">
+                          {isUser ? <User size={12} className="text-emerald-600 dark:text-emerald-400" /> : <ShieldCheck size={12} className="text-indigo-600 dark:text-indigo-400" />}
                           <span>{msg.senderName}</span>
                           <span>•</span>
                           <span>{new Date(msg.createdAt).toLocaleString()}</span>
@@ -499,20 +499,20 @@ const Notifications = () => {
                           className={`max-w-md p-4 rounded-2xl text-xs leading-relaxed whitespace-pre-wrap ${
                             isUser
                               ? 'bg-emerald-600 text-white rounded-tr-none shadow-md shadow-emerald-600/10'
-                              : 'bg-gray-800 border border-gray-700 text-gray-100 rounded-tl-none shadow-md'
+                              : 'bg-surface border border-border text-foreground rounded-tl-none shadow-sm dark:shadow-md'
                           }`}
                         >
                           {msg.message}
 
                           {msg.attachments && msg.attachments.length > 0 && (
-                            <div className="mt-3 pt-2 border-t border-white/20 flex flex-wrap gap-2">
+                            <div className="mt-3 pt-2 border-t border-border/60 dark:border-white/20 flex flex-wrap gap-2">
                               {msg.attachments.map((url, i) => (
                                 <a
                                   key={i}
                                   href={url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-1 px-2 py-1 rounded bg-black/20 text-[10px] hover:underline"
+                                  className="flex items-center gap-1 px-2 py-1 rounded bg-black/10 dark:bg-black/20 text-[10px] hover:underline"
                                 >
                                   <Paperclip size={11} /> Attachment #{i + 1}
                                 </a>
@@ -530,17 +530,17 @@ const Notifications = () => {
 
             {/* Reply Input Bar */}
             {threadDetails && (
-              <form onSubmit={handleSendUserReply} className="p-4 bg-gray-900 border-t border-gray-700 space-y-3">
+              <form onSubmit={handleSendUserReply} className="p-4 bg-surface border-t border-border space-y-3">
                 <textarea
                   rows={2}
                   value={userReplyText}
                   onChange={(e) => setUserReplyText(e.target.value)}
                   placeholder="Type your reply to the support team..."
-                  className="w-full bg-gray-950 border border-gray-700 rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none resize-none"
+                  className="w-full bg-surface-muted border border-border rounded-xl p-3 text-xs text-foreground placeholder:text-muted focus:border-indigo-500 focus:outline-none resize-none"
                   required
                 />
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-gray-400">
+                  <span className="text-[11px] text-muted">
                     Staff will be notified instantly when you reply.
                   </span>
                   <button

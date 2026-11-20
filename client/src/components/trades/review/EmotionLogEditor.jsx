@@ -2,17 +2,17 @@ import React from 'react';
 import { Trash2 } from 'lucide-react';
 
 const emotionColorMap = {
-  CALM: 'bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30',
-  CONFIDENT: 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30',
-  DISCIPLINED: 'bg-teal-500/20 text-teal-400 border-teal-500/30 hover:bg-teal-500/30',
-  ANXIOUS: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30',
-  GREEDY: 'bg-orange-500/20 text-orange-400 border-orange-500/30 hover:bg-orange-500/30',
-  FOMO: 'bg-orange-500/20 text-orange-400 border-orange-500/30 hover:bg-orange-500/30',
-  FEARFUL: 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30',
-  ANGRY: 'bg-red-900/40 text-red-400 border-red-900/50 hover:bg-red-900/50',
-  REVENGE_MINDSET: 'bg-red-900/40 text-red-500 border-red-900/50 hover:bg-red-900/50',
+  CALM: 'bg-blue-500/15 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/25',
+  CONFIDENT: 'bg-green-500/15 dark:bg-green-500/20 text-emerald-700 dark:text-green-400 border-green-500/30 hover:bg-green-500/25',
+  DISCIPLINED: 'bg-teal-500/15 dark:bg-teal-500/20 text-teal-700 dark:text-teal-400 border-teal-500/30 hover:bg-teal-500/25',
+  ANXIOUS: 'bg-yellow-500/15 dark:bg-yellow-500/20 text-amber-700 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/25',
+  GREEDY: 'bg-orange-500/15 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/25',
+  FOMO: 'bg-orange-500/15 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/25',
+  FEARFUL: 'bg-red-500/15 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30 hover:bg-red-500/25',
+  ANGRY: 'bg-red-500/20 dark:bg-red-900/40 text-red-800 dark:text-red-400 border-red-500/40 dark:border-red-900/50 hover:bg-red-500/30 dark:hover:bg-red-900/50',
+  REVENGE_MINDSET: 'bg-red-500/20 dark:bg-red-900/40 text-red-800 dark:text-red-500 border-red-500/40 dark:border-red-900/50 hover:bg-red-500/30 dark:hover:bg-red-900/50',
   REGRETFUL: 'bg-gray-500/20 text-muted border-gray-500/30 hover:bg-gray-500/30',
-  FRUSTRATED: 'bg-pink-500/20 text-pink-400 border-pink-500/30 hover:bg-pink-500/30',
+  FRUSTRATED: 'bg-pink-500/15 dark:bg-pink-500/20 text-pink-700 dark:text-pink-400 border-pink-500/30 hover:bg-pink-500/25',
 };
 
 const stageOptions = ['BEFORE_TRADE', 'DURING_TRADE', 'AFTER_TRADE'];
@@ -85,7 +85,7 @@ const EmotionLogEditor = ({ emotionLogs, setEmotionLogs }) => {
                 />
               </div>
               <input value={log.note || ''} onChange={(e) => updateEmotion(index, 'note', e.target.value)} placeholder="What was on your mind..." className="flex-1 lg:w-48 bg-background border border-border rounded-md py-1.5 px-3 text-sm outline-none focus:border-green-500" />
-              <button type="button" onClick={() => removeEmotion(index)} className="text-red-400 hover:text-red-300 p-1">
+              <button type="button" onClick={() => removeEmotion(index)} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 p-1">
                 <Trash2 size={18} />
               </button>
             </div>

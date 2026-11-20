@@ -55,7 +55,7 @@ const Legal = ({ type }) => {
       title: '3. Strict Non-Brokerage & Non-Financial Advisor Declaration',
       content: (
         <>
-          <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 mb-4 text-xs text-amber-200 leading-relaxed font-semibold">
+          <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 mb-4 text-xs text-amber-800 dark:text-amber-200 leading-relaxed font-semibold">
             IMPORTANT STATUTORY NOTICE: JAHZJOURNALS IS NOT A BROKER, NOT A DEALER, NOT A COMMODITY TRADING ADVISOR (CTA), NOT AN ASSET MANAGER, AND NOT A LICENSED FINANCIAL ADVISOR.
           </div>
           <p className="mb-4">
@@ -268,7 +268,7 @@ const Legal = ({ type }) => {
       title: '1. Statutory High-Risk Investment Warning',
       content: (
         <>
-          <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 mb-4 text-xs text-red-300 font-semibold leading-relaxed">
+          <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 mb-4 text-xs text-red-700 dark:text-red-300 font-semibold leading-relaxed">
             CRITICAL WARNING: TRADING FOREIGN EXCHANGE (FOREX), CONTRACTS FOR DIFFERENCE (CFDs), COMMODITIES, CRYPTO-ASSETS, AND FINANCIAL DERIVATIVES CARRIES A HIGH LEVEL OF RISK TO YOUR CAPITAL AND IS NOT SUITABLE FOR ALL INVESTORS.
           </div>
           <p className="mb-4">
@@ -288,7 +288,7 @@ const Legal = ({ type }) => {
           <p className="mb-4">
             JAHZJOURNALS operates exclusively as a financial software provider offering self-directed trading journaling, execution logs, habit tracking, and statistical analytics.
           </p>
-          <p className="mb-4 font-semibold text-emerald-400">
+          <p className="mb-4 font-semibold text-emerald-700 dark:text-emerald-400">
             NOTHING CONTAINED ON JAHZJOURNALS CONSTITUTES INVESTMENT, FINANCIAL, LEGAL, TAX, OR REGULATORY ADVICE.
           </p>
           <p className="mb-4">
@@ -384,7 +384,7 @@ const Legal = ({ type }) => {
       title: '3. Proprietary Trading Data Safeguards (Strict Zero-Sharing)',
       content: (
         <>
-          <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 mb-4 text-xs text-emerald-300 font-semibold leading-relaxed">
+          <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 mb-4 text-xs text-emerald-800 dark:text-emerald-300 font-semibold leading-relaxed">
             OUR ZERO-DATA-SHARING PROMISE: YOUR PRIVATE TRADING RECORDS, JOURNAL LOGS, SCREENSHOTS, STRATEGIES, AND ACCOUNT BALANCES ARE NEVER SOLD, RENTED, OR DISCLOSED TO ADVERTISERS, BROKERS, OR UNRELATED THIRD PARTIES.
           </div>
           <p className="mb-4">
@@ -535,13 +535,13 @@ const Legal = ({ type }) => {
       title: '2. Technologies Used by JAHZJOURNALS',
       content: (
         <>
-          <p className="mb-4 font-semibold text-emerald-400">Strictly Essential Technologies (Always Active):</p>
+          <p className="mb-4 font-semibold text-emerald-700 dark:text-emerald-400">Strictly Essential Technologies (Always Active):</p>
           <ul className="list-disc pl-6 space-y-2 mb-4 text-xs">
             <li><code>jwt</code> (Cookie): An encrypted, HTTP-only, secure authentication token required to verify your login session, protect against session hijacking, and safeguard trading data.</li>
             <li><code>jahzjournals-consent</code> (localStorage): Records your cookie and privacy preferences across sessions.</li>
           </ul>
 
-          <p className="mb-4 font-semibold text-emerald-400">Functional & Preference Technologies (localStorage):</p>
+          <p className="mb-4 font-semibold text-emerald-700 dark:text-emerald-400">Functional & Preference Technologies (localStorage):</p>
           <ul className="list-disc pl-6 space-y-2 mb-4 text-xs">
             <li><code>jahzjournals-theme</code>: Stores your UI color mode preference (Dark / Light).</li>
             <li><code>jahzjournal-sidebar-collapsed</code>: Remembers your sidebar navigation display state.</li>

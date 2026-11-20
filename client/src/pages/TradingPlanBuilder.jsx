@@ -89,18 +89,18 @@ const TradingPlanBuilder = () => {
       {step === 3 && plan && (
         <div className="bg-surface border border-border p-8 rounded-xl animate-in fade-in zoom-in">
            <div className="flex justify-between items-center mb-6">
-             <h2 className="text-xl font-bold flex items-center gap-2 text-indigo-400"><FileText size={24} /> Your Official Trading Plan</h2>
+             <h2 className="text-xl font-bold flex items-center gap-2 text-indigo-600 dark:text-indigo-400"><FileText size={24} /> Your Official Trading Plan</h2>
            </div>
            
-           <div className="prose prose-invert max-w-none text-foreground/90 whitespace-pre-wrap leading-relaxed shadow-inner bg-background p-6 rounded-lg border border-border">
+           <div className="prose dark:prose-invert max-w-none text-foreground/90 whitespace-pre-wrap leading-relaxed shadow-inner bg-background p-6 rounded-lg border border-border">
              {plan.markdownPlan}
            </div>
 
            <div className="mt-8 border-t border-border pt-6">
-             <h3 className="font-bold text-lg mb-4 text-emerald-400">Extracted Golden Rules</h3>
+             <h3 className="font-bold text-lg mb-4 text-emerald-600 dark:text-emerald-400">Extracted Golden Rules</h3>
              <ul className="space-y-2 mb-6">
                {plan.rules?.map((rule, idx) => (
-                 <li key={idx} className="flex items-start gap-3 bg-slate-900/50 p-3 rounded-lg border border-border">
+                 <li key={idx} className="flex items-start gap-3 bg-surface-muted p-3 rounded-lg border border-border">
                    <CheckCircle2 className="text-green-500 mt-0.5" size={18} />
                    <span className="text-sm font-medium">{rule}</span>
                  </li>

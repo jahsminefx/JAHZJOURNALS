@@ -91,7 +91,7 @@ const shouldNotifyDashboard = (config = {}) => {
   const method = String(config.method || '').toLowerCase();
   const url = String(config.url || '');
 
-  return mutatingMethods.has(method) && dashboardRefreshPaths.some((path) => url.startsWith(path));
+  return mutatingMethods.has(method) && dashboardRefreshPaths.some((path) => url.startsWith(path) || url.includes(path));
 };
 
 api.interceptors.response.use(

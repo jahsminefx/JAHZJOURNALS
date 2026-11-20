@@ -536,17 +536,17 @@ const MentorPricing = () => {
 
         {/* 14-Day Private Cohort Free Trial Banner for unregistered or eligible non-mentor users */}
         {(!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) && (
-          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-950/40 via-surface to-slate-950 p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-5 shadow-xl">
+          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-surface to-surface dark:from-blue-950/40 dark:via-surface dark:to-slate-950 p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-5 shadow-xl">
             <div className="flex items-start gap-3 sm:gap-4">
               <span className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-400 font-bold text-lg sm:text-xl border border-blue-500/30 mt-0.5 sm:mt-0">
                 ⏳
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-blue-400">
+                  <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400">
                     Two Weeks Complimentary + 12h Grace
                   </span>
-                  <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                  <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
                     Private Cohort Exclusive
                   </span>
                 </div>
@@ -610,10 +610,10 @@ const MentorPricing = () => {
               </span>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-amber-400">
+                  <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
                     12-Hour Grace Period Active
                   </span>
-                  <span className="text-xs font-bold text-amber-300">
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
                     ~{Math.max(1, Math.ceil((new Date(new Date(user.mentorTrialExpiresAt).getTime() + 12 * 60 * 60 * 1000).getTime() - Date.now()) / (60 * 60 * 1000)))} hour(s) left
                   </span>
                 </div>
@@ -657,13 +657,13 @@ const MentorPricing = () => {
 
         {/* Promo Banner if Active */}
         {(activePublicPromo || appliedPromo) && (
-          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-surface to-slate-950 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-lg">
+          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-surface to-surface dark:from-emerald-950/40 dark:via-surface dark:to-slate-950 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-lg">
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-sm shrink-0">
                 🎉
               </span>
               <div>
-                <p className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                <p className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
                   {appliedPromo?.discountPercent || 50}% Launch Discount Active
                 </p>
                 <p className="text-xs text-muted mt-0.5 leading-relaxed">
@@ -671,7 +671,7 @@ const MentorPricing = () => {
                 </p>
               </div>
             </div>
-            <span className="self-start sm:self-auto shrink-0 font-mono text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
+            <span className="self-start sm:self-auto shrink-0 font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
               CODE: {(appliedPromo?.code || 'LAUNCH50').toUpperCase()}
             </span>
           </div>
@@ -828,8 +828,8 @@ const MentorPricing = () => {
                         onClick={() => handleJoinWaitlist(megaProSyncSelected ? 'MENTOR_MEGA_PRO_SYNC' : 'MENTOR_MEGA')}
                         className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5 min-h-[44px] ${
                           megaProSyncSelected
-                            ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40'
-                            : 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                            ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-700 dark:text-purple-300 border border-purple-500/40'
+                            : 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-700 dark:text-sky-400 border border-sky-500/30'
                         }`}
                       >
                         <Sparkles size={14} className={megaProSyncSelected ? 'text-purple-400' : 'text-sky-400'} />
@@ -1005,10 +1005,10 @@ const MentorPricing = () => {
               </div>
 
               {/* Live Calculation Output Card */}
-              <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-surface to-emerald-950/20 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6 shadow-xl">
+              <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-surface to-emerald-500/10 dark:from-surface dark:to-emerald-950/20 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6 shadow-xl">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider">
                       Matching Tier
                     </span>
                     <span className="text-xs font-bold text-muted">

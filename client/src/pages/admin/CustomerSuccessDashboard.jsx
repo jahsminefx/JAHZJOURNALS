@@ -27,7 +27,7 @@ const CustomerSuccessDashboard = () => {
       <div className="space-y-6">
          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 p-4 sm:p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
              <div className="min-w-0">
-               <h1 className="text-xl sm:text-2xl font-black text-emerald-500 tracking-wide flex items-center gap-3">
+               <h1 className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-500 tracking-wide flex items-center gap-3">
                  <LifeBuoy size={24} className="shrink-0" /> <span>Customer Support &amp; Feedback</span>
                </h1>
                <p className="text-emerald-600/80 dark:text-emerald-400/80 text-sm mt-2 font-medium max-w-2xl">

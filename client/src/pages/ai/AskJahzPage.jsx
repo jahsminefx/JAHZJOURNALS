@@ -104,7 +104,7 @@ const AskJahzPage = () => {
         <div className="max-w-3xl mx-auto space-y-6">
           {messages.map((m, i) => (
             <div key={i} className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-amber-400'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:bg-slate-800 dark:border-transparent dark:text-amber-400'}`}>
                  {m.role === 'user' ? <User size={20} /> : <Bot size={24} />}
               </div>
               <div className={`p-4 rounded-2xl max-w-[85%] sm:max-w-[75%] shadow-sm leading-relaxed ${
@@ -118,7 +118,7 @@ const AskJahzPage = () => {
           ))}
           {loading && (
             <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-slate-800 text-amber-400 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:bg-slate-800 dark:border-transparent dark:text-amber-400 flex items-center justify-center flex-shrink-0 shadow-sm">
                 <Bot size={24} />
               </div>
               <div className="p-4 bg-surface border border-border rounded-2xl rounded-tl-none text-muted text-sm flex items-center gap-2">

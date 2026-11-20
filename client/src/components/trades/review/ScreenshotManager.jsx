@@ -69,7 +69,7 @@ const ScreenshotManager = ({ existingScreenshots, setExistingScreenshots, screen
               </div>
               <div className="mt-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-muted">{screenshot.screenshotType.replace('_', ' ')}</p>
-                <button type="button" disabled={deletingScreenshotId === screenshot.id} onClick={() => deleteExistingScreenshot(screenshot.id)} className="text-xs text-red-400 hover:text-red-300 disabled:opacity-60">
+                <button type="button" disabled={deletingScreenshotId === screenshot.id} onClick={() => deleteExistingScreenshot(screenshot.id)} className="text-xs text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 disabled:opacity-60">
                   {deletingScreenshotId === screenshot.id ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
@@ -80,7 +80,7 @@ const ScreenshotManager = ({ existingScreenshots, setExistingScreenshots, screen
       )}
 
       <div className="pt-4 mt-4 border-t border-border">
-        <input type="file" accept="image/*" multiple onChange={addScreenshotFile} className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:font-medium file:text-emerald-400 dark:file:bg-gray-700" />
+        <input type="file" accept="image/*" multiple onChange={addScreenshotFile} className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border file:border-emerald-500/30 file:bg-emerald-500/10 file:px-4 file:py-2 file:font-medium file:text-emerald-700 dark:file:border-0 dark:file:bg-gray-700 dark:file:text-emerald-400" />
       </div>
 
       {screenshotFiles.length > 0 && (
@@ -95,7 +95,7 @@ const ScreenshotManager = ({ existingScreenshots, setExistingScreenshots, screen
               <select value={screenshot.screenshotType} onChange={(e) => updateScreenshotFile(index, 'screenshotType', e.target.value)} className="bg-background border border-border rounded-md py-1.5 px-3 text-sm outline-none focus:border-green-500 self-start">
                 {screenshotTypeOptions.map((type) => <option key={type} value={type}>{type.replace(/_/g, ' ')}</option>)}
               </select>
-              <button type="button" onClick={() => removePendingScreenshot(index)} className="text-red-400 hover:text-red-300 justify-self-start self-start p-1.5">
+              <button type="button" onClick={() => removePendingScreenshot(index)} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 justify-self-start self-start p-1.5">
                 <Trash2 size={18} />
               </button>
             </div>

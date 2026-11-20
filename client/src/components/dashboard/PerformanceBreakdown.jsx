@@ -5,7 +5,7 @@ import { formatCurrency } from '../../utils/dashboard';
 const BreakdownItem = ({ label, value, percent, tone = 'green', currency }) => (
   <div className="rounded-lg border border-border bg-background p-4">
     <p className="text-xs text-muted">{label}</p>
-    <p className={`mt-1 text-sm font-bold ${tone === 'red' ? 'text-red-300' : 'text-foreground'}`}>{formatCurrency(value, currency)}</p>
+    <p className={`mt-1 text-sm font-bold ${tone === 'red' ? 'text-red-600 dark:text-red-300' : 'text-foreground'}`}>{formatCurrency(value, currency)}</p>
     <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-muted">
       <div className={`h-full rounded-full ${tone === 'red' ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(percent, 100)}%` }} />
     </div>

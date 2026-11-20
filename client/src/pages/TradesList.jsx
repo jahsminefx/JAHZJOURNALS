@@ -477,7 +477,7 @@ const getPnlColor = (pnl) => {
         <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 shadow-xs">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center font-black text-sm text-indigo-300 shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center font-black text-sm text-indigo-700 dark:text-indigo-300 shrink-0">
                 {pairFilter.slice(0, 3)}
               </div>
               <div>
@@ -610,7 +610,7 @@ const getPnlColor = (pnl) => {
                       <div>
                         <span className="text-lg font-black text-foreground">{trade.pair}</span>
                         <span className={`ml-2 px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
-                          trade.direction === 'BUY' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
+                          trade.direction === 'BUY' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-rose-500/15 text-rose-700 dark:text-rose-400'
                         }`}>
                           {trade.direction}
                         </span>
@@ -626,7 +626,7 @@ const getPnlColor = (pnl) => {
                       <div className="min-w-0">
                         <span className="block text-[10px] uppercase font-bold text-muted">P/L</span>
                         <span className={`font-mono font-bold truncate block ${
-                          trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
+                          trade.profitLossAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted'
                         }`}>
                           {formatCurrency(trade.profitLossAmount, trade.tradingAccount?.currency || 'USD', { signDisplay: 'always' })}
                         </span>
@@ -650,14 +650,14 @@ const getPnlColor = (pnl) => {
 
                   <div className="flex items-center justify-between border-t border-border pt-3">
                     <div className="flex items-center gap-3 text-xs">
-                      <Link to={`/trades/${trade.id}`} className="text-indigo-400 hover:text-indigo-300 font-bold">Details</Link>
-                      <Link to={`/trades/${trade.id}/edit`} className="text-emerald-400 hover:text-emerald-300 font-bold">Edit</Link>
+                      <Link to={`/trades/${trade.id}`} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-bold">Details</Link>
+                      <Link to={`/trades/${trade.id}/edit`} className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 font-bold">Edit</Link>
                     </div>
                     <button 
                       type="button" 
                       onClick={() => setTradePendingDelete(trade)} 
                       disabled={deletingTradeId === trade.id}
-                      className="text-rose-400 hover:text-rose-300 text-xs font-semibold"
+                      className="text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 text-xs font-semibold"
                     >
                       {deletingTradeId === trade.id ? 'Deleting...' : 'Delete'}
                     </button>
@@ -674,7 +674,7 @@ const getPnlColor = (pnl) => {
                 <div key={trade.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 hover:bg-surface-muted/40 transition-colors gap-3">
                   <div className="flex items-center gap-3">
                     <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
-                      trade.direction === 'BUY' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
+                      trade.direction === 'BUY' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-rose-500/15 text-rose-700 dark:text-rose-400'
                     }`}>
                       {trade.direction}
                     </span>
@@ -687,19 +687,19 @@ const getPnlColor = (pnl) => {
                   <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6">
                     <TradeOutcomeBadge trade={trade} size="sm" />
                     <span className={`font-mono font-bold text-sm ${
-                      trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
+                      trade.profitLossAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted'
                     }`}>
                       {formatCurrency(trade.profitLossAmount, trade.tradingAccount?.currency || 'USD', { signDisplay: 'always' })}
                     </span>
 
                     <div className="flex items-center gap-2 text-xs">
-                      <Link to={`/trades/${trade.id}`} className="text-indigo-400 hover:text-indigo-300 font-semibold px-2 py-1 rounded-md hover:bg-surface-muted">Details</Link>
-                      <Link to={`/trades/${trade.id}/edit`} className="text-emerald-400 hover:text-emerald-300 font-semibold px-2 py-1 rounded-md hover:bg-surface-muted">Edit</Link>
+                      <Link to={`/trades/${trade.id}`} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold px-2 py-1 rounded-md hover:bg-surface-muted">Details</Link>
+                      <Link to={`/trades/${trade.id}/edit`} className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 font-semibold px-2 py-1 rounded-md hover:bg-surface-muted">Edit</Link>
                       <button 
                         type="button" 
                         onClick={() => setTradePendingDelete(trade)} 
                         disabled={deletingTradeId === trade.id}
-                        className="text-rose-400 hover:text-rose-300 font-semibold px-2 py-1 rounded-md hover:bg-surface-muted"
+                        className="text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 font-semibold px-2 py-1 rounded-md hover:bg-surface-muted"
                       >
                         {deletingTradeId === trade.id ? 'Removing...' : 'Delete'}
                       </button>
@@ -724,7 +724,7 @@ const getPnlColor = (pnl) => {
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-base text-foreground">{trade.pair}</span>
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
-                          trade.direction === 'BUY' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
+                          trade.direction === 'BUY' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-rose-500/15 text-rose-700 dark:text-rose-400'
                         }`}>
                           {trade.direction}
                         </span>
@@ -740,7 +740,7 @@ const getPnlColor = (pnl) => {
                       <div>
                         <span className="text-muted font-normal">P/L: </span>
                         <span className={`font-mono font-bold text-sm ${
-                          trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
+                          trade.profitLossAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted'
                         }`}>
                           {formatCurrency(trade.profitLossAmount, trade.tradingAccount?.currency || 'USD', { signDisplay: 'always' })}
                         </span>
@@ -749,11 +749,11 @@ const getPnlColor = (pnl) => {
 
                     <div className="flex justify-between items-center pt-1 border-t border-border/40">
                       <div className="flex gap-2 text-xs">
-                        <Link to={`/trades/${trade.id}`} className="text-indigo-400 font-semibold hover:underline">
+                        <Link to={`/trades/${trade.id}`} className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
                           Details
                         </Link>
                         <span className="text-border">•</span>
-                        <Link to={`/trades/${trade.id}/edit`} className="text-emerald-400 font-semibold hover:underline">
+                        <Link to={`/trades/${trade.id}/edit`} className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">
                           Edit
                         </Link>
                       </div>
@@ -762,7 +762,7 @@ const getPnlColor = (pnl) => {
                         type="button"
                         onClick={() => setTradePendingDelete(trade)}
                         disabled={deletingTradeId === trade.id}
-                        className="text-rose-400 hover:text-rose-300 text-xs font-semibold flex items-center gap-1"
+                        className="text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 text-xs font-semibold flex items-center gap-1"
                       >
                         <Trash2 size={13} />
                         <span>Delete</span>
@@ -791,7 +791,7 @@ const getPnlColor = (pnl) => {
                         <tr key={trade.id} className="hover:bg-surface-muted/40 transition-colors group">
                           <td className="px-6 py-4">
                             <div className="font-bold text-foreground">{trade.pair}</div>
-                            <div className={`text-xs font-bold ${trade.direction === 'BUY' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            <div className={`text-xs font-bold ${trade.direction === 'BUY' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                               {trade.direction}
                             </div>
                           </td>
@@ -802,24 +802,24 @@ const getPnlColor = (pnl) => {
                             <TradeOutcomeBadge trade={trade} size="sm" />
                           </td>
                           <td className={`px-6 py-4 font-mono font-bold text-sm ${
-                            trade.profitLossAmount > 0 ? 'text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-400' : 'text-muted'
+                            trade.profitLossAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : trade.profitLossAmount < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted'
                           }`}>
                             {formatCurrency(trade.profitLossAmount, trade.tradingAccount?.currency || 'USD', { signDisplay: 'always' })}
                           </td>
                           <td className="px-6 py-4 text-muted text-xs font-medium">{trade.status}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-3 text-xs">
-                              <Link to={`/trades/${trade.id}`} className="text-indigo-400 hover:text-indigo-300 font-semibold">
+                              <Link to={`/trades/${trade.id}`} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold">
                                 Details
                               </Link>
-                              <Link to={`/trades/${trade.id}/edit`} className="text-emerald-400 hover:text-emerald-300 font-semibold">
+                              <Link to={`/trades/${trade.id}/edit`} className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 font-semibold">
                                 Edit
                               </Link>
                               <button
                                 type="button"
                                 onClick={() => setTradePendingDelete(trade)}
                                 disabled={deletingTradeId === trade.id}
-                                className="inline-flex items-center gap-1 text-rose-400 hover:text-rose-300 disabled:opacity-50 font-semibold"
+                                className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 disabled:opacity-50 font-semibold"
                               >
                                 <Trash2 size={14} />
                                 {deletingTradeId === trade.id ? 'Removing...' : 'Delete'}

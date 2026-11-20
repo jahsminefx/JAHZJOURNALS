@@ -34,6 +34,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import api from '../utils/api';
+import { invalidateCache } from '../utils/apiCache';
 import { useAuth } from '../context/useAuth';
 import { useTheme } from '../context/ThemeProvider';
 import { loadSettings, saveSettings, fetchAndSyncSettings } from '../utils/settings';
@@ -203,6 +204,7 @@ const Settings = () => {
   const [settings, setSettings] = useState(() => loadSettings());
   const [profile, setProfile] = useState(() => profileFromUser(user, loadSettings()));
   const [weeklyGoal, setWeeklyGoal] = useState(emptyWeeklyGoal);
+  const [persistedWeeklyGoal, setPersistedWeeklyGoal] = useState(emptyWeeklyGoal);
   const [accounts, setAccounts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingSection, setSavingSection] = useState(null);
@@ -369,7 +371,9 @@ const Settings = () => {
         setSettings(fetchedSettings);
         setProfile(profileFromUser(profileResponse.data, fetchedSettings));
         setAccounts(accountsResponse.data);
-        setWeeklyGoal(weeklyGoalFromApi(weeklyGoalResponse.data));
+        const initialWeeklyGoal = weeklyGoalFromApi(weeklyGoalResponse.data);
+        setWeeklyGoal(initialWeeklyGoal);
+        setPersistedWeeklyGoal(initialWeeklyGoal);
       } catch (error) {
         toast.error(error.response?.data?.message || 'We had trouble loading your settings.');
       } finally {
@@ -545,27 +549,43 @@ const Settings = () => {
     }));
   };
 
-  const handleWeeklyGoalSave = async (event) => {
-    event.preventDefault();
+  const submitWeeklyGoalPayload = async (payload) => {
+    if (savingSection === 'weeklyGoal') return;
     setSavingSection('weeklyGoal');
-
     try {
-      const payload = {
-        tradingAccountId: weeklyGoal.tradingAccountId || null,
-        profitTarget: weeklyGoal.profitTarget === '' ? null : weeklyGoal.profitTarget,
-        tradeCountTarget: weeklyGoal.tradeCountTarget === '' ? null : weeklyGoal.tradeCountTarget,
-        winRateTarget: weeklyGoal.winRateTarget === '' ? null : weeklyGoal.winRateTarget,
-        maxLossTarget: weeklyGoal.maxLossTarget === '' ? null : weeklyGoal.maxLossTarget,
-      };
-
       const { data } = await api.put('/users/trading-goals/weekly', payload);
-      setWeeklyGoal(weeklyGoalFromApi(data));
-      toast.success('Weekly targets locked in.');
+      const savedGoal = weeklyGoalFromApi(data);
+      setWeeklyGoal(savedGoal);
+      setPersistedWeeklyGoal(savedGoal);
+      invalidateCache('/analytics');
+      invalidateCache('/users/trading-goals');
+      toast.success(data ? 'Weekly targets locked in.' : 'Weekly dashboard goals disabled.');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Couldn\'t save your weekly targets.');
     } finally {
       setSavingSection(null);
     }
+  };
+
+  const handleClearWeeklyGoals = async () => {
+    await submitWeeklyGoalPayload({
+      tradingAccountId: weeklyGoal.tradingAccountId || null,
+      profitTarget: null,
+      tradeCountTarget: null,
+      winRateTarget: null,
+      maxLossTarget: null,
+    });
+  };
+
+  const handleWeeklyGoalSave = async (event) => {
+    event.preventDefault();
+    await submitWeeklyGoalPayload({
+      tradingAccountId: weeklyGoal.tradingAccountId || null,
+      profitTarget: weeklyGoal.profitTarget === '' ? null : weeklyGoal.profitTarget,
+      tradeCountTarget: weeklyGoal.tradeCountTarget === '' ? null : weeklyGoal.tradeCountTarget,
+      winRateTarget: weeklyGoal.winRateTarget === '' ? null : weeklyGoal.winRateTarget,
+      maxLossTarget: weeklyGoal.maxLossTarget === '' ? null : weeklyGoal.maxLossTarget,
+    });
   };
 
   const handleExportData = async () => {
@@ -738,9 +758,38 @@ const Settings = () => {
       <form onSubmit={handleWeeklyGoalSave}>
         <SettingsCard
           title="Weekly Dashboard Goals"
-          description="Set targets for the dashboard weekly-goal card. Leave all targets blank to disable the active weekly goal."
-          actions={<SaveButton section="weeklyGoal" savingSection={savingSection}>Save goals</SaveButton>}
+          description="Set targets for the dashboard Weekly Goal Progress card (Monday–Sunday UTC). Saved separately from Trading Preferences above using Save goals."
+          actions={(
+            <div className="flex flex-wrap items-center gap-2">
+              {(weeklyGoal.profitTarget !== '' || weeklyGoal.tradeCountTarget !== '' || weeklyGoal.winRateTarget !== '' || weeklyGoal.maxLossTarget !== '') && (
+                <button
+                  type="button"
+                  disabled={savingSection === 'weeklyGoal'}
+                  onClick={handleClearWeeklyGoals}
+                  className="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted transition hover:border-red-500/40 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
+                >
+                  Clear goals
+                </button>
+              )}
+              <SaveButton section="weeklyGoal" savingSection={savingSection}>Save goals</SaveButton>
+            </div>
+          )}
         >
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-muted/60 px-4 py-2.5 text-xs">
+            <span className="text-muted">
+              Current active weekly goal:{' '}
+              <strong className="text-foreground">
+                {(persistedWeeklyGoal.profitTarget !== '' || persistedWeeklyGoal.tradeCountTarget !== '' || persistedWeeklyGoal.winRateTarget !== '' || persistedWeeklyGoal.maxLossTarget !== '')
+                  ? (persistedWeeklyGoal.tradingAccountId
+                      ? (accounts.find((a) => a.id === persistedWeeklyGoal.tradingAccountId)?.name || 'Selected account')
+                      : 'All accounts')
+                  : 'Disabled'}
+              </strong>
+            </span>
+            <Link to="/dashboard" className="font-bold text-emerald-600 hover:underline dark:text-emerald-400">
+              View on Dashboard →
+            </Link>
+          </div>
           <div className="grid gap-5 md:grid-cols-2">
             <SelectInput label="Goal account" description="Use all accounts or focus the weekly target on one account." value={weeklyGoal.tradingAccountId} onChange={(event) => updateWeeklyGoal('tradingAccountId', event.target.value)}>
               <option value="">All accounts</option>
@@ -1158,7 +1207,7 @@ const Settings = () => {
         <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-xl border border-green-500/20 bg-green-500/10 p-5 relative overflow-hidden">
             {isFoundingTrader && <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-amber-500/20 blur-xl" />}
-            <p className="relative z-10 text-xs font-bold uppercase tracking-[0.2em] text-green-300">Current plan</p>
+            <p className="relative z-10 text-xs font-bold uppercase tracking-[0.2em] text-emerald-700 dark:text-green-300">Current plan</p>
             <h3 className="relative z-10 mt-3 text-3xl font-black text-foreground">{user?.subscriptionPlan || 'FREE'}</h3>
             
             <div className="relative z-10 mt-6 space-y-3 border-t border-green-500/20 pt-4">
@@ -1170,7 +1219,7 @@ const Settings = () => {
                  <span className="text-muted">Access Type</span>
                  <span className="font-medium text-foreground">
                    {isFoundingTrader ? (
-                     <span className="flex items-center gap-1.5 text-amber-400">
+                     <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
                        🏅 {promotion?.badge?.name || 'Founding Trader'}
                      </span>
                    ) : 'Standard'}
@@ -1337,10 +1386,10 @@ const Settings = () => {
             </div>
             <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="mt-1 shrink-0 text-red-300" size={20} />
+                <AlertTriangle className="mt-1 shrink-0 text-red-600 dark:text-red-300" size={20} />
                 <div>
-                  <h3 className="font-bold text-red-100">Danger zone</h3>
-                  <p className="mt-2 text-sm leading-6 text-red-100/70">Destructive actions should require password confirmation. Backend delete endpoints for all journal data and account deletion are not connected yet.</p>
+                  <h3 className="font-bold text-red-700 dark:text-red-100">Danger zone</h3>
+                  <p className="mt-2 text-sm leading-6 text-red-700/80 dark:text-red-100/70">Destructive actions should require password confirmation. Backend delete endpoints for all journal data and account deletion are not connected yet.</p>
                 </div>
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto]">
@@ -1351,10 +1400,10 @@ const Settings = () => {
                   placeholder="Type your current password to confirm"
                   className="rounded-lg border border-red-500/30 bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-red-300"
                 />
-                <button type="button" onClick={() => comingSoon('Delete all journal data')} disabled={!deleteConfirmation} className="rounded-lg border border-red-400/40 px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50">
+                <button type="button" onClick={() => comingSoon('Delete all journal data')} disabled={!deleteConfirmation} className="rounded-lg border border-red-400/40 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-200 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50">
                   Delete journal data
                 </button>
-                <button type="button" onClick={handleDeleteAccount} disabled={!deleteConfirmation || savingSection === 'deleteAccount'} className="rounded-lg bg-red-500 px-4 py-3 text-sm font-bold text-foreground hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50">
+                <button type="button" onClick={handleDeleteAccount} disabled={!deleteConfirmation || savingSection === 'deleteAccount'} className="rounded-lg bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50">
                   {savingSection === 'deleteAccount' ? 'Deleting...' : 'Delete account'}
                 </button>
               </div>
@@ -1868,7 +1917,7 @@ const Settings = () => {
             {/* Body */}
             <div className="p-6 space-y-4">
               <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4">
-                <p className="text-sm font-semibold text-rose-300">
+                <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">
                   Are you sure you want to cancel your {user?.subscriptionPlan || 'current'} subscription?
                 </p>
               </div>

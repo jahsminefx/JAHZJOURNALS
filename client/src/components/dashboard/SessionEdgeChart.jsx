@@ -84,12 +84,12 @@ const SessionEdgeChart = ({ data = [], currency, className = '' }) => {
                   <div className="min-w-0">
                     <p className="break-words font-semibold leading-5 text-foreground">{session.label}</p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
-                      <span className="inline-flex items-center gap-1 font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 text-[11px]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
+                      <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 text-[11px]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 inline-block" />
                         {session.wins ?? 0} positive
                       </span>
-                      <span className="inline-flex items-center gap-1 font-semibold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 text-[11px]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-400 inline-block" />
+                      <span className="inline-flex items-center gap-1 font-semibold text-red-700 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 text-[11px]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 dark:bg-red-400 inline-block" />
                         {session.losses ?? 0} negative
                       </span>
                       {(session.breakevens ?? 0) > 0 && (
@@ -129,10 +129,10 @@ const SessionEdgeChart = ({ data = [], currency, className = '' }) => {
           <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
             {strongest ? (
               <div className="flex gap-3">
-                <ShieldCheck size={20} className="mt-0.5 text-emerald-400" />
+                <ShieldCheck size={20} className="mt-0.5 text-emerald-600 dark:text-emerald-400" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{strongest.label} is currently your strongest session.</p>
-                  <p className="mt-1 text-xs text-emerald-100/70">Based on positive P/L, profit factor, and enough trade samples.</p>
+                  <p className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-100/70">Based on positive P/L, profit factor, and enough trade samples.</p>
                 </div>
               </div>
             ) : (

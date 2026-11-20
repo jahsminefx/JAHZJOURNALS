@@ -666,14 +666,14 @@ const ContactMessagesTab = () => {
                           {item.message}
 
                           {item.attachments && item.attachments.length > 0 && (
-                            <div className="mt-3 pt-2 border-t border-white/20 flex flex-wrap gap-2">
+                            <div className="mt-3 pt-2 border-t border-border/60 dark:border-white/20 flex flex-wrap gap-2">
                               {item.attachments.map((url, i) => (
                                 <a
                                   key={i}
                                   href={url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-black/20 hover:bg-black/40 text-[11px] transition-colors"
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-black/10 hover:bg-black/20 dark:bg-black/20 dark:hover:bg-black/40 text-[11px] transition-colors"
                                 >
                                   <Paperclip size={12} />
                                   Attachment #{i + 1}

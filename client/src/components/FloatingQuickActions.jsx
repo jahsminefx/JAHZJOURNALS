@@ -43,7 +43,7 @@ const FloatingQuickActions = () => {
 
             <button
               onClick={() => handleAction('/weekly-review')}
-              className="flex items-center gap-2.5 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 font-bold text-xs rounded-full shadow-lg active:scale-95 transition-all"
+              className="flex items-center gap-2.5 px-4 py-2.5 bg-surface hover:bg-surface-muted text-foreground border border-border font-bold text-xs rounded-full shadow-lg active:scale-95 transition-all"
             >
               <span>Weekly Journal</span>
               <BookOpen size={16} />
@@ -51,7 +51,7 @@ const FloatingQuickActions = () => {
 
             <button
               onClick={() => handleAction('/analytics')}
-              className="flex items-center gap-2.5 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 font-bold text-xs rounded-full shadow-lg active:scale-95 transition-all"
+              className="flex items-center gap-2.5 px-4 py-2.5 bg-surface hover:bg-surface-muted text-foreground border border-border font-bold text-xs rounded-full shadow-lg active:scale-95 transition-all"
             >
               <span>Analytics</span>
               <LineChart size={16} />
@@ -63,9 +63,9 @@ const FloatingQuickActions = () => {
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className={`flex items-center justify-center h-13 w-13 rounded-full font-bold text-white shadow-xl transition-all active:scale-90 ${
+          className={`flex items-center justify-center h-13 w-13 rounded-full font-bold shadow-xl transition-all active:scale-90 ${
             open 
-              ? 'bg-gray-800 border border-gray-700 text-gray-300 rotate-90' 
+              ? 'bg-surface border border-border text-foreground rotate-90' 
               : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
           }`}
           aria-label="Quick Actions"

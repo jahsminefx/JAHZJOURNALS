@@ -180,7 +180,7 @@ const PropFirmAdvancedSettings = ({ account, initialValues, isSaving, onCancel, 
           <label className="block text-sm text-muted md:col-span-3">
             <span className="font-medium text-foreground">Custom rules and notes</span>
             <textarea rows="4" {...register('customRules')} className="mt-2 block w-full resize-none rounded-lg border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition focus:border-green-400" />
-            {errors.customRules?.message && <span className="mt-2 block text-xs font-medium text-red-300">{errors.customRules.message}</span>}
+            {errors.customRules?.message && <span className="mt-2 block text-xs font-medium text-red-600 dark:text-red-300">{errors.customRules.message}</span>}
           </label>
         </div>
       </AdvancedSettingsSection>
@@ -212,7 +212,7 @@ const PropFirmAdvancedSettings = ({ account, initialValues, isSaving, onCancel, 
       )}
 
       <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <button type="button" onClick={onCancel} className="rounded-lg border border-gray-600 px-5 py-2.5 text-sm font-medium text-muted hover:bg-surface-muted">
+        <button type="button" onClick={onCancel} className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-muted hover:text-foreground hover:bg-surface-muted">
           Cancel
         </button>
         <button type="submit" disabled={isSaving} className="rounded-lg bg-green-500 px-5 py-2.5 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">

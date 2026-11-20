@@ -55,8 +55,8 @@ const UpcomingNewsTicker = ({ className = '' }) => {
     <div
       className={`rounded-2xl border p-3.5 sm:p-4 transition-all duration-200 shadow-md ${
         isHighImpact
-          ? 'bg-gradient-to-r from-red-950/40 via-surface to-red-950/20 border-red-500/30'
-          : 'bg-gradient-to-r from-amber-950/30 via-surface to-surface border-amber-500/30'
+          ? 'bg-gradient-to-r from-red-500/10 via-surface to-red-500/5 dark:from-red-950/40 dark:via-surface dark:to-red-950/20 border-red-500/30'
+          : 'bg-gradient-to-r from-amber-500/10 via-surface to-surface dark:from-amber-950/30 dark:via-surface dark:to-surface border-amber-500/30'
       } ${className}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -64,8 +64,8 @@ const UpcomingNewsTicker = ({ className = '' }) => {
           <div
             className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
               isHighImpact
-                ? 'bg-red-500/15 text-red-400 border-red-500/30 animate-pulse'
-                : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                ? 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 animate-pulse'
+                : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
             }`}
           >
             {isHighImpact ? <Flame size={18} /> : <AlertTriangle size={18} />}
@@ -77,7 +77,7 @@ const UpcomingNewsTicker = ({ className = '' }) => {
                 className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
                   isHighImpact
                     ? 'bg-red-500 text-white'
-                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
                 }`}
               >
                 {isHighImpact ? 'High Impact News' : 'Medium Impact News'}
@@ -87,7 +87,7 @@ const UpcomingNewsTicker = ({ className = '' }) => {
                 {primaryEvent.country}
               </span>
 
-              <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <Clock size={12} />
                 <span>{primaryEvent.countdown || formatEventTime(primaryEvent.date)}</span>
               </span>

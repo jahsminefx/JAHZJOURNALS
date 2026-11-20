@@ -97,7 +97,7 @@ const AiUsageDashboard = () => {
                  <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 10 }}>
                    <XAxis type="number" hide />
                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: 'rgb(var(--muted-foreground))', fontSize: 11}} width={90}/>
-                   <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: 'rgb(var(--surface-elevated))', borderColor: 'rgb(var(--border))', color: 'rgb(var(--foreground))', borderRadius: '8px', fontSize: '12px'}} />
+                   <Tooltip cursor={{fill: 'rgba(148, 163, 184, 0.12)'}} contentStyle={{backgroundColor: 'rgb(var(--surface-elevated))', borderColor: 'rgb(var(--border))', color: 'rgb(var(--foreground))', borderRadius: '8px', fontSize: '12px'}} />
                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                       {chartData.map((e, i) => <Cell key={i} fill="#A855F7" />)}
                    </Bar>

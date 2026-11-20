@@ -8,7 +8,7 @@ const PropFirmMockup = () => (
         <p className="text-xs uppercase tracking-[0.2em] text-muted">Challenge Tracker</p>
         <h3 className="mt-1 text-xl font-bold text-foreground">Phase 1 Account</h3>
       </div>
-      <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-300">47% progress</span>
+      <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-700 dark:text-cyan-300">47% progress</span>
     </div>
     <div className="mt-5 grid grid-cols-2 gap-3">
       <StatCard label="Account size" value="$10,000" tone="white" />
@@ -19,7 +19,7 @@ const PropFirmMockup = () => (
     <div className="mt-5 rounded-xl border border-border bg-surface-muted dark:border-white/10 dark:bg-white/[0.03] p-4">
       <div className="flex justify-between text-sm text-muted">
         <span>Current progress</span>
-        <span className="font-semibold text-emerald-300">47%</span>
+        <span className="font-semibold text-emerald-700 dark:text-emerald-300">47%</span>
       </div>
       <div className="mt-3 h-3 overflow-hidden rounded-full bg-surface-muted">
         <div className="h-full w-[47%] rounded-full bg-emerald-400" />

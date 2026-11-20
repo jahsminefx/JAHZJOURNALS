@@ -9,7 +9,7 @@ const SummaryCard = ({ title, onEdit, children }) => (
     <div className="mb-4 flex items-center justify-between gap-3">
       <h3 className="font-bold text-foreground">{title}</h3>
       {onEdit && (
-        <button type="button" onClick={onEdit} className="text-sm font-semibold text-green-300 hover:text-green-200">
+        <button type="button" onClick={onEdit} className="text-sm font-semibold text-emerald-600 dark:text-green-300 hover:text-emerald-700 dark:hover:text-green-200">
           Edit
         </button>
       )}
@@ -34,7 +34,7 @@ const PropFirmReviewStep = ({ editableStepKeys = ['details', 'challenge'], onEdi
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm leading-6 text-yellow-100/90">
+      <div className="rounded-lg border border-amber-500/30 dark:border-yellow-500/20 bg-amber-500/10 dark:bg-yellow-500/10 p-4 text-sm leading-6 text-amber-800 dark:text-yellow-100/90">
         Verify these rules against your official prop-firm agreement before saving.
       </div>
 
@@ -66,7 +66,7 @@ const PropFirmReviewStep = ({ editableStepKeys = ['details', 'challenge'], onEdi
       <section className="rounded-lg border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="font-bold text-foreground">Phase targets</h3>
-          {canEditChallenge && <button type="button" onClick={() => onEditStep('challenge')} className="text-sm font-semibold text-green-300 hover:text-green-200">Edit</button>}
+          {canEditChallenge && <button type="button" onClick={() => onEditStep('challenge')} className="text-sm font-semibold text-emerald-600 dark:text-green-300 hover:text-emerald-700 dark:hover:text-green-200">Edit</button>}
         </div>
         {(form.phases || []).length === 0 ? (
           <p className="text-sm text-muted">No evaluation phases for this account.</p>
@@ -77,7 +77,7 @@ const PropFirmReviewStep = ({ editableStepKeys = ['details', 'challenge'], onEdi
 
               return (
                 <div key={`${phase.name}-${index}`} className="rounded-lg border border-border bg-surface-muted p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-green-400">Phase {index + 1}</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600 dark:text-green-400">Phase {index + 1}</p>
                   <h4 className="mt-2 font-bold text-foreground">{phase.name || `Phase ${index + 1}`}</h4>
                   <p className="mt-2 text-sm text-muted">Target: {phase.profitTargetPercent || 0}%</p>
                   <p className="mt-1 text-sm text-muted">Amount: <CurrencyDisplay value={targetAmount} currency={form.currency} /></p>

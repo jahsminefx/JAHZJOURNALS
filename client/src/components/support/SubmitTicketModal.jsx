@@ -13,9 +13,9 @@ const CATEGORIES = [
 ];
 
 const PRIORITIES = [
-  { value: 'NORMAL', label: 'Normal (Standard SLA - within 24h)', color: 'text-gray-300' },
-  { value: 'HIGH', label: 'High Priority (within 6h)', color: 'text-amber-400' },
-  { value: 'URGENT', label: 'Urgent / Active Trading Blocked (within 2h)', color: 'text-red-400' },
+  { value: 'NORMAL', label: 'Normal (Standard SLA - within 24h)', color: 'text-foreground' },
+  { value: 'HIGH', label: 'High Priority (within 6h)', color: 'text-amber-600 dark:text-amber-400' },
+  { value: 'URGENT', label: 'Urgent / Active Trading Blocked (within 2h)', color: 'text-red-600 dark:text-red-400' },
 ];
 
 export default function SubmitTicketModal({ isOpen, onClose, onSuccess }) {

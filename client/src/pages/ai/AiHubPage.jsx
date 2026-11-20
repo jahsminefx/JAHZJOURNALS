@@ -54,7 +54,7 @@ const AiHubPage = () => {
                   <h2 className="text-lg font-bold text-foreground">Pending Trade Reviews</h2>
                   <button
                     onClick={() => navigate('/ai/trade-reviews')}
-                    className="text-xs font-bold text-emerald-400 hover:underline"
+                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
                   >
                     View All
                   </button>
@@ -72,7 +72,7 @@ const AiHubPage = () => {
                          </div>
                          <button
                            onClick={() => handleGenerateTradeReview(trade.id)}
-                           className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold transition-colors flex items-center gap-1.5"
+                           className="text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold transition-colors flex items-center gap-1.5"
                          >
                             <Sparkles size={13} /> Generate
                          </button>

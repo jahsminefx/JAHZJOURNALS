@@ -25,6 +25,10 @@
   --color-border: rgb(var(--border));
   --color-foreground: rgb(var(--foreground));
   --color-muted: rgb(var(--muted-foreground));
+  --color-muted-foreground: rgb(var(--muted-foreground));
+  --color-primary: rgb(var(--primary));
+  --color-secondary: rgb(var(--surface-muted));
+  --color-card: rgb(var(--surface));
 }
 
 @layer base {
@@ -37,6 +41,7 @@
     --border: 226 232 240;
     --foreground: 15 23 42;
     --muted-foreground: 71 85 105;
+    --primary: 16 185 129;
     --problem-icon: #ef4444;
     --problem-text: #334155;
   }
@@ -50,6 +55,7 @@
     --border: 51 65 85;
     --foreground: 248 250 252;
     --muted-foreground: 148 163 184;
+    --primary: 16 185 129;
     --problem-icon: #fca5a5;
     --problem-text: #e5e7eb;
   }
@@ -93,5 +99,26 @@
 
   .card-glow {
     @apply transition-all duration-200 hover:shadow-md hover:border-emerald-500/30;
+  }
+
+  .recharts-wrapper:focus,
+  .recharts-wrapper *:focus,
+  .recharts-surface:focus,
+  .recharts-layer:focus,
+  .recharts-sector:focus {
+    outline: none;
+  }
+
+  .recharts-surface:focus-visible {
+    outline: 2px solid rgb(var(--primary) / 0.65);
+    outline-offset: -2px;
+    border-radius: 0.5rem;
+  }
+
+  [data-focus-source='pointer'] .recharts-surface:focus,
+  [data-focus-source='pointer'] .recharts-surface:focus-visible,
+  [data-focus-source='pointer'] .recharts-wrapper *:focus,
+  [data-focus-source='pointer'] .recharts-wrapper *:focus-visible {
+    outline: none;
   }
 }

@@ -107,13 +107,13 @@ const MTCloudSyncModal = ({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-surface-muted/50">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <Cloud size={24} />
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                 {isCreateMode ? '1-Click MT5 Auto-Import' : 'MetaTrader 4 / 5 Cloud Sync'}
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
                   <Clock size={11} /> Early Access • Jan 2027 (Pro Sync)
                 </span>
               </h2>
@@ -136,7 +136,7 @@ const MTCloudSyncModal = ({
         {/* If Not on Pro Sync: Upgrade Prompt */}
         {!isAllowedSync ? (
           <div className="p-6 space-y-5 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-inner">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-inner">
               <Clock size={32} />
             </div>
             <div>
@@ -191,11 +191,11 @@ const MTCloudSyncModal = ({
         ) : CLOUD_SYNC_COMING_SOON ? (
           /* Coming Soon View for Pro Sync accounts */
           <div className="p-6 space-y-5 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-inner">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-inner">
               <Clock size={32} />
             </div>
             <div>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full mb-2">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full mb-2">
                 <Clock size={12} /> Early Access • January 2027 (Pro Sync)
               </span>
               <h3 className="text-xl font-black text-foreground">
@@ -204,14 +204,14 @@ const MTCloudSyncModal = ({
               <p className="mt-2 text-xs leading-relaxed text-muted max-w-md mx-auto">
                 We are currently upgrading our dedicated server infrastructure to deliver ultra-reliable, high-speed 24/7 background syncing without needing MetaTrader open on your machine.
               </p>
-              <p className="mt-1.5 text-xs text-emerald-400 font-semibold">
+              <p className="mt-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
                 As a valued Pro Sync member, your account will automatically unlock full access when Early Access opens in January 2027!
               </p>
             </div>
 
             {/* Instant Free Alternative: Desktop EA */}
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-left space-y-2.5 text-xs">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold">
                 <Zap size={16} className="shrink-0" />
                 <span>Want to sync trades right now?</span>
               </div>
@@ -222,7 +222,7 @@ const MTCloudSyncModal = ({
                 <a
                   href="/downloads/JahzJournals_Sync_MT5.mq5"
                   download
-                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors"
                 >
                   <Download size={13} />
                   Download MT5 EA (.mq5)
@@ -230,7 +230,7 @@ const MTCloudSyncModal = ({
                 <a
                   href="/downloads/JahzJournals_Sync_MT4.mq4"
                   download
-                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors"
                 >
                   <Download size={13} />
                   Download MT4 EA (.mq4)
@@ -253,11 +253,11 @@ const MTCloudSyncModal = ({
           /* Modal Form - 100% Preserved */
           <form onSubmit={handleConnect} className="p-6 space-y-4 overflow-y-auto">
             {/* Security Banner */}
-            <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300">
-              <ShieldCheck size={18} className="shrink-0 text-emerald-400 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-800 dark:text-emerald-300">
+              <ShieldCheck size={18} className="shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
               <div>
                 <strong className="font-bold text-foreground">Read-Only Investor Password Safety:</strong>
-                <p className="mt-0.5 text-emerald-300/90 leading-relaxed">
+                <p className="mt-0.5 text-emerald-800/90 dark:text-emerald-300/90 leading-relaxed">
                   Your broker's Investor Password provides <strong>read-only access</strong>. JAHZJOURNALS cannot place, modify, or close trades, nor touch any account funds.
                 </p>
               </div>
@@ -357,7 +357,7 @@ const MTCloudSyncModal = ({
                     }}
                     className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold border transition-all ${
                       server.startsWith(b.name) || b.serverPrefixes.includes(server)
-                        ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
+                        ? 'border-emerald-500 bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
                         : 'border-border bg-surface-muted text-muted hover:border-emerald-500/50 hover:text-foreground'
                     }`}
                   >

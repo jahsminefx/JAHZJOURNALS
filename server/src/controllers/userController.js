@@ -61,7 +61,7 @@ const serializeTradingGoal = (goal) => {
 
   return {
     id: goal.id,
-    tradingAccountId: goal.tradingAccountId,
+    tradingAccountId: goal.tradingAccountId, tradingAccountName: goal.tradingAccount?.name || null, tradingAccountCurrency: goal.tradingAccount?.currency || null,
     periodType: goal.periodType,
     profitTarget: goal.profitTarget === null ? null : Number(goal.profitTarget),
     tradeCountTarget: goal.tradeCountTarget,
@@ -269,7 +269,8 @@ const getWeeklyTradingGoal = async (req, res) => {
         active: true,
         periodType: 'WEEKLY',
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+      include: { tradingAccount: { select: { id: true, name: true, currency: true } } },
     });
 
     res.json(serializeTradingGoal(goal));
@@ -302,8 +303,8 @@ const upsertWeeklyTradingGoal = async (req, res) => {
       maxLossTarget: parseOptionalDecimal(req.body.maxLossTarget),
     };
 
-    const hasAnyTarget = Object.values(data).some((value, index) => index > 0 && value !== null && !Number.isNaN(value));
-    const hasInvalidNumber = Object.values(data).some((value, index) => index > 0 && Number.isNaN(value));
+    const hasAnyTarget = Object.values(data).some((value, index) => index > 0 && value !== null && Number.isFinite(value));
+    const hasInvalidNumber = Object.values(data).some((value, index) => index > 0 && value !== null && (!Number.isFinite(value) || Number.isNaN(value)));
 
     if (hasInvalidNumber) {
       return res.status(400).json({ message: 'Your goal values need to be valid numbers.' });
@@ -331,6 +332,7 @@ const upsertWeeklyTradingGoal = async (req, res) => {
       if (!hasAnyTarget) return null;
 
       return tx.tradingGoal.create({
+        include: { tradingAccount: { select: { id: true, name: true, currency: true } } },
         data: {
           userId: req.user.id,
           periodType: 'WEEKLY',

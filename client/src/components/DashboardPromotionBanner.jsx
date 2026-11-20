@@ -58,23 +58,23 @@ const DashboardPromotionBanner = () => {
   const isDiscount = topPromo.discountType === 'PERCENTAGE_DISCOUNT' || (topPromo.discountPercent && topPromo.discountPercent < 100);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-gray-900 via-emerald-950/40 to-gray-900 p-5 sm:p-6 backdrop-blur-xl shadow-lg transition-all mb-6 group">
+    <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-surface via-emerald-500/10 to-surface dark:from-gray-900 dark:via-emerald-950/40 dark:to-gray-900 p-5 sm:p-6 backdrop-blur-xl shadow-sm dark:shadow-lg transition-all mb-6 group">
       {/* Background Ambient Glow */}
       <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-emerald-500/10 blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700 pointer-events-none" />
       
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative z-10">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl text-emerald-400 shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+          <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
             <Zap size={24} className="animate-pulse" />
           </div>
 
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[10px] uppercase font-black tracking-widest text-emerald-400">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-[10px] uppercase font-black tracking-widest text-emerald-700 dark:text-emerald-400">
                 {isDiscount ? `🔥 ${topPromo.discountPercent}% OFF OFFER` : '🎉 Exclusive Offer'}
               </span>
               {topPromo.endsAt && (
-                <span className="text-xs text-gray-400 flex items-center gap-1 font-medium">
+                <span className="text-xs text-muted flex items-center gap-1 font-medium">
                   <Clock size={12} /> Ends {format(new Date(topPromo.endsAt), 'MMM dd')}
                 </span>
               )}

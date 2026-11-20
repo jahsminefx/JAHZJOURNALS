@@ -26,7 +26,7 @@ const MentorMockup = () => (
             <p className="font-semibold text-foreground">{name}</p>
             <p className="text-sm text-muted">{note}</p>
           </div>
-          <span className="text-xs font-semibold text-emerald-300">{stat}</span>
+          <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{stat}</span>
         </div>
       ))}
     </div>

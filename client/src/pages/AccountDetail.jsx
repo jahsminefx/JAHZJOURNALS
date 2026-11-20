@@ -18,13 +18,13 @@ const enumLabel = (value) => String(value || '').replaceAll('_', ' ').toLowerCas
 const MetricCard = ({ label, value, tone = 'green' }) => (
   <div className="rounded-xl border border-border bg-surface-muted p-4">
     <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">{label}</p>
-    <p className={`mt-2 text-xl font-black ${tone === 'red' ? 'text-red-300' : tone === 'yellow' ? 'text-yellow-300' : 'text-green-400'}`}>{value}</p>
+    <p className={`mt-2 text-xl font-black ${tone === 'red' ? 'text-red-600 dark:text-red-300' : tone === 'yellow' ? 'text-amber-600 dark:text-yellow-300' : 'text-emerald-600 dark:text-green-400'}`}>{value}</p>
   </div>
 );
 
 const ProgressBar = ({ label, value, tone = 'green' }) => {
   const safeValue = Math.min(Math.max(Number(value || 0), 0), 100);
-  const color = tone === 'red' ? 'bg-red-400' : tone === 'yellow' ? 'bg-yellow-300' : 'bg-green-400';
+  const color = tone === 'red' ? 'bg-red-500 dark:bg-red-400' : tone === 'yellow' ? 'bg-amber-500 dark:bg-yellow-300' : 'bg-emerald-500 dark:bg-green-400';
 
   return (
     <div className="rounded-xl border border-border bg-surface-muted p-4">
@@ -115,7 +115,7 @@ const PropFirmAccountDetail = ({ account }) => {
         </div>
 
         <div className="rounded-xl border border-border bg-surface-muted p-5">
-          <h3 className="flex items-center gap-2 font-bold text-foreground"><ShieldAlert size={18} className="text-yellow-300" /> Rule snapshot</h3>
+          <h3 className="flex items-center gap-2 font-bold text-foreground"><ShieldAlert size={18} className="text-amber-600 dark:text-yellow-300" /> Rule snapshot</h3>
           <div className="mt-4 space-y-3 text-sm text-muted">
             <p>Maximum daily loss: <span className="font-semibold text-foreground">{formatMoney(dailyLossLimit, account.currency)}</span></p>
             <p>Remaining daily-loss allowance: <span className="font-semibold text-foreground">{formatMoney(dailyRemaining, account.currency)}</span></p>
@@ -160,7 +160,7 @@ const PropFirmAccountDetail = ({ account }) => {
               <>
                 {enabledRestrictions.map(([label]) => (
                   <div key={label} className="flex items-center gap-2 text-sm text-muted">
-                    <AlertTriangle size={16} className="text-yellow-300" />
+                    <AlertTriangle size={16} className="text-amber-600 dark:text-yellow-300" />
                     {label}: Restricted
                   </div>
                 ))}
@@ -281,14 +281,14 @@ const AccountDetail = () => {
               href="#mt-sync-section"
               className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
                 isAccountSynced
-                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                  : 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
+                  : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
               }`}
             >
               {isAccountSynced ? <CheckCircle2 size={16} /> : <Clock size={16} />}
               {isAccountSynced ? 'Synced' : 'MT5 Sync (Coming Soon)'}
             </a>
-            <Link to={`/accounts/${account.id}/prop-firm/edit-account`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-muted">
+            <Link to={`/accounts/${account.id}/prop-firm/edit-account`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-muted">
               <Settings size={16} />
               Edit Account
             </Link>
@@ -296,7 +296,7 @@ const AccountDetail = () => {
               <ShieldAlert size={16} />
               Edit Challenge Rules
             </Link>
-            <Link to={`/accounts/${account.id}/prop-firm/advanced-settings`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-green-500/50 px-4 py-2 text-sm font-bold text-green-300 hover:bg-green-500/10">
+            <Link to={`/accounts/${account.id}/prop-firm/advanced-settings`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-green-500/50 px-4 py-2 text-sm font-bold text-emerald-700 dark:text-green-300 hover:bg-green-500/10">
               <SlidersHorizontal size={16} />
               Advanced Settings
             </Link>
@@ -307,8 +307,8 @@ const AccountDetail = () => {
               href="#mt-sync-section"
               className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
                 isAccountSynced
-                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                  : 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
+                  : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
               }`}
             >
               {isAccountSynced ? <CheckCircle2 size={16} /> : <Clock size={16} />}

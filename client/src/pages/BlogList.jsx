@@ -211,9 +211,9 @@ const BlogList = () => {
             {selectedTag && (
               <div className="flex items-center justify-center gap-2 text-xs">
                 <span className="text-muted">Filtering by tag:</span>
-                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 font-semibold text-emerald-400">
+                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 font-semibold text-emerald-700 dark:text-emerald-400">
                   <Tag size={12} /> {selectedTag}
-                  <button onClick={() => setSelectedTag('')} className="ml-1 hover:text-white">✕</button>
+                  <button onClick={() => setSelectedTag('')} className="ml-1 hover:text-foreground">✕</button>
                 </span>
               </div>
             )}

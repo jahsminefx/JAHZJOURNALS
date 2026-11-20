@@ -886,14 +886,14 @@ const Pricing = () => {
           <aside
             role="status"
             aria-label="Development Pricing Preview Indicator"
-            className="mb-6 rounded-2xl border-2 border-dashed border-amber-500/70 bg-amber-500/10 px-5 py-3.5 shadow-lg backdrop-blur-md text-amber-200"
+            className="mb-6 rounded-2xl border-2 border-dashed border-amber-500/70 bg-amber-500/10 px-5 py-3.5 shadow-lg backdrop-blur-md text-amber-800 dark:text-amber-200"
           >
             <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
               <div className="flex items-center gap-2.5 flex-wrap justify-center md:justify-start">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow">
                   <span>🛠️</span> DEV PREVIEW ACTIVE: {devPreviewActive === 'nigeria' ? '🇳🇬 Nigeria (NGN)' : '🌍 International (USD)'}
                 </span>
-                <span className="text-xs text-amber-100 font-medium">
+                <span className="text-xs text-amber-900 dark:text-amber-100 font-medium">
                   Presentation only. Does not authorize checkout sessions, alter user billing preferences, or modify backend pricing.
                 </span>
               </div>
@@ -903,7 +903,7 @@ const Pricing = () => {
                   <button
                     type="button"
                     onClick={() => handleDevSwitchPreview('international')}
-                    className="px-3 py-1.5 rounded-lg bg-surface border border-amber-400/40 text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-surface border border-amber-400/40 text-amber-700 dark:text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer"
                   >
                     Preview International (USD) →
                   </button>
@@ -911,7 +911,7 @@ const Pricing = () => {
                   <button
                     type="button"
                     onClick={() => handleDevSwitchPreview('nigeria')}
-                    className="px-3 py-1.5 rounded-lg bg-surface border border-amber-400/40 text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-surface border border-amber-400/40 text-amber-700 dark:text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer"
                   >
                     Preview Nigeria (NGN) →
                   </button>
@@ -931,7 +931,7 @@ const Pricing = () => {
         {/* 1. Compact Promotional Banner (Only if promotion is valid and active) */}
         {(activePublicPromo || appliedPromo) && timeLeft && !timeLeft.expired && (
           <section className="mb-4">
-            <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 via-surface to-emerald-950/40 px-4 py-2.5 sm:px-5 sm:py-3 shadow-md backdrop-blur-md">
+            <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 via-surface to-emerald-500/10 dark:from-emerald-950/60 dark:via-surface dark:to-emerald-950/40 px-4 py-2.5 sm:px-5 sm:py-3 shadow-md backdrop-blur-md">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left">
                 <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-black uppercase tracking-wider shadow-sm">
@@ -941,7 +941,7 @@ const Pricing = () => {
                   <span className="text-xs text-foreground font-semibold">
                     Starter & Pro plans automatically discounted at checkout.
                   </span>
-                  <span className="text-[11px] font-mono font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
+                  <span className="text-[11px] font-mono font-bold text-sky-700 dark:text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
                     CODE: {(appliedPromo?.code || activePublicPromo?.slug || '50OFF').toUpperCase()}
                   </span>
                 </div>
@@ -949,13 +949,13 @@ const Pricing = () => {
                 <div className="flex items-center gap-3 text-xs shrink-0">
                   <div className="flex items-center gap-1.5 text-muted font-mono">
                     <span className="text-[11px] font-sans text-muted">Expires in:</span>
-                    <span className="font-bold text-emerald-400 bg-surface-muted px-2 py-0.5 rounded border border-border">
+                    <span className="font-bold text-emerald-700 dark:text-emerald-400 bg-surface-muted px-2 py-0.5 rounded border border-border">
                       {timeLeft.days}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m {String(timeLeft.seconds).padStart(2, '0')}s
                     </span>
                   </div>
                   <a 
                     href="#pricing-cards"
-                    className="text-xs font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors cursor-pointer hidden md:inline"
+                    className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors cursor-pointer hidden md:inline"
                   >
                     View Plans ↓
                   </a>
@@ -997,7 +997,7 @@ const Pricing = () => {
             >
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
                 <div className="space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 text-[11px] font-bold uppercase tracking-wider">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-700 dark:text-sky-400 text-[11px] font-bold uppercase tracking-wider">
                     <span>🌍</span> International Reference Notice
                   </div>
                   <p className="text-xs text-muted leading-relaxed">
@@ -1123,9 +1123,9 @@ const Pricing = () => {
           })()}
 
           {/* Dedicated Mentor & Academy Spotlight Banner */}
-          <div className="mt-14 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/30 via-surface to-surface p-6 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="mt-14 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-surface to-surface dark:from-emerald-950/30 dark:via-surface dark:to-surface p-6 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl">
             <div className="space-y-2 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
                 <span>🎓</span> For Mentors, Coaches & Academies
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-foreground">
@@ -1135,9 +1135,9 @@ const Pricing = () => {
                 Stop reviewing messy screenshots in group chats. Give your students structured trading journals, enforce strict strategy risk guards (e.g. max 1% risk rules), and issue graded feedback directly on their setups.
               </p>
               <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-muted pt-1">
-                <span className="flex items-center gap-1.5 text-emerald-400">✓ From ₦8,000 / month</span>
-                <span className="flex items-center gap-1.5 text-emerald-400">✓ 25 to 1,000+ student capacity</span>
-                <span className="flex items-center gap-1.5 text-emerald-400">✓ Paid student cohort checkout via Paystack</span>
+                <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">✓ From ₦8,000 / month</span>
+                <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">✓ 25 to 1,000+ student capacity</span>
+                <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">✓ Paid student cohort checkout via Paystack</span>
               </div>
             </div>
             <Button to="/pricing/mentor" variant="primary" size="lg" className="shrink-0 w-full sm:w-auto">
@@ -1349,7 +1349,7 @@ const Pricing = () => {
                     </tr>
                     {category.rows.map((row, rowIdx) => (
                       <tr key={rowIdx} className="hover:bg-surface-muted/40 transition-colors">
-                        <td className="p-4 font-semibold text-foreground border-r border-border sticky left-0 bg-surface z-10 shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
+                        <td className="p-4 font-semibold text-foreground border-r border-border sticky left-0 bg-surface z-10 shadow-[1px_0_0_0_rgba(15,23,42,0.08)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
                           {row.feature}
                         </td>
                         <td className="p-4 text-center border-r border-border">

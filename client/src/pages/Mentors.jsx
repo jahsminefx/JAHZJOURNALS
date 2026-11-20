@@ -234,13 +234,13 @@ const Mentors = () => {
                   </div>
                   <div>
                     <h3 className="font-bold text-foreground text-lg">JAHZJOURNALS Academy System</h3>
-                    <p className="text-xs text-emerald-400 font-medium">Verified, disciplined, and automated</p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Verified, disciplined, and automated</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   {comparisonPoints.map((pt, idx) => (
-                    <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-gray-200">
+                    <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-foreground">
                       <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
                         ✓
                       </span>
@@ -393,14 +393,14 @@ const Mentors = () => {
           </div>
 
           {/* Complimentary Trial Announcement */}
-          <div className="mb-10 max-w-4xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-950/40 via-surface to-slate-950 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg text-left">
+          <div className="mb-10 max-w-4xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-surface to-surface dark:from-blue-950/40 dark:via-surface dark:to-slate-950 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg text-left">
             <div className="flex items-center gap-3.5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400 font-bold text-lg border border-blue-500/30">
                 ⏳
               </span>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-400">
+                  <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400">
                     Complimentary 14-Day Trial + 12h Grace
                   </span>
                 </div>

@@ -19,6 +19,7 @@ export function useDraggable(storageKey, initialDefaultPos = { x: 0, y: 0 }) {
   });
 
   const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const elementStartPosRef = useRef({ x: 0, y: 0 });
   const hasMovedRef = useRef(false);

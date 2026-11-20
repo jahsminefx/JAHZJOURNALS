@@ -219,20 +219,20 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
                 title={collapsed ? (canUseAiLogging ? 'Log Trade with JAHZ AI' : 'Log Trade with JAHZ AI (Pro/Mentor Only)') : undefined}
                 className={`flex items-center w-full px-3.5 py-2.5 rounded-xl transition-all duration-200 group text-left ${
                   isAiCaptureOpen
-                    ? 'bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-indigo-600/20 text-indigo-400 font-bold border border-indigo-500/30 shadow-xs'
-                    : 'text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 font-semibold'
+                    ? 'bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-indigo-600/20 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/30 shadow-xs'
+                    : 'text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-500/10 font-semibold'
                 } ${collapsed ? 'justify-center px-2' : ''}`}
               >
-                <Icon size={19} className={`shrink-0 text-indigo-400 group-hover:scale-110 transition-transform ${collapsed ? '' : 'mr-3'}`} />
+                <Icon size={19} className={`shrink-0 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform ${collapsed ? '' : 'mr-3'}`} />
                 {!collapsed && (
                   <span className="flex-1 flex items-center justify-between min-w-0">
-                    <span className="text-sm truncate font-bold bg-gradient-to-r from-indigo-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
+                    <span className="text-sm truncate font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 dark:from-indigo-400 dark:via-purple-300 dark:to-indigo-300 bg-clip-text text-transparent">
                       {item.name}
                     </span>
                     <span className={`ml-1.5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md border ${
                       canUseAiLogging
-                        ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
-                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30'
+                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
                     }`}>
                       {canUseAiLogging ? 'AI' : 'PRO'}
                     </span>
@@ -260,7 +260,7 @@ const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
                 <span className="flex-1 flex items-center justify-between min-w-0">
                   <span className="text-sm truncate">{item.name}</span>
                   {item.badge && (
-                    <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                       {item.badge}
                     </span>
                   )}

@@ -14,7 +14,7 @@ const Toggle = ({ label, description, checked, onChange, disabled }) => (
       <span className="block text-sm font-semibold text-foreground">{label}</span>
       {description && <span className="mt-1 block text-sm leading-6 text-muted">{description}</span>}
     </span>
-    <span className={`mt-1 flex h-6 w-11 shrink-0 items-center rounded-full p-1 transition ${checked ? 'bg-indigo-500' : 'bg-slate-700'}`}>
+    <span className={`mt-1 flex h-6 w-11 shrink-0 items-center rounded-full p-1 transition ${checked ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
       <span className={`h-4 w-4 rounded-full bg-white transition ${checked ? 'translate-x-5' : ''}`} />
     </span>
   </button>

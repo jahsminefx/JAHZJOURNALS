@@ -134,13 +134,13 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
       <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
               <Cloud size={20} />
             </div>
             <div>
               <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                 Method 1: 1-Click Cloud Sync (Investor Password)
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
                   <Clock size={11} /> Early Access • Jan 2027 (Pro Sync)
                 </span>
               </h4>
@@ -154,7 +154,7 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
             <Button
               type="button"
               onClick={() => setIsCloudModalOpen(true)}
-              className="shrink-0 font-bold bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25"
+              className="shrink-0 font-bold bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25"
             >
               <Clock size={16} className="mr-1.5" />
               Early Access • Jan 2027
@@ -175,7 +175,7 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
               </div>
               <div>
                 <span className="text-muted block">Sync Status:</span>
-                <span className="font-bold text-emerald-400 flex items-center gap-1">
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                   <CheckCircle2 size={13} /> {account.cloudSyncStatus && account.cloudSyncStatus !== 'DISCONNECTED' ? account.cloudSyncStatus : 'CONNECTED'}
                 </span>
               </div>
@@ -183,7 +183,7 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/60">
               <p className="text-[11px] text-muted flex items-center gap-1.5">
-                <ShieldCheck size={14} className="text-emerald-400" />
+                <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400" />
                 Read-Only Investor Password connected.
                 {(account.cloudLastSyncedAt || account.lastSyncedAt) && (
                   <span>Last synced: <strong className="text-foreground">{new Date(account.cloudLastSyncedAt || account.lastSyncedAt).toLocaleTimeString()}</strong></span>
@@ -205,7 +205,7 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
                   variant="outline"
                   onClick={handleDisconnectCloud}
                   disabled={isDisconnectingCloud}
-                  className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  className="text-xs border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10"
                 >
                   Disconnect
                 </Button>
@@ -215,15 +215,15 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
         ) : (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-xs text-muted">
             <div className="flex items-center gap-2">
-              <Clock size={16} className="text-amber-400 shrink-0" />
+              <Clock size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
               <span>
-                1-Click Cloud Sync launches in <strong className="text-foreground">Early Access in January 2027</strong> exclusively for Pro Sync accounts. In the meantime, use <strong className="text-emerald-400">Method 2 (Desktop EA)</strong> below to sync your trades right now for free!
+                1-Click Cloud Sync launches in <strong className="text-foreground">Early Access in January 2027</strong> exclusively for Pro Sync accounts. In the meantime, use <strong className="text-emerald-600 dark:text-emerald-400">Method 2 (Desktop EA)</strong> below to sync your trades right now for free!
               </span>
             </div>
             <button
               type="button"
               onClick={() => setIsGuideOpen(true)}
-              className="shrink-0 text-xs font-bold text-emerald-400 hover:text-emerald-300 underline"
+              className="shrink-0 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 underline"
             >
               View EA Setup Guide →
             </button>
@@ -303,7 +303,7 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
                     variant="outline"
                     onClick={handleRevokeToken}
                     disabled={isRevoking}
-                    className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    className="text-xs border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10"
                   >
                     <Trash2 size={14} className="mr-1.5" />
                     Revoke

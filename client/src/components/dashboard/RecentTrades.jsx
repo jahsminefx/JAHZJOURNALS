@@ -6,14 +6,14 @@ import TradeOutcomeBadge from '../trades/TradeOutcomeBadge';
 
 const badgeClass = (direction) => (
   direction === 'SELL'
-    ? 'bg-red-500/15 text-red-300'
-    : 'bg-emerald-500/15 text-emerald-300'
+    ? 'bg-red-500/15 text-red-700 dark:text-red-300'
+    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
 );
 
 const pnlClass = (value) => {
   const amount = Number(value || 0);
-  if (amount > 0) return 'text-emerald-400';
-  if (amount < 0) return 'text-red-400';
+  if (amount > 0) return 'text-emerald-600 dark:text-emerald-400';
+  if (amount < 0) return 'text-red-600 dark:text-red-400';
   return 'text-muted';
 };
 
@@ -48,7 +48,7 @@ const RecentTrades = ({ trades = [], currency, className = '' }) => (
         Your latest trades will appear here once logged.
       </div>
     ) : (
-      <div className="divide-y divide-slate-800">
+      <div className="divide-y divide-border">
         {trades.map((trade) => {
           const amount = Number(trade.profitLossAmount || 0);
           return (

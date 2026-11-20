@@ -60,16 +60,16 @@ export default function PushNotificationBanner() {
   }
 
   return (
-    <div className="relative mb-6 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 backdrop-blur-xs transition-all sm:p-5">
+    <div className="relative mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/20 p-4 backdrop-blur-xs transition-all sm:p-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-start gap-3.5">
-          <div className="mt-0.5 rounded-lg bg-emerald-500/20 p-2.5 text-emerald-400 shrink-0">
+          <div className="mt-0.5 rounded-lg bg-emerald-500/15 p-2.5 text-emerald-600 dark:text-emerald-400 shrink-0">
             <BellRing className="h-5 w-5 animate-pulse" />
           </div>
           <div>
             <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
               Enable Desktop & Mobile Notifications
-              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/30">Recommended</span>
+              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">Recommended</span>
             </h4>
             <p className="mt-1 text-xs text-muted leading-relaxed">
               Receive instant alerts for <strong>MT4/MT5 trade syncs</strong>, <strong>support replies</strong>, and automated <strong>Daily Trading Discipline Reminders</strong> directly on your laptop and phone screen.

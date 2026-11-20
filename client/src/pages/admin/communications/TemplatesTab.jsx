@@ -90,12 +90,12 @@ const TemplatesTab = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-700 pb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-100 flex items-center gap-2">
-            <FileText className="text-amber-400" size={22} /> Message & Reply Templates
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <FileText className="text-amber-500 dark:text-amber-400" size={22} /> Message & Reply Templates
           </h2>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-muted mt-1">
             Create reusable support response snippets and variable tags for quick 1-click customer replies.
           </p>
         </div>

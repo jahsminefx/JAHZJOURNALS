@@ -1000,15 +1000,15 @@ const MentorDashboard = () => {
       {isInGracePeriod && (
         <div className="rounded-2xl border border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-surface to-surface p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl ring-1 ring-amber-500/30">
           <div className="flex items-center gap-3.5">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 font-black text-xl border border-amber-500/30">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 font-black text-xl border border-amber-500/30">
               ⚠️
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-400">
+                <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
                   12-Hour Grace Period Active
                 </span>
-                <span className="text-xs font-bold text-amber-300">
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
                   ~{graceHoursRemaining} hour{graceHoursRemaining === 1 ? '' : 's'} remaining
                 </span>
               </div>
@@ -1034,12 +1034,12 @@ const MentorDashboard = () => {
       {isTrialActive && (
         <div className="rounded-xl border border-blue-500/30 bg-blue-500/[0.06] px-4 py-2.5 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 text-muted">
-            <span className="text-blue-400 font-bold">⚡ 14-Day Free Trial:</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold">⚡ 14-Day Free Trial:</span>
             <span>You have ~{trialDaysRemaining} day{trialDaysRemaining === 1 ? '' : 's'} remaining in your complimentary Private Cohort trial (with a 12-hour grace buffer).</span>
           </div>
           <Link
             to="/pricing/mentor"
-            className="text-[11px] font-bold text-blue-400 hover:text-blue-300 underline underline-offset-2 shrink-0"
+            className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline underline-offset-2 shrink-0"
           >
             View Plans & Pricing →
           </Link>
@@ -3753,7 +3753,7 @@ const MentorDashboard = () => {
                                   <span className="flex items-center gap-1.5">
                                     <AlertCircle size={13} /> {v.title}
                                   </span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono">
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/15 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 font-mono">
                                     Rule Limit: {v.ruleLimit} vs Actual: {v.actualValue}
                                   </span>
                                 </div>
@@ -3768,7 +3768,7 @@ const MentorDashboard = () => {
                                 <div className="pt-1 flex justify-end">
                                   <button
                                     onClick={() => handleIssueViolationWarning(trade, v)}
-                                    className="text-[11px] font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 hover:underline transition"
+                                    className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 flex items-center gap-1 hover:underline transition"
                                   >
                                     <FileText size={12} /> 1-Click Disciplinary Warning Notice &rarr;
                                   </button>

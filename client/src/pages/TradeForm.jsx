@@ -368,7 +368,7 @@ const TradeForm = () => {
       </div>
 
       {!isEditMode && (
-        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-surface via-indigo-500/10 to-purple-500/10 dark:from-indigo-950/60 dark:via-purple-950/40 dark:to-slate-900 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
               <Sparkles className="w-5 h-5 text-indigo-400" />
@@ -691,8 +691,8 @@ const TradeForm = () => {
 
             <section>
               <div className="flex items-center justify-between border-b border-border pb-2 mb-4">
-                <h3 className="text-lg font-medium text-green-400">Rules & Deviations</h3>
-                <button type="button" onClick={addRuleViolation} className="px-3 py-1.5 rounded-lg bg-gray-700 text-sm hover:bg-gray-600">Log Rule Event</button>
+                <h3 className="text-lg font-medium text-emerald-600 dark:text-green-400">Rules & Deviations</h3>
+                <button type="button" onClick={addRuleViolation} className="px-3 py-1.5 rounded-lg bg-surface border border-border text-foreground text-sm hover:bg-surface-muted transition">Log Rule Event</button>
               </div>
               {ruleViolations.length === 0 ? (
                 <p className="text-sm text-muted">Your discipline was solid here.</p>
@@ -707,7 +707,7 @@ const TradeForm = () => {
                         {severityOptions.map((severity) => <option key={severity} value={severity}>{severity}</option>)}
                       </select>
                       <input value={violation.note} onChange={(event) => updateRuleViolation(index, 'note', event.target.value)} placeholder="Note" className="bg-background border border-border rounded-md py-2 px-3 text-sm" />
-                      <button type="button" onClick={() => setRuleViolations((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-400 hover:text-red-300 justify-self-start">
+                      <button type="button" onClick={() => setRuleViolations((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 justify-self-start">
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -718,8 +718,8 @@ const TradeForm = () => {
 
             <section>
               <div className="flex items-center justify-between border-b border-border pb-2 mb-4">
-                <h3 className="text-lg font-medium text-green-400">Emotional State</h3>
-                <button type="button" onClick={() => setEmotionLogs((current) => [...current, emptyEmotion()])} className="px-3 py-1.5 rounded-lg bg-gray-700 text-sm hover:bg-gray-600">Log Emotion</button>
+                <h3 className="text-lg font-medium text-emerald-600 dark:text-green-400">Emotional State</h3>
+                <button type="button" onClick={() => setEmotionLogs((current) => [...current, emptyEmotion()])} className="px-3 py-1.5 rounded-lg bg-surface border border-border text-foreground text-sm hover:bg-surface-muted transition">Log Emotion</button>
               </div>
               {emotionLogs.length === 0 ? (
                 <p className="text-sm text-muted">The mind was quiet.</p>
@@ -735,7 +735,7 @@ const TradeForm = () => {
                       </select>
                       <input type="number" min="1" max="10" value={emotion.intensity} onChange={(event) => updateEmotion(index, 'intensity', event.target.value)} className="bg-background border border-border rounded-md py-2 px-3 text-sm" />
                       <input value={emotion.note} onChange={(event) => updateEmotion(index, 'note', event.target.value)} placeholder="Note" className="bg-background border border-border rounded-md py-2 px-3 text-sm" />
-                      <button type="button" onClick={() => setEmotionLogs((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-400 hover:text-red-300 justify-self-start">
+                      <button type="button" onClick={() => setEmotionLogs((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 justify-self-start">
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -745,7 +745,7 @@ const TradeForm = () => {
             </section>
 
             <section>
-              <h3 className="text-lg font-medium text-green-400 border-b border-border pb-2 mb-4">Visual Proof</h3>
+              <h3 className="text-lg font-medium text-emerald-600 dark:text-green-400 border-b border-border pb-2 mb-4">Visual Proof</h3>
               {existingScreenshots.length > 0 && (
                 <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   {existingScreenshots.map((screenshot) => (
@@ -753,7 +753,7 @@ const TradeForm = () => {
                       <img src={screenshot.imageUrl} alt={screenshot.note || screenshot.screenshotType} className="aspect-video w-full rounded-md object-cover border border-border" />
                       <div className="mt-3 flex items-center justify-between gap-3">
                         <p className="text-xs text-muted">{screenshot.screenshotType}</p>
-                        <button type="button" disabled={deletingScreenshotId === screenshot.id} onClick={() => deleteExistingScreenshot(screenshot.id)} className="text-xs text-red-400 hover:text-red-300 disabled:opacity-60">
+                        <button type="button" disabled={deletingScreenshotId === screenshot.id} onClick={() => deleteExistingScreenshot(screenshot.id)} className="text-xs text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 disabled:opacity-60">
                           {deletingScreenshotId === screenshot.id ? 'Deleting...' : 'Delete'}
                         </button>
                       </div>
@@ -773,7 +773,7 @@ const TradeForm = () => {
                       <select value={screenshot.screenshotType} onChange={(event) => updateScreenshotFile(index, 'screenshotType', event.target.value)} className="bg-background border border-border rounded-md py-2 px-3 text-sm">
                         {screenshotTypeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
                       </select>
-                      <button type="button" onClick={() => setScreenshotFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-400 hover:text-red-300 justify-self-start">
+                      <button type="button" onClick={() => setScreenshotFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 justify-self-start">
                         <Trash2 size={18} />
                       </button>
                       <input value={screenshot.note} onChange={(event) => updateScreenshotFile(index, 'note', event.target.value)} placeholder="Screenshot note" className="md:col-span-3 bg-background border border-border rounded-md py-2 px-3 text-sm" />
@@ -784,7 +784,7 @@ const TradeForm = () => {
             </section>
 
             <div className="pt-4 flex items-center justify-end space-x-3 border-t border-border">
-              <button type="button" onClick={() => navigate(-1)} className="px-5 py-2.5 border border-gray-600 rounded-lg text-sm font-medium text-muted hover:bg-surface-muted transition">Go Back</button>
+              <button type="button" onClick={() => navigate(-1)} className="px-5 py-2.5 border border-border rounded-lg text-sm font-medium text-muted hover:text-foreground hover:bg-surface-muted transition">Go Back</button>
               <button type="submit" disabled={isSaving} className="px-5 py-2.5 bg-green-500 text-gray-900 rounded-lg text-sm font-bold shadow-md hover:bg-green-400 transition disabled:opacity-70">
                 {isSaving ? 'Saving...' : isEditMode ? 'Update Journal' : 'Save to Journal'}
               </button>

@@ -76,7 +76,7 @@ const RegularAccountForm = ({ initialValues, isSaving, onSubmit, onCancel, submi
         </div>
       </div>
       <div className="flex items-center justify-end gap-3 border-t border-border pt-5">
-        <button type="button" onClick={onCancel} className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-muted hover:bg-surface-muted">Go Back</button>
+        <button type="button" onClick={onCancel} className="rounded-lg border border-border px-4 py-2 text-sm text-muted hover:text-foreground hover:bg-surface-muted">Go Back</button>
         <button type="submit" disabled={isSaving} className="rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400 disabled:opacity-70">
           {isSaving ? 'Saving...' : submitLabel}
         </button>

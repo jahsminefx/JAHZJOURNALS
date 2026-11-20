@@ -264,13 +264,13 @@ const UnifiedAssistantWidget = () => {
           type="button"
           {...pointerHandlers}
           onClick={handleButtonClick}
-          className="relative bg-slate-950 dark:bg-surface border border-emerald-500/40 text-emerald-400 p-3.5 rounded-full shadow-2xl hover:scale-105 transition-all active:scale-95 group flex items-center justify-center ring-2 ring-emerald-500/20"
+          className="relative bg-surface border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 p-3.5 rounded-full shadow-2xl hover:scale-105 transition-all active:scale-95 group flex items-center justify-center ring-2 ring-emerald-500/20"
           aria-label="Open JAHZ Assistant & Support"
           title="Drag to move • Click to open Assistant & Support"
         >
           <div className="relative flex items-center justify-center">
-            <Bot size={26} className="text-emerald-400 group-hover:rotate-12 transition-transform" />
-            <Sparkles size={12} className="absolute -top-1 -right-1 text-amber-400 animate-pulse" />
+            <Bot size={26} className="text-emerald-600 dark:text-emerald-400 group-hover:rotate-12 transition-transform" />
+            <Sparkles size={12} className="absolute -top-1 -right-1 text-amber-500 dark:text-amber-400 animate-pulse" />
           </div>
         </button>
       )}

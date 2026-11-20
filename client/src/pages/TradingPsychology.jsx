@@ -50,7 +50,7 @@ const TradingPsychology = () => (
       />
 
       {/* Deep Content Section for AI Search & Google indexing */}
-      <section className="py-16 border-b border-gray-800">
+      <section className="py-16 border-b border-border">
         <SectionHeader 
           eyebrow="Psychological Safeguards"
           title="Turn Mindset Flaws into Measurable Data"
@@ -58,12 +58,12 @@ const TradingPsychology = () => (
 
         <div className="grid md:grid-cols-2 gap-8 mt-10">
           {psychologyFeatures.map((feat, idx) => (
-            <div key={idx} className="p-6 bg-gray-850 border border-gray-750 rounded-2xl space-y-3 shadow-lg">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <div key={idx} className="p-6 bg-surface border border-border rounded-2xl space-y-3 shadow-sm dark:shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <Brain size={20} />
               </div>
-              <h3 className="text-lg font-bold text-white">{feat.title}</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">{feat.description}</p>
+              <h3 className="text-lg font-bold text-foreground">{feat.title}</h3>
+              <p className="text-xs text-muted leading-relaxed">{feat.description}</p>
             </div>
           ))}
         </div>
@@ -73,16 +73,16 @@ const TradingPsychology = () => (
       <section className="py-16">
         <SectionHeader eyebrow="Frequently Asked Questions" title="Trading Psychology FAQs" />
         <div className="max-w-4xl mx-auto mt-8 space-y-4 text-xs">
-          <div className="p-5 bg-gray-850 border border-gray-750 rounded-2xl space-y-2">
-            <h4 className="font-bold text-sm text-gray-200">How does JAHZJOURNALS help eliminate revenge trading?</h4>
-            <p className="text-gray-400 leading-relaxed">
+          <div className="p-5 bg-surface border border-border rounded-2xl space-y-2 shadow-sm dark:shadow-none">
+            <h4 className="font-bold text-sm text-foreground">How does JAHZJOURNALS help eliminate revenge trading?</h4>
+            <p className="text-muted leading-relaxed">
               JAHZJOURNALS monitors order execution timing relative to previous trade closures. If a new position is opened rapidly after a loss without proper checklist confirmation, the system flags a revenge trading alert.
             </p>
           </div>
 
-          <div className="p-5 bg-gray-850 border border-gray-750 rounded-2xl space-y-2">
-            <h4 className="font-bold text-sm text-gray-200">What is a Discipline Score?</h4>
-            <p className="text-gray-400 leading-relaxed">
+          <div className="p-5 bg-surface border border-border rounded-2xl space-y-2 shadow-sm dark:shadow-none">
+            <h4 className="font-bold text-sm text-foreground">What is a Discipline Score?</h4>
+            <p className="text-muted leading-relaxed">
               Your Discipline Score measures the percentage of logged trades executed strictly according to your pre-defined trading plan rules.
             </p>
           </div>

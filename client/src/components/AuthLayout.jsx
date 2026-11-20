@@ -30,11 +30,11 @@ const AuthLayout = ({
               style={{ backgroundImage: `url(${authTradingBg})` }}
               aria-hidden="true"
             />
-            <div className="absolute inset-0 bg-background/25" aria-hidden="true" />
+            <div className="absolute inset-0 bg-slate-950/50" aria-hidden="true" />
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/55 via-slate-950/30 to-slate-950/65" aria-hidden="true" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_25%,rgba(52,211,153,0.16),transparent_38%)]" aria-hidden="true" />
 
-            <BrandLogo size="md" className="relative z-10" />
+            <BrandLogo size="md" forceDark className="relative z-10" />
 
             {sidePanel ? (
               <div className="relative z-10 my-auto py-6">

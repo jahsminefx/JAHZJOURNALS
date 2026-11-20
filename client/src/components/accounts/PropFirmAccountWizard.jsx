@@ -145,7 +145,7 @@ const PropFirmAccountWizard = ({ initialValues, isSaving, mode = 'full', onSubmi
               type="button"
               onClick={() => setCurrentStep((step) => Math.max(step - 1, 0))}
               disabled={currentStep === 0 || isSaving}
-              className="rounded-lg border border-gray-600 px-5 py-2.5 text-sm font-medium text-muted transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-muted transition hover:text-foreground hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
               Go Back
             </button>
