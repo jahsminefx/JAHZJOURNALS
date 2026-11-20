@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { ShieldCheck, AlertTriangle, FileText, Lock, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { FadeIn } from '../components/motion/MotionSystem';
 
 const Legal = ({ type }) => {
   // ==========================================
@@ -588,21 +589,22 @@ const Legal = ({ type }) => {
         <Breadcrumbs />
         
         {/* Header Banner */}
-        <div className="mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-3">
-            <ShieldCheck size={14} />
-            <span>Official Legal Suite</span>
+        <FadeIn direction="up" delay={0} duration={580} distance={16}>
+          <div className="mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-3">
+              <ShieldCheck size={14} />
+              <span>Official Legal Suite</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-foreground tracking-tight">{title}</h1>
+            {date && (
+              <p className="text-xs text-muted mt-2">
+                Last updated: <span className="text-foreground font-semibold">{date}</span> &bull; Compliance: Federal Republic of Nigeria (NDPA 2023) & International Standards
+              </p>
+            )}
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-foreground tracking-tight">{title}</h1>
-          {date && (
-            <p className="text-xs text-muted mt-2">
-              Last updated: <span className="text-foreground font-semibold">{date}</span> &bull; Compliance: Federal Republic of Nigeria (NDPA 2023) & International Standards
-            </p>
-          )}
-        </div>
 
-        {/* Quick Document Navigation Pills */}
-        <div className="mb-8 flex flex-wrap items-center gap-2 border-b border-border pb-4 text-xs font-bold">
+          {/* Quick Document Navigation Pills */}
+          <div className="mb-8 flex flex-wrap items-center gap-2 border-b border-border pb-4 text-xs font-bold">
           <Link
             to="/terms"
             className={`px-3 py-1.5 rounded-lg border transition ${
@@ -643,9 +645,11 @@ const Legal = ({ type }) => {
           >
             Cookie Policy
           </Link>
-        </div>
+          </div>
+        </FadeIn>
         
-        <div className="bg-surface border border-border rounded-2xl p-6 sm:p-10 shadow-xl">
+        <FadeIn direction="up" delay={120} duration={620} distance={18}>
+          <div className="bg-surface border border-border rounded-2xl p-6 sm:p-10 shadow-xl">
           {/* Table of Contents */}
           <div className="mb-10 bg-surface-muted/40 p-5 rounded-xl border border-border/70">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted mb-3 flex items-center gap-2">
@@ -690,7 +694,8 @@ const Legal = ({ type }) => {
               Contact Support Desk →
             </Link>
           </div>
-        </div>
+          </div>
+        </FadeIn>
       </main>
       
       <Footer />

@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import api from '../utils/api';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { FadeIn, Reveal } from '../components/motion/MotionSystem';
 
 const inputClass = 'w-full rounded-xl border border-border/80 bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted/60 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 outline-none transition shadow-sm';
 
@@ -52,22 +53,28 @@ const Contact = () => {
 
         {/* Hero Section */}
         <div className="py-8 sm:py-12 text-center max-w-2xl mx-auto space-y-3">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-400">
-            Contact
-          </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground">
-            Talk to the JAHZJOURNALS team.
-          </h1>
-          <p className="text-sm sm:text-base text-muted leading-relaxed">
-            Have questions about early access, mentor cohorts, prop firm challenge tracking, or platform feedback? We're here to help.
-          </p>
+          <FadeIn direction="up" delay={0} duration={550} distance={14}>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-400">
+              Contact
+            </p>
+          </FadeIn>
+          <FadeIn direction="up" delay={90} duration={650} distance={18}>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground">
+              Talk to the JAHZJOURNALS team.
+            </h1>
+          </FadeIn>
+          <FadeIn direction="up" delay={180} duration={650} distance={16}>
+            <p className="text-sm sm:text-base text-muted leading-relaxed">
+              Have questions about early access, mentor cohorts, prop firm challenge tracking, or platform feedback? We're here to help.
+            </p>
+          </FadeIn>
         </div>
 
         {/* Content Section: 2 Column Layout */}
         <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_1.4fr] items-start">
           {/* Left Column: Direct Info & Founder Note */}
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-border/80 bg-surface/90 p-6 sm:p-7 shadow-sm space-y-6">
+          <Reveal direction="up" delay={100} className="space-y-6">
+            <div className="motion-card-hover motion-card-glow rounded-2xl border border-border/80 bg-surface/90 p-6 sm:p-7 shadow-sm space-y-6">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -119,7 +126,7 @@ const Contact = () => {
             </div>
 
             {/* Inquiries Badges Card */}
-            <div className="rounded-2xl border border-border/70 bg-surface/60 p-5 space-y-3">
+            <div className="motion-card-hover rounded-2xl border border-border/70 bg-surface/60 p-5 space-y-3">
               <span className="text-xs font-semibold text-foreground block">Common Inquiries</span>
               <div className="flex flex-wrap gap-2">
                 {[
@@ -138,13 +145,14 @@ const Contact = () => {
                 ))}
               </div>
             </div>
-          </div>
+          </Reveal>
 
           {/* Right Column: Contact Form */}
-          <form 
-            onSubmit={handleSubmit} 
-            className="rounded-2xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-sm space-y-5"
-          >
+          <Reveal direction="up" delay={180}>
+            <form 
+              onSubmit={handleSubmit} 
+              className="rounded-2xl border border-border/80 bg-surface/90 p-6 sm:p-8 shadow-sm space-y-5"
+            >
             <div>
               <h2 className="text-lg font-semibold text-foreground">Send a Message</h2>
               <p className="text-xs text-muted mt-0.5">Fill out the details below and we will get back to you promptly.</p>
@@ -231,13 +239,14 @@ const Contact = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-emerald-400 active:translate-y-0.5 disabled:opacity-60 w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-slate-950 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-400 active:translate-y-0 motion-reduce:transform-none disabled:opacity-60 w-full sm:w-auto cursor-pointer"
               >
                 <Send size={15} />
                 <span>{isSubmitting ? 'Sending...' : 'Send Message'}</span>
               </button>
             </div>
-          </form>
+            </form>
+          </Reveal>
         </div>
       </main>
 

@@ -15,6 +15,7 @@ import api from '../utils/api';
 import { sanitizeArticleHtml } from '../utils/sanitizeHtml';
 import { getPostBySlug, getRelatedPosts, calculateReadTime } from '../data/blogHelpers';
 import { getArticleSchema } from '../seo/schemas';
+import { FadeIn, Reveal, StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 
 const BlogPost = () => {
   const { slug } = useParams();
@@ -277,47 +278,53 @@ const BlogPost = () => {
           {/* Main Article Content Column */}
           <article className="lg:col-span-8 space-y-6 min-w-0">
             {/* Category & Title */}
-            <div>
-              <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3">
-                {post.category}
-              </span>
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-tight">
-                {post.title}
-              </h1>
-            </div>
+            <FadeIn direction="up" delay={0} duration={600} distance={16}>
+              <div>
+                <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3">
+                  {post.category}
+                </span>
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-tight">
+                  {post.title}
+                </h1>
+              </div>
+            </FadeIn>
 
             {/* Author Meta Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-surface/90 border border-border/80 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-3">
-                <img 
-                  src={post.author.avatar} 
-                  alt={post.author.name}
-                  className="w-10 h-10 rounded-full border border-emerald-500/30 object-cover"
-                  onError={(e) => { e.target.src = '/logo-mark.png'; }}
-                />
-                <div>
-                  <p className="text-xs font-bold text-foreground">{post.author.name}</p>
-                  <p className="text-[11px] text-muted">{post.author.title}</p>
+            <FadeIn direction="up" delay={90} duration={600} distance={14}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-surface/90 border border-border/80 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={post.author.avatar} 
+                    alt={post.author.name}
+                    className="w-10 h-10 rounded-full border border-emerald-500/30 object-cover"
+                    onError={(e) => { e.target.src = '/logo-mark.png'; }}
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-foreground">{post.author.name}</p>
+                    <p className="text-[11px] text-muted">{post.author.title}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 text-xs text-muted">
+                  <span className="flex items-center gap-1"><Calendar size={13}/> {post.publishedAt}</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1"><Clock size={13}/> {estimatedReadTime}</span>
                 </div>
               </div>
-
-              <div className="flex items-center gap-3 text-xs text-muted">
-                <span className="flex items-center gap-1"><Calendar size={13}/> {post.publishedAt}</span>
-                <span>•</span>
-                <span className="flex items-center gap-1"><Clock size={13}/> {estimatedReadTime}</span>
-              </div>
-            </div>
+            </FadeIn>
 
             {/* Cover Image */}
-            <div className="aspect-video bg-surface-muted rounded-2xl overflow-hidden border border-border/80 shadow-md">
-              <img 
-                src={post.coverImage} 
-                alt={post.altText || post.title}
-                loading="eager"
-                className="w-full h-full object-cover"
-                onError={(e) => { e.target.src = '/heroes/hero-home.png'; }}
-              />
-            </div>
+            <FadeIn direction="up" delay={160} duration={650} scale={0.98}>
+              <div className="aspect-video bg-surface-muted rounded-2xl overflow-hidden border border-border/80 shadow-md">
+                <img 
+                  src={post.coverImage} 
+                  alt={post.altText || post.title}
+                  loading="eager"
+                  className="w-full h-full object-cover"
+                  onError={(e) => { e.target.src = '/heroes/hero-home.png'; }}
+                />
+              </div>
+            </FadeIn>
 
             {/* Mobile Collapsible Table of Contents (< lg screens) */}
             {post.tableOfContents && post.tableOfContents.length > 0 && (
@@ -379,27 +386,30 @@ const BlogPost = () => {
             )}
 
             {/* Context-Aware Conversion Box */}
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 sm:p-7 space-y-3 shadow-sm my-8">
-              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                <CheckCircle2 className="text-emerald-400" size={18} />
-                {post.contextualCta?.title || 'Ready to Journal Your Trades with AI?'}
-              </h3>
-              <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                {post.contextualCta?.description || 'Put these principles into practice. Log trades, track emotions, and get automated AI reviews with JAHZJOURNALS.'}
-              </p>
-              <div className="pt-2">
-                <Link 
-                  to={post.contextualCta?.to || '/register'}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-xs transition shadow-sm"
-                >
-                  <span>{post.contextualCta?.buttonText || 'Start Journaling Free'}</span>
-                  <ArrowRight size={14} />
-                </Link>
+            <Reveal direction="up">
+              <div className="motion-card-hover rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 sm:p-7 space-y-3 shadow-sm my-8">
+                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <CheckCircle2 className="text-emerald-400" size={18} />
+                  {post.contextualCta?.title || 'Ready to Journal Your Trades with AI?'}
+                </h3>
+                <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                  {post.contextualCta?.description || 'Put these principles into practice. Log trades, track emotions, and get automated AI reviews with JAHZJOURNALS.'}
+                </p>
+                <div className="pt-2">
+                  <Link 
+                    to={post.contextualCta?.to || '/register'}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-xs transition shadow-sm"
+                  >
+                    <span>{post.contextualCta?.buttonText || 'Start Journaling Free'}</span>
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
               </div>
-            </div>
+            </Reveal>
 
             {/* Article Feedback Widget ("Was this article helpful?") */}
-            <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <Reveal direction="up">
+              <div className="rounded-2xl border border-border/80 bg-surface/90 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h4 className="text-sm font-semibold text-foreground">Was this guide helpful?</h4>
                 <p className="text-xs text-muted mt-0.5">Your feedback helps us continuously improve our forex education.</p>
@@ -432,11 +442,13 @@ const BlogPost = () => {
                   </button>
                 </div>
               )}
-            </div>
+              </div>
+            </Reveal>
           </article>
 
           {/* Sticky Desktop Sidebar (>= lg screens) */}
           <aside className="hidden lg:block lg:col-span-4 space-y-6 sticky top-24">
+            <FadeIn direction="up" delay={150} className="space-y-6">
             {/* Table of Contents Box */}
             {post.tableOfContents && post.tableOfContents.length > 0 && (
               <div className="p-5 bg-surface/90 border border-border/80 rounded-2xl shadow-sm space-y-3">
@@ -482,45 +494,49 @@ const BlogPost = () => {
                 <span>{copiedLink ? 'Link Copied to Clipboard' : 'Share or Copy Link'}</span>
               </button>
             </div>
+            </FadeIn>
           </aside>
         </div>
 
         {/* Related Posts Grid */}
         {relatedPosts.length > 0 && (
           <div className="pt-10 border-t border-border/80">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-foreground">Related Trading Guides</h3>
-              <Link to="/blog" className="text-xs font-semibold text-emerald-400 hover:text-emerald-300">
-                View all guides &rarr;
-              </Link>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {relatedPosts.map((rel) => (
-                <Link 
-                  key={rel.id}
-                  to={`/blog/${rel.slug}`}
-                  className="bg-surface/90 border border-border/80 p-5 rounded-2xl hover:border-emerald-500/40 transition-all block group shadow-sm flex flex-col justify-between"
-                >
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
-                      {rel.category}
-                    </span>
-                    <h4 className="text-sm font-bold text-foreground group-hover:text-emerald-400 transition-colors line-clamp-2">
-                      {rel.title}
-                    </h4>
-                    <p className="text-xs text-muted line-clamp-2 leading-relaxed">
-                      {rel.summary || rel.excerpt}
-                    </p>
-                  </div>
-
-                  <div className="pt-4 border-t border-border/70 flex items-center justify-between text-[11px] text-muted font-medium mt-4">
-                    <span>{rel.publishedAt}</span>
-                    <span className="text-emerald-400 font-semibold group-hover:underline">Read &rarr;</span>
-                  </div>
+            <Reveal direction="up">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-foreground">Related Trading Guides</h3>
+                <Link to="/blog" className="text-xs font-semibold text-emerald-400 hover:text-emerald-300">
+                  View all guides &rarr;
                 </Link>
+              </div>
+            </Reveal>
+
+            <StaggerContainer className="grid md:grid-cols-3 gap-6">
+              {relatedPosts.map((rel, idx) => (
+                <StaggerItem key={rel.id} index={idx} className="flex">
+                  <Link 
+                    to={`/blog/${rel.slug}`}
+                    className="motion-card-hover motion-card-glow w-full bg-surface/90 border border-border/80 p-5 rounded-2xl block group shadow-sm flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
+                        {rel.category}
+                      </span>
+                      <h4 className="text-sm font-bold text-foreground group-hover:text-emerald-400 transition-colors line-clamp-2">
+                        {rel.title}
+                      </h4>
+                      <p className="text-xs text-muted line-clamp-2 leading-relaxed">
+                        {rel.summary || rel.excerpt}
+                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-border/70 flex items-center justify-between text-[11px] text-muted font-medium mt-4">
+                      <span>{rel.publishedAt}</span>
+                      <span className="text-emerald-400 font-semibold group-hover:underline">Read &rarr;</span>
+                    </div>
+                  </Link>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         )}
 

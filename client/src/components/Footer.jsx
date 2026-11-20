@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 import { useAuth } from '../context/useAuth';
 import { SEO_DEFAULTS } from '../seo/defaults';
+import { Reveal } from './motion/MotionSystem';
 
 const groups = [
   {
@@ -72,57 +73,59 @@ const Footer = () => {
 
   return (
     <footer className="border-t border-border dark:border-white/10 bg-background px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.2fr_2fr]">
-        <div>
-          <BrandLogo />
-          <p className="mt-4 max-w-md text-sm leading-6 text-muted">
-            A mobile-first forex trading journal for traders who want structure, review, and discipline without hype.
-          </p>
-          {validSocialLinks.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-4 text-sm text-gray-500">
-              {validSocialLinks.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted hover:text-emerald-400 transition-colors"
-                  aria-label={`Follow JAHZJOURNALS on ${item.name}`}
-                >
-                  {item.name}
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-          {groups.map((group) => (
-            <div key={group.title}>
-              <h3 className="font-semibold text-foreground">{group.title}</h3>
-              <ul className="mt-4 space-y-3">
-                {group.links.map(([label, to]) => (
-                  <li key={label}>
-                    <Link to={to} className="text-sm text-muted transition-colors hover:text-emerald-300">
-                      {label}
-                    </Link>
-                  </li>
+      <Reveal direction="up" distance={16} duration={550} threshold={0.05} rootMargin="0px">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.2fr_2fr]">
+          <div>
+            <BrandLogo />
+            <p className="mt-4 max-w-md text-sm leading-6 text-muted">
+              A mobile-first forex trading journal for traders who want structure, review, and discipline without hype.
+            </p>
+            {validSocialLinks.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-4 text-sm text-gray-500">
+                {validSocialLinks.map((item) => (
+                  <a
+                    key={item.name}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted hover:text-emerald-400 transition-colors"
+                    aria-label={`Follow JAHZJOURNALS on ${item.name}`}
+                  >
+                    {item.name}
+                  </a>
                 ))}
-              </ul>
-            </div>
-          ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+            {groups.map((group) => (
+              <div key={group.title}>
+                <h3 className="font-semibold text-foreground">{group.title}</h3>
+                <ul className="mt-4 space-y-3">
+                  {group.links.map(([label, to]) => (
+                    <li key={label}>
+                      <Link to={to} className="text-sm text-muted transition-colors hover:text-emerald-300">
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="mx-auto mt-10 max-w-7xl border-t border-border dark:border-white/10 pt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-500">
-        <span>© 2026 JAHZJOURNALS. Built for disciplined trading review. Not financial advice.</span>
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('jahzjournals:open-privacy-settings'))}
-          className="text-sm text-muted hover:text-emerald-300 transition-colors text-left sm:text-right"
-        >
-          Privacy Settings
-        </button>
-      </div>
+        <div className="mx-auto mt-10 max-w-7xl border-t border-border dark:border-white/10 pt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-500">
+          <span>© 2026 JAHZJOURNALS. Built for disciplined trading review. Not financial advice.</span>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('jahzjournals:open-privacy-settings'))}
+            className="text-sm text-muted hover:text-emerald-300 transition-colors text-left sm:text-right cursor-pointer"
+          >
+            Privacy Settings
+          </button>
+        </div>
+      </Reveal>
     </footer>
   );
 };

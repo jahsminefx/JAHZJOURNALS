@@ -37,12 +37,12 @@ const PricingCard = ({
 
   return (
     <div
-      className={`relative flex h-full min-h-[500px] w-full flex-col rounded-[1.25rem] border p-6 sm:p-7 transition-all duration-200 ${
+      className={`motion-card-hover relative flex h-full min-h-[500px] w-full flex-col rounded-[1.25rem] border p-6 sm:p-7 ${
         highlighted
-          ? 'border-emerald-500/80 dark:border-emerald-400/80 bg-emerald-500/[0.03] dark:bg-emerald-950/20 shadow-md ring-1 ring-emerald-500/40'
+          ? 'border-emerald-500/80 dark:border-emerald-400/80 bg-emerald-500/[0.03] dark:bg-emerald-950/20 shadow-lg shadow-emerald-500/10 hover:shadow-xl hover:shadow-emerald-500/15 ring-1 ring-emerald-500/40'
           : isSyncCard
-          ? 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c1322] shadow-sm hover:border-sky-500/40'
-          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c1322] shadow-sm hover:border-slate-300 dark:hover:border-slate-700'
+          ? 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c1322] shadow-sm hover:border-sky-500/40 hover:shadow-md'
+          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c1322] shadow-sm hover:border-emerald-500/35 hover:shadow-md'
       } ${className}`}
     >
       {/* Top Floating Badge */}

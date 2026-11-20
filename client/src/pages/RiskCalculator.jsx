@@ -11,6 +11,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { FadeIn, Reveal } from '../components/motion/MotionSystem';
 import { INSTRUMENT_SPECS, SPECIFICATION_SOURCES, getInstrumentSpec } from '../config/instrumentSpecs.js';
 import { getMarketData, resolveExecutionPrice } from '../services/marketDataService.js';
 import { getSavedBrokerProfiles, DEFAULT_BROKER_PROFILE } from '../services/brokerProfileService.js';
@@ -309,37 +310,39 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
       <Breadcrumbs />
 
       {/* Sleek Compact Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface p-4 rounded-2xl border border-border/80 shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
-            <Calculator size={22} />
+      <FadeIn direction="up" delay={0} duration={560} distance={14}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface p-4 rounded-2xl border border-border/80 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+              <Calculator size={22} />
+            </div>
+            <div>
+              <h1 className="text-base sm:text-lg font-black text-foreground tracking-tight">
+                Position Size & Risk Calculator
+              </h1>
+              <p className="text-xs text-muted">
+                Deterministic broker-aware lot sizing & pre-trade risk check.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-base sm:text-lg font-black text-foreground tracking-tight">
-              Position Size & Risk Calculator
-            </h1>
-            <p className="text-xs text-muted">
-              Deterministic broker-aware lot sizing & pre-trade risk check.
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="px-3 py-1.5 bg-surface-muted hover:bg-surface border border-border rounded-xl text-xs font-bold text-muted hover:text-foreground flex items-center gap-1.5 transition-all"
-          >
-            <RefreshCw size={13} /> Reset
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="px-3 py-1.5 bg-surface-muted hover:bg-surface border border-border rounded-xl text-xs font-bold text-muted hover:text-foreground flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <RefreshCw size={13} /> Reset
+            </button>
+          </div>
         </div>
-      </div>
+      </FadeIn>
 
       {/* Main 2-Column Desktop Grid Layout */}
       <div className="grid gap-5 lg:grid-cols-12 items-start">
         
         {/* LEFT COLUMN — TRADE SETUP (7 Columns) */}
-        <div className="lg:col-span-7 space-y-5">
+        <FadeIn direction="up" delay={80} duration={600} distance={16} className="lg:col-span-7 space-y-5">
           <div className="bg-surface p-5 sm:p-6 rounded-2xl border border-border shadow-xl space-y-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2 border-b border-border pb-3">
               <Calculator size={16} className="text-emerald-400" />
@@ -558,10 +561,10 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
               </div>
             </div>
           </div>
-        </div>
+        </FadeIn>
 
         {/* RIGHT COLUMN — RESULTS, SAFETY & ACTIONS (5 Columns) */}
-        <div className="lg:col-span-5 space-y-5">
+        <FadeIn direction="up" delay={150} duration={620} distance={16} className="lg:col-span-5 space-y-5">
 
           {/* SECTION 2 — POSITION SIZE RESULT (HERO DISPLAY CARD) */}
           <div className="bg-surface p-6 rounded-2xl border border-emerald-500/40 shadow-2xl space-y-5 relative overflow-hidden">
@@ -673,7 +676,7 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
             </div>
           </div>
 
-        </div>
+        </FadeIn>
       </div>
 
       {/* SECTION 4 — BROKER SPECIFICATION (COLLAPSED BY DEFAULT) */}
@@ -916,34 +919,36 @@ Safety Check: ${riskCheck.status === 'PASS' ? '✅ SAFE' : riskCheck.status === 
       </div>
 
       {/* Educational Documentation for Traders & Search Engines */}
-      <section className="bg-surface rounded-2xl border border-border p-6 sm:p-8 space-y-6 text-sm text-muted leading-relaxed">
-        <h2 className="text-lg sm:text-xl font-black text-foreground">
-          How to Calculate Position Size in Forex, Gold (XAUUSD) &amp; Indices
-        </h2>
-        <p>
-          Accurate position sizing is the cornerstone of institutional risk management and prop firm challenge survival. Whether you are trading major currency pairs like <strong>EUR/USD</strong> and <strong>GBP/USD</strong>, commodities like <strong>XAU/USD (Gold)</strong>, or indices such as <strong>US30</strong> and <strong>NAS100</strong>, calculating your exact lot size before order execution ensures a single losing trade never breaches your daily drawdown limit.
-        </p>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
-            <h3 className="font-bold text-foreground">1. The Position Size Formula</h3>
-            <p className="text-xs">
-              <strong>Lot Size = Capital at Risk ÷ (Stop Loss Distance in Pips × Pip Value per Standard Lot)</strong>. Our calculator automatically adjusts contract sizes across 5-digit Forex pairs, 2-digit JPY pairs, Metals, and CFDs.
-            </p>
+      <Reveal direction="up">
+        <section className="bg-surface rounded-2xl border border-border p-6 sm:p-8 space-y-6 text-sm text-muted leading-relaxed">
+          <h2 className="text-lg sm:text-xl font-black text-foreground">
+            How to Calculate Position Size in Forex, Gold (XAUUSD) &amp; Indices
+          </h2>
+          <p>
+            Accurate position sizing is the cornerstone of institutional risk management and prop firm challenge survival. Whether you are trading major currency pairs like <strong>EUR/USD</strong> and <strong>GBP/USD</strong>, commodities like <strong>XAU/USD (Gold)</strong>, or indices such as <strong>US30</strong> and <strong>NAS100</strong>, calculating your exact lot size before order execution ensures a single losing trade never breaches your daily drawdown limit.
+          </p>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="motion-card-hover motion-card-glow p-4 rounded-xl bg-surface-muted border border-border space-y-2">
+              <h3 className="font-bold text-foreground">1. The Position Size Formula</h3>
+              <p className="text-xs">
+                <strong>Lot Size = Capital at Risk ÷ (Stop Loss Distance in Pips × Pip Value per Standard Lot)</strong>. Our calculator automatically adjusts contract sizes across 5-digit Forex pairs, 2-digit JPY pairs, Metals, and CFDs.
+              </p>
+            </div>
+            <div className="motion-card-hover motion-card-glow p-4 rounded-xl bg-surface-muted border border-border space-y-2">
+              <h3 className="font-bold text-foreground">2. Multi-Currency Account Conversion</h3>
+              <p className="text-xs">
+                Trading USD-quoted pairs from a non-USD account (such as EUR, GBP, NGN, CAD, AUD, or ZAR) requires converting the quote currency pip value into your account base currency so your real monetary risk stays exact.
+              </p>
+            </div>
+            <div className="motion-card-hover motion-card-glow p-4 rounded-xl bg-surface-muted border border-border space-y-2">
+              <h3 className="font-bold text-foreground">3. Prop Firm Drawdown Protection</h3>
+              <p className="text-xs">
+                Most evaluation challenges enforce a strict 4% to 5% maximum daily loss limit. Risking 0.5% to 1.0% per trade setup gives you a statistical buffer to weather normal losing streaks while maintaining positive expectancy.
+              </p>
+            </div>
           </div>
-          <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
-            <h3 className="font-bold text-foreground">2. Multi-Currency Account Conversion</h3>
-            <p className="text-xs">
-              Trading USD-quoted pairs from a non-USD account (such as EUR, GBP, NGN, CAD, AUD, or ZAR) requires converting the quote currency pip value into your account base currency so your real monetary risk stays exact.
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-surface-muted border border-border space-y-2">
-            <h3 className="font-bold text-foreground">3. Prop Firm Drawdown Protection</h3>
-            <p className="text-xs">
-              Most evaluation challenges enforce a strict 4% to 5% maximum daily loss limit. Risking 0.5% to 1.0% per trade setup gives you a statistical buffer to weather normal losing streaks while maintaining positive expectancy.
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
+      </Reveal>
 
     </div>
   );

@@ -82,23 +82,229 @@
 
 @layer components {
   .hero-media {
-    object-position: var(--hero-position-mobile, center center);
+    object-position: var(--hero-position-mobile, 68% 38%);
+    filter: brightness(1.06) contrast(1.04) saturate(1.04);
+    transition: object-position 200ms ease;
   }
 
   @media (min-width: 640px) {
     .hero-media {
-      object-position: var(--hero-position-tablet, var(--hero-position-mobile, center center));
+      object-position: var(--hero-position-tablet, var(--hero-position-mobile, 64% 40%));
     }
   }
 
   @media (min-width: 1024px) {
     .hero-media {
-      object-position: var(--hero-position-desktop, var(--hero-position-tablet, center center));
+      object-position: var(--hero-position-desktop, var(--hero-position-tablet, 60% 42%));
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .hero-media {
+      object-position: var(--hero-position-xl, var(--hero-position-desktop, 58% 42%));
+    }
+  }
+
+  .hero-overlay-split {
+    background:
+      radial-gradient(circle at 16% 18%, rgba(16, 185, 129, 0.14), transparent 44%),
+      radial-gradient(circle at 82% 36%, rgba(56, 189, 248, 0.10), transparent 46%),
+      linear-gradient(180deg, rgba(2, 6, 23, 0.80) 0%, rgba(2, 6, 23, 0.64) 48%, rgba(2, 6, 23, 0.56) 76%, rgba(2, 6, 23, 0.86) 100%),
+      linear-gradient(90deg, rgba(2, 6, 23, 0.86) 0%, rgba(2, 6, 23, 0.64) 58%, rgba(2, 6, 23, 0.34) 100%);
+  }
+
+  @media (min-width: 640px) {
+    .hero-overlay-split {
+      background:
+        radial-gradient(circle at 14% 20%, rgba(16, 185, 129, 0.14), transparent 42%),
+        radial-gradient(circle at 80% 38%, rgba(56, 189, 248, 0.10), transparent 46%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.52) 0%, rgba(2, 6, 23, 0.10) 30%, rgba(2, 6, 23, 0.14) 72%, rgba(2, 6, 23, 0.80) 100%),
+        linear-gradient(90deg, rgba(2, 6, 23, 0.92) 0%, rgba(2, 6, 23, 0.84) 34%, rgba(2, 6, 23, 0.62) 50%, rgba(2, 6, 23, 0.30) 68%, rgba(2, 6, 23, 0.18) 84%, rgba(2, 6, 23, 0.26) 100%);
+    }
+  }
+
+  .hero-overlay-home {
+    background:
+      radial-gradient(circle at 18% 15%, rgba(16, 185, 129, 0.15), transparent 42%),
+      radial-gradient(circle at 78% 32%, rgba(56, 189, 248, 0.10), transparent 46%),
+      linear-gradient(180deg, rgba(2, 6, 23, 0.82) 0%, rgba(2, 6, 23, 0.66) 50%, rgba(2, 6, 23, 0.88) 100%),
+      linear-gradient(90deg, rgba(2, 6, 23, 0.88) 0%, rgba(2, 6, 23, 0.68) 54%, rgba(2, 6, 23, 0.36) 100%);
+  }
+
+  @media (min-width: 1024px) {
+    .hero-overlay-home {
+      background:
+        radial-gradient(circle at 16% 18%, rgba(16, 185, 129, 0.15), transparent 40%),
+        radial-gradient(circle at 78% 36%, rgba(56, 189, 248, 0.10), transparent 46%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.56) 0%, rgba(2, 6, 23, 0.16) 32%, rgba(2, 6, 23, 0.22) 72%, rgba(2, 6, 23, 0.86) 100%),
+        linear-gradient(90deg, rgba(2, 6, 23, 0.92) 0%, rgba(2, 6, 23, 0.82) 38%, rgba(2, 6, 23, 0.54) 56%, rgba(2, 6, 23, 0.30) 78%, rgba(2, 6, 23, 0.36) 100%);
     }
   }
 
   .card-glow {
     @apply transition-all duration-200 hover:shadow-md hover:border-emerald-500/30;
+  }
+
+  /* ========================================================================= */
+  /* Unified Public Motion System Keyframes & Utilities                         */
+  /* ========================================================================= */
+  @keyframes heroKenBurns {
+    0% {
+      transform: scale3d(1.01, 1.01, 1);
+    }
+    100% {
+      transform: scale3d(1.065, 1.065, 1);
+    }
+  }
+
+  @keyframes heroKenBurnsMobile {
+    0% {
+      transform: scale3d(1.005, 1.005, 1);
+    }
+    100% {
+      transform: scale3d(1.035, 1.035, 1);
+    }
+  }
+
+  @keyframes subtleFloat {
+    0%, 100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(0, -6px, 0);
+    }
+  }
+
+  @keyframes subtleFloatMobile {
+    0%, 100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(0, -3px, 0);
+    }
+  }
+
+  @keyframes navDropdownEnter {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 6px, 0) scale(0.97);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  @keyframes navBackdropEnter {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes navDrawerEnter {
+    0% {
+      transform: translate3d(100%, 0, 0);
+    }
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes faqAnswerEnter {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, -4px, 0);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  .hero-ken-burns {
+    transform-origin: center center;
+    will-change: transform;
+    animation: heroKenBurnsMobile 20s ease-in-out infinite alternate;
+  }
+
+  @media (min-width: 768px) {
+    .hero-ken-burns {
+      animation: heroKenBurns 20s ease-in-out infinite alternate;
+    }
+  }
+
+  .motion-float-subtle {
+    will-change: transform;
+    animation: subtleFloatMobile 8s ease-in-out infinite;
+  }
+
+  @media (min-width: 768px) {
+    .motion-float-subtle {
+      animation: subtleFloat 8s ease-in-out infinite;
+    }
+  }
+
+  .nav-dropdown-enter {
+    animation: navDropdownEnter 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: top center;
+  }
+
+  .nav-backdrop-enter {
+    animation: navBackdropEnter 220ms ease-out forwards;
+  }
+
+  .nav-drawer-enter {
+    animation: navDrawerEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .faq-answer-enter {
+    animation: faqAnswerEnter 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .motion-card-hover {
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 240ms ease,
+      box-shadow 240ms ease,
+      background-color 240ms ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .motion-card-hover:hover {
+      transform: translate3d(0, -3px, 0);
+    }
+
+    .motion-card-glow:hover {
+      border-color: rgba(16, 185, 129, 0.38);
+      box-shadow: 0 12px 28px -10px rgba(16, 185, 129, 0.14);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-ken-burns,
+    .motion-float-subtle,
+    .nav-dropdown-enter,
+    .nav-backdrop-enter,
+    .nav-drawer-enter,
+    .faq-answer-enter {
+      animation: none !important;
+      transition-duration: 0.01ms !important;
+      transform: none !important;
+    }
+
+    .motion-card-hover,
+    .motion-card-hover:hover {
+      transition-duration: 0.01ms !important;
+      transform: none !important;
+    }
+
+    .motion-reveal {
+      opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
+    }
   }
 
   .recharts-wrapper:focus,

@@ -3,6 +3,7 @@ import { Check, Minus, Globe, Shield, Sparkles, Brain, Eye, TrendingUp, Bot, Fil
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import PricingCard from '../components/PricingCard';
+import PageHeader from '../components/PageHeader';
 import FAQItem from '../components/FAQItem';
 import CTASection from '../components/CTASection';
 import Button from '../components/Button';
@@ -12,6 +13,7 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { Reveal, StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 
 const REGIONAL_CONFIG = {
   NG: {
@@ -966,26 +968,19 @@ const Pricing = () => {
         )}
 
         {/* 2. Pricing Headline and Concise Supporting Description */}
-        <section className="text-center max-w-3xl mx-auto pt-2 pb-5 px-4">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-500 dark:text-emerald-400 mb-2">
-            PRICING & PLANS
-          </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight">
-            Build Better Trading Habits. Understand Your Edge.
-          </h1>
-          <p className="mt-3 text-sm sm:text-base text-muted leading-relaxed max-w-2xl mx-auto">
-            Journal your forex and gold trades, identify recurring mistakes, analyse your performance, and keep your risk under control—all in one place.
-          </p>
-          
-          <div className="mt-4 flex items-center justify-center gap-3">
-            {user ? (
-              <Button to="/dashboard" size="sm">Go to Dashboard</Button>
-            ) : (
-              <Button to="/register" size="sm">Get Started Free</Button>
-            )}
-            <Button href="#compare-plans" variant="secondary" size="sm">Compare Plans</Button>
-          </div>
-        </section>
+        <div className="mt-2 sm:mt-3 mb-6">
+          <PageHeader
+            compact
+            eyebrow="PRICING & PLANS"
+            title="Build Better Trading Habits. Understand Your Edge."
+            description="Journal your forex and gold trades, identify recurring mistakes, analyse your performance, and keep your risk under control—all in one place."
+            primaryCta={user ? { label: 'Go to Dashboard', to: '/dashboard' } : { label: 'Get Started Free', to: '/register' }}
+            secondaryCta={{ label: 'Compare Plans', href: '#compare-plans' }}
+            heroImage="/heroes/hero-pricing.png"
+            heroAlt="JAHZJOURNALS pricing tiers and trading growth"
+            heroPosition={{ mobile: '72% 50%', tablet: '66% 50%', desktop: '60% 52%', xl: '58% 50%' }}
+          />
+        </div>
 
         {/* International Reference Notice (Shown ONLY when viewing International USD reference pricing) */}
         {selectedRegion === 'GLOBAL' && (
@@ -1074,10 +1069,11 @@ const Pricing = () => {
             return (
               <div className="space-y-12">
                 {/* Row 1: Standard Plans (Free, Starter, Pro) */}
-                <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <StaggerContainer className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                   {standardPlans.map((plan, idx) => (
-                    <div
+                    <StaggerItem
                       key={plan.id || plan.name}
+                      index={idx}
                       className={`flex flex-col ${
                         idx === 2 && standardPlans.length === 3
                           ? 'md:col-span-2 lg:col-span-1 md:max-w-md md:mx-auto md:w-full lg:max-w-none'
@@ -1085,15 +1081,15 @@ const Pricing = () => {
                       }`}
                     >
                       {renderCard(plan)}
-                    </div>
+                    </StaggerItem>
                   ))}
-                </div>
+                </StaggerContainer>
 
                 {/* Row 2: Automated Cloud Sync Plans (Starter Sync, Pro Sync) */}
                 {syncPlans.length > 0 && (
                   <div>
                     {/* Subtle Category Header / Divider */}
-                    <div className="mb-8 text-center">
+                    <Reveal direction="up" className="mb-8 text-center">
                       <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-500 dark:text-sky-400 text-xs font-black uppercase tracking-widest mb-2 shadow-sm">
                         <span>⚡</span> AUTOMATED SYNC
                       </div>
@@ -1103,19 +1099,20 @@ const Pricing = () => {
                       <p className="mt-1.5 text-xs sm:text-sm text-muted max-w-xl mx-auto leading-relaxed">
                         Hands-free 24/7 trade ingestion directly from your MetaTrader 4 and 5 broker accounts via secure cloud synchronization.
                       </p>
-                    </div>
+                    </Reveal>
 
                     {/* Centered Row with Matching Card Widths */}
-                    <div className="flex flex-col md:flex-row justify-center items-stretch gap-6">
-                      {syncPlans.map((plan) => (
-                        <div
+                    <StaggerContainer className="flex flex-col md:flex-row justify-center items-stretch gap-6">
+                      {syncPlans.map((plan, idx) => (
+                        <StaggerItem
                           key={plan.id || plan.name}
+                          index={idx}
                           className="w-full md:w-[calc(50%-12px)] lg:w-[calc((100%-48px)/3)] flex flex-col"
                         >
                           {renderCard(plan)}
-                        </div>
+                        </StaggerItem>
                       ))}
-                    </div>
+                    </StaggerContainer>
                   </div>
                 )}
               </div>
@@ -1123,55 +1120,59 @@ const Pricing = () => {
           })()}
 
           {/* Dedicated Mentor & Academy Spotlight Banner */}
-          <div className="mt-14 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-surface to-surface dark:from-emerald-950/30 dark:via-surface dark:to-surface p-6 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl">
-            <div className="space-y-2 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                <span>🎓</span> For Mentors, Coaches & Academies
+          <Reveal direction="up">
+            <div className="motion-card-hover mt-14 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-surface to-surface dark:from-emerald-950/30 dark:via-surface dark:to-surface p-6 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl hover:border-emerald-500/45">
+              <div className="space-y-2 max-w-3xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                  <span>🎓</span> For Mentors, Coaches & Academies
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-foreground">
+                  Managing a Telegram channel or coaching students?
+                </h3>
+                <p className="text-sm text-muted leading-relaxed">
+                  Stop reviewing messy screenshots in group chats. Give your students structured trading journals, enforce strict strategy risk guards (e.g. max 1% risk rules), and issue graded feedback directly on their setups.
+                </p>
+                <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-muted pt-1">
+                  <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">✓ From ₦8,000 / month</span>
+                  <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">✓ 25 to 1,000+ student capacity</span>
+                  <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">✓ Paid student cohort checkout via Paystack</span>
+                </div>
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-foreground">
-                Managing a Telegram channel or coaching students?
-              </h3>
-              <p className="text-sm text-muted leading-relaxed">
-                Stop reviewing messy screenshots in group chats. Give your students structured trading journals, enforce strict strategy risk guards (e.g. max 1% risk rules), and issue graded feedback directly on their setups.
-              </p>
-              <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-muted pt-1">
-                <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">✓ From ₦8,000 / month</span>
-                <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">✓ 25 to 1,000+ student capacity</span>
-                <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">✓ Paid student cohort checkout via Paystack</span>
-              </div>
+              <Button to="/pricing/mentor" variant="primary" size="lg" className="shrink-0 w-full sm:w-auto">
+                View Mentor Plans & Capacity →
+              </Button>
             </div>
-            <Button to="/pricing/mentor" variant="primary" size="lg" className="shrink-0 w-full sm:w-auto">
-              View Mentor Plans & Capacity →
-            </Button>
-          </div>
+          </Reveal>
 
           {/* Promo Code Box */}
-          <div className="mt-8 max-w-2xl mx-auto rounded-2xl border border-border bg-surface p-6 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                🏷️ Have an official promo code?
-              </h3>
-              <p className="text-xs text-muted mt-1">
-                Enter your code to unlock promotional discounts across Starter and Pro.
-              </p>
+          <Reveal direction="up" delay={80}>
+            <div className="mt-8 max-w-2xl mx-auto rounded-2xl border border-border bg-surface p-6 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  🏷️ Have an official promo code?
+                </h3>
+                <p className="text-xs text-muted mt-1">
+                  Enter your code to unlock promotional discounts across Starter and Pro.
+                </p>
+              </div>
+              <form onSubmit={handleRedeemCode} className="flex gap-2 w-full sm:w-auto">
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="e.g. FOUNDING50"
+                  className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-xs font-mono font-bold text-sky-500 dark:text-sky-400 uppercase placeholder:text-muted outline-none focus:border-sky-500 w-full sm:w-36 text-foreground"
+                />
+                <button
+                  type="submit"
+                  disabled={redeemingPromo || !promoCode.trim()}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-xl shadow-md disabled:opacity-50 transition-all shrink-0 cursor-pointer"
+                >
+                  {redeemingPromo ? 'Applying...' : 'Apply'}
+                </button>
+              </form>
             </div>
-            <form onSubmit={handleRedeemCode} className="flex gap-2 w-full sm:w-auto">
-              <input
-                type="text"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                placeholder="e.g. FOUNDING50"
-                className="bg-surface-muted border border-border px-3 py-2 rounded-xl text-xs font-mono font-bold text-sky-500 dark:text-sky-400 uppercase placeholder:text-muted outline-none focus:border-sky-500 w-full sm:w-36 text-foreground"
-              />
-              <button
-                type="submit"
-                disabled={redeemingPromo || !promoCode.trim()}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs rounded-xl shadow-md disabled:opacity-50 transition-all shrink-0 cursor-pointer"
-              >
-                {redeemingPromo ? 'Applying...' : 'Apply'}
-              </button>
-            </form>
-          </div>
+          </Reveal>
 
           {/* Subtle Regional Pricing Override */}
           <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 text-xs text-muted">
@@ -1215,7 +1216,7 @@ const Pricing = () => {
         {/* PLAIN-LANGUAGE AI SHOWCASE SECTION                                        */}
         {/* ========================================================================= */}
         <section className="py-12 border-t border-border">
-          <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
+          <Reveal direction="up" className="text-center max-w-3xl mx-auto mb-10 space-y-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider">
               <Sparkles size={14} /> JAHZ AI Intelligence
             </span>
@@ -1225,101 +1226,114 @@ const Pricing = () => {
             <p className="text-sm text-muted leading-relaxed">
               Practical, objective analysis of your real trade execution—designed for self-reflection and discipline, not market predictions or get-rich-quick claims.
             </p>
-          </div>
+          </Reveal>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                <Brain size={20} />
-              </div>
-              <h3 className="text-base font-bold text-foreground">AI Trade Review</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Compares your executed entry, stop loss, and exit against your trading rules. Flags premature profit-taking, stop-widening, and rule violations so you can break destructive habits.
-              </p>
-              <div className="text-[11px] font-semibold text-emerald-400 pt-1">
-                ✓ Available on Pro & Pro Sync (150 reviews/mo)
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400">
-                <TrendingUp size={20} />
-              </div>
-              <h3 className="text-base font-bold text-foreground">Weekly Coaching Summaries</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Synthesizes your weekly trade log into an honest behavioral report. Identifies session patterns (London vs New York) and flags revenge trading risks before they wipe out capital.
-              </p>
-              <div className="text-[11px] font-semibold text-sky-400 pt-1">
-                ✓ Available on Starter, Pro & Pro Sync
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
-                <Eye size={20} />
-              </div>
-              <h3 className="text-base font-bold text-foreground">Screenshot Vision Extraction</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Attach MT4/MT5 or TradingView chart screenshots. JAHZ Vision automatically reads your pair, order direction, entry price, and stop levels to eliminate tedious manual typing.
-              </p>
-              <div className="text-[11px] font-semibold text-amber-400 pt-1">
-                ✓ Available on Pro & Pro Sync
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
-                <TrendingUp size={20} />
-              </div>
-              <h3 className="text-base font-bold text-foreground">JAHZ Edge Finder</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Quantitative statistical analysis that cuts through market noise. Reveals which setups, session overlaps, and currency pairs (e.g. Gold vs EURUSD) yield your highest statistical profit factor.
-              </p>
-              <div className="text-[11px] font-semibold text-purple-400 pt-1">
-                ✓ Available on Pro & Pro Sync
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400">
-                <Bot size={20} />
-              </div>
-              <h3 className="text-base font-bold text-foreground">Natural Language Journal Assistant</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Log thoughts on the go using plain conversational English. The assistant formats your reflections, emotions, and setup rationale into structured journal entries in seconds.
-              </p>
-              <div className="text-[11px] font-semibold text-teal-400 pt-1">
-                ✓ Available on Starter, Pro & Pro Sync
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 flex flex-col justify-between space-y-3">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wide">
-                  <Shield size={16} /> Responsible AI Policy
+          <StaggerContainer className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <StaggerItem index={0}>
+              <div className="motion-card-hover motion-card-glow h-full rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                  <Brain size={20} />
                 </div>
-                <h4 className="text-sm font-bold text-foreground">Objective Reflection, Not Signals</h4>
+                <h3 className="text-base font-bold text-foreground">AI Trade Review</h3>
                 <p className="text-xs text-muted leading-relaxed">
-                  JAHZ AI analyzes your historical journal data to assist your personal self-reflection. It does not provide financial advice, make trade predictions, or guarantee profitable outcomes.
+                  Compares your executed entry, stop loss, and exit against your trading rules. Flags premature profit-taking, stop-widening, and rule violations so you can break destructive habits.
                 </p>
+                <div className="text-[11px] font-semibold text-emerald-400 pt-1">
+                  ✓ Available on Pro & Pro Sync (150 reviews/mo)
+                </div>
               </div>
-              <Link to="/register" className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300">
-                Test 2 Free AI Reviews Today →
-              </Link>
-            </div>
-          </div>
+            </StaggerItem>
+
+            <StaggerItem index={1}>
+              <div className="motion-card-hover motion-card-glow h-full rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400">
+                  <TrendingUp size={20} />
+                </div>
+                <h3 className="text-base font-bold text-foreground">Weekly Coaching Summaries</h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Synthesizes your weekly trade log into an honest behavioral report. Identifies session patterns (London vs New York) and flags revenge trading risks before they wipe out capital.
+                </p>
+                <div className="text-[11px] font-semibold text-sky-400 pt-1">
+                  ✓ Available on Starter, Pro & Pro Sync
+                </div>
+              </div>
+            </StaggerItem>
+
+            <StaggerItem index={2}>
+              <div className="motion-card-hover motion-card-glow h-full rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+                  <Eye size={20} />
+                </div>
+                <h3 className="text-base font-bold text-foreground">Screenshot Vision Extraction</h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Attach MT4/MT5 or TradingView chart screenshots. JAHZ Vision automatically reads your pair, order direction, entry price, and stop levels to eliminate tedious manual typing.
+                </p>
+                <div className="text-[11px] font-semibold text-amber-400 pt-1">
+                  ✓ Available on Pro & Pro Sync
+                </div>
+              </div>
+            </StaggerItem>
+
+            <StaggerItem index={3}>
+              <div className="motion-card-hover motion-card-glow h-full rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+                  <TrendingUp size={20} />
+                </div>
+                <h3 className="text-base font-bold text-foreground">JAHZ Edge Finder</h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Quantitative statistical analysis that cuts through market noise. Reveals which setups, session overlaps, and currency pairs (e.g. Gold vs EURUSD) yield your highest statistical profit factor.
+                </p>
+                <div className="text-[11px] font-semibold text-purple-400 pt-1">
+                  ✓ Available on Pro & Pro Sync
+                </div>
+              </div>
+            </StaggerItem>
+
+            <StaggerItem index={4}>
+              <div className="motion-card-hover motion-card-glow h-full rounded-2xl border border-border bg-surface p-6 space-y-3 shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-400">
+                  <Bot size={20} />
+                </div>
+                <h3 className="text-base font-bold text-foreground">Natural Language Journal Assistant</h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Log thoughts on the go using plain conversational English. The assistant formats your reflections, emotions, and setup rationale into structured journal entries in seconds.
+                </p>
+                <div className="text-[11px] font-semibold text-teal-400 pt-1">
+                  ✓ Available on Starter, Pro & Pro Sync
+                </div>
+              </div>
+            </StaggerItem>
+
+            <StaggerItem index={5}>
+              <div className="motion-card-hover motion-card-glow h-full rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 flex flex-col justify-between space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wide">
+                    <Shield size={16} /> Responsible AI Policy
+                  </div>
+                  <h4 className="text-sm font-bold text-foreground">Objective Reflection, Not Signals</h4>
+                  <p className="text-xs text-muted leading-relaxed">
+                    JAHZ AI analyzes your historical journal data to assist your personal self-reflection. It does not provide financial advice, make trade predictions, or guarantee profitable outcomes.
+                  </p>
+                </div>
+                <Link to="/register" className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300">
+                  Test 2 Free AI Reviews Today →
+                </Link>
+              </div>
+            </StaggerItem>
+          </StaggerContainer>
         </section>
 
         {/* ========================================================================= */}
         {/* RESPONSIVE FEATURE COMPARISON TABLE                                       */}
         {/* ========================================================================= */}
         <section id="compare-plans" className="py-12 border-t border-border scroll-mt-20">
-          <div className="text-center mb-10 space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-black text-foreground">Compare Plan Features</h2>
-            <p className="text-sm text-muted">Complete breakdown of limits, analytics, and automation across every tier</p>
-          </div>
+          <Reveal direction="up" threshold={0.04} rootMargin="0px">
+            <div className="text-center mb-10 space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-black text-foreground">Compare Plan Features</h2>
+              <p className="text-sm text-muted">Complete breakdown of limits, analytics, and automation across every tier</p>
+            </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-xl">
+            <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-xl">
             <table className="w-full text-xs text-left border-collapse">
               <thead className="bg-surface-muted text-muted uppercase tracking-wider border-b border-border font-bold">
                 <tr>
@@ -1404,43 +1418,48 @@ const Pricing = () => {
               </tbody>
             </table>
           </div>
+          </Reveal>
         </section>
 
         {/* ========================================================================= */}
         {/* COMPREHENSIVE 9-QUESTION FAQ SECTION                                      */}
         {/* ========================================================================= */}
         <section className="py-12 border-t border-border">
-          <div className="text-center mb-10 space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-black text-foreground">Frequently Asked Questions</h2>
-            <p className="text-sm text-muted">Transparent answers to all your billing, data, and sync questions</p>
-          </div>
-          <div className="mx-auto max-w-4xl space-y-4">
-            {faqs.map(([question, answer]) => (
-              <FAQItem key={question} question={question} answer={answer} />
-            ))}
-          </div>
+          <Reveal direction="up">
+            <div className="text-center mb-10 space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-black text-foreground">Frequently Asked Questions</h2>
+              <p className="text-sm text-muted">Transparent answers to all your billing, data, and sync questions</p>
+            </div>
+            <div className="mx-auto max-w-4xl space-y-4">
+              {faqs.map(([question, answer]) => (
+                <FAQItem key={question} question={question} answer={answer} />
+              ))}
+            </div>
+          </Reveal>
         </section>
 
         {/* Genuine Security & Trust Information */}
         <section className="py-8 border-t border-border">
-          <div className="max-w-4xl mx-auto rounded-2xl border border-border bg-surface p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
-                <Lock size={22} />
+          <Reveal direction="up">
+            <div className="motion-card-hover motion-card-glow max-w-4xl mx-auto rounded-2xl border border-border bg-surface p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Lock size={22} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-foreground">Bank-Grade 256-Bit SSL Encryption</h4>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Your payments are processed securely by Paystack. JAHZJOURNALS never stores your credit card, debit card, or banking PINs.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-foreground">Bank-Grade 256-Bit SSL Encryption</h4>
-                <p className="text-xs text-muted leading-relaxed">
-                  Your payments are processed securely by Paystack. JAHZJOURNALS never stores your credit card, debit card, or banking PINs.
-                </p>
+              <div className="flex items-center gap-4 text-xs font-semibold text-muted shrink-0">
+                <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+                <span>•</span>
+                <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
               </div>
             </div>
-            <div className="flex items-center gap-4 text-xs font-semibold text-muted shrink-0">
-              <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
-              <span>•</span>
-              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
-            </div>
-          </div>
+          </Reveal>
         </section>
 
         <CTASection 

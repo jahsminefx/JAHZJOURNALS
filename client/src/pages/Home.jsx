@@ -30,6 +30,13 @@ import MentorMockup from '../components/MentorMockup';
 import StatCard from '../components/StatCard';
 import SEO from '../components/SEO';
 import { useAuth } from '../context/useAuth';
+import {
+  CountUpNumber,
+  FadeIn,
+  Reveal,
+  StaggerContainer,
+  StaggerItem,
+} from '../components/motion/MotionSystem';
 
 const problems = [
   'Taking too many random trades',
@@ -155,9 +162,11 @@ const disciplineData = {
 };
 
 const DisciplineMetric = ({ label, value }) => (
-  <div className="rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-background/55 p-4 shadow-sm dark:shadow-none">
+  <div className="motion-card-hover rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-background/55 p-4 shadow-sm dark:shadow-none hover:border-emerald-500/30">
     <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-500">{label}</p>
-    <p className="mt-2 text-2xl font-black text-emerald-600 dark:text-emerald-300">{value}</p>
+    <p className="mt-2 text-2xl font-black text-emerald-600 dark:text-emerald-300">
+      <CountUpNumber value={value} />
+    </p>
   </div>
 );
 
@@ -247,51 +256,66 @@ const Home = () => {
       <Navbar />
 
       <main>
-        <section className="relative overflow-hidden px-4 pb-16 pt-28 sm:px-6 lg:px-8 lg:pt-32">
+        <section className="relative overflow-hidden bg-slate-950 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:px-8 lg:pb-20 lg:pt-32">
           <img
             src="/heroes/hero-home.png"
             alt="JAHZJOURNALS forex journal dashboard"
-            className="hero-media absolute inset-0 z-0 h-full w-full object-cover brightness-[1.6]"
+            className="hero-media hero-ken-burns absolute inset-0 z-0 h-full w-full object-cover"
             style={{
-              '--hero-position-mobile': '64% top',
-              '--hero-position-tablet': '58% top',
-              '--hero-position-desktop': 'center top',
+              '--hero-position-mobile': '70% 42%',
+              '--hero-position-tablet': '64% 44%',
+              '--hero-position-desktop': '62% 48%',
+              '--hero-position-xl': '60% 46%',
             }}
           />
-          <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.18),transparent_33%),linear-gradient(180deg,rgba(2,6,23,0.76),rgba(17,24,39,0.82)_70%,rgba(2,6,23,0.92))]" />
+          <div className="hero-overlay-home absolute inset-0 z-10" />
           <div className="relative z-20 mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="text-center lg:text-left">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-400">Forex journal and analytics</p>
-              <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-6xl drop-shadow-sm">
-                Stop Guessing. Start Journaling Like a Disciplined Forex Trader.
-              </h1>
-              <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:mx-0 font-medium">
-                Track every trade, screenshot, emotion, mistake, and setup, then discover what actually makes you profitable.
-              </p>
-              <div className="mt-4 flex items-center justify-center lg:justify-start">
-                <Link
-                  to="/calendar"
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-xs font-bold transition-all shadow-sm group"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Live Economic News Calendar (Free)</span>
-                  <ArrowRight size={13} className="text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
-              </div>
-              {user ? (
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                  <Button to="/dashboard" size="lg" className="w-full sm:w-auto">Go to Dashboard</Button>
-                  <Button to="/trades/new" variant="secondary" size="lg" className="w-full sm:w-auto">Log New Trade</Button>
+              <FadeIn direction="up" delay={0} duration={550} distance={14}>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-400">Forex journal and analytics</p>
+              </FadeIn>
+              <FadeIn direction="up" delay={90} duration={650} distance={20}>
+                <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-6xl drop-shadow-sm">
+                  Stop Guessing. Start Journaling Like a Disciplined Forex Trader.
+                </h1>
+              </FadeIn>
+              <FadeIn direction="up" delay={180} duration={650} distance={18}>
+                <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:mx-0 font-medium">
+                  Track every trade, screenshot, emotion, mistake, and setup, then discover what actually makes you profitable.
+                </p>
+              </FadeIn>
+              <FadeIn direction="up" delay={250} duration={600} distance={16}>
+                <div className="mt-4 flex items-center justify-center lg:justify-start">
+                  <Link
+                    to="/calendar"
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-xs font-bold transition-all shadow-sm group"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Live Economic News Calendar (Free)</span>
+                    <ArrowRight size={13} className="text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
                 </div>
-              ) : (
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                  <Button to="/register" size="lg" className="w-full sm:w-auto">Start Journaling Free</Button>
-                  <Button to="/features" variant="secondary" size="lg" className="w-full sm:w-auto">View Features</Button>
-                </div>
-              )}
-              <p className="mt-5 text-sm font-medium text-slate-300">No signals. No hype. Built for structured review.</p>
+              </FadeIn>
+              <FadeIn direction="up" delay={320} duration={650} distance={16}>
+                {user ? (
+                  <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                    <Button to="/dashboard" size="lg" className="w-full sm:w-auto">Go to Dashboard</Button>
+                    <Button to="/trades/new" variant="secondary" size="lg" className="w-full sm:w-auto !border-white/25 !bg-white/10 !text-white hover:!bg-white/20 backdrop-blur-sm">Log New Trade</Button>
+                  </div>
+                ) : (
+                  <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                    <Button to="/register" size="lg" className="w-full sm:w-auto">Start Journaling Free</Button>
+                    <Button to="/features" variant="secondary" size="lg" className="w-full sm:w-auto !border-white/25 !bg-white/10 !text-white hover:!bg-white/20 backdrop-blur-sm">View Features</Button>
+                  </div>
+                )}
+              </FadeIn>
+              <FadeIn direction="up" delay={390} duration={600} distance={12}>
+                <p className="mt-5 text-sm font-medium text-slate-300">No signals. No hype. Built for structured review.</p>
+              </FadeIn>
             </div>
-            <DashboardMockup />
+            <FadeIn direction="up" delay={340} duration={720} scale={0.97}>
+              <DashboardMockup />
+            </FadeIn>
           </div>
         </section>
 
@@ -302,14 +326,16 @@ const Home = () => {
               title="Most traders do not need more noise. They need better review."
               description="If you cannot see your patterns, your journal cannot help you improve them."
             />
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {problems.map((problem) => (
-                <div key={problem} className="flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 dark:border-red-400/20 dark:bg-red-400/[0.06]">
-                  <AlertTriangle size={20} className="shrink-0 text-rose-500 dark:text-rose-400" />
-                  <span className="text-sm font-semibold text-foreground">{problem}</span>
-                </div>
+            <StaggerContainer className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {problems.map((problem, index) => (
+                <StaggerItem key={problem} index={index}>
+                  <div className="motion-card-hover flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 dark:border-red-400/20 dark:bg-red-400/[0.06] hover:border-rose-500/35">
+                    <AlertTriangle size={20} className="shrink-0 text-rose-500 dark:text-rose-400" />
+                    <span className="text-sm font-semibold text-foreground">{problem}</span>
+                  </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
@@ -322,23 +348,27 @@ const Home = () => {
                 title="A disciplined trading review system in one place."
                 description="JAHZJOURNALS brings your trade log, screenshots, rules, emotions, performance metrics, and review process into one clean workflow."
               />
-              <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                {['Log trades', 'Upload chart screenshots', 'Track rules', 'Track emotions', 'Analyze performance', 'Prepare smart reviews'].map((item) => (
-                  <div key={item} className="flex items-center gap-3 text-sm font-semibold text-foreground">
-                    <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    {item}
-                  </div>
+              <StaggerContainer className="mt-8 grid gap-3 sm:grid-cols-2">
+                {['Log trades', 'Upload chart screenshots', 'Track rules', 'Track emotions', 'Analyze performance', 'Prepare smart reviews'].map((item, index) => (
+                  <StaggerItem key={item} index={index} distance={14}>
+                    <div className="flex items-center gap-3 text-sm font-semibold text-foreground">
+                      <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      {item}
+                    </div>
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerContainer>
             </div>
-            <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-6 shadow-sm dark:shadow-none">
-              <div className="grid grid-cols-2 gap-4">
-                <StatCard label="Best pair" value="GBPUSD" />
-                <StatCard label="Worst pair" value="XAUUSD" tone="red" />
-                <StatCard label="Best session" value="London" tone="cyan" />
-                <StatCard label="Most broken rule" value="Early entry" tone="white" />
+            <Reveal direction="up" delay={120}>
+              <div className="motion-card-hover motion-card-glow rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-6 shadow-sm dark:shadow-none">
+                <div className="grid grid-cols-2 gap-4">
+                  <StatCard label="Best pair" value="GBPUSD" />
+                  <StatCard label="Worst pair" value="XAUUSD" tone="red" />
+                  <StatCard label="Best session" value="London" tone="cyan" />
+                  <StatCard label="Most broken rule" value="Early entry" tone="white" />
+                </div>
               </div>
-            </div>
+            </Reveal>
           </div>
         </section>
 
@@ -349,25 +379,29 @@ const Home = () => {
               title="Everything serious traders need to know what works and what hurts."
               description="Built for forex, gold, indices, prop firm challenges, and screenshot-heavy smart money review."
             />
-            <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {features.map(([title, Icon, description, to]) => (
-                <FeatureCard key={title} icon={Icon} title={title} description={description} to={to} />
+            <StaggerContainer className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {features.map(([title, Icon, description, to], index) => (
+                <StaggerItem key={title} index={index}>
+                  <FeatureCard icon={Icon} title={title} description={description} to={to} />
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <SectionHeader eyebrow="How it works" title="Five steps from execution to insight." />
-            <div className="mt-10 grid gap-5 md:grid-cols-5">
+            <StaggerContainer className="mt-10 grid gap-5 md:grid-cols-5">
               {['Log your trade', 'Upload screenshots', 'Track emotions and rules', 'Review analytics', 'Discover your edge'].map((step, index) => (
-                <div key={step} className="rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-5 shadow-sm dark:shadow-none">
-                  <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">0{index + 1}</span>
-                  <p className="mt-4 font-semibold text-foreground">{step}</p>
-                </div>
+                <StaggerItem key={step} index={index}>
+                  <div className="motion-card-hover motion-card-glow h-full rounded-xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-5 shadow-sm dark:shadow-none">
+                    <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">0{index + 1}</span>
+                    <p className="mt-4 font-semibold text-foreground">{step}</p>
+                  </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
@@ -382,126 +416,134 @@ const Home = () => {
                   title="Disciplined traders do not gamble through red folder news."
                   description="Plan your trading week around high-impact macroeconomic releases, and review how news volatility impacts your personal execution."
                 />
-                <div className="mt-8 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 size={18} className="text-emerald-500 mt-1 shrink-0" />
-                    <div>
-                      <p className="text-sm font-bold text-foreground">Plan XAUUSD trades around high-impact USD events</p>
-                      <p className="text-xs text-muted mt-0.5">Know exactly when NFP, CPI, and FOMC drop so you avoid holding blind exposure during spread expansion.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 size={18} className="text-emerald-500 mt-1 shrink-0" />
-                    <div>
-                      <p className="text-sm font-bold text-foreground">Avoid revenge trading around CPI and NFP volatility</p>
-                      <p className="text-xs text-muted mt-0.5">Configure safeguard buffers before and after major releases to enforce sitting on your hands when whipsaws occur.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 size={18} className="text-emerald-500 mt-1 shrink-0" />
-                    <div>
-                      <p className="text-sm font-bold text-foreground">Review whether trade entries occurred during news volatility</p>
-                      <p className="text-xs text-muted mt-0.5">Tag macroeconomic catalysts in your post-trade journal to verify whether a loss came from strategy or news slippage.</p>
-                    </div>
-                  </div>
-                </div>
-                <p className="mt-6 text-xs text-muted font-medium">For trade planning and structured review. Not trading advice or a promise of outcomes.</p>
-                <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                  <Button to="/calendar" variant="secondary" size="md">
-                    Explore Live Economic Calendar (Free)
-                  </Button>
-                  <Button to="/register" size="md">
-                    Start Journaling Free
-                  </Button>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
-                <div className="flex items-center justify-between border-b border-border pb-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={18} className="text-emerald-400" />
-                    <span className="text-sm font-bold text-foreground">High-Impact Event Safeguard</span>
-                  </div>
-                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                    High Impact (USD)
-                  </span>
-                </div>
-                <div className="mt-4 space-y-3">
-                  <div className="p-3.5 rounded-xl border border-border bg-surface-muted/60">
-                    <div className="flex justify-between items-start">
+                <Reveal direction="up" delay={100}>
+                  <div className="mt-8 space-y-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 size={18} className="text-emerald-500 mt-1 shrink-0" />
                       <div>
-                        <p className="text-xs font-bold text-foreground">Non-Farm Employment Change (NFP)</p>
-                        <p className="text-[11px] text-muted">Bureau of Labor Statistics • USD</p>
+                        <p className="text-sm font-bold text-foreground">Plan XAUUSD trades around high-impact USD events</p>
+                        <p className="text-xs text-muted mt-0.5">Know exactly when NFP, CPI, and FOMC drop so you avoid holding blind exposure during spread expansion.</p>
                       </div>
-                      <span className="text-xs font-mono font-bold text-foreground">13:30 UTC</span>
                     </div>
-                    <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
-                      <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20">
-                        ±15m buffer recommended
-                      </span>
-                      <span>Spread expansion expected</span>
-                    </div>
-                  </div>
-                  <div className="p-3.5 rounded-xl border border-border bg-surface-muted/60">
-                    <div className="flex justify-between items-start">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 size={18} className="text-emerald-500 mt-1 shrink-0" />
                       <div>
-                        <p className="text-xs font-bold text-foreground">Consumer Price Index (CPI m/m)</p>
-                        <p className="text-[11px] text-muted">Bureau of Labor Statistics • USD</p>
+                        <p className="text-sm font-bold text-foreground">Avoid revenge trading around CPI and NFP volatility</p>
+                        <p className="text-xs text-muted mt-0.5">Configure safeguard buffers before and after major releases to enforce sitting on your hands when whipsaws occur.</p>
                       </div>
-                      <span className="text-xs font-mono font-bold text-foreground">13:30 UTC</span>
                     </div>
-                    <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
-                        Journal news tag ready
-                      </span>
-                      <span>Catalyst review tracking</span>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 size={18} className="text-emerald-500 mt-1 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-foreground">Review whether trade entries occurred during news volatility</p>
+                        <p className="text-xs text-muted mt-0.5">Tag macroeconomic catalysts in your post-trade journal to verify whether a loss came from strategy or news slippage.</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-muted">
-                  <span>Synced with ForexFactory & TradingView</span>
-                  <Link to="/calendar" className="text-emerald-400 font-semibold hover:underline">
-                    View Live Calendar →
-                  </Link>
-                </div>
+                  <p className="mt-6 text-xs text-muted font-medium">For trade planning and structured review. Not trading advice or a promise of outcomes.</p>
+                  <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                    <Button to="/calendar" variant="secondary" size="md">
+                      Explore Live Economic Calendar (Free)
+                    </Button>
+                    <Button to="/register" size="md">
+                      Start Journaling Free
+                    </Button>
+                  </div>
+                </Reveal>
               </div>
+              <Reveal direction="up" delay={140} scale={0.98}>
+                <div className="motion-card-hover motion-card-glow rounded-2xl border border-border bg-surface p-6 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-border pb-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={18} className="text-emerald-400" />
+                      <span className="text-sm font-bold text-foreground">High-Impact Event Safeguard</span>
+                    </div>
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                      High Impact (USD)
+                    </span>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    <div className="p-3.5 rounded-xl border border-border bg-surface-muted/60 transition-colors duration-200 hover:border-emerald-500/30">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-xs font-bold text-foreground">Non-Farm Employment Change (NFP)</p>
+                          <p className="text-[11px] text-muted">Bureau of Labor Statistics • USD</p>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-foreground">13:30 UTC</span>
+                      </div>
+                      <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
+                        <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20">
+                          ±15m buffer recommended
+                        </span>
+                        <span>Spread expansion expected</span>
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-border bg-surface-muted/60 transition-colors duration-200 hover:border-emerald-500/30">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-xs font-bold text-foreground">Consumer Price Index (CPI m/m)</p>
+                          <p className="text-[11px] text-muted">Bureau of Labor Statistics • USD</p>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-foreground">13:30 UTC</span>
+                      </div>
+                      <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">
+                          Journal news tag ready
+                        </span>
+                        <span>Catalyst review tracking</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-muted">
+                    <span>Synced with ForexFactory & TradingView</span>
+                    <Link to="/calendar" className="text-emerald-400 font-semibold hover:underline">
+                      View Live Calendar →
+                    </Link>
+                  </div>
+                </div>
+              </Reveal>
             </div>
           </div>
         </section>
 
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-8 shadow-sm dark:shadow-none">
-              <SectionHeader
-                align="left"
-                eyebrow="Discipline"
-                title="Your problem may not be your strategy. It may be your discipline."
-                description="Use scores, rule tracking, and emotion logs to separate strategy problems from behavior problems."
-              />
-              <div className="mt-8 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-foreground">Discipline score</span>
-                  <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">{disciplineData.score}/100</span>
+            <Reveal direction="up">
+              <div className="rounded-2xl border border-border bg-surface dark:border-white/10 dark:bg-white/[0.04] p-8 shadow-sm dark:shadow-none">
+                <SectionHeader
+                  align="left"
+                  eyebrow="Discipline"
+                  title="Your problem may not be your strategy. It may be your discipline."
+                  description="Use scores, rule tracking, and emotion logs to separate strategy problems from behavior problems."
+                />
+                <div className="mt-8 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground">Discipline score</span>
+                    <span className="text-3xl font-black text-emerald-600 dark:text-emerald-300">
+                      <CountUpNumber value={`${disciplineData.score}/100`} />
+                    </span>
+                  </div>
+                  <div
+                    className="mt-4 h-3 overflow-hidden rounded-full bg-surface-muted"
+                    role="progressbar"
+                    aria-label="Discipline score"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow={disciplineData.score}
+                  >
+                    <div className="h-full rounded-full bg-emerald-400" style={{ width: `${disciplineData.score}%` }} />
+                  </div>
                 </div>
-                <div
-                  className="mt-4 h-3 overflow-hidden rounded-full bg-surface-muted"
-                  role="progressbar"
-                  aria-label="Discipline score"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  aria-valuenow={disciplineData.score}
-                >
-                  <div className="h-full rounded-full bg-emerald-400" style={{ width: `${disciplineData.score}%` }} />
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {disciplineData.metrics.map((metric) => (
+                    <DisciplineMetric key={metric.label} label={metric.label} value={metric.value} />
+                  ))}
                 </div>
+                <DisciplineTrend trend={disciplineData.trend} weeklyChange={disciplineData.weeklyChange} />
+                <DisciplineStreak days={disciplineData.streak.days} description={disciplineData.streak.description} />
+                <DisciplineFocusArea focusArea={disciplineData.focusArea} onReviewViolations={handleReviewViolations} />
               </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {disciplineData.metrics.map((metric) => (
-                  <DisciplineMetric key={metric.label} label={metric.label} value={metric.value} />
-                ))}
-              </div>
-              <DisciplineTrend trend={disciplineData.trend} weeklyChange={disciplineData.weeklyChange} />
-              <DisciplineStreak days={disciplineData.streak.days} description={disciplineData.streak.description} />
-              <DisciplineFocusArea focusArea={disciplineData.focusArea} onReviewViolations={handleReviewViolations} />
-            </div>
+            </Reveal>
             <div className="space-y-5">
               <PropFirmMockup />
               <MentorMockup />
@@ -512,38 +554,41 @@ const Home = () => {
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <SectionHeader eyebrow="Pricing preview" title="Start free. Upgrade when your review process grows." />
-            <div className="mt-10 grid gap-5 lg:grid-cols-3">
-              {pricing.map((plan) => (
-                <PricingCard
-                  key={plan.name}
-                  name={plan.name}
-                  price={plan.price}
-                  period={plan.period}
-                  description={plan.description}
-                  limits={plan.limits}
-                  features={plan.features}
-                  highlighted={plan.highlighted}
-                  to={plan.to}
-                  cta={plan.cta}
-                />
+            <StaggerContainer className="mt-10 grid gap-5 lg:grid-cols-3">
+              {pricing.map((plan, index) => (
+                <StaggerItem key={plan.name} index={index} className="flex">
+                  <PricingCard
+                    name={plan.name}
+                    price={plan.price}
+                    period={plan.period}
+                    description={plan.description}
+                    limits={plan.limits}
+                    features={plan.features}
+                    highlighted={plan.highlighted}
+                    to={plan.to}
+                    cta={plan.cta}
+                  />
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerContainer>
           </div>
         </section>
 
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl">
             <SectionHeader eyebrow="FAQ" title="Responsible answers before you start." />
-            <div className="mt-10 space-y-4">
-              {faqs.map(([question, answer], index) => (
-                <FAQItem
-                  key={question}
-                  question={question}
-                  answer={answer}
-                  defaultOpen={index === 0}
-                />
-              ))}
-            </div>
+            <Reveal direction="up" delay={80}>
+              <div className="mt-10 space-y-4">
+                {faqs.map(([question, answer], index) => (
+                  <FAQItem
+                    key={question}
+                    question={question}
+                    answer={answer}
+                    defaultOpen={index === 0}
+                  />
+                ))}
+              </div>
+            </Reveal>
           </div>
         </section>
 

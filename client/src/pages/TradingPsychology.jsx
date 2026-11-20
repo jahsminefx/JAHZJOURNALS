@@ -7,6 +7,7 @@ import SectionHeader from '../components/SectionHeader';
 import CTASection from '../components/CTASection';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 
 const psychologyFeatures = [
   {
@@ -56,37 +57,43 @@ const TradingPsychology = () => (
           title="Turn Mindset Flaws into Measurable Data"
         />
 
-        <div className="grid md:grid-cols-2 gap-8 mt-10">
+        <StaggerContainer className="grid md:grid-cols-2 gap-8 mt-10">
           {psychologyFeatures.map((feat, idx) => (
-            <div key={idx} className="p-6 bg-surface border border-border rounded-2xl space-y-3 shadow-sm dark:shadow-lg">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                <Brain size={20} />
+            <StaggerItem key={idx} index={idx}>
+              <div className="motion-card-hover motion-card-glow h-full p-6 bg-surface border border-border rounded-2xl space-y-3 shadow-sm dark:shadow-lg">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <Brain size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">{feat.title}</h3>
+                <p className="text-xs text-muted leading-relaxed">{feat.description}</p>
               </div>
-              <h3 className="text-lg font-bold text-foreground">{feat.title}</h3>
-              <p className="text-xs text-muted leading-relaxed">{feat.description}</p>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       </section>
 
       {/* AI Search FAQ Block */}
       <section className="py-16">
         <SectionHeader eyebrow="Frequently Asked Questions" title="Trading Psychology FAQs" />
-        <div className="max-w-4xl mx-auto mt-8 space-y-4 text-xs">
-          <div className="p-5 bg-surface border border-border rounded-2xl space-y-2 shadow-sm dark:shadow-none">
-            <h4 className="font-bold text-sm text-foreground">How does JAHZJOURNALS help eliminate revenge trading?</h4>
-            <p className="text-muted leading-relaxed">
-              JAHZJOURNALS monitors order execution timing relative to previous trade closures. If a new position is opened rapidly after a loss without proper checklist confirmation, the system flags a revenge trading alert.
-            </p>
-          </div>
+        <StaggerContainer className="max-w-4xl mx-auto mt-8 space-y-4 text-xs">
+          <StaggerItem index={0}>
+            <div className="motion-card-hover motion-card-glow p-5 bg-surface border border-border rounded-2xl space-y-2 shadow-sm dark:shadow-none">
+              <h4 className="font-bold text-sm text-foreground">How does JAHZJOURNALS help eliminate revenge trading?</h4>
+              <p className="text-muted leading-relaxed">
+                JAHZJOURNALS monitors order execution timing relative to previous trade closures. If a new position is opened rapidly after a loss without proper checklist confirmation, the system flags a revenge trading alert.
+              </p>
+            </div>
+          </StaggerItem>
 
-          <div className="p-5 bg-surface border border-border rounded-2xl space-y-2 shadow-sm dark:shadow-none">
-            <h4 className="font-bold text-sm text-foreground">What is a Discipline Score?</h4>
-            <p className="text-muted leading-relaxed">
-              Your Discipline Score measures the percentage of logged trades executed strictly according to your pre-defined trading plan rules.
-            </p>
-          </div>
-        </div>
+          <StaggerItem index={1}>
+            <div className="motion-card-hover motion-card-glow p-5 bg-surface border border-border rounded-2xl space-y-2 shadow-sm dark:shadow-none">
+              <h4 className="font-bold text-sm text-foreground">What is a Discipline Score?</h4>
+              <p className="text-muted leading-relaxed">
+                Your Discipline Score measures the percentage of logged trades executed strictly according to your pre-defined trading plan rules.
+              </p>
+            </div>
+          </StaggerItem>
+        </StaggerContainer>
       </section>
 
       <CTASection title="Master your mind in the markets today." cta="Start Tracking Your Mindset Free" />

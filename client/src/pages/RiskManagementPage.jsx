@@ -7,6 +7,7 @@ import SectionHeader from '../components/SectionHeader';
 import CTASection from '../components/CTASection';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { Reveal, StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 
 const riskFeatures = [
   {
@@ -55,30 +56,34 @@ const RiskManagementPage = () => (
           title="Institutional Risk Tools Built for Retail Traders"
         />
 
-        <div className="grid md:grid-cols-2 gap-8 mt-10">
+        <StaggerContainer className="grid md:grid-cols-2 gap-8 mt-10">
           {riskFeatures.map((feat, idx) => (
-            <div key={idx} className="p-6 bg-surface border border-border rounded-2xl space-y-3 shadow-sm dark:shadow-lg">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                <Target size={20} />
+            <StaggerItem key={idx} index={idx}>
+              <div className="motion-card-hover motion-card-glow h-full p-6 bg-surface border border-border rounded-2xl space-y-3 shadow-sm dark:shadow-lg">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                  <Target size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">{feat.title}</h3>
+                <p className="text-xs text-muted leading-relaxed">{feat.description}</p>
               </div>
-              <h3 className="text-lg font-bold text-foreground">{feat.title}</h3>
-              <p className="text-xs text-muted leading-relaxed">{feat.description}</p>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       </section>
 
       {/* FAQ Section */}
       <section className="py-16">
         <SectionHeader eyebrow="Risk FAQ" title="Risk Management Questions" />
-        <div className="max-w-4xl mx-auto mt-8 space-y-4 text-xs">
-          <div className="p-5 bg-surface border border-border rounded-2xl space-y-2 shadow-sm dark:shadow-none">
-            <h4 className="font-bold text-sm text-foreground">How does the position size calculator work?</h4>
-            <p className="text-muted leading-relaxed">
-              Input your account balance, risk percentage (e.g. 1%), and stop loss distance in pips. The calculator instantly determines the exact lot size for EURUSD, GBPUSD, XAUUSD, or Indices.
-            </p>
+        <Reveal direction="up" delay={80}>
+          <div className="max-w-4xl mx-auto mt-8 space-y-4 text-xs">
+            <div className="motion-card-hover motion-card-glow p-5 bg-surface border border-border rounded-2xl space-y-2 shadow-sm dark:shadow-none">
+              <h4 className="font-bold text-sm text-foreground">How does the position size calculator work?</h4>
+              <p className="text-muted leading-relaxed">
+                Input your account balance, risk percentage (e.g. 1%), and stop loss distance in pips. The calculator instantly determines the exact lot size for EURUSD, GBPUSD, XAUUSD, or Indices.
+              </p>
+            </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <CTASection title="Protect your trading capital with automated risk safeguards." cta="Start Managing Risk Free" />

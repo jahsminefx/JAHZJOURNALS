@@ -31,6 +31,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { FadeIn, Reveal, StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 import {
   CALENDAR_CATEGORIES,
   DEFAULT_CALENDAR_PREFERENCES,
@@ -538,7 +539,8 @@ export default function EconomicCalendarPage() {
       />
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <FadeIn direction="up" delay={0} duration={560} distance={14}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -624,7 +626,8 @@ export default function EconomicCalendarPage() {
             <span>{refreshing ? 'Syncing...' : 'Sync Calendar'}</span>
           </button>
         </div>
-      </div>
+        </div>
+      </FadeIn>
 
       {/* Prominent Data Source & Timing Disclosure */}
       <CalendarDataDisclosure />
@@ -729,97 +732,105 @@ export default function EconomicCalendarPage() {
       )}
 
       {/* 4 Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-surface border border-border/80 hover:border-border rounded-2xl p-4 sm:p-5 shadow-xs transition-colors flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Matching Events</span>
-            <div className="w-8 h-8 rounded-xl bg-surface-muted border border-border/60 flex items-center justify-center text-muted shrink-0">
-              <Calendar size={15} />
+      <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <StaggerItem index={0} className="flex">
+          <div className="motion-card-hover w-full bg-surface border border-border/80 hover:border-border rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Matching Events</span>
+              <div className="w-8 h-8 rounded-xl bg-surface-muted border border-border/60 flex items-center justify-center text-muted shrink-0">
+                <Calendar size={15} />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight font-mono tabular-nums">
+                {stats.total}
+              </p>
+              <p className="text-[11px] text-muted mt-0.5 font-medium">For current view &amp; filters</p>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight font-mono tabular-nums">
-              {stats.total}
-            </p>
-            <p className="text-[11px] text-muted mt-0.5 font-medium">For current view &amp; filters</p>
-          </div>
-        </div>
+        </StaggerItem>
 
-        <div className="bg-surface border border-rose-500/20 hover:border-rose-500/35 rounded-2xl p-4 sm:p-5 shadow-xs transition-colors flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">High Impact</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center text-rose-400 shrink-0">
-              <Flame size={16} />
+        <StaggerItem index={1} className="flex">
+          <div className="motion-card-hover w-full bg-surface border border-rose-500/20 hover:border-rose-500/35 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">High Impact</span>
+              <div className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center text-rose-400 shrink-0">
+                <Flame size={16} />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-extrabold text-rose-400 tracking-tight font-mono tabular-nums">
+                {stats.high}
+              </p>
+              <p className="text-[11px] text-rose-400/80 mt-0.5 font-medium">High-volatility catalysts</p>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-2xl sm:text-3xl font-extrabold text-rose-400 tracking-tight font-mono tabular-nums">
-              {stats.high}
-            </p>
-            <p className="text-[11px] text-rose-400/80 mt-0.5 font-medium">High-volatility catalysts</p>
-          </div>
-        </div>
+        </StaggerItem>
 
-        <div className="bg-surface border border-amber-500/20 hover:border-amber-500/35 rounded-2xl p-4 sm:p-5 shadow-xs transition-colors flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Medium Impact</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400 shrink-0">
-              <AlertTriangle size={15} />
+        <StaggerItem index={2} className="flex">
+          <div className="motion-card-hover w-full bg-surface border border-amber-500/20 hover:border-amber-500/35 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Medium Impact</span>
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400 shrink-0">
+                <AlertTriangle size={15} />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-extrabold text-amber-400 tracking-tight font-mono tabular-nums">
+                {stats.medium}
+              </p>
+              <p className="text-[11px] text-amber-400/80 mt-0.5 font-medium">Moderate volume drivers</p>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-2xl sm:text-3xl font-extrabold text-amber-400 tracking-tight font-mono tabular-nums">
-              {stats.medium}
-            </p>
-            <p className="text-[11px] text-amber-400/80 mt-0.5 font-medium">Moderate volume drivers</p>
-          </div>
-        </div>
+        </StaggerItem>
 
-        <div className="bg-surface border border-emerald-500/20 hover:border-emerald-500/35 rounded-2xl p-4 sm:p-5 shadow-xs transition-colors flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Next Release</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0">
-              <Clock size={15} />
+        <StaggerItem index={3} className="flex">
+          <div className="motion-card-hover w-full bg-surface border border-emerald-500/20 hover:border-emerald-500/35 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Next Release</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0">
+                <Clock size={15} />
+              </div>
             </div>
-          </div>
-          <div className="mt-2 min-w-0">
-            {stats.upcomingNext ? (
-              <>
-                <p
-                  className="text-xs sm:text-sm font-bold text-foreground truncate"
-                  title={`${stats.upcomingNext.country} - ${stats.upcomingNext.title}`}
-                >
-                  <span className="text-emerald-400 font-mono mr-1.5 font-bold">
-                    [{stats.upcomingNext.country}]
-                  </span>
-                  {stats.upcomingNext.title}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs font-mono font-bold text-foreground">
-                    {formatEventTimeInZone(
-                      stats.upcomingNext.date,
-                      effectiveTimeZone,
-                      savedPrefs.timeFormat
-                    )}
-                  </span>
-                  {stats.upcomingNext.releaseDisplay && (
-                    <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded border ${stats.upcomingNext.releaseDisplay.className}`}
-                    >
-                      {stats.upcomingNext.releaseDisplay.label}
+            <div className="mt-2 min-w-0">
+              {stats.upcomingNext ? (
+                <>
+                  <p
+                    className="text-xs sm:text-sm font-bold text-foreground truncate"
+                    title={`${stats.upcomingNext.country} - ${stats.upcomingNext.title}`}
+                  >
+                    <span className="text-emerald-400 font-mono mr-1.5 font-bold">
+                      [{stats.upcomingNext.country}]
                     </span>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-xs sm:text-sm font-bold text-muted truncate">No releases pending</p>
-                <p className="text-[11px] text-muted/70 mt-0.5">All filtered events completed</p>
-              </>
-            )}
+                    {stats.upcomingNext.title}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-mono font-bold text-foreground">
+                      {formatEventTimeInZone(
+                        stats.upcomingNext.date,
+                        effectiveTimeZone,
+                        savedPrefs.timeFormat
+                      )}
+                    </span>
+                    {stats.upcomingNext.releaseDisplay && (
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded border ${stats.upcomingNext.releaseDisplay.className}`}
+                      >
+                        {stats.upcomingNext.releaseDisplay.label}
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs sm:text-sm font-bold text-muted truncate">No releases pending</p>
+                  <p className="text-[11px] text-muted/70 mt-0.5">All filtered events completed</p>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+        </StaggerItem>
+      </StaggerContainer>
 
       {/* Filter and Search Bar Toolbar */}
       <div className="bg-surface border border-border/80 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
@@ -1452,47 +1463,49 @@ export default function EconomicCalendarPage() {
 
       {/* Anonymous Trader Callout Banner */}
       {!user && (
-        <div className="mt-8 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-surface to-surface dark:from-emerald-950/40 dark:via-surface dark:to-surface p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-          <div className="space-y-3 max-w-2xl">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
-              <span>⚡</span> Free Forex Journaling
-            </span>
-            <h3 className="text-xl sm:text-2xl font-black text-foreground">
-              Connect Economic News to Disciplined Journaling
-            </h3>
-            <div className="space-y-1.5 text-xs text-muted leading-relaxed">
-              <p className="flex items-center gap-2 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                <span>Plan XAUUSD trades around high-impact USD events</span>
-              </p>
-              <p className="flex items-center gap-2 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                <span>Avoid revenge trading around CPI and NFP volatility</span>
-              </p>
-              <p className="flex items-center gap-2 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                <span>Review whether trade entries occurred during news volatility</span>
+        <Reveal direction="up">
+          <div className="motion-card-hover mt-8 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-surface to-surface dark:from-emerald-950/40 dark:via-surface dark:to-surface p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+            <div className="space-y-3 max-w-2xl">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                <span>⚡</span> Free Forex Journaling
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-foreground">
+                Connect Economic News to Disciplined Journaling
+              </h3>
+              <div className="space-y-1.5 text-xs text-muted leading-relaxed">
+                <p className="flex items-center gap-2 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span>Plan XAUUSD trades around high-impact USD events</span>
+                </p>
+                <p className="flex items-center gap-2 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span>Avoid revenge trading around CPI and NFP volatility</span>
+                </p>
+                <p className="flex items-center gap-2 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span>Review whether trade entries occurred during news volatility</span>
+                </p>
+              </div>
+              <p className="text-[11px] text-muted/80">
+                For trade planning and structured review. Not trading advice or financial recommendations.
               </p>
             </div>
-            <p className="text-[11px] text-muted/80">
-              For trade planning and structured review. Not trading advice or financial recommendations.
-            </p>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
+              <Link
+                to="/register"
+                className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black shadow-md shadow-emerald-500/20 transition-all text-center whitespace-nowrap cursor-pointer"
+              >
+                Start Journaling Free →
+              </Link>
+              <Link
+                to="/risk-calculator"
+                className="inline-flex items-center justify-center px-4 py-3 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-bold transition-all text-center whitespace-nowrap cursor-pointer"
+              >
+                Position Size Calculator
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
-            <Link
-              to="/register"
-              className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black shadow-md shadow-emerald-500/20 transition-all text-center whitespace-nowrap cursor-pointer"
-            >
-              Start Journaling Free →
-            </Link>
-            <Link
-              to="/risk-calculator"
-              className="inline-flex items-center justify-center px-4 py-3 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-bold transition-all text-center whitespace-nowrap cursor-pointer"
-            >
-              Position Size Calculator
-            </Link>
-          </div>
-        </div>
+        </Reveal>
       )}
     </div>
   );

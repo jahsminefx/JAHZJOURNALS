@@ -33,6 +33,7 @@ import CTASection from '../components/CTASection';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useAuth } from '../context/useAuth';
+import { Reveal, StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 
 const PRESET_TIERS = [
   {
@@ -183,13 +184,14 @@ const Mentors = () => {
           }}
           heroImage="/heroes/hero-mentors.png"
           heroAlt="Mentor reviewing student trading journals"
-          heroPosition={{ mobile: '72% top', tablet: '64% top', desktop: 'center top' }}
+          heroPosition={{ mobile: '74% 30%', tablet: '68% 34%', desktop: '60% 36%', xl: '58% 35%' }}
+          contentClassName="max-w-lg lg:max-w-[34rem]"
         />
 
         {/* Telegram vs JAHZJOURNALS Comparison Section */}
         <section className="py-16 sm:py-20 border-b border-border">
           <div className="mx-auto max-w-5xl">
-            <div className="text-center mb-12">
+            <Reveal direction="up" className="text-center mb-12">
               <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
                 The Coaching Evolution
               </span>
@@ -199,57 +201,61 @@ const Mentors = () => {
               <p className="mt-3 text-sm text-muted max-w-2xl mx-auto">
                 Telegram and WhatsApp are great for signals and hype. But when it comes to teaching real execution discipline, chat apps fail mentors and students alike.
               </p>
-            </div>
+            </Reveal>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <StaggerContainer className="grid gap-4 md:grid-cols-2">
               {/* Old Way Card */}
-              <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.03] p-6 sm:p-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-400 border border-red-500/20">
-                    <MessageSquareWarning size={22} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-foreground text-lg">Telegram & WhatsApp Coaching</h3>
-                    <p className="text-xs text-red-400 font-medium">Unstructured, noisy, and unverified</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  {comparisonPoints.map((pt, idx) => (
-                    <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-muted">
-                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold">
-                        ✕
-                      </span>
-                      <span>{pt.telegram}</span>
+              <StaggerItem index={0}>
+                <div className="motion-card-hover h-full rounded-2xl border border-red-500/20 bg-red-500/[0.03] p-6 sm:p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-400 border border-red-500/20">
+                      <MessageSquareWarning size={22} />
                     </div>
-                  ))}
+                    <div>
+                      <h3 className="font-bold text-foreground text-lg">Telegram & WhatsApp Coaching</h3>
+                      <p className="text-xs text-red-400 font-medium">Unstructured, noisy, and unverified</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {comparisonPoints.map((pt, idx) => (
+                      <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-muted">
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold">
+                          ✕
+                        </span>
+                        <span>{pt.telegram}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </StaggerItem>
 
               {/* JAHZJOURNALS Way Card */}
-              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/[0.04] p-6 sm:p-8 shadow-lg shadow-emerald-950/20">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    <ShieldCheck size={22} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-foreground text-lg">JAHZJOURNALS Academy System</h3>
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Verified, disciplined, and automated</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  {comparisonPoints.map((pt, idx) => (
-                    <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-foreground">
-                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                        ✓
-                      </span>
-                      <span className="font-medium text-foreground">{pt.jahz}</span>
+              <StaggerItem index={1}>
+                <div className="motion-card-hover motion-card-glow h-full rounded-2xl border border-emerald-500/40 bg-emerald-500/[0.04] p-6 sm:p-8 shadow-lg shadow-emerald-950/20">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      <ShieldCheck size={22} />
                     </div>
-                  ))}
+                    <div>
+                      <h3 className="font-bold text-foreground text-lg">JAHZJOURNALS Academy System</h3>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Verified, disciplined, and automated</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {comparisonPoints.map((pt, idx) => (
+                      <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-foreground">
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                          ✓
+                        </span>
+                        <span className="font-medium text-foreground">{pt.jahz}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
+              </StaggerItem>
+            </StaggerContainer>
           </div>
         </section>
 
@@ -264,43 +270,49 @@ const Mentors = () => {
                 description="Your mentor dashboard gives you an instant birds-eye view of who is trading, who is respecting your risk rules, and who needs corrective feedback today."
               />
 
-              <div className="mt-8 space-y-4">
-                <div className="flex gap-4 p-4 rounded-xl border border-border bg-surface">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-                    <Zap size={20} />
+              <StaggerContainer className="mt-8 space-y-4">
+                <StaggerItem index={0}>
+                  <div className="motion-card-hover motion-card-glow flex gap-4 p-4 rounded-xl border border-border bg-surface">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Black-and-White Strategy Risk Guard</h4>
+                      <p className="mt-1 text-xs text-muted leading-relaxed">
+                        If a student risks 12% on Gold instead of your specified 1% limit, JAHZJOURNALS flags it in bold red before excuses can be made.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground">Black-and-White Strategy Risk Guard</h4>
-                    <p className="mt-1 text-xs text-muted leading-relaxed">
-                      If a student risks 12% on Gold instead of your specified 1% limit, JAHZJOURNALS flags it in bold red before excuses can be made.
-                    </p>
-                  </div>
-                </div>
+                </StaggerItem>
 
-                <div className="flex gap-4 p-4 rounded-xl border border-border bg-surface">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
-                    <MessageCircle size={20} />
+                <StaggerItem index={1}>
+                  <div className="motion-card-hover motion-card-glow flex gap-4 p-4 rounded-xl border border-border bg-surface">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                      <MessageCircle size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Two-Way Trade Review & Grade Cards</h4>
+                      <p className="mt-1 text-xs text-muted leading-relaxed">
+                        Leave comments and assign letter grades (A+, B, C, F) directly on student trades. Students view your review on their trade detail page and can submit follow-up replies.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground">Two-Way Trade Review & Grade Cards</h4>
-                    <p className="mt-1 text-xs text-muted leading-relaxed">
-                      Leave comments and assign letter grades (A+, B, C, F) directly on student trades. Students view your review on their trade detail page and can submit follow-up replies.
-                    </p>
-                  </div>
-                </div>
+                </StaggerItem>
 
-                <div className="flex gap-4 p-4 rounded-xl border border-border bg-surface">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
-                    <Lock size={20} />
+                <StaggerItem index={2}>
+                  <div className="motion-card-hover motion-card-glow flex gap-4 p-4 rounded-xl border border-border bg-surface">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
+                      <Lock size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Student Privacy & Respect</h4>
+                      <p className="mt-1 text-xs text-muted leading-relaxed">
+                        Students maintain complete control over their personal journals. Unshared personal accounts stay private, preserving trader trust.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground">Student Privacy & Respect</h4>
-                    <p className="mt-1 text-xs text-muted leading-relaxed">
-                      Students maintain complete control over their personal journals. Unshared personal accounts stay private, preserving trader trust.
-                    </p>
-                  </div>
-                </div>
-              </div>
+                </StaggerItem>
+              </StaggerContainer>
             </div>
 
             <div>
@@ -311,7 +323,7 @@ const Mentors = () => {
 
         {/* Feature Grid / Core Specifications */}
         <section className="py-16 sm:py-20 border-b border-border">
-          <div className="text-center mb-12">
+          <Reveal direction="up" className="text-center mb-12">
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
               Complete Academy Toolset
             </span>
@@ -321,9 +333,9 @@ const Mentors = () => {
             <p className="mt-3 text-sm text-muted max-w-2xl mx-auto">
               Engineered specifically for African trading academies, coaching masterminds, and prop firm preparation groups.
             </p>
-          </div>
+          </Reveal>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <StaggerContainer className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
               {
                 icon: AlertTriangle,
@@ -364,23 +376,25 @@ const Mentors = () => {
             ].map((f, i) => {
               const Icon = f.icon;
               return (
-                <div key={i} className="rounded-2xl border border-border bg-surface p-6 hover:border-emerald-500/30 transition-all duration-200">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${f.color} mb-4`}>
-                    <Icon size={20} />
+                <StaggerItem key={i} index={i}>
+                  <div className="motion-card-hover motion-card-glow h-full rounded-2xl border border-border bg-surface p-6">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${f.color} mb-4`}>
+                      <Icon size={20} />
+                    </div>
+                    <h3 className="font-bold text-foreground text-base">{f.title}</h3>
+                    <p className="mt-2 text-xs text-muted leading-relaxed">{f.description}</p>
                   </div>
-                  <h3 className="font-bold text-foreground text-base">{f.title}</h3>
-                  <p className="mt-2 text-xs text-muted leading-relaxed">{f.description}</p>
-                </div>
+                </StaggerItem>
               );
             })}
-          </div>
+          </StaggerContainer>
         </section>
 
         {/* ========================================================================= */}
         {/* MENTOR & ACADEMY PRICING PLANS SECTION (DIRECTLY ON THIS PAGE)             */}
         {/* ========================================================================= */}
         <section id="pricing" className="py-16 sm:py-24 border-b border-border scroll-mt-12">
-          <div className="text-center mb-12 space-y-2">
+          <Reveal direction="up" className="text-center mb-12 space-y-2">
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
               Clear, Tiered Capacity
             </span>
@@ -390,49 +404,51 @@ const Mentors = () => {
             <p className="text-xs sm:text-sm text-muted max-w-2xl mx-auto">
               Flat, bracketed pricing based on your active student community. No hidden fees or per-trade charges. All plans include full Pro trading tools for the mentor.
             </p>
-          </div>
+          </Reveal>
 
           {/* Complimentary Trial Announcement */}
-          <div className="mb-10 max-w-4xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-surface to-surface dark:from-blue-950/40 dark:via-surface dark:to-slate-950 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg text-left">
-            <div className="flex items-center gap-3.5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400 font-bold text-lg border border-blue-500/30">
-                ⏳
-              </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400">
-                    Complimentary 14-Day Trial + 12h Grace
-                  </span>
+          <Reveal direction="up" delay={60}>
+            <div className="motion-card-hover mb-10 max-w-4xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-surface to-surface dark:from-blue-950/40 dark:via-surface dark:to-slate-950 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg text-left">
+              <div className="flex items-center gap-3.5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400 font-bold text-lg border border-blue-500/30">
+                  ⏳
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400">
+                      Complimentary 14-Day Trial + 12h Grace
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-foreground mt-0.5">
+                    Test the Mentor Workspace with up to 50 students risk-free
+                  </h4>
+                  <p className="text-xs text-muted">
+                    Includes full Private Cohort access, 2 cohorts, and Strategy Risk Guards. Strictly one trial per user.
+                  </p>
                 </div>
-                <h4 className="text-sm font-bold text-foreground mt-0.5">
-                  Test the Mentor Workspace with up to 50 students risk-free
-                </h4>
-                <p className="text-xs text-muted">
-                  Includes full Private Cohort access, 2 cohorts, and Strategy Risk Guards. Strictly one trial per user.
-                </p>
               </div>
+              <Link
+                to="/pricing/mentor"
+                className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-bold py-2.5 px-4 text-xs transition shadow-md whitespace-nowrap"
+              >
+                Start 14-Day Trial →
+              </Link>
             </div>
-            <Link
-              to="/pricing/mentor"
-              className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-bold py-2.5 px-4 text-xs transition shadow-md whitespace-nowrap"
-            >
-              Start 14-Day Trial →
-            </Link>
-          </div>
+          </Reveal>
 
-          <div className="grid gap-8 md:grid-cols-3 max-w-6xl mx-auto">
-            {PRESET_TIERS.map((tier) => {
+          <StaggerContainer className="grid gap-8 md:grid-cols-3 max-w-6xl mx-auto">
+            {PRESET_TIERS.map((tier, idx) => {
               const Icon = tier.icon;
 
               return (
-                <div
-                  key={tier.name}
-                  className={`relative flex flex-col rounded-2xl border p-6 sm:p-8 transition-all duration-200 hover:-translate-y-1 ${
-                    tier.highlighted
-                      ? 'border-emerald-400/60 bg-emerald-500/[0.08] shadow-2xl ring-1 ring-emerald-400/50'
-                      : 'border-border bg-surface shadow-sm'
-                  }`}
-                >
+                <StaggerItem key={tier.name} index={idx} className="flex">
+                  <div
+                    className={`motion-card-hover relative flex w-full flex-col rounded-2xl border p-6 sm:p-8 ${
+                      tier.highlighted
+                        ? 'border-emerald-400/60 bg-emerald-500/[0.08] shadow-2xl ring-1 ring-emerald-400/50 hover:shadow-emerald-500/15'
+                        : 'border-border bg-surface shadow-sm hover:border-emerald-500/35 hover:shadow-md'
+                    }`}
+                  >
                   {tier.highlighted && (
                     <div className="absolute -top-3.5 right-6 rounded-full bg-emerald-400 px-3 py-1 text-[11px] font-black text-slate-950 uppercase tracking-wider shadow-md">
                       Most Popular
@@ -485,9 +501,10 @@ const Mentors = () => {
                     </Link>
                   </div>
                 </div>
+                </StaggerItem>
               );
             })}
-          </div>
+          </StaggerContainer>
 
           <div className="mt-10 text-center">
             <p className="text-xs text-muted">
@@ -502,23 +519,25 @@ const Mentors = () => {
 
         {/* Frequently Asked Questions */}
         <section className="py-16 sm:py-20 border-b border-border">
-          <div className="text-center mb-12">
-            <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-              Got Questions?
-            </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-black text-foreground">
-              Frequently Asked Questions for Mentors
-            </h2>
-            <p className="mt-3 text-sm text-muted max-w-2xl mx-auto">
-              Everything you need to know about setting up your trading academy on JAHZJOURNALS.
-            </p>
-          </div>
+          <Reveal direction="up">
+            <div className="text-center mb-12">
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                Got Questions?
+              </span>
+              <h2 className="mt-2 text-2xl sm:text-3xl font-black text-foreground">
+                Frequently Asked Questions for Mentors
+              </h2>
+              <p className="mt-3 text-sm text-muted max-w-2xl mx-auto">
+                Everything you need to know about setting up your trading academy on JAHZJOURNALS.
+              </p>
+            </div>
 
-          <div className="max-w-3xl mx-auto divide-y divide-border">
-            {mentorFaqs.map(([question, answer], idx) => (
-              <FAQItem key={idx} question={question} answer={answer} />
-            ))}
-          </div>
+            <div className="max-w-3xl mx-auto space-y-4">
+              {mentorFaqs.map(([question, answer], idx) => (
+                <FAQItem key={idx} question={question} answer={answer} />
+              ))}
+            </div>
+          </Reveal>
         </section>
 
         {/* Final CTA Banner */}

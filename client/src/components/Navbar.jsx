@@ -235,16 +235,18 @@ const Navbar = () => {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`relative py-2 text-sm font-bold transition-colors duration-150 ${
+                  className={`group relative py-2 text-sm font-bold transition-colors duration-200 ${
                     active
                       ? 'text-emerald-500 dark:text-emerald-400 font-extrabold'
                       : 'text-foreground/80 dark:text-slate-200 hover:text-emerald-500 dark:hover:text-emerald-400'
                   }`}
                 >
                   <span>{item.label}</span>
-                  {active && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
-                  )}
+                  <span
+                    className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-transform duration-200 origin-left ${
+                      active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100 opacity-60'
+                    }`}
+                  />
                 </Link>
               );
             }
@@ -278,9 +280,11 @@ const Navbar = () => {
                       isOpen ? 'rotate-180 text-emerald-500 dark:text-emerald-400' : 'opacity-70 group-hover:opacity-100'
                     }`}
                   />
-                  {groupActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
-                  )}
+                  <span
+                    className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-transform duration-200 origin-left ${
+                      groupActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100 opacity-60'
+                    }`}
+                  />
                 </button>
 
                 {/* Dropdown Menu Panel */}
@@ -288,7 +292,7 @@ const Navbar = () => {
                   <div
                     role="menu"
                     aria-orientation="vertical"
-                    className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-80 rounded-2xl border border-border/80 dark:border-slate-800 bg-surface/98 dark:bg-slate-950/98 p-2 shadow-2xl shadow-slate-950/20 dark:shadow-black/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-2xl z-50 transition-all duration-150 animate-in fade-in-0 zoom-in-95"
+                    className="nav-dropdown-enter absolute left-1/2 -translate-x-1/2 top-full mt-2 w-80 rounded-2xl border border-border/80 dark:border-slate-800 bg-surface/98 dark:bg-slate-950/98 p-2 shadow-2xl shadow-slate-950/20 dark:shadow-black/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-2xl z-50"
                   >
                     <div className="space-y-1">
                       {item.items.map((subItem) => {
@@ -376,13 +380,13 @@ const Navbar = () => {
           {/* Backdrop with Blur */}
           <div
             onClick={() => setDrawerOpen(false)}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300"
+            className="nav-backdrop-enter fixed inset-0 bg-black/70 backdrop-blur-sm"
             aria-hidden="true"
           />
 
           {/* Drawer Panel */}
           <aside
-            className="fixed inset-y-0 right-0 z-[101] w-full max-w-xs sm:max-w-sm h-full h-[100dvh] bg-surface dark:bg-slate-950 border-l border-border dark:border-slate-800 shadow-2xl flex flex-col justify-between overflow-hidden transition-transform duration-300 ease-in-out"
+            className="nav-drawer-enter fixed inset-y-0 right-0 z-[101] w-full max-w-xs sm:max-w-sm h-full h-[100dvh] bg-surface dark:bg-slate-950 border-l border-border dark:border-slate-800 shadow-2xl flex flex-col justify-between overflow-hidden"
             aria-label="Mobile navigation"
           >
             {/* Drawer Top Header (Pinned) */}
@@ -458,7 +462,7 @@ const Navbar = () => {
                       </button>
 
                       {isExpanded && (
-                        <div className="px-2 pb-2 space-y-1 border-t border-border/50 dark:border-slate-800/60 pt-1.5 bg-surface/40 dark:bg-slate-950/40">
+                        <div className="faq-answer-enter px-2 pb-2 space-y-1 border-t border-border/50 dark:border-slate-800/60 pt-1.5 bg-surface/40 dark:bg-slate-950/40">
                           {item.items.map((subItem) => {
                             const active = isItemActive(subItem.to);
                             const SubIcon = subItem.icon;

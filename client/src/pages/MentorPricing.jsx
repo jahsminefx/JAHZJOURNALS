@@ -32,6 +32,7 @@ import Button from '../components/Button';
 import { useAuth } from '../context/useAuth';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { Reveal, StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 
 const PRESET_TIERS = [
   {
@@ -536,43 +537,45 @@ const MentorPricing = () => {
 
         {/* 14-Day Private Cohort Free Trial Banner for unregistered or eligible non-mentor users */}
         {(!user || (!user.hasUsedMentorTrial && user.role !== 'MENTOR')) && (
-          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-surface to-surface dark:from-blue-950/40 dark:via-surface dark:to-slate-950 p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-5 shadow-xl">
-            <div className="flex items-start gap-3 sm:gap-4">
-              <span className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-400 font-bold text-lg sm:text-xl border border-blue-500/30 mt-0.5 sm:mt-0">
-                ⏳
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400">
-                    Two Weeks Complimentary + 12h Grace
-                  </span>
-                  <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                    Private Cohort Exclusive
-                  </span>
+          <Reveal direction="up">
+            <div className="motion-card-hover mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-surface to-surface dark:from-blue-950/40 dark:via-surface dark:to-slate-950 p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-5 shadow-xl">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <span className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-400 font-bold text-lg sm:text-xl border border-blue-500/30 mt-0.5 sm:mt-0">
+                  ⏳
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400">
+                      Two Weeks Complimentary + 12h Grace
+                    </span>
+                    <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                      Private Cohort Exclusive
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-foreground mt-1.5">
+                    Try the Private Cohort Free for 14 Days
+                  </h3>
+                  <p className="text-xs text-muted max-w-xl mt-1 leading-relaxed">
+                    Already registered as a trader? You can activate a 14-day complimentary trial of the Private Cohort plan (manage up to 80 students, create 2 cohorts, and test Strategy Risk Guards) with a 12-hour grace buffer. Free trials are strictly exclusive to the Private Cohort tier; Growth Community and Mega Academy require a direct subscription. No credit card required. Strictly one trial per user.
+                  </p>
                 </div>
-                <h3 className="text-base sm:text-lg font-black text-foreground mt-1.5">
-                  Try the Private Cohort Free for 14 Days
-                </h3>
-                <p className="text-xs text-muted max-w-xl mt-1 leading-relaxed">
-                  Already registered as a trader? You can activate a 14-day complimentary trial of the Private Cohort plan (manage up to 80 students, create 2 cohorts, and test Strategy Risk Guards) with a 12-hour grace buffer. Free trials are strictly exclusive to the Private Cohort tier; Growth Community and Mega Academy require a direct subscription. No credit card required. Strictly one trial per user.
-                </p>
               </div>
+              <button
+                onClick={handleStartTrial}
+                disabled={activatingTrial}
+                className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white py-3 px-6 text-xs sm:text-sm font-bold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 cursor-pointer min-h-[44px]"
+              >
+                {activatingTrial ? (
+                  <span>Activating Trial...</span>
+                ) : (
+                  <>
+                    <span>{user ? 'Activate 14-Day Private Cohort Trial' : 'Sign Up for 14-Day Trial'}</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
+              </button>
             </div>
-            <button
-              onClick={handleStartTrial}
-              disabled={activatingTrial}
-              className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white py-3 px-6 text-xs sm:text-sm font-bold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 cursor-pointer min-h-[44px]"
-            >
-              {activatingTrial ? (
-                <span>Activating Trial...</span>
-              ) : (
-                <>
-                  <span>{user ? 'Activate 14-Day Private Cohort Trial' : 'Sign Up for 14-Day Trial'}</span>
-                  <ArrowRight size={15} />
-                </>
-              )}
-            </button>
-          </div>
+          </Reveal>
         )}
 
         {/* Active Trial Notice if currently in 14-day window */}
@@ -657,31 +660,33 @@ const MentorPricing = () => {
 
         {/* Promo Banner if Active */}
         {(activePublicPromo || appliedPromo) && (
-          <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-surface to-surface dark:from-emerald-950/40 dark:via-surface dark:to-slate-950 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-lg">
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-sm shrink-0">
-                🎉
-              </span>
-              <div>
-                <p className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                  {appliedPromo?.discountPercent || 50}% Launch Discount Active
-                </p>
-                <p className="text-xs text-muted mt-0.5 leading-relaxed">
-                  Your Mentor plan rate automatically includes your {appliedPromo?.discountPercent || 50}% discount at checkout.
-                </p>
+          <Reveal direction="up">
+            <div className="mt-6 mb-8 max-w-5xl mx-auto rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-surface to-surface dark:from-emerald-950/40 dark:via-surface dark:to-slate-950 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shadow-lg">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-sm shrink-0">
+                  🎉
+                </span>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                    {appliedPromo?.discountPercent || 50}% Launch Discount Active
+                  </p>
+                  <p className="text-xs text-muted mt-0.5 leading-relaxed">
+                    Your Mentor plan rate automatically includes your {appliedPromo?.discountPercent || 50}% discount at checkout.
+                  </p>
+                </div>
               </div>
+              <span className="self-start sm:self-auto shrink-0 font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
+                CODE: {(appliedPromo?.code || 'LAUNCH50').toUpperCase()}
+              </span>
             </div>
-            <span className="self-start sm:self-auto shrink-0 font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
-              CODE: {(appliedPromo?.code || 'LAUNCH50').toUpperCase()}
-            </span>
-          </div>
+          </Reveal>
         )}
 
         {/* ========================================================================= */}
         {/* PRESET MENTOR TIERS (PLACED ON TOP AS REQUESTED)                          */}
         {/* ========================================================================= */}
         <section className="py-8">
-          <div className="text-center mb-8 space-y-2">
+          <Reveal direction="up" className="text-center mb-8 space-y-2">
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
               Defined Mentor Packages
             </span>
@@ -700,10 +705,10 @@ const MentorPricing = () => {
                 Compare Plan Features
               </Button>
             </div>
-          </div>
+          </Reveal>
 
-          <div className="grid gap-5 sm:gap-6 grid-cols-1 md:grid-cols-3 max-w-5xl mx-auto">
-            {PRESET_TIERS.map((tier) => {
+          <StaggerContainer className="grid gap-5 sm:gap-6 grid-cols-1 md:grid-cols-3 max-w-5xl mx-auto">
+            {PRESET_TIERS.map((tier, idx) => {
               let finalPrice = tier.priceNgn;
               let origPrice = null;
               if (appliedPromo?.discountPercent) {
@@ -713,14 +718,14 @@ const MentorPricing = () => {
               const Icon = tier.icon;
 
               return (
-                <div
-                  key={tier.name}
-                  className={`relative flex flex-col rounded-2xl border p-5 sm:p-6 transition-all duration-200 hover:-translate-y-1 ${
-                    tier.highlighted
-                      ? 'border-emerald-400/60 bg-emerald-500/10 shadow-xl ring-1 ring-emerald-400/50'
-                      : 'border-border bg-surface shadow-sm'
-                  }`}
-                >
+                <StaggerItem key={tier.name} index={idx} className="flex">
+                  <div
+                    className={`motion-card-hover relative flex w-full flex-col rounded-2xl border p-5 sm:p-6 ${
+                      tier.highlighted
+                        ? 'border-emerald-400/60 bg-emerald-500/10 shadow-xl ring-1 ring-emerald-400/50 hover:shadow-2xl hover:shadow-emerald-500/15'
+                        : 'border-border bg-surface shadow-sm hover:border-emerald-500/35 hover:shadow-md'
+                    }`}
+                  >
                   {tier.highlighted && (
                     <div className="absolute -top-3.5 right-4 sm:right-6 rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold text-slate-950 shadow-md">
                       Most Popular
@@ -899,30 +904,34 @@ const MentorPricing = () => {
                       Select {tier.name} ({tier.studentRange})
                     </button>
                   )}
-                </div>
+                  </div>
+                </StaggerItem>
               );
             })}
-          </div>
+          </StaggerContainer>
 
           {/* 1.5% Platform Fee Highlight Note */}
-          <div className="mt-6 max-w-5xl mx-auto rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-start gap-2.5">
-              <Sparkles size={18} className="text-emerald-400 shrink-0 mt-0.5" />
-              <p className="text-muted leading-relaxed">
-                <strong>Hosting Paid Cohorts on JahzJournal?</strong> JahzJournal only charges a modest <strong>1.5% platform fee</strong> on paid student registrations. Student fees are processed seamlessly via Paystack and settled directly to your Nigerian bank account.
-              </p>
+          <Reveal direction="up" delay={120}>
+            <div className="mt-6 max-w-5xl mx-auto rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-start gap-2.5">
+                <Sparkles size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+                <p className="text-muted leading-relaxed">
+                  <strong>Hosting Paid Cohorts on JahzJournal?</strong> JahzJournal only charges a modest <strong>1.5% platform fee</strong> on paid student registrations. Student fees are processed seamlessly via Paystack and settled directly to your Nigerian bank account.
+                </p>
+              </div>
+              <span className="self-start sm:self-auto shrink-0 font-mono text-[11px] font-bold text-emerald-400 bg-surface px-2.5 py-1 rounded border border-border whitespace-nowrap">
+                1.5% Commission Fee
+              </span>
             </div>
-            <span className="self-start sm:self-auto shrink-0 font-mono text-[11px] font-bold text-emerald-400 bg-surface px-2.5 py-1 rounded border border-border whitespace-nowrap">
-              1.5% Commission Fee
-            </span>
-          </div>
+          </Reveal>
         </section>
 
         {/* ========================================================================= */}
         {/* INTERACTIVE STUDENT-CAPACITY PRICING CALCULATOR (BELOW PRESETS)           */}
         {/* ========================================================================= */}
         <section className="my-8 sm:my-10 border-t border-border pt-8 sm:pt-12">
-          <div className="max-w-4xl mx-auto rounded-2xl sm:rounded-3xl border border-emerald-500/30 bg-surface/90 backdrop-blur-xl p-4 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden">
+          <Reveal direction="up" scale={0.99}>
+            <div className="max-w-4xl mx-auto rounded-2xl sm:rounded-3xl border border-emerald-500/30 bg-surface/90 backdrop-blur-xl p-4 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden">
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
             <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
 
@@ -1069,12 +1078,14 @@ const MentorPricing = () => {
               </div>
             </div>
           </div>
+          </Reveal>
         </section>
 
         {/* ========================================================================= */}
         {/* COMPREHENSIVE MENTOR PLAN COMPARISON SECTION                              */}
         {/* ========================================================================= */}
         <section id="compare-mentor-plans" className="py-10 sm:py-12 border-t border-border scroll-mt-20">
+          <Reveal direction="up" threshold={0.04} rootMargin="0px">
           <div className="text-center mb-8 sm:mb-10 space-y-2">
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
               Side-by-Side Comparison
@@ -1486,13 +1497,14 @@ const MentorPricing = () => {
               Start with Private Cohort (Up to 80 Students) →
             </button>
           </div>
+          </Reveal>
         </section>
 
         {/* ========================================================================= */}
         {/* TELEGRAM VS JAHZJOURNALS FEATURE HIGHLIGHT SECTION                        */}
         {/* ========================================================================= */}
         <section className="py-10 sm:py-12 border-t border-border">
-          <div className="text-center mb-8 sm:mb-10 space-y-2">
+          <Reveal direction="up" className="text-center mb-8 sm:mb-10 space-y-2">
             <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
               Why Mentors Upgrade
             </span>
@@ -1502,80 +1514,86 @@ const MentorPricing = () => {
             <p className="text-xs sm:text-sm text-muted max-w-xl mx-auto leading-relaxed">
               Keep your Telegram channel for community chat and announcements. Use JAHZJOURNALS to review real trades, verify risk discipline, and protect your reputation.
             </p>
-          </div>
+          </Reveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-5xl mx-auto">
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-5xl mx-auto">
             {/* Telegram Column */}
-            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 sm:p-6 space-y-3.5 sm:space-y-4">
-              <div className="flex items-center gap-2.5 text-rose-400 font-black text-xs sm:text-sm uppercase tracking-wider">
-                <MessageCircle size={18} className="shrink-0" />
-                <span>Managing on Telegram Only</span>
+            <StaggerItem index={0}>
+              <div className="motion-card-hover h-full rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 sm:p-6 space-y-3.5 sm:space-y-4">
+                <div className="flex items-center gap-2.5 text-rose-400 font-black text-xs sm:text-sm uppercase tracking-wider">
+                  <MessageCircle size={18} className="shrink-0" />
+                  <span>Managing on Telegram Only</span>
+                </div>
+                <ul className="space-y-3 text-xs text-muted leading-relaxed">
+                  <li className="flex items-start gap-2.5">
+                    <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
+                    <span><strong>Messy chat threads:</strong> 500 students sending screenshots in one endless feed where questions get lost.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
+                    <span><strong>Mentors get blamed for blown accounts:</strong> When a student gambles with 12% risk on Gold, you have zero proof of what they actually did.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
+                    <span><strong>Exhausting DMs:</strong> Mentors burn out reviewing screenshots scattered across WhatsApp and Telegram.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
+                    <span><strong>Manual payment checking:</strong> Verifying bank transfer receipts manually before adding students to private links.</span>
+                  </li>
+                </ul>
               </div>
-              <ul className="space-y-3 text-xs text-muted leading-relaxed">
-                <li className="flex items-start gap-2.5">
-                  <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
-                  <span><strong>Messy chat threads:</strong> 500 students sending screenshots in one endless feed where questions get lost.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
-                  <span><strong>Mentors get blamed for blown accounts:</strong> When a student gambles with 12% risk on Gold, you have zero proof of what they actually did.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
-                  <span><strong>Exhausting DMs:</strong> Mentors burn out reviewing screenshots scattered across WhatsApp and Telegram.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <X size={15} className="text-rose-400 shrink-0 mt-0.5" />
-                  <span><strong>Manual payment checking:</strong> Verifying bank transfer receipts manually before adding students to private links.</span>
-                </li>
-              </ul>
-            </div>
+            </StaggerItem>
 
             {/* JahzJournal Column */}
-            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 sm:p-6 space-y-3.5 sm:space-y-4 shadow-lg">
-              <div className="flex items-center gap-2.5 text-emerald-400 font-black text-xs sm:text-sm uppercase tracking-wider">
-                <ShieldCheck size={18} className="shrink-0" />
-                <span>Telegram + JAHZJOURNALS Academy</span>
+            <StaggerItem index={1}>
+              <div className="motion-card-hover motion-card-glow h-full rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 sm:p-6 space-y-3.5 sm:space-y-4 shadow-lg">
+                <div className="flex items-center gap-2.5 text-emerald-400 font-black text-xs sm:text-sm uppercase tracking-wider">
+                  <ShieldCheck size={18} className="shrink-0" />
+                  <span>Telegram + JAHZJOURNALS Academy</span>
+                </div>
+                <ul className="space-y-3 text-xs text-muted leading-relaxed">
+                  <li className="flex items-start gap-2.5">
+                    <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+                    <span><strong>Organized student portfolios:</strong> Click any student's name to view their complete trade log, win rate, and equity curve.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+                    <span><strong>Automatic Strategy Risk Violation Guard:</strong> The system automatically flags trades where a student exceeded your taught 1.0% risk rule.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+                    <span><strong>Direct trade grading:</strong> Leave timestamped comments and grades directly on the student's entry/exit chart screenshot.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+                    <span><strong>Automated Paystack student enrollments:</strong> Students pay to join and funds land in your Nigerian bank account with just a 1.5% platform fee.</span>
+                  </li>
+                </ul>
               </div>
-              <ul className="space-y-3 text-xs text-muted leading-relaxed">
-                <li className="flex items-start gap-2.5">
-                  <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>Organized student portfolios:</strong> Click any student's name to view their complete trade log, win rate, and equity curve.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>Automatic Strategy Risk Violation Guard:</strong> The system automatically flags trades where a student exceeded your taught 1.0% risk rule.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>Direct trade grading:</strong> Leave timestamped comments and grades directly on the student's entry/exit chart screenshot.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check size={15} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>Automated Paystack student enrollments:</strong> Students pay to join and funds land in your Nigerian bank account with just a 1.5% platform fee.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+            </StaggerItem>
+          </StaggerContainer>
         </section>
 
         {/* ========================================================================= */}
         {/* FREQUENTLY ASKED QUESTIONS FOR MENTORS                                    */}
         {/* ========================================================================= */}
         <section className="py-10 sm:py-12 border-t border-border">
-          <div className="text-center mb-8 space-y-2">
-            <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-              Clear Answers
-            </span>
-            <h2 className="text-2xl font-bold text-foreground">
-              Frequently Asked Questions About Mentor Plans
-            </h2>
-          </div>
-          <div className="mx-auto max-w-4xl space-y-4">
-            {mentorFaqs.map(([question, answer]) => (
-              <FAQItem key={question} question={question} answer={answer} />
-            ))}
-          </div>
+          <Reveal direction="up">
+            <div className="text-center mb-8 space-y-2">
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                Clear Answers
+              </span>
+              <h2 className="text-2xl font-bold text-foreground">
+                Frequently Asked Questions About Mentor Plans
+              </h2>
+            </div>
+            <div className="mx-auto max-w-4xl space-y-4">
+              {mentorFaqs.map(([question, answer]) => (
+                <FAQItem key={question} question={question} answer={answer} />
+              ))}
+            </div>
+          </Reveal>
         </section>
 
         <CTASection

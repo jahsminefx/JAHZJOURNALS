@@ -11,6 +11,7 @@ import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import CTASection from '../components/CTASection';
 import api from '../utils/api';
+import { FadeIn, Reveal, StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 import { 
   getPublishedPosts, 
   getFeaturedPost, 
@@ -147,17 +148,24 @@ const BlogList = () => {
 
         {/* Hero Header */}
         <div className="text-center py-8 sm:py-12 border-b border-border/80 mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-4">
-            <BookOpen size={14} /> JAHZJOURNALS Academy & Knowledge Base
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-foreground tracking-tight">
-            Trading Knowledge, Strategy & Discipline
-          </h1>
-          <p className="mt-3 text-sm sm:text-base text-muted max-w-2xl mx-auto leading-relaxed">
-            Actionable, math-backed guides on trade journaling, prop firm challenges, trading psychology, and AI analytics.
-          </p>
+          <FadeIn direction="up" delay={0} duration={550} distance={14}>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-4">
+              <BookOpen size={14} /> JAHZJOURNALS Academy & Knowledge Base
+            </div>
+          </FadeIn>
+          <FadeIn direction="up" delay={90} duration={650} distance={18}>
+            <h1 className="text-3xl sm:text-5xl font-black text-foreground tracking-tight">
+              Trading Knowledge, Strategy & Discipline
+            </h1>
+          </FadeIn>
+          <FadeIn direction="up" delay={180} duration={650} distance={16}>
+            <p className="mt-3 text-sm sm:text-base text-muted max-w-2xl mx-auto leading-relaxed">
+              Actionable, math-backed guides on trade journaling, prop firm challenges, trading psychology, and AI analytics.
+            </p>
+          </FadeIn>
 
           {/* Search & Filter Toolbar */}
+          <FadeIn direction="up" delay={260} duration={650} distance={14} className="min-w-0">
           <div className="mt-8 flex flex-col gap-4 max-w-3xl mx-auto">
             <div className="relative w-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
@@ -218,17 +226,18 @@ const BlogList = () => {
               </div>
             )}
           </div>
+          </FadeIn>
         </div>
 
         {/* Featured Guide Banner (Shown when not actively searching) */}
         {!isFiltering && featuredPost && (
-          <div className="mb-14">
+          <Reveal direction="up" className="mb-14 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles size={16} className="text-emerald-400" />
               <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">Featured Flagship Guide</h2>
             </div>
 
-            <article className="rounded-2xl border border-border/80 bg-surface/90 overflow-hidden shadow-sm transition hover:border-emerald-500/40 grid lg:grid-cols-12 gap-0">
+            <article className="motion-card-hover motion-card-glow min-w-0 rounded-2xl border border-border/80 bg-surface/90 overflow-hidden shadow-sm grid lg:grid-cols-12 gap-0">
               <div className="lg:col-span-6 relative aspect-video lg:aspect-auto overflow-hidden bg-surface-muted">
                 <img 
                   src={featuredPost.coverImage} 
@@ -284,7 +293,7 @@ const BlogList = () => {
                 </div>
               </div>
             </article>
-          </div>
+          </Reveal>
         )}
 
         {/* Section Heading & Result Count */}
@@ -349,12 +358,12 @@ const BlogList = () => {
             </div>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-16">
-            {filteredPosts.map(post => (
-              <article 
-                key={post.id}
-                className="bg-surface/90 border border-border/80 rounded-2xl overflow-hidden hover:border-emerald-500/40 transition-all group flex flex-col shadow-sm"
-              >
+          <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-16">
+            {filteredPosts.map((post, idx) => (
+              <StaggerItem key={post.id} index={idx} className="flex min-w-0">
+                <article 
+                  className="motion-card-hover motion-card-glow w-full min-w-0 bg-surface/90 border border-border/80 rounded-2xl overflow-hidden group flex flex-col shadow-sm"
+                >
                 <div className="aspect-video bg-surface-muted relative overflow-hidden">
                   <img 
                     src={post.coverImage} 
@@ -424,60 +433,64 @@ const BlogList = () => {
                     </Link>
                   </div>
                 </div>
-              </article>
+                </article>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         )}
 
         {/* Curated Educational Pathways Section */}
         {!isFiltering && (
-          <section className="my-16 rounded-3xl border border-border/80 bg-surface/70 p-6 sm:p-10 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-border/70 pb-4">
-              <div>
-                <div className="flex items-center gap-2 text-emerald-400 mb-1">
-                  <Compass size={16} />
-                  <span className="text-xs font-semibold uppercase tracking-wider">Curated Learning Tracks</span>
+          <Reveal direction="up">
+            <section className="my-16 rounded-3xl border border-border/80 bg-surface/70 p-6 sm:p-10 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-border/70 pb-4">
+                <div>
+                  <div className="flex items-center gap-2 text-emerald-400 mb-1">
+                    <Compass size={16} />
+                    <span className="text-xs font-semibold uppercase tracking-wider">Curated Learning Tracks</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                    Educational Pathways for Forex Traders
+                  </h2>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                  Educational Pathways for Forex Traders
-                </h2>
+                <p className="text-xs text-muted max-w-sm">
+                  Follow these curated reading paths to build an institutional-grade trading system from scratch.
+                </p>
               </div>
-              <p className="text-xs text-muted max-w-sm">
-                Follow these curated reading paths to build an institutional-grade trading system from scratch.
-              </p>
-            </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {educationalPathways.map((path) => (
-                <div key={path.id} className="rounded-2xl border border-border/80 bg-surface p-5 space-y-3 flex flex-col justify-between">
-                  <div>
-                    <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                      {path.badge}
-                    </span>
-                    <h3 className="text-base font-semibold text-foreground mt-2">{path.title}</h3>
-                    <p className="text-xs text-muted leading-relaxed mt-1">{path.description}</p>
-                  </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {educationalPathways.map((path) => (
+                  <div key={path.id} className="motion-card-hover motion-card-glow min-w-0 rounded-2xl border border-border/80 bg-surface p-5 space-y-3 flex flex-col justify-between">
+                    <div className="min-w-0">
+                      <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                        {path.badge}
+                      </span>
+                      <h3 className="text-base font-semibold text-foreground mt-2">{path.title}</h3>
+                      <p className="text-xs text-muted leading-relaxed mt-1">{path.description}</p>
+                    </div>
 
-                  <div className="pt-3 border-t border-border/70 space-y-1.5">
-                    {path.slugs.map((slug, idx) => (
-                      <Link
-                        key={slug}
-                        to={`/blog/${slug}`}
-                        className="flex items-center justify-between text-xs text-foreground/80 hover:text-emerald-400 py-1 transition group"
-                      >
-                        <span className="truncate pr-2">Step {idx + 1}: {slug.replace(/-/g, ' ')}</span>
-                        <ChevronRight size={12} className="text-muted group-hover:text-emerald-400 shrink-0" />
-                      </Link>
-                    ))}
+                    <div className="pt-3 border-t border-border/70 space-y-1.5 min-w-0">
+                      {path.slugs.map((slug, idx) => (
+                        <Link
+                          key={slug}
+                          to={`/blog/${slug}`}
+                          className="flex items-center justify-between text-xs text-foreground/80 hover:text-emerald-400 py-1 transition group"
+                        >
+                          <span className="truncate pr-2">Step {idx + 1}: {slug.replace(/-/g, ' ')}</span>
+                          <ChevronRight size={12} className="text-muted group-hover:text-emerald-400 shrink-0" />
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
+          </Reveal>
         )}
 
         {/* Newsletter Subscription Card */}
-        <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-8 sm:p-10 mb-16 text-center max-w-3xl mx-auto shadow-sm">
+        <Reveal direction="up">
+          <div className="motion-card-hover rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-8 sm:p-10 mb-16 text-center max-w-3xl mx-auto shadow-sm hover:border-emerald-500/35">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 mb-4 border border-emerald-500/20">
             <Mail size={22} />
           </div>
@@ -512,7 +525,8 @@ const BlogList = () => {
               </button>
             </form>
           )}
-        </div>
+          </div>
+        </Reveal>
 
         <CTASection title="Put these trading principles into practice with JAHZJOURNALS." cta="Start Journaling Free" />
       </main>

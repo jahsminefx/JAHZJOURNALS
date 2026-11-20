@@ -7,6 +7,7 @@ import FeatureCard from '../components/FeatureCard';
 import CTASection from '../components/CTASection';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 
 const groups = [
   ['Trade Journaling', ClipboardList, ['Manual trade logging', 'Pair/instrument tracking', 'Entry/exit details', 'Risk/reward tracking', 'Notes before and after trade']],
@@ -33,19 +34,20 @@ const Features = () => (
         secondaryCta={{ label: 'View Pricing', to: '/pricing' }}
         heroImage="/heroes/hero-features.png"
         heroAlt="JAHZJOURNALS trading features workspace"
-        heroPosition={{ mobile: '72% top', tablet: '64% top', desktop: 'center top' }}
+        heroPosition={{ mobile: '76% 42%', tablet: '68% 45%', desktop: '62% 48%', xl: '58% 46%' }}
       />
       <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-5 md:grid-cols-2">
-          {groups.map(([title, Icon, items]) => (
-            <FeatureCard
-              key={title}
-              icon={Icon}
-              title={title}
-              description={items.join(' · ')}
-            />
+        <StaggerContainer className="mx-auto grid max-w-7xl gap-5 md:grid-cols-2">
+          {groups.map(([title, Icon, items], index) => (
+            <StaggerItem key={title} index={index}>
+              <FeatureCard
+                icon={Icon}
+                title={title}
+                description={items.join(' · ')}
+              />
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       </section>
       <CTASection title="Ready to understand your trading performance?" cta="Create Your Free Journal" />
     </main>

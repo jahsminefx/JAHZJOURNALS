@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const variants = {
-  primary: 'bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 shadow-md shadow-emerald-500/20',
-  secondary: 'border border-border bg-surface text-foreground hover:bg-surface-muted',
+  primary: 'bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/25',
+  secondary: 'border border-border bg-surface text-foreground hover:bg-surface-muted hover:border-emerald-500/30',
   ghost: 'text-slate-900 dark:text-slate-100 font-bold hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-surface-muted',
 };
 
@@ -23,7 +23,7 @@ const Button = ({
   onClick,
   ...props
 }) => {
-  const classes = `inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-background ${variants[variant]} ${sizes[size]} ${className}`;
+  const classes = `inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transform-none focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-background ${variants[variant]} ${sizes[size]} ${className}`;
 
   const linkHref = href || (to && to.startsWith('#') ? to : null);
 

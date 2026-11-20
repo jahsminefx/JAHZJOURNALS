@@ -10,7 +10,7 @@ const FAQItem = ({ question, answer, defaultOpen = false, id }) => {
   const panelId = `faq-a-${sanitizedId}`;
 
   return (
-    <div className="rounded-xl border border-border bg-surface shadow-sm transition-colors">
+    <div className="rounded-xl border border-border bg-surface shadow-sm transition-colors duration-200 hover:border-emerald-500/30">
       <button
         type="button"
         id={buttonId}
@@ -31,7 +31,7 @@ const FAQItem = ({ question, answer, defaultOpen = false, id }) => {
           id={panelId}
           role="region"
           aria-labelledby={buttonId}
-          className="border-t border-border px-5 pb-5 pt-4 text-sm leading-6 text-muted"
+          className="faq-answer-enter border-t border-border px-5 pb-5 pt-4 text-sm leading-6 text-muted"
         >
           {answer}
         </div>
