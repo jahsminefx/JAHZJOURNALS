@@ -213,6 +213,36 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(clientBuildPath, 'manifest.webmanifest'));
   });
 
+  app.get('/favicon.ico', (req, res) => {
+    res.setHeader('Content-Type', 'image/x-icon');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(path.join(clientBuildPath, 'favicon.ico'));
+  });
+
+  app.get('/favicon.svg', (req, res) => {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(path.join(clientBuildPath, 'favicon.svg'));
+  });
+
+  app.get(['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png'], (req, res) => {
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(path.join(clientBuildPath, 'apple-touch-icon.png'));
+  });
+
+  app.get(['/icon-192.png', '/icon-512.png', '/favicon-16x16.png', '/favicon-32x32.png', '/logo-mark.png'], (req, res) => {
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(path.join(clientBuildPath, path.basename(req.path)));
+  });
+
+  app.get('/fonts/ethnocentric.woff', (req, res) => {
+    res.setHeader('Content-Type', 'font/woff');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.sendFile(path.join(clientBuildPath, 'fonts', 'ethnocentric.woff'));
+  });
+
   // Serve hashed static assets with long cache lifetimes (1 year)
   app.use(express.static(clientBuildPath, {
     maxAge: '1y',

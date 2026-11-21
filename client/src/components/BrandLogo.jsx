@@ -30,9 +30,10 @@ const BrandLogo = ({ to = '/', size = 'sm', showText = true, forceDark = false, 
         src={logo}
         alt="JAHZJOURNALS logo"
         className={`${selected.image} shrink-0 object-contain select-none transition-transform duration-200 group-hover:scale-105`}
+        loading="eager"
       />
       {showText && (
-        <span className={`${selected.text} font-ethnocentric font-black tracking-tighter inline-flex items-center uppercase select-none whitespace-nowrap shrink-0`}>
+        <span className={`${selected.text} font-ethnocentric font-normal tracking-tight inline-flex items-center uppercase select-none whitespace-nowrap shrink-0`}>
           <span className={forceDark ? "text-rose-400" : "text-rose-600 dark:text-rose-400"}>JAHZ</span>
           <span className={forceDark ? "text-emerald-400" : "text-emerald-600 dark:text-emerald-400"}>JOURNALS</span>
         </span>

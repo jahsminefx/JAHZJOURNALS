@@ -62,7 +62,7 @@ const DashboardTopBar = ({ onOpenDrawer }) => {
 
   return (
     <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between h-14 px-4 bg-background/90 dark:bg-background/90 backdrop-blur-md border-b border-border text-foreground pt-safe transition-colors">
-      {/* Left: Hamburger menu button */}
+      {/* Left: Hamburger menu button & Brand Logo */}
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -72,8 +72,9 @@ const DashboardTopBar = ({ onOpenDrawer }) => {
         >
           <Menu size={20} />
         </button>
-        <div className="hidden sm:block">
-          <BrandLogo size="xs" />
+        <div>
+          <BrandLogo size="xs" className="hidden sm:inline-flex" />
+          <BrandLogo size="xs" showText={false} className="sm:hidden inline-flex" />
         </div>
       </div>
 

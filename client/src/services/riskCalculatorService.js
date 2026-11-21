@@ -495,6 +495,7 @@ export const evaluateTradeRiskCheck = ({
   if (account && (isPropFirm || userSettings?.dailyLossLimit)) {
     const startBal = Number(account.startingBalance || account.currentBalance || 10000);
     const dailyLimit = propFirmAccount?.dailyLossAmount ?? 
+      propFirmAccount?.dailyLossLimit ??
       (propFirmAccount?.dailyLossPercent ? startBal * (propFirmAccount.dailyLossPercent / 100) : null) ?? 
       userSettings?.dailyLossLimit;
 
@@ -531,7 +532,7 @@ export const evaluateTradeRiskCheck = ({
       };
 
       if (combinedRisk > remainingDaily) {
-        hardBlocks.push(`🚨 EXCEEDS PROP-FIRM DAILY LIMIT: Trade risk ($${estimatedTotalRisk.toFixed(2)}) + open risk ($${existingOpenTradeRisk.toFixed(2)}) = $${combinedRisk.toFixed(2)}, exceeding remaining daily allowance of $${Math.max(0, remainingDaily).toFixed(2)}.`);
+        hardBlocks.push(`🚨 EXCEEDS COMBINED PROP-FIRM DAILY LIMIT: Trade risk ($${estimatedTotalRisk.toFixed(2)}) + open risk ($${existingOpenTradeRisk.toFixed(2)}) = $${combinedRisk.toFixed(2)}, exceeding remaining daily allowance of $${Math.max(0, remainingDaily).toFixed(2)}.`);
         checklist.push({ category: '6. PROP FIRM CHECK', label: 'Combined Daily Loss Limit', status: 'FAIL', detail: `$${combinedRisk.toFixed(2)} > Remaining $${Math.max(0, remainingDaily).toFixed(2)}` });
       } else if (remainingAfterCombined <= (dailyLimit * 0.15)) {
         warnings.push(`⚠️ Critical Margin: Trade risk leaves only $${remainingAfterCombined.toFixed(2)} remaining daily allowance before breach.`);

@@ -178,18 +178,32 @@ const AdminLayout = () => {
         {/* Sidebar Header */}
         <div className={`border-b border-border flex items-center sticky top-0 bg-surface dark:bg-surface-muted z-10 ${isCompact ? 'p-3 justify-center flex-col gap-2' : 'p-4 sm:p-5 justify-between'}`}>
           {!isCompact ? (
-            <div className="min-w-0">
-              <h1 className="font-black text-xl tracking-wide text-foreground truncate">
-                JAHZ<span className="text-emerald-500">ADMIN</span>
-              </h1>
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mt-0.5">
-                Portal HQ
-              </p>
-            </div>
+            <Link to="/admin" className="flex items-center gap-2.5 min-w-0 group">
+              <img
+                src="/logo-mark.png"
+                alt="JAHZJOURNALS logo"
+                className="h-8 w-auto shrink-0 object-contain transition-transform duration-200 group-hover:scale-105"
+                loading="eager"
+              />
+              <div className="min-w-0">
+                <span className="font-ethnocentric text-sm tracking-tight font-black uppercase inline-flex items-center whitespace-nowrap">
+                  <span className="text-rose-500">JAHZ</span>
+                  <span className="text-emerald-500">ADMIN</span>
+                </span>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none mt-0.5">
+                  Portal HQ
+                </p>
+              </div>
+            </Link>
           ) : (
-            <div className="h-9 w-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 font-black flex items-center justify-center text-sm" title="JAHZADMIN Portal HQ">
-              JA
-            </div>
+            <Link to="/admin" className="group flex items-center justify-center" title="JAHZADMIN Portal HQ">
+              <img
+                src="/logo-mark.png"
+                alt="JAHZJOURNALS logo"
+                className="h-8 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                loading="eager"
+              />
+            </Link>
           )}
 
           {isDrawer ? (
@@ -351,7 +365,7 @@ const AdminLayout = () => {
       <main className="flex-1 flex flex-col relative min-w-0 overflow-hidden bg-background">
         {/* Compact Mobile Top Navigation Bar (< 768px) */}
         <header className="h-14 border-b border-border flex items-center justify-between gap-2 px-3 md:hidden bg-surface shrink-0 z-30">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
@@ -360,14 +374,23 @@ const AdminLayout = () => {
             >
               <Menu size={20} />
             </button>
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 leading-none">
-                JAHZADMIN
-              </p>
-              <h1 className="font-bold text-sm text-foreground truncate leading-tight mt-0.5">
-                {currentPageTitle}
-              </h1>
-            </div>
+            <Link to="/admin" className="flex items-center gap-2 min-w-0">
+              <img
+                src="/logo-mark.png"
+                alt="JAHZJOURNALS logo"
+                className="h-7 w-auto shrink-0 object-contain"
+                loading="eager"
+              />
+              <div className="min-w-0">
+                <span className="font-ethnocentric text-[11px] tracking-tight font-black uppercase inline-flex items-center whitespace-nowrap leading-none">
+                  <span className="text-rose-500">JAHZ</span>
+                  <span className="text-emerald-500">ADMIN</span>
+                </span>
+                <h1 className="font-bold text-xs text-foreground truncate leading-tight mt-0.5">
+                  {currentPageTitle}
+                </h1>
+              </div>
+            </Link>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
