@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, TrendingUp, TrendingDown, ExternalLink, Sparkles, CheckCircle2, XCircle, AlertTriangle, Brain, Target, ShieldCheck, Download } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, ExternalLink, Sparkles, CheckCircle2, XCircle, AlertTriangle, Brain, Target, ShieldCheck, Download, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import CustomSelect from '../components/common/CustomSelect';
 import { useAuth } from '../context/useAuth';
 import { generateWeeklyPdfReport } from '../utils/pdfReportService';
 import { hasFeature } from '../utils/planHelpers';
@@ -231,13 +232,21 @@ const WeeklyReview = () => {
 
         <form onSubmit={generateReview} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] pt-4 border-t border-border items-end">
           <div>
-            <label htmlFor="review-account-id" className="block text-xs font-bold uppercase tracking-wider text-muted">
+            <label htmlFor="review-account-id" className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
               Account
             </label>
-            <select id="review-account-id" value={form.accountId} onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))} className={inputStyle}>
-              <option value="" className="bg-surface text-foreground">All Accounts</option>
-              {accounts.map((account) => <option key={account.id} value={account.id} className="bg-surface text-foreground">{account.name}</option>)}
-            </select>
+            <CustomSelect
+              id="review-account-id"
+              aria-label="Filter weekly review by trading account"
+              value={form.accountId}
+              onChange={(value) => setForm((current) => ({ ...current, accountId: value }))}
+              options={[
+                { value: '', label: 'All Accounts' },
+                ...accounts.map((acc) => ({ value: acc.id, label: acc.name })),
+              ]}
+              icon={Wallet}
+              placeholder="All Accounts"
+            />
           </div>
 
           <div>

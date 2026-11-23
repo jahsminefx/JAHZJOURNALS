@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Cpu, Copy, RefreshCw, Trash2, Download, HelpCircle, Eye, EyeOff, CheckCircle2, AlertCircle, Cloud, Sparkles, ShieldCheck, Zap, Clock } from 'lucide-react';
 import api from '../../utils/api';
+import { dialog } from '../common/dialog';
 import Button from '../Button';
 import MTSyncGuideModal from './MTSyncGuideModal';
 import MTCloudSyncModal from './MTCloudSyncModal';
@@ -40,7 +41,14 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
   };
 
   const handleDisconnectCloud = async () => {
-    if (!window.confirm('Are you sure you want to disconnect MetaTrader Cloud Sync for this account?')) {
+    const confirmed = await dialog.confirm({
+      title: 'Disconnect MetaTrader Cloud Sync?',
+      message: 'Are you sure you want to disconnect MetaTrader Cloud Sync for this account? Automatic trade imports from your terminal will stop immediately.',
+      confirmText: 'Disconnect sync',
+      cancelText: 'Keep connected',
+      variant: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
     setIsDisconnectingCloud(true);
@@ -69,7 +77,14 @@ const MTSyncSettings = ({ account, onAccountUpdated }) => {
   };
 
   const handleRevokeToken = async () => {
-    if (!window.confirm('Are you sure you want to revoke this MetaTrader Sync Token? Your active EA will stop syncing trades.')) {
+    const confirmed = await dialog.confirm({
+      title: 'Revoke MetaTrader Sync Token?',
+      message: 'Are you sure you want to revoke this MetaTrader Sync Token? Your active EA will stop syncing trades until a new token is generated and configured.',
+      confirmText: 'Revoke token',
+      cancelText: 'Keep token',
+      variant: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
     setIsRevoking(true);

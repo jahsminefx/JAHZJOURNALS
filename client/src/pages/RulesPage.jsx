@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { PlusCircle, Trash2, Edit3, PauseCircle, PlayCircle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import api from '../utils/api';
+import { dialog } from '../components/common/dialog';
 
 const emptyForm = { name: '', description: '', active: true };
 
@@ -80,7 +81,14 @@ const RulesPage = () => {
   };
 
   const deleteRule = async (rule) => {
-    if (!window.confirm(`Remove "${rule.name}"? If you've logged trades against this rule, pause it instead so your historical reviews remain intact.`)) return;
+    const confirmed = await dialog.confirm({
+      title: 'Remove trading rule?',
+      message: `Remove "${rule.name}"? If you've logged trades against this rule, we recommend pausing it instead so your historical reviews remain intact.`,
+      confirmText: 'Remove rule',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     setActionId(rule.id);
     try {

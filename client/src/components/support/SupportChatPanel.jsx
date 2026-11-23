@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import api, { resolveImageUrl, subscribeToRealtimeSync } from '../../utils/api';
 import toast from 'react-hot-toast';
+import { dialog } from '../common/dialog';
 import { useAuth } from '../../context/useAuth';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -158,9 +159,13 @@ export default function SupportChatPanel({
 
   const handleConvertToTicket = async (thread) => {
     if (!thread) return;
-    const confirmConvert = window.confirm(
-      `Escalate conversation "${thread.subject || 'Inquiry'}" to an official tracked Support Ticket (#TK-xxxx)?\n\nThis will link this conversation to the Engineering/Support queue and post an official status update in the chat.`
-    );
+    const confirmConvert = await dialog.confirm({
+      title: 'Escalate to support ticket?',
+      message: `Escalate conversation "${thread.subject || 'Inquiry'}" to an official tracked Support Ticket?\n\nThis will link this conversation to the Engineering/Support queue and post an official status update in the chat.`,
+      confirmText: 'Create ticket',
+      cancelText: 'Cancel',
+      variant: 'primary',
+    });
     if (!confirmConvert) return;
 
     setConvertingTicket(true);

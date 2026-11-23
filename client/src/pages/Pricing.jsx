@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { dialog } from '../components/common/dialog';
 import { Reveal, StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 
 const REGIONAL_CONFIG = {
@@ -651,7 +652,16 @@ const Pricing = () => {
     let emailToUse = user?.email;
     if (!emailToUse) {
       const tierLabel = targetTier === 'STARTER_SYNC' ? 'Starter Sync' : 'Pro Sync';
-      const input = window.prompt(`Enter your email to reserve your spot on the ${tierLabel} early-access waitlist:`);
+      const input = await dialog.prompt({
+        title: 'Reserve early-access spot',
+        message: `Enter your email to reserve your spot on the ${tierLabel} early-access waitlist:`,
+        placeholder: 'trader@example.com',
+        inputType: 'email',
+        confirmText: 'Reserve spot',
+        cancelText: 'Cancel',
+        required: true,
+        validate: (val) => (!val.includes('@') ? 'Please enter a valid email address.' : null),
+      });
       if (!input || !input.includes('@')) return;
       emailToUse = input.trim();
     }

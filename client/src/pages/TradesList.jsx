@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/useAuth';
 import api from '../utils/api';
 import DeleteTradeDialog from '../components/trades/DeleteTradeDialog';
+import CustomSelect from '../components/common/CustomSelect';
 import ImportTradesModal from '../components/trades/ImportTradesModal';
 import TradeOutcomeBadge from '../components/trades/TradeOutcomeBadge';
 import AiTradeCaptureModal from '../components/trades/AiTradeCaptureModal';
@@ -337,47 +338,49 @@ const getPnlColor = (pnl) => {
           )}
 
           {/* Account Selector Filter */}
-          <select
-            value={accountIdFilter}
-            onChange={(e) => handleAccountFilterChange(e.target.value)}
-            className="bg-surface-muted/60 border border-border rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-foreground focus:border-emerald-500 focus:outline-none transition-colors max-w-[170px] sm:max-w-[200px] truncate"
-            title="Filter by Trading Account"
-          >
-            <option value="">All Accounts</option>
-            {accounts.map((acc) => {
-              const accName = acc.name || acc.accountName || acc.propFirmName || 'Trading Account';
-              return (
-                <option key={acc.id} value={acc.id}>
-                  {accName} ({acc.currency || 'USD'})
-                </option>
-              );
-            })}
-          </select>
+          <div className="w-[170px] sm:w-[200px]">
+            <CustomSelect
+              aria-label="Filter by Trading Account"
+              value={accountIdFilter}
+              onChange={handleAccountFilterChange}
+              options={[
+                { value: '', label: 'All Accounts' },
+                ...accounts.map((acc) => {
+                  const accName = acc.name || acc.accountName || acc.propFirmName || 'Trading Account';
+                  return {
+                    value: acc.id,
+                    label: `${accName} (${acc.currency || 'USD'})`,
+                  };
+                }),
+              ]}
+              placeholder="All Accounts"
+            />
+          </div>
 
           {/* Pair Selector Filter (Only pairs already traded on selected account) */}
-          <select
-            value={pairFilter}
-            onChange={(e) => handlePairFilterChange(e.target.value)}
-            className="bg-surface-muted/60 border border-border rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-foreground focus:border-emerald-500 focus:outline-none transition-colors max-w-[140px] sm:max-w-[160px] truncate"
-            title="Filter by Traded Pair"
-          >
-            <option value="">All Pairs</option>
-            {tradedPairs.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
+          <div className="w-[140px] sm:w-[160px]">
+            <CustomSelect
+              aria-label="Filter by Traded Pair"
+              value={pairFilter}
+              onChange={handlePairFilterChange}
+              options={[
+                { value: '', label: 'All Pairs' },
+                ...tradedPairs.map((p) => ({ value: p, label: p })),
+              ]}
+              placeholder="All Pairs"
+            />
+          </div>
 
           {/* Session Selector Filter */}
-          <select
-            value={sessionFilter}
-            onChange={(e) => handleSessionFilterChange(e.target.value)}
-            className="bg-surface-muted/60 border border-border rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-foreground focus:border-emerald-500 focus:outline-none transition-colors max-w-[140px] sm:max-w-[170px] truncate"
-            title="Filter by Trading Session"
-          >
-            {SESSIONS.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
+          <div className="w-[140px] sm:w-[170px]">
+            <CustomSelect
+              aria-label="Filter by Trading Session"
+              value={sessionFilter}
+              onChange={handleSessionFilterChange}
+              options={SESSIONS}
+              placeholder="All Sessions"
+            />
+          </div>
 
           {/* View Mode Toggle Controls */}
           <div className="flex items-center rounded-xl border border-border bg-surface-muted/60 p-1">

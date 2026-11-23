@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Layers, Plus, Pencil, Trash2, ArrowRight } from 'lucide-react';
 import api from '../../utils/api';
+import { dialog } from '../common/dialog';
 import StrategyForm from './StrategyForm';
 
 const StrategySettings = () => {
@@ -37,7 +38,14 @@ const StrategySettings = () => {
   };
 
   const handleDelete = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to delete ${name}? This will archive it.`)) return;
+    const confirmed = await dialog.confirm({
+      title: 'Archive strategy?',
+      message: `"${name}" will be archived and removed from your active playbook. You can restore it later if restoration is supported; otherwise this cannot be undone.`,
+      confirmText: 'Archive strategy',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await api.delete(`/strategies/${id}`);
       toast.success('Strategy archived.');

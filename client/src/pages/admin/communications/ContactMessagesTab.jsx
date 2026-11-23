@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import api from '../../../utils/api';
 import toast from 'react-hot-toast';
+import { dialog } from '../../../components/common/dialog';
 
 const ContactMessagesTab = () => {
   const [messages, setMessages] = useState([]);
@@ -256,9 +257,13 @@ const ContactMessagesTab = () => {
 
   const handleConvertToTicket = async (thread) => {
     if (!thread) return;
-    const confirmConvert = window.confirm(
-      `Escalate conversation "${thread.subject}" to an official tracked Support Ticket (#TK-xxxx)?\n\nThis will link this conversation to the Engineering/Support queue and post an official status update in the chat.`
-    );
+    const confirmConvert = await dialog.confirm({
+      title: 'Escalate to support ticket?',
+      message: `Escalate conversation "${thread.subject || 'Inquiry'}" to an official tracked Support Ticket?\n\nThis will link this conversation to the Engineering/Support queue and post an official status update in the chat.`,
+      confirmText: 'Create ticket',
+      cancelText: 'Cancel',
+      variant: 'primary',
+    });
     if (!confirmConvert) return;
 
     setConvertingTicket(true);

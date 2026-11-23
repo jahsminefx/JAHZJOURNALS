@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { BrainCircuit, Trash2, ShieldAlert } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
+import { dialog } from '../common/dialog';
 
 const featureLabels = {
   TRADE_REVIEW: 'Trade AI Review',
@@ -33,7 +34,14 @@ const AiUsageDashboard = () => {
   }, []);
 
   const handleClearHistory = async () => {
-    if (!window.confirm("Delete all AiRequest history? This won't refund your limit, but it will erase stored prompt data.")) return;
+    const confirmed = await dialog.confirm({
+      title: 'Clear AI request history?',
+      message: "Delete all stored AI request history? This will erase stored prompt data and history, but will not refund your monthly generation limit.",
+      confirmText: 'Clear history',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
        await api.delete('/ai/usage');
        toast.success('AI History Purged.');

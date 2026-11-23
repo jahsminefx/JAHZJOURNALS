@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
+import { dialog } from '../../components/common/dialog';
 import { Search, ShieldAlert, ShieldCheck, Mail, BrainCircuit, ScanLine, UserSquare2, RefreshCw, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
 import UserAiModal from '../../components/admin/UserAiModal';
@@ -50,7 +51,14 @@ const UserManagement = () => {
   }, [searchTerm, planFilter, roleFilter]);
 
   const handleRoleChange = async (userId, newRole) => {
-    if (!window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
+    const confirmed = await dialog.confirm({
+      title: 'Change user role?',
+      message: `Are you sure you want to change this user's role to "${newRole}"?`,
+      confirmText: 'Change role',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!confirmed) return;
     try {
       setIsModifyingRole(userId);
       await api.patch(`/admin/users/${userId}/role`, { role: newRole });
@@ -88,7 +96,14 @@ const UserManagement = () => {
 
     if (currentKey === selectedValue) return;
 
-    if (!window.confirm(`Change tier for ${user.name} (${user.email}) to ${label}?`)) return;
+    const confirmed = await dialog.confirm({
+      title: 'Update subscription tier?',
+      message: `Change tier for ${user.name} (${user.email}) to ${label}?`,
+      confirmText: 'Update tier',
+      cancelText: 'Cancel',
+      variant: 'primary',
+    });
+    if (!confirmed) return;
     
     try {
       setIsModifyingPlan(user.id);
@@ -131,8 +146,15 @@ const UserManagement = () => {
   };
 
   const executeImpersonation = async (targetUser) => {
-      const reason = window.prompt(`Please provide a reason for temporarily signing in as ${targetUser.email}:`);
-      if (!reason) return;
+      const reason = await dialog.prompt({
+        title: 'User impersonation',
+        message: `Please provide a reason for temporarily signing in as ${targetUser.email}. This will be logged in security audit records:`,
+        placeholder: 'e.g. Investigating trade sync failure (Ticket #123)',
+        confirmText: 'Start impersonation',
+        cancelText: 'Cancel',
+        required: true,
+      });
+      if (!reason || !reason.trim()) return;
       
       try {
           await api.post(`/admin/impersonate/${targetUser.id}`, { reason });

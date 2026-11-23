@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './context/ThemeProvider';
 import { AuthProvider } from './context/AuthProvider';
 import { ConsentProvider } from './context/ConsentProvider';
+import { OverlayProvider } from './context/OverlayContext';
+import { DialogOverlay } from './components/common/dialog/DialogOverlay';
 import { useAuth } from './context/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
@@ -111,6 +113,7 @@ function App() {
     <ThemeProvider>
       <ConsentProvider>
       <AuthProvider>
+        <OverlayProvider>
         <Router>
         <Toaster
           position="top-right"
@@ -122,6 +125,7 @@ function App() {
             },
           }}
         />
+        <DialogOverlay />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -237,6 +241,7 @@ function App() {
         </Suspense>
         <Suspense fallback={null}><CookieConsentBanner /></Suspense>
         </Router>
+        </OverlayProvider>
       </AuthProvider>
       </ConsentProvider>
     </ThemeProvider>

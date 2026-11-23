@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Users, Globe, Edit3, Trash2, Calendar, Target, Megaphone, X, Send } from 'lucide-react';
 import api from '../../../utils/api';
 import toast from 'react-hot-toast';
+import { dialog } from '../../../components/common/dialog';
 
 const AnnouncementsTab = () => {
   const [announcements, setAnnouncements] = useState([]);
@@ -92,7 +93,14 @@ const AnnouncementsTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this announcement?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Delete announcement?',
+      message: 'Are you sure you want to delete this announcement? It will be removed from all user notification streams.',
+      confirmText: 'Delete announcement',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await api.delete(`/admin/communications/announcements/${id}`);
       toast.success('Announcement deleted');

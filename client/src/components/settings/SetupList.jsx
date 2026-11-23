@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, Pencil, Save, X, ArrowUp, ArrowDown, CheckSquare, Sparkles } from 'lucide-react';
 import api from '../../utils/api';
+import { dialog } from '../common/dialog';
 
 const inputClass = 'block w-full rounded-xl border border-border/80 bg-surface px-3.5 py-2 text-sm text-foreground outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20';
 
@@ -173,7 +174,14 @@ const SetupList = ({ strategyId, initialSetups, onSetupsChanged }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this setup?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Delete setup?',
+      message: 'Are you sure you want to delete this trading setup? Existing trades that logged this setup will retain historical records, but it will no longer be available for new trades.',
+      confirmText: 'Delete setup',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await api.delete(`/setups/${id}`);
       toast.success('Setup removed.');

@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
+import { dialog } from '../common/dialog';
 import TradeSetupSection from './quick/TradeSetupSection';
 import TradePriceRiskSection from './quick/TradePriceRiskSection';
 import CalculatedTradeSummary from './quick/CalculatedTradeSummary';
@@ -52,7 +53,13 @@ const QuickTradeForm = ({ initialData, accounts, strategies, isEditMode, tradeId
           }
           
           if (evaluation.warnings?.length > 0) {
-            const proceed = window.confirm(`Rule Warnings:\n\n${evaluation.warnings.join('\n')}\n\nDo you want to overrule these warnings and save anyway?`);
+            const proceed = await dialog.confirm({
+              title: 'Rule check warnings',
+              message: `The following rule warnings were detected:\n\n• ${evaluation.warnings.join('\n• ')}\n\nDo you want to overrule these warnings and save anyway?`,
+              confirmText: 'Overrule & save',
+              cancelText: 'Review trade',
+              variant: 'warning',
+            });
             if (!proceed) {
               setIsSaving(false);
               return;

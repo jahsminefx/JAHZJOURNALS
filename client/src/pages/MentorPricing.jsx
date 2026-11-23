@@ -32,6 +32,7 @@ import Button from '../components/Button';
 import { useAuth } from '../context/useAuth';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { dialog } from '../components/common/dialog';
 import { Reveal, StaggerContainer, StaggerItem } from '../components/motion/MotionSystem';
 
 const PRESET_TIERS = [
@@ -328,7 +329,16 @@ const MentorPricing = () => {
   const handleJoinWaitlist = async (tierKey = 'MENTOR_MEGA') => {
     let emailToUse = user?.email;
     if (!emailToUse) {
-      const input = window.prompt('Enter your email to reserve your spot on the Mega Academy early-access waitlist:');
+      const input = await dialog.prompt({
+        title: 'Reserve early-access spot',
+        message: 'Enter your email to reserve your spot on the Mega Academy early-access waitlist:',
+        placeholder: 'mentor@example.com',
+        inputType: 'email',
+        confirmText: 'Reserve spot',
+        cancelText: 'Cancel',
+        required: true,
+        validate: (val) => (!val.includes('@') ? 'Please enter a valid email address.' : null),
+      });
       if (!input || !input.includes('@')) return;
       emailToUse = input.trim();
     }

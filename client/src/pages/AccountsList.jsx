@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Building2, Settings, ShieldCheck, Trash2, Wallet, Cloud, Sparkles, CheckCircle2, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import { dialog } from '../components/common/dialog';
 import AccountTypeCard from '../components/accounts/AccountTypeCard';
 import MTCloudSyncModal from '../components/accounts/MTCloudSyncModal';
 import PropFirmCommandCenter from '../components/propfirm/PropFirmCommandCenter';
@@ -59,8 +60,17 @@ const AccountsList = () => {
   }, [searchParams]);
 
   const deleteAccount = async (account) => {
-    const label = isPropFirmAccount(account) ? 'prop-firm account' : 'regular account';
-    if (!window.confirm(`Remove this ${label}? All associated trades, reviews, and screenshots will be permanently deleted.`)) return;
+    const isProp = isPropFirmAccount(account);
+    const label = isProp ? 'Prop-Firm Challenge' : 'Trading Account';
+    const accName = account.name || account.accountName || label;
+    const confirmed = await dialog.confirm({
+      title: `Remove ${label}?`,
+      message: `Are you sure you want to remove "${accName}"? All associated trades, reviews, and screenshots will be permanently deleted. This action cannot be undone.`,
+      confirmText: `Remove ${isProp ? 'challenge' : 'account'}`,
+      cancelText: 'Keep account',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     try {
       if (isPropFirmAccount(account)) {

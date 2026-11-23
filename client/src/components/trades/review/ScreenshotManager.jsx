@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Trash2, Maximize2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { resolveImageUrl } from '../../../utils/api';
+import { dialog } from '../../common/dialog';
 import ImageModal from '../../common/ImageModal';
 
 const screenshotTypeOptions = [
@@ -29,7 +30,14 @@ const ScreenshotManager = ({ existingScreenshots, setExistingScreenshots, screen
   };
 
   const deleteExistingScreenshot = async (screenshotId) => {
-    if (!window.confirm('Delete this screenshot from the trade and Cloudinary?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Delete screenshot?',
+      message: 'Remove this screenshot from the trade and cloud storage? This action cannot be undone.',
+      confirmText: 'Delete screenshot',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     setDeletingScreenshotId(screenshotId);
     try {

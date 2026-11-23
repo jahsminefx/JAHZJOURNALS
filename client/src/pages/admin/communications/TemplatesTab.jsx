@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Plus, Trash2, Edit3, Tag, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../utils/api';
+import { dialog } from '../../../components/common/dialog';
 
 const TemplatesTab = () => {
   const [templates, setTemplates] = useState([]);
@@ -70,7 +71,14 @@ const TemplatesTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this template snippet?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Delete template?',
+      message: 'Are you sure you want to delete this template snippet?',
+      confirmText: 'Delete template',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await api.delete(`/admin/communications/templates/${id}`);
       toast.success('Template deleted');

@@ -7,6 +7,7 @@ import AiTradeCaptureModal from '../components/trades/AiTradeCaptureModal';
 import { useAuth } from '../context/useAuth';
 import { canLogTradesWithAi } from '../utils/planHelpers';
 import api from '../utils/api';
+import { dialog } from '../components/common/dialog';
 import { loadSettings } from '../utils/settings';
 import AiDraftHelper from '../components/trades/review/AiDraftHelper';
 import DirectionSelect from '../components/trades/DirectionSelect';
@@ -337,7 +338,14 @@ const TradeForm = () => {
   };
 
   const deleteExistingScreenshot = async (screenshotId) => {
-    if (!window.confirm('Are you sure you want to remove this piece of visual proof?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Remove screenshot?',
+      message: 'Are you sure you want to remove this piece of visual proof from the trade?',
+      confirmText: 'Remove screenshot',
+      cancelText: 'Keep it',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     setDeletingScreenshotId(screenshotId);
     try {

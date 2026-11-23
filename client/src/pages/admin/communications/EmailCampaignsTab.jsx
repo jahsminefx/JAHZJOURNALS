@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mailbox, Plus, Send, Trash2, CheckCircle2, Clock, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../utils/api';
+import { dialog } from '../../../components/common/dialog';
 
 const EmailCampaignsTab = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -53,7 +54,14 @@ const EmailCampaignsTab = () => {
   };
 
   const handleSend = async (id) => {
-    if (!window.confirm('Send this email campaign to all users in the target segment via Brevo?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Dispatch email campaign?',
+      message: 'Send this email campaign to all users in the target segment via Brevo? This will deliver live emails.',
+      confirmText: 'Send campaign',
+      cancelText: 'Cancel',
+      variant: 'primary',
+    });
+    if (!confirmed) return;
     try {
       setSendingId(id);
       const res = await api.post(`/admin/communications/emails/${id}/send`);
@@ -68,7 +76,14 @@ const EmailCampaignsTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this campaign?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Delete email campaign?',
+      message: 'Are you sure you want to delete this email campaign? Draft data and delivery metrics will be permanently removed.',
+      confirmText: 'Delete campaign',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await api.delete(`/admin/communications/emails/${id}`);
       toast.success('Campaign deleted');

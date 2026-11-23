@@ -15,6 +15,7 @@ import { useAuth } from '../context/useAuth';
 import api, { resolveImageUrl, subscribeToRealtimeSync } from '../utils/api';
 import Button from '../components/Button';
 import SectionHeader from '../components/SectionHeader';
+import { dialog } from '../components/common/dialog';
 import ImageModal from '../components/common/ImageModal';
 import ShareTradeToCohortModal from '../components/share/ShareTradeToCohortModal';
 import MentorStudentChatPanel from '../components/mentor/MentorStudentChatPanel';
@@ -301,7 +302,14 @@ const MentorDashboard = () => {
   };
 
   const handleDeleteAnnouncement = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this announcement?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Delete announcement?',
+      message: 'Are you sure you want to delete this cohort announcement? Students in the cohort will no longer see it.',
+      confirmText: 'Delete announcement',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await api.delete(`/mentors/cohort-announcements/${id}`);
       toast.success('Announcement deleted.');
@@ -639,7 +647,14 @@ const MentorDashboard = () => {
   };
 
   const handleDeleteGroup = async (groupId, groupName) => {
-    if (!window.confirm(`Are you sure you want to delete the cohort "${groupName}"?`)) {
+    const confirmed = await dialog.confirm({
+      title: 'Delete cohort?',
+      message: `Are you sure you want to delete the cohort "${groupName}"? Enrolled students will be removed from this group.`,
+      confirmText: 'Delete cohort',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
     try {
@@ -679,7 +694,14 @@ const MentorDashboard = () => {
   };
 
   const handleRemoveStudent = async (groupId, studentId, studentName) => {
-    if (!window.confirm(`Remove ${studentName || 'this student'} from this cohort?`)) {
+    const confirmed = await dialog.confirm({
+      title: 'Remove student from cohort?',
+      message: `Remove ${studentName || 'this student'} from this cohort? Their shared trade logs will no longer be visible in the group feed.`,
+      confirmText: 'Remove student',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
     try {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { History, Search, Loader2, Calendar, FileText, CheckCircle2, Clock, XCircle, Trash2, Eye, ExternalLink, Filter } from 'lucide-react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
+import { dialog } from '../../components/common/dialog';
 import AiResultModal from '../../components/ai/AiResultModal';
 
 const AiHistoryPage = () => {
@@ -30,7 +31,14 @@ const AiHistoryPage = () => {
   };
 
   const handleClearHistory = async () => {
-    if (!window.confirm('Are you sure you want to permanently delete your AI generation history?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Clear AI history?',
+      message: 'Are you sure you want to permanently delete your AI generation history? All saved AI prompts, analyses, and responses will be erased.',
+      confirmText: 'Delete history',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     setClearing(true);
     try {
       await api.delete('/ai/usage');

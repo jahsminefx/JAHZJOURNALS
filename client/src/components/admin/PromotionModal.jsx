@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
+import { dialog } from '../common/dialog';
 import { X, Save, Trash2, Archive, Calendar, Users, Eye, Anchor, Crown, Zap, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -70,7 +71,14 @@ const PromotionModal = ({ promotionId, onClose, onMutate }) => {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this promotion? If traders have already used it, it will be safely archived instead of deleted.')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Delete promotion?',
+      message: 'Are you sure you want to delete this promotion? If traders have already used it, it will be safely archived instead of deleted.',
+      confirmText: 'Delete promotion',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
        await api.delete(`/admin/promotions/${promotionId}`);
        toast.success('Promotion deleted or archived successfully.');

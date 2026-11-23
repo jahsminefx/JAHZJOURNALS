@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
+import { dialog } from '../../components/common/dialog';
 import {
   ArrowLeft, Save, Eye, Send, Upload, Image as ImageIcon,
   CheckCircle, AlertTriangle, Sparkles, Hash, Link as LinkIcon,
@@ -239,8 +240,15 @@ const BlogEditorPage = () => {
     }
   };
 
-  const insertLinkPrompt = () => {
-    const url = window.prompt('Enter destination URL (e.g. /risk-calculator or https://...):');
+  const insertLinkPrompt = async () => {
+    const url = await dialog.prompt({
+      title: 'Insert link',
+      message: 'Enter destination URL (e.g. /risk-calculator or https://...):',
+      placeholder: 'https://...',
+      confirmText: 'Insert link',
+      cancelText: 'Cancel',
+      required: true,
+    });
     if (!url) return;
     executeFormat('createLink', url);
   };
@@ -336,9 +344,13 @@ const BlogEditorPage = () => {
 
     // Check slug warning
     if (isEditing && status === 'PUBLISHED' && originalSlug && finalSlug !== originalSlug) {
-      const confirmed = window.confirm(
-        `Warning: You are modifying the slug of an already published article from "/blog/${originalSlug}" to "/blog/${finalSlug}". This may break external links and search results. Do you want to proceed?`
-      );
+      const confirmed = await dialog.confirm({
+        title: 'Modify published URL slug?',
+        message: `Warning: You are modifying the URL slug of an already published article from "/blog/${originalSlug}" to "/blog/${finalSlug}". This may break external bookmarks and search rankings. Do you want to proceed?`,
+        confirmText: 'Update slug',
+        cancelText: 'Keep original slug',
+        variant: 'warning',
+      });
       if (!confirmed) return;
     }
 

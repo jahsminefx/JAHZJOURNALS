@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import { dialog } from '../components/common/dialog';
 import PropFirmAccountWizard from '../components/accounts/PropFirmAccountWizard';
 
 const toDateInput = (value) => {
@@ -79,8 +80,15 @@ const PropFirmAccountForm = ({ editSection = 'full' }) => {
   }, [id, isEditMode, navigate]);
 
   const onSubmit = async (payload) => {
-    if (isEditMode && hasTrades && !window.confirm('This account already has trades. Rule changes will not delete trades, but they may change challenge tracking interpretation. Continue?')) {
-      return;
+    if (isEditMode && hasTrades) {
+      const confirmed = await dialog.confirm({
+        title: 'Update challenge rules?',
+        message: 'This account already has logged trades. Rule changes will not delete trades, but they may change challenge tracking interpretation. Continue?',
+        confirmText: 'Save changes',
+        cancelText: 'Cancel',
+        variant: 'warning',
+      });
+      if (!confirmed) return;
     }
 
     setIsSaving(true);

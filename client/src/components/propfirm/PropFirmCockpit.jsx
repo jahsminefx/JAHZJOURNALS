@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
+import { dialog } from '../common/dialog';
 import PropFirmPayoutLedger from './PropFirmPayoutLedger';
 import { generatePropFirmCompliancePdfReport } from '../../utils/pdfReportService';
 
@@ -106,7 +107,14 @@ const PropFirmCockpit = ({ account, onRefresh }) => {
   }, [compliance?.dailyLoss?.resetBoundaries?.nextResetUtc]);
 
   const handleAdvancePhase = async () => {
-    if (!window.confirm('Ready to advance to the next phase based on verified profit and trading day requirements?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Advance challenge phase?',
+      message: 'Ready to advance to the next phase based on verified profit and trading day requirements?',
+      confirmText: 'Advance phase',
+      cancelText: 'Cancel',
+      variant: 'primary',
+    });
+    if (!confirmed) return;
     try {
       setAdvancing(true);
       const { data } = await api.post(`/accounts/prop-firm/${account.id}/advance-phase`);
