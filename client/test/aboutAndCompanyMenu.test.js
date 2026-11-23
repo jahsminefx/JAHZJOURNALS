@@ -44,10 +44,14 @@ describe('Company Dropdown & About Page Contracts', () => {
     );
     assert.ok(aboutSrc.includes('heroImage="/heroes/hero-about.png"'));
 
-    // Section heading & no founder-led claim
+    // Section heading & no founder-led claim; Stage 1 sits above Stage 2 grid and right column caps line width
     assert.ok(aboutSrc.includes('eyebrow="WHY WE BUILT JAHZJOURNALS"'));
     assert.ok(aboutSrc.includes('title="Serious traders need evidence, not hype."'));
     assert.equal(/founder-led/i.test(aboutSrc), false);
+    const sectionHeaderIdx = aboutSrc.indexOf('eyebrow="WHY WE BUILT JAHZJOURNALS"');
+    const stageTwoGridIdx = aboutSrc.indexOf('lg:grid-cols-[0.9fr_1.1fr]');
+    assert.ok(sectionHeaderIdx !== -1 && stageTwoGridIdx !== -1 && sectionHeaderIdx < stageTwoGridIdx);
+    assert.ok(aboutSrc.includes('max-w-[520px]'));
 
     // Left-column supporting copy, label & 4 review questions
     assert.ok(

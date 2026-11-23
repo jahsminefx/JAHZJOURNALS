@@ -48,15 +48,18 @@ const About = () => {
           contentClassName="max-w-lg lg:max-w-[33rem]"
         />
         <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-6xl items-start gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
-            <div className="min-w-0">
+          <div className="mx-auto max-w-6xl space-y-8 lg:space-y-10">
+            <div>
               <SectionHeader
                 align="left"
                 eyebrow="WHY WE BUILT JAHZJOURNALS"
                 title="Serious traders need evidence, not hype."
               />
-              <Reveal direction="up" delay={60}>
-                <p className="mt-4 max-w-md text-base leading-7 text-muted">
+            </div>
+
+            <div className="grid items-start gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+              <Reveal direction="up" delay={60} className="min-w-0">
+                <p className="max-w-md text-base leading-7 text-muted">
                   A trading journal should do more than store results. It should help you see the decisions and habits behind them.
                 </p>
                 <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
@@ -77,20 +80,20 @@ const About = () => {
                   ))}
                 </ul>
               </Reveal>
+              <Reveal direction="up" delay={100} className="min-w-0">
+                <div className="max-w-[520px] space-y-5 text-base leading-8 text-muted">
+                  <p>
+                    Trading decisions are often scattered across broker history, chart screenshots, notes, and memory. JAHZJOURNALS brings them into one review process.
+                  </p>
+                  <p>
+                    Log trades with context, attach screenshots, track rules, risk, and emotions, then use your own data to identify repeated mistakes and stronger habits.
+                  </p>
+                  <p>
+                    It is built for forex, gold, indices, and prop-firm traders who want to review their execution honestly—not rely on hype, signals, or promises.
+                  </p>
+                </div>
+              </Reveal>
             </div>
-            <Reveal direction="up" delay={100}>
-              <div className="space-y-5 text-base leading-8 text-muted">
-                <p>
-                  Trading decisions are often scattered across broker history, chart screenshots, notes, and memory. JAHZJOURNALS brings them into one review process.
-                </p>
-                <p>
-                  Log trades with context, attach screenshots, track rules, risk, and emotions, then use your own data to identify repeated mistakes and stronger habits.
-                </p>
-                <p>
-                  It is built for forex, gold, indices, and prop-firm traders who want to review their execution honestly—not rely on hype, signals, or promises.
-                </p>
-              </div>
-            </Reveal>
           </div>
         </section>
 
