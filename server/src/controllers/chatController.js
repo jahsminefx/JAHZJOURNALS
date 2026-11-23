@@ -1,4 +1,5 @@
 const { getProvider } = require('../ai/providers/providerFactory');
+const { isChatV2Enabled, handleChatV2, classifySafeClientError } = require('../ai/chat/chatService');
 const { checkAiAllowance } = require('../services/entitlementService');
 const { buildDashboardAnalytics } = require('../services/dashboardAnalyticsService');
 const { getPropFirmComplianceReport } = require('../services/propFirmRuleEngine');
@@ -73,7 +74,7 @@ const supportTools = [
   }
 ];
 
-const sendMessage = async (req, res) => {
+const handleChatLegacy = async (req, res) => {
   let aiReq = null;
   try {
     const { messages, chatMode = 'ANALYTICS' } = req.body;
@@ -105,10 +106,10 @@ const sendMessage = async (req, res) => {
       sanitizedMessages.push({ role, content });
     }
 
-    const featureType = chatMode === 'ANALYTICS' ? 'CHAT_SUPPORT' : 'SUPPORT_ASSISTANT';
+    const featureType = chatMode === 'ANALYTICS' ? 'ANALYTICS_ASSISTANT' : 'SUPPORT_ASSISTANT';
 
-    if (featureType === 'CHAT_SUPPORT') {
-      const limitCheck = await checkAiAllowance(req.user, 'CHAT_SUPPORT');
+    if (featureType === 'ANALYTICS_ASSISTANT') {
+      const limitCheck = await checkAiAllowance(req.user, 'ANALYTICS_ASSISTANT');
       if (!limitCheck.allowed) {
         return res.status(403).json(limitCheck.payload);
       }
@@ -313,15 +314,24 @@ const sendMessage = async (req, res) => {
         where: { id: aiReq.id },
         data: {
           status: 'FAILED',
-          errorMessage: error.message || 'Failed to communicate with JAHZ AI.',
+          errorMessage: String(error?.message || 'Failed to communicate with JAHZ AI.').slice(0, 500),
           completedAt: new Date()
         }
       }).catch(() => {});
     }
-    res.status(500).json({ message: error.message || 'Failed to communicate with JAHZ AI.' });
+    const safe = classifySafeClientError(error, `legacy_${Date.now()}`);
+    return res.status(safe.status).json(safe.body);
   }
 };
 
+const sendMessage = async (req, res) => {
+  if (isChatV2Enabled()) {
+    return handleChatV2(req, res);
+  }
+  return handleChatLegacy(req, res);
+};
+
 module.exports = {
-  sendMessage
+  sendMessage,
+  handleChatLegacy,
 };

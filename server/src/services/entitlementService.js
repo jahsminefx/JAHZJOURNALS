@@ -14,19 +14,22 @@ const {
 const AI_FEATURE_LIMITS = {
   FREE: {
     SHARED_TRIAL: 2,
-    allowedFeatures: ['TRADE_REVIEW', 'CHAT_SUPPORT'],
+    allowedFeatures: ['TRADE_REVIEW', 'ANALYTICS_ASSISTANT'],
+    SUPPORT_ASSISTANT: 20,
   },
   STARTER: {
     TRADE_REVIEW: 10,
     WEEKLY_COACH: 5,
-    CHAT_SUPPORT: 10,
+    ANALYTICS_ASSISTANT: 10,
+    SUPPORT_ASSISTANT: 50,
     JOURNAL_ASSISTANT: 20,
     DAILY_REVIEW: 10,
   },
   PRO: {
     TRADE_REVIEW: 50,
     WEEKLY_COACH: 20,
-    CHAT_SUPPORT: 50,
+    ANALYTICS_ASSISTANT: 50,
+    SUPPORT_ASSISTANT: 150,
     EDGE_FINDER: 10,
     TRADING_PLAN: 5,
     SCREENSHOT_REVIEW: 20,
@@ -35,10 +38,24 @@ const AI_FEATURE_LIMITS = {
     DAILY_REVIEW: 31,
     AI_TRADE_CAPTURE: 300,
   },
+  STARTER_SYNC: {
+    TRADE_REVIEW: 50,
+    WEEKLY_COACH: 20,
+    ANALYTICS_ASSISTANT: 50,
+    SUPPORT_ASSISTANT: 150,
+    EDGE_FINDER: 10,
+    TRADING_PLAN: 5,
+    SCREENSHOT_REVIEW: 20,
+    JOURNAL_ASSISTANT: 100,
+    PSYCHOLOGY_INSIGHTS: 10,
+    DAILY_REVIEW: 31,
+    AI_TRADE_CAPTURE: Infinity,
+  },
   SYNC_PLUS: {
     TRADE_REVIEW: 50,
     WEEKLY_COACH: 20,
-    CHAT_SUPPORT: 50,
+    ANALYTICS_ASSISTANT: 50,
+    SUPPORT_ASSISTANT: 150,
     EDGE_FINDER: 10,
     TRADING_PLAN: 5,
     SCREENSHOT_REVIEW: 20,
@@ -50,7 +67,8 @@ const AI_FEATURE_LIMITS = {
   PRO_SYNC: {
     TRADE_REVIEW: 50,
     WEEKLY_COACH: 20,
-    CHAT_SUPPORT: 50,
+    ANALYTICS_ASSISTANT: 50,
+    SUPPORT_ASSISTANT: 150,
     EDGE_FINDER: 10,
     TRADING_PLAN: 5,
     SCREENSHOT_REVIEW: 20,
@@ -62,7 +80,8 @@ const AI_FEATURE_LIMITS = {
   ELITE: {
     TRADE_REVIEW: 100,
     WEEKLY_COACH: 50,
-    CHAT_SUPPORT: 100,
+    ANALYTICS_ASSISTANT: 100,
+    SUPPORT_ASSISTANT: 200,
     EDGE_FINDER: 25,
     TRADING_PLAN: 20,
     SCREENSHOT_REVIEW: 50,
@@ -74,7 +93,8 @@ const AI_FEATURE_LIMITS = {
   MENTOR: {
     TRADE_REVIEW: Infinity,
     WEEKLY_COACH: Infinity,
-    CHAT_SUPPORT: Infinity,
+    ANALYTICS_ASSISTANT: Infinity,
+    SUPPORT_ASSISTANT: Infinity,
     EDGE_FINDER: Infinity,
     TRADING_PLAN: Infinity,
     SCREENSHOT_REVIEW: Infinity,
@@ -376,7 +396,9 @@ const canAttachScreenshot = async (tradeId, userIdOrUser, countToAdd = 1, txOrPr
 /**
  * Authoritative check for AI feature quotas and user settings
  */
-const checkAiAllowance = async (userIdOrUser, featureType, txOrPrisma = prisma) => {
+const checkAiAllowance = async (userIdOrUser, rawFeatureType, txOrPrisma = prisma) => {
+  // Normalize legacy CHAT_SUPPORT alias to valid Prisma AiFeatureType enum value ANALYTICS_ASSISTANT
+  const featureType = rawFeatureType === 'CHAT_SUPPORT' ? 'ANALYTICS_ASSISTANT' : rawFeatureType;
   const user = await resolveUser(userIdOrUser, txOrPrisma);
   const plan = getEffectivePlanKey(user);
   const userId = user?.id || (typeof userIdOrUser === 'string' ? userIdOrUser : (userIdOrUser?.id || null));
@@ -393,18 +415,18 @@ const checkAiAllowance = async (userIdOrUser, featureType, txOrPrisma = prisma) 
       allowed: false,
       payload: {
         error: 'AI_DISABLED_IN_SETTINGS',
-        message: 'JAHZ AI is disabled in your settings.',
+        message: 'JAHZ AI is disabled in your privacy settings. Enable it under JAHZ AI → AI Privacy & Usage to continue.',
       },
     };
   }
 
-  if (['TRADE_REVIEW', 'EDGE_FINDER', 'WEEKLY_COACH', 'DAILY_REVIEW'].includes(featureType)) {
+  if (['TRADE_REVIEW', 'EDGE_FINDER', 'WEEKLY_COACH', 'DAILY_REVIEW', 'ANALYTICS_ASSISTANT'].includes(featureType)) {
     if (userSettings && userSettings.allowTradeDataAnalysis === false) {
       return {
         allowed: false,
         payload: {
           error: 'TRADE_ANALYSIS_DISABLED',
-          message: 'Trade data analysis is disabled in your privacy settings.',
+          message: 'Trade data analysis is disabled in your privacy settings. Enable it under JAHZ AI → AI Privacy & Usage to query your trading analytics.',
         },
       };
     }
@@ -427,8 +449,36 @@ const checkAiAllowance = async (userIdOrUser, featureType, txOrPrisma = prisma) 
 
   const startOfMonth = getStartOfUtcMonth();
 
-  // FREE TIER: Shared pool of 2 requests across allowed features (TRADE_REVIEW, CHAT_SUPPORT)
+  // FREE TIER: Shared pool of 2 requests across allowed features (TRADE_REVIEW, ANALYTICS_ASSISTANT)
+  // plus a dedicated monthly allowance for App Support Mode (SUPPORT_ASSISTANT).
   if (plan === 'FREE') {
+    if (featureType === 'SUPPORT_ASSISTANT') {
+      const limit = AI_FEATURE_LIMITS.FREE.SUPPORT_ASSISTANT;
+      const usageCount = await txOrPrisma.aiRequest.count({
+        where: {
+          userId,
+          featureType: 'SUPPORT_ASSISTANT',
+          status: { notIn: ['FAILED', 'CANCELLED'] },
+          createdAt: { gte: startOfMonth },
+        },
+      });
+
+      if (usageCount >= limit) {
+        return {
+          allowed: false,
+          payload: buildLimitReachedPayload({
+            feature: 'ai',
+            current: usageCount,
+            limit,
+            userPlan: 'FREE',
+            requiredPlan: 'STARTER',
+            customMessage: `You have reached your Free plan monthly limit of ${limit} JAHZ AI App Support questions. Upgrade to Starter or Pro for expanded support access, or use the Support Chat tab.`,
+          }),
+        };
+      }
+      return { allowed: true, current: usageCount, limit, plan: 'FREE' };
+    }
+
     if (AI_FEATURE_LIMITS.FREE.allowedFeatures.includes(featureType)) {
       const limit = AI_FEATURE_LIMITS.FREE.SHARED_TRIAL;
       const usageCount = await txOrPrisma.aiRequest.count({
