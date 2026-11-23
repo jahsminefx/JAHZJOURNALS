@@ -11,7 +11,7 @@ const CTASection = ({
 }) => {
   const { user } = useAuth();
   const destination = to || (user ? '/dashboard' : '/register');
-  const buttonText = user && (cta === 'Start Free Today' || cta === 'Start Journaling Free') ? 'Go to Dashboard' : cta;
+  const buttonText = !to && user && (cta === 'Start Free Today' || cta === 'Start Journaling Free') ? 'Go to Dashboard' : cta;
 
   return (
     <section className="px-4 py-16 sm:px-6 lg:px-8">

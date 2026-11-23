@@ -82,7 +82,7 @@ const navigationItems = [
       {
         label: 'About',
         to: '/about',
-        description: 'Our mission and the disciplined trader sanctuary',
+        description: 'Our mission and story',
         icon: Compass,
       },
       {
@@ -112,6 +112,13 @@ const Navbar = () => {
 
   const dropdownTimeoutRef = useRef(null);
   const navContainerRef = useRef(null);
+  const activeDropdownRef = useRef(null);
+  const hoverOpenedRef = useRef({ id: null, at: 0 });
+
+  const updateActiveDropdown = (nextId) => {
+    activeDropdownRef.current = nextId;
+    setActiveDropdown(nextId);
+  };
 
   // Helper: check if a specific route is active
   const isItemActive = (to) => {
@@ -138,7 +145,7 @@ const Navbar = () => {
 
   // Close menus on route change
   useEffect(() => {
-    setActiveDropdown(null);
+    updateActiveDropdown(null);
     setDrawerOpen(false);
   }, [currentPath]);
 
@@ -146,7 +153,7 @@ const Navbar = () => {
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (navContainerRef.current && !navContainerRef.current.contains(e.target)) {
-        setActiveDropdown(null);
+        updateActiveDropdown(null);
       }
     };
 
@@ -162,7 +169,7 @@ const Navbar = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        setActiveDropdown(null);
+        updateActiveDropdown(null);
         setDrawerOpen(false);
       }
     };
@@ -188,7 +195,10 @@ const Navbar = () => {
     if (dropdownTimeoutRef.current) {
       clearTimeout(dropdownTimeoutRef.current);
     }
-    setActiveDropdown(id);
+    if (activeDropdownRef.current !== id) {
+      hoverOpenedRef.current = { id, at: Date.now() };
+      updateActiveDropdown(id);
+    }
   };
 
   const handleMouseLeave = () => {
@@ -196,12 +206,22 @@ const Navbar = () => {
       clearTimeout(dropdownTimeoutRef.current);
     }
     dropdownTimeoutRef.current = setTimeout(() => {
-      setActiveDropdown(null);
+      hoverOpenedRef.current = { id: null, at: 0 };
+      updateActiveDropdown(null);
     }, 180);
   };
 
   const handleDropdownToggle = (id) => {
-    setActiveDropdown((prev) => (prev === id ? null : id));
+    if (
+      activeDropdownRef.current === id &&
+      hoverOpenedRef.current.id === id &&
+      Date.now() - hoverOpenedRef.current.at < 400
+    ) {
+      hoverOpenedRef.current = { id: null, at: 0 };
+      return;
+    }
+    hoverOpenedRef.current = { id: null, at: 0 };
+    updateActiveDropdown(activeDropdownRef.current === id ? null : id);
   };
 
   const toggleMobileGroup = (id) => {
@@ -304,7 +324,7 @@ const Navbar = () => {
                             key={subItem.to}
                             to={subItem.to}
                             role="menuitem"
-                            onClick={() => setActiveDropdown(null)}
+                            onClick={() => updateActiveDropdown(null)}
                             className={`group flex items-start gap-3 rounded-xl p-2.5 transition-all duration-150 cursor-pointer ${
                               active
                                 ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 font-extrabold border-l-2 border-emerald-500 pl-3'
@@ -327,7 +347,7 @@ const Navbar = () => {
                                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 shrink-0" />
                                 )}
                               </div>
-                              <p className="text-[11px] text-muted mt-0.5 leading-snug line-clamp-1 group-hover:text-muted/90">
+                              <p className="text-[11px] text-muted mt-0.5 leading-snug group-hover:text-muted/90">
                                 {subItem.description}
                               </p>
                             </div>
@@ -491,7 +511,7 @@ const Navbar = () => {
                                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                                     )}
                                   </div>
-                                  <div className="text-[10px] text-muted truncate mt-0.5">
+                                  <div className="text-[10px] text-muted leading-snug mt-0.5">
                                     {subItem.description}
                                   </div>
                                 </div>
