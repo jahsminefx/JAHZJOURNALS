@@ -26,8 +26,13 @@ export default defineConfig({
       injectRegister: 'auto',
       workbox: {
         importScripts: ['/sw-push.js'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        navigateFallback: null,
         maximumFileSizeToCacheInBytes: 5000000,
-        globPatterns: ['**/*.{js,css,html,ico,svg,webp,json}'], // Cache all structural assets
+        // Never precache versioned HTML/JS/CSS bundles so active tabs or reloads never hit deleted hashes
+        globPatterns: ['favicon.{ico,svg}', 'logo-mark.png', 'icons.svg', 'manifest.webmanifest'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

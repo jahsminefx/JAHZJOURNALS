@@ -169,6 +169,7 @@ initBlogReminderScheduler();
 // Serve built Vite React frontend in production
 if (process.env.NODE_ENV === 'production') {
   const clientBuildPath = path.resolve(__dirname, '../../client/dist');
+  const { isMissingStaticAssetRequest, getStaticCacheControl } = require('./utils/staticAssetRouting');
 
   // Explicit static file routes with no-cache to ensure immediate updates
   app.get('/ads.txt', (req, res) => {
@@ -207,6 +208,20 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(clientBuildPath, 'sw-push.js'));
   });
 
+  app.get('/registerSW.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(clientBuildPath, 'registerSW.js'));
+  });
+
+  app.get('/index.html', (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+
   app.get('/manifest.webmanifest', (req, res) => {
     res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=3600');
@@ -243,11 +258,23 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(clientBuildPath, 'fonts', 'ethnocentric.woff'));
   });
 
-  // Serve hashed static assets with long cache lifetimes (1 year)
-  app.use(express.static(clientBuildPath, {
+  // Serve hashed bundle assets with 1-year immutable caching and immediate 404 on missing chunks
+  app.use('/assets', express.static(path.join(clientBuildPath, 'assets'), {
     maxAge: '1y',
     immutable: true,
     index: false,
+  }));
+  app.use('/assets', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(404).type('text/plain').send('Asset not found');
+  });
+
+  // Serve remaining static files with per-file Cache-Control (unhashed files short-lived, entry files uncached)
+  app.use(express.static(clientBuildPath, {
+    index: false,
+    setHeaders: (res, filePath) => {
+      res.setHeader('Cache-Control', getStaticCacheControl(filePath));
+    },
   }));
 
   const fs = require('fs');
@@ -263,6 +290,11 @@ if (process.env.NODE_ENV === 'production') {
   app.get('{*path}', async (req, res, next) => {
     if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/uploads')) {
       return next();
+    }
+
+    if (isMissingStaticAssetRequest(req.path)) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(404).type('text/plain').send('Asset not found');
     }
 
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
