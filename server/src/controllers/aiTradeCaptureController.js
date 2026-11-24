@@ -31,6 +31,8 @@ const { calculatePips } = require('../utils/pipCalculator');
 const {
   detectTradingSession,
   resolveTradeRiskReward,
+  resolveTradePlannedRiskReward,
+  parseRiskRewardInput,
   calculateRiskReward,
   calculateProfitLossPercentage,
 } = require('../utils/tradeCalculations');
@@ -527,18 +529,25 @@ const handleConfirmSave = async (req, res) => {
         const detectedSession = detectTradingSession(entryTimeDate);
         const resolvedSession = item.session || detectedSession || null;
 
-        // Calculate Risk/Reward ratio
-        const { riskRewardRatio: plannedRR } = calculateRiskReward(direction, entryPrice, stopLoss, takeProfit);
-        const computedRR = item.riskRewardRatio !== null && item.riskRewardRatio !== undefined && !isNaN(Number(item.riskRewardRatio))
-          ? parseNum(item.riskRewardRatio)
-          : (plannedRR ?? resolveTradeRiskReward({
+        // Calculate / validate Risk/Reward ratio (card edits may specify custom R:R)
+        const parsedRR = parseRiskRewardInput(item.riskRewardRatio);
+        if (!parsedRR.valid) {
+          throw new Error(parsedRR.error);
+        }
+
+        const isManualRR = parsedRR.value !== null && Boolean(item.isManualRiskReward);
+        const computedRR = parsedRR.value !== null
+          ? parsedRR.value
+          : resolveTradePlannedRiskReward({
               direction,
               entryPrice,
               stopLoss,
+              initialStopLoss: parseNum(item.initialStopLoss) ?? stopLoss,
               takeProfit,
               exitPrice,
               profitLossAmount: effectiveNetPnl,
-            }));
+              result: classification.result,
+            });
 
         const plPercent = account.currentBalance
           ? calculateProfitLossPercentage(effectiveNetPnl, account.currentBalance)
@@ -575,6 +584,7 @@ const handleConfirmSave = async (req, res) => {
               resultCalculatedAt: new Date(),
               isManualResultOverride: Boolean(item.isManualResultOverride),
               riskRewardRatio: computedRR,
+              isManualRiskReward: isManualRR,
               profitLossPercent: plPercent,
               session: resolvedSession,
               strategyId: item.strategyId || null,

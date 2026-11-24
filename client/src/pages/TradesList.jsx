@@ -14,7 +14,7 @@ import { SkeletonTable, SkeletonCard } from '../components/SkeletonLoader';
 import { loadSettings, fetchAndSyncSettings } from '../utils/settings';
 import { formatCurrency } from '../utils/dashboard';
 import { getCurrencySymbol } from '../services/currencyConversionService';
-import { getTradingSessionLabel } from '../utils/tradeCalculations';
+import { formatRiskReward, getTradingSessionLabel } from '../utils/tradeCalculations';
 
 import { createCacheKey, getCachedData, setCachedData } from '../utils/apiCache';
 
@@ -636,7 +636,7 @@ const getPnlColor = (pnl) => {
                       </div>
                       <div className="min-w-0">
                         <span className="block text-[10px] uppercase font-bold text-muted">R:R</span>
-                        <span className="font-medium text-foreground truncate block">{trade.riskRewardRatio || 'N/A'}</span>
+                        <span className="font-medium text-foreground truncate block">{formatRiskReward(trade.riskRewardRatio)}</span>
                       </div>
                       <div className="min-w-0">
                         <span className="block text-[10px] uppercase font-bold text-muted">Session</span>

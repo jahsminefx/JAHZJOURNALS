@@ -18,9 +18,12 @@ const evaluateTradeAgainstRules = async (userId, tradeData) => {
   }
 
   // 2. R:R check
-  if (tradeData.riskRewardRatio && settings.minimumRiskRewardRatio) {
-     if (tradeData.riskRewardRatio < settings.minimumRiskRewardRatio) {
-       warnings.push(`Target R:R ${tradeData.riskRewardRatio} is lower than your minimum rule of ${settings.minimumRiskRewardRatio}.`);
+  const parsedTradeRR = (tradeData.riskRewardRatio !== null && tradeData.riskRewardRatio !== undefined && tradeData.riskRewardRatio !== '')
+    ? Number(tradeData.riskRewardRatio)
+    : null;
+  if (parsedTradeRR !== null && Number.isFinite(parsedTradeRR) && settings.minimumRiskRewardRatio) {
+     if (parsedTradeRR > 0 && parsedTradeRR < settings.minimumRiskRewardRatio) {
+       warnings.push(`Target R:R ${parsedTradeRR} is lower than your minimum rule of ${settings.minimumRiskRewardRatio}.`);
      }
   }
 

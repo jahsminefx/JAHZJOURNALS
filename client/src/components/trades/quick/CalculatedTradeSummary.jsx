@@ -1,14 +1,38 @@
 import React from 'react';
-import { calculateRiskReward, calculateTradeResult } from '../../../utils/tradeCalculations';
+import {
+  calculateRiskReward,
+  calculateTradeResult,
+  formatRiskReward,
+  parseRiskRewardInput,
+  resolveTradePlannedRiskReward,
+} from '../../../utils/tradeCalculations';
 
 const CalculatedTradeSummary = ({ watch, status }) => {
   const direction = watch('direction');
   const entryPrice = watch('entryPrice');
   const stopLoss = watch('stopLoss');
   const takeProfit = watch('takeProfit');
+  const exitPrice = watch('exitPrice');
+  const riskAmount = watch('riskAmount');
   const profitLossAmount = watch('profitLossAmount');
+  const initialStopLoss = watch('initialStopLoss');
+  const riskRewardRatioInput = watch('riskRewardRatio');
+  const isManualRiskReward = Boolean(watch('isManualRiskReward'));
 
-  const { riskDistance, rewardDistance, riskRewardRatio } = calculateRiskReward(direction, entryPrice, stopLoss, takeProfit);
+  const { riskDistance, rewardDistance } = calculateRiskReward(direction, entryPrice, stopLoss, takeProfit);
+  const parsedManualRR = parseRiskRewardInput(riskRewardRatioInput);
+  const effectiveRR = (parsedManualRR.valid && parsedManualRR.value !== null)
+    ? parsedManualRR.value
+    : resolveTradePlannedRiskReward({
+        direction,
+        entryPrice,
+        stopLoss,
+        initialStopLoss,
+        takeProfit,
+        exitPrice: status === 'CLOSED' ? exitPrice : null,
+        riskAmount,
+        profitLossAmount: status === 'CLOSED' ? profitLossAmount : null,
+      });
   const result = calculateTradeResult(status, profitLossAmount);
 
   return (
@@ -24,9 +48,16 @@ const CalculatedTradeSummary = ({ watch, status }) => {
           <span className="block text-base text-foreground font-medium">{rewardDistance ?? '-'}</span>
         </div>
         <div>
-          <span className="block text-xs text-muted">Risk / Reward</span>
+          <div className="flex items-center gap-1.5">
+            <span className="block text-xs text-muted">Risk / Reward</span>
+            {effectiveRR !== null && (
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-surface-muted border border-border text-muted">
+                {isManualRiskReward ? 'Manual' : 'Auto'}
+              </span>
+            )}
+          </div>
           <span className="block text-base text-emerald-600 dark:text-emerald-400 font-medium">
-            {riskRewardRatio ? `1 : ${riskRewardRatio}` : '-'}
+            {formatRiskReward(effectiveRR, '-')}
           </span>
         </div>
         <div>

@@ -242,7 +242,9 @@ const getDailyReviewSummary = async ({ userId, date, accountId, timezone = 'UTC'
       session,
       sessionLabel: getTradingSessionLabel(session),
       pips: tradePips !== null ? round(tradePips, 1) : null,
-      riskRewardRatio: rr !== null ? round(rr, 2) : (t.riskRewardRatio ? round(t.riskRewardRatio, 2) : null),
+      riskRewardRatio: rr !== null
+        ? round(rr, 2)
+        : ((t.riskRewardRatio !== null && t.riskRewardRatio !== undefined && t.riskRewardRatio !== '') ? round(t.riskRewardRatio, 2) : null),
     };
   });
 
@@ -250,7 +252,10 @@ const getDailyReviewSummary = async ({ userId, date, accountId, timezone = 'UTC'
   const averageWin = winningTrades.length > 0 ? round(grossProfit / winningTrades.length) : null;
   const averageLoser = losingTrades.length > 0 ? round(grossLoss / losingTrades.length) : null;
 
-  const validRrValues = enrichedTrades.map((t) => Number(t.riskRewardRatio)).filter((v) => Number.isFinite(v) && v !== 0);
+  const validRrValues = enrichedTrades
+    .filter((t) => t.riskRewardRatio !== null && t.riskRewardRatio !== undefined && t.riskRewardRatio !== '')
+    .map((t) => Number(t.riskRewardRatio))
+    .filter((v) => Number.isFinite(v));
   const averageRiskReward = validRrValues.length > 0
     ? round(validRrValues.reduce((sum, val) => sum + val, 0) / validRrValues.length, 2)
     : null;

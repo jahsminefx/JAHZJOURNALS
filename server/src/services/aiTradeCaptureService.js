@@ -21,6 +21,8 @@ const {
 const {
   detectTradingSession,
   resolveTradeRiskReward,
+  resolveTradePlannedRiskReward,
+  parseRiskRewardInput,
   calculateRiskReward,
   calculateTradeDurationMinutes,
 } = require('../utils/tradeCalculations');
@@ -567,6 +569,20 @@ Extract any new or modified trade information and provide an assistant reply ask
     userThresholdAmount,
   });
 
+  const parsedDraftManualRR = currentDraft?.isManualRiskReward ? parseRiskRewardInput(currentDraft?.riskRewardRatio) : { valid: true, value: null };
+  const hasManualDraftRR = Boolean(currentDraft?.isManualRiskReward) && parsedDraftManualRR.valid && parsedDraftManualRR.value !== null;
+  const computedPlannedRR = resolveTradePlannedRiskReward({
+    entryPrice,
+    stopLoss,
+    initialStopLoss: parseNum(currentDraft?.initialStopLoss) ?? stopLoss,
+    takeProfit,
+    exitPrice,
+    direction,
+    profitLossAmount: status === 'CLOSED' ? (netProfit ?? classification.netProfit) : null,
+    result: classification.result,
+  });
+  const effectiveDraftRR = hasManualDraftRR ? parsedDraftManualRR.value : computedPlannedRR;
+
   const updatedDraft = {
     pair,
     direction,
@@ -602,14 +618,8 @@ Extract any new or modified trade information and provide an assistant reply ask
     entryTime: currentDraft.entryTime || new Date().toISOString(),
     exitTime: status === 'CLOSED' ? (currentDraft.exitTime || new Date().toISOString()) : null,
     session: detectTradingSession(currentDraft.entryTime || new Date().toISOString()) || currentDraft.session || null,
-    riskRewardRatio: (calculateRiskReward(direction, entryPrice, stopLoss, takeProfit).riskRewardRatio ?? resolveTradeRiskReward({
-      entryPrice,
-      stopLoss,
-      takeProfit,
-      exitPrice,
-      direction,
-      profitLossAmount: status === 'CLOSED' ? (netProfit ?? classification.netProfit) : null,
-    })) ?? parseNum(currentDraft.riskRewardRatio),
+    riskRewardRatio: effectiveDraftRR,
+    isManualRiskReward: hasManualDraftRR,
     pips: calculatePips({
       pair,
       direction,
@@ -811,16 +821,21 @@ const processSingleExtractedTrade = async ({
     exitPrice: isClosed ? exitPrice : null,
   });
 
-  // Calculate Risk/Reward ratio (Planned target R:R or Realized R:R)
-  const { riskRewardRatio: plannedRR } = calculateRiskReward(direction, entryPrice, stopLoss, takeProfit);
-  const resolvedRR = plannedRR ?? resolveTradeRiskReward({
-    entryPrice,
-    stopLoss,
-    takeProfit,
-    exitPrice,
-    direction,
-    profitLossAmount: isClosed ? netProfit : null,
-  });
+  // Calculate non-negative Risk/Reward ratio (Planned target R:R or non-negative realized R:R)
+  const parsedDraftManualRR = currentDraft?.isManualRiskReward ? parseRiskRewardInput(currentDraft?.riskRewardRatio) : { valid: true, value: null };
+  const hasManualDraftRR = Boolean(currentDraft?.isManualRiskReward) && parsedDraftManualRR.valid && parsedDraftManualRR.value !== null;
+  const resolvedRR = hasManualDraftRR
+    ? parsedDraftManualRR.value
+    : resolveTradePlannedRiskReward({
+        entryPrice,
+        stopLoss,
+        initialStopLoss: parseNum(currentDraft?.initialStopLoss) ?? stopLoss,
+        takeProfit,
+        exitPrice,
+        direction,
+        profitLossAmount: isClosed ? netProfit : null,
+        result: classification.result,
+      });
 
   // Calculate trade hold duration in minutes if closed
   const durationMinutes = (entryTimeIso && exitTimeIso)
@@ -853,6 +868,7 @@ const processSingleExtractedTrade = async ({
     exitTime: exitTimeIso,
     session,
     riskRewardRatio: resolvedRR,
+    isManualRiskReward: hasManualDraftRR,
     pips,
     durationMinutes,
     breakEvenActivated: classification.breakEvenActivated,

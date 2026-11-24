@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Trade" ADD COLUMN IF NOT EXISTS "isManualRiskReward" BOOLEAN NOT NULL DEFAULT false;

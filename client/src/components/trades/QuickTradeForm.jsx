@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
+import { parseRiskRewardInput } from '../../utils/tradeCalculations';
 import { dialog } from '../common/dialog';
 import TradeSetupSection from './quick/TradeSetupSection';
 import TradePriceRiskSection from './quick/TradePriceRiskSection';
@@ -35,9 +36,19 @@ const QuickTradeForm = ({ initialData, accounts, strategies, isEditMode, tradeId
   };
 
   const onSubmit = async (data, actionType) => {
+    const parsedRR = parseRiskRewardInput(data.riskRewardRatio);
+    if (!parsedRR.valid) {
+      toast.error(parsedRR.error);
+      return;
+    }
+
     setIsSaving(true);
     try {
       const payload = compactPayload(data);
+      payload.riskRewardRatio = parsedRR.value;
+      payload.isManualRiskReward = Boolean(data.isManualRiskReward && parsedRR.value !== null);
+      delete payload.initialStopLoss;
+      delete payload.breakEvenActivated;
       let newOrUpdateTradeId = tradeId;
 
       // 1. Pre-trade rule evaluation check (only on creation)

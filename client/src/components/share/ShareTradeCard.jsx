@@ -1,5 +1,6 @@
 import React from 'react';
 import BrandLogo from '../BrandLogo';
+import { formatRiskReward } from '../../utils/tradeCalculations';
 
 export default function ShareTradeCard({ trade, cardRef }) {
   if (!trade) return null;
@@ -91,7 +92,7 @@ export default function ShareTradeCard({ trade, cardRef }) {
         </div>
         <div className="border-x border-border">
           <span className="text-[10px] text-muted font-medium uppercase block">Risk : Reward</span>
-          <span className="text-sm font-bold text-foreground">{trade.riskRewardRatio ? `1:${trade.riskRewardRatio}` : '—'}</span>
+          <span className="text-sm font-bold text-foreground">{formatRiskReward(trade.riskRewardRatio, '—')}</span>
         </div>
         <div>
           <span className="text-[10px] text-muted font-medium uppercase block">Session</span>

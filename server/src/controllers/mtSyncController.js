@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { canCreateTrades } = require('../services/entitlementService');
 const { sendPushToUser } = require('../services/pushNotificationService');
+const { resolveTradePlannedRiskReward } = require('../utils/tradeCalculations');
 const {
   classifyTrade,
   isStopAtOrPastEntry,
@@ -152,6 +153,17 @@ const handleMtSyncWebhook = async (req, res) => {
           userThresholdAmount,
         });
 
+        const initialRR = resolveTradePlannedRiskReward({
+          direction,
+          entryPrice,
+          stopLoss,
+          initialStopLoss: stopLoss,
+          takeProfit,
+          exitPrice,
+          profitLossAmount: isClosed ? netProfit : null,
+          result: classification.result,
+        });
+
         const newTrade = await prisma.trade.create({
           data: {
             tradingAccountId: account.id,
@@ -172,6 +184,8 @@ const handleMtSyncWebhook = async (req, res) => {
             fees: 0,
             profitLossAmount: isClosed ? netProfit : null,
             pips,
+            riskRewardRatio: initialRR,
+            isManualRiskReward: false,
             status,
             result: classification.result,
             breakEvenActivated: classification.breakEvenActivated,
@@ -311,6 +325,20 @@ const handleMtSyncWebhook = async (req, res) => {
 
         const pnlDelta = nowClosing ? netProfit : (wasClosed && netProfit !== existingTrade.profitLossAmount ? netProfit - (existingTrade.profitLossAmount || 0) : 0);
 
+        const nextRR = existingTrade.isManualRiskReward
+          ? undefined
+          : resolveTradePlannedRiskReward({
+              direction: currentDirection,
+              entryPrice: currentEntry,
+              stopLoss: stopLoss !== null ? stopLoss : existingTrade.stopLoss,
+              initialStopLoss: existingTrade.initialStopLoss,
+              takeProfit: takeProfit !== null ? takeProfit : existingTrade.takeProfit,
+              exitPrice: exitPrice !== null ? exitPrice : existingTrade.exitPrice,
+              riskAmount: existingTrade.riskAmount,
+              profitLossAmount: effectiveNet,
+              result: classification.result,
+            });
+
         await prisma.trade.update({
           where: { id: existingTrade.id },
           data: {
@@ -320,6 +348,7 @@ const handleMtSyncWebhook = async (req, res) => {
             ...(exitPrice !== null && { exitPrice }),
             ...(lotSize !== null && { lotSize }),
             ...(pips !== null && { pips }),
+            ...(!existingTrade.isManualRiskReward && nextRR !== null && nextRR !== undefined && { riskRewardRatio: nextRR }),
             grossProfit: effectiveGross,
             commission: effectiveComm,
             swap: effectiveSwap,

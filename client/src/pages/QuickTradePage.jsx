@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { loadSettings } from '../utils/settings';
@@ -25,12 +25,18 @@ const getNewTradeDefaults = (settings, accounts) => {
     status: 'PLANNED',
     result: 'OPEN',
     strategyId: '',
+    riskRewardRatio: '',
+    isManualRiskReward: false,
+    initialStopLoss: '',
+    breakEvenActivated: false,
   };
 };
 
 const QuickTradePage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const prefill = location.state?.prefill || null;
   const isEditMode = Boolean(id);
   const [isLoading, setIsLoading] = useState(true);
   const [accounts, setAccounts] = useState([]);
@@ -66,6 +72,10 @@ const QuickTradePage = () => {
             takeProfit: trade.takeProfit ?? '',
             lotSize: trade.lotSize ?? '',
             riskAmount: trade.riskAmount ?? '',
+            riskRewardRatio: trade.riskRewardRatio ?? '',
+            isManualRiskReward: Boolean(trade.isManualRiskReward),
+            initialStopLoss: trade.initialStopLoss ?? '',
+            breakEvenActivated: Boolean(trade.breakEvenActivated),
             entryTime: toDateTimeLocal(trade.entryTime),
             exitTime: toDateTimeLocal(trade.exitTime),
             profitLossAmount: trade.profitLossAmount ?? '',
@@ -83,9 +93,35 @@ const QuickTradePage = () => {
           const paramLot = searchParams.get('lotSize');
           const paramRisk = searchParams.get('riskAmount');
           const paramAccId = searchParams.get('tradingAccountId');
+          const paramRR = searchParams.get('riskRewardRatio');
+
+          const prefillData = prefill ? {
+            ...(prefill.tradingAccountId ? { tradingAccountId: prefill.tradingAccountId } : {}),
+            ...(prefill.pair ? { pair: prefill.pair } : {}),
+            ...(prefill.direction ? { direction: prefill.direction } : {}),
+            ...(prefill.status ? { status: prefill.status } : {}),
+            ...(prefill.result ? { result: prefill.result } : {}),
+            ...(prefill.entryPrice !== undefined && prefill.entryPrice !== null ? { entryPrice: prefill.entryPrice } : {}),
+            ...(prefill.exitPrice !== undefined && prefill.exitPrice !== null ? { exitPrice: prefill.exitPrice } : {}),
+            ...(prefill.stopLoss !== undefined && prefill.stopLoss !== null ? { stopLoss: prefill.stopLoss } : {}),
+            ...(prefill.takeProfit !== undefined && prefill.takeProfit !== null ? { takeProfit: prefill.takeProfit } : {}),
+            ...(prefill.lotSize !== undefined && prefill.lotSize !== null ? { lotSize: prefill.lotSize } : {}),
+            ...(prefill.riskAmount !== undefined && prefill.riskAmount !== null ? { riskAmount: prefill.riskAmount } : {}),
+            ...(prefill.profitLossAmount !== undefined && prefill.profitLossAmount !== null ? { profitLossAmount: prefill.profitLossAmount } : {}),
+            ...(prefill.riskRewardRatio !== undefined && prefill.riskRewardRatio !== null ? { riskRewardRatio: prefill.riskRewardRatio } : {}),
+            isManualRiskReward: Boolean(prefill.isManualRiskReward),
+            ...(prefill.initialStopLoss !== undefined && prefill.initialStopLoss !== null ? { initialStopLoss: prefill.initialStopLoss } : {}),
+            breakEvenActivated: Boolean(prefill.breakEvenActivated),
+            ...(prefill.entryTime ? { entryTime: toDateTimeLocal(prefill.entryTime) } : {}),
+            ...(prefill.exitTime ? { exitTime: toDateTimeLocal(prefill.exitTime) } : {}),
+            ...(prefill.strategyId ? { strategyId: prefill.strategyId } : {}),
+            ...(prefill.setupId ? { setupId: prefill.setupId } : {}),
+            ...(prefill.entryReason ? { entryReason: prefill.entryReason } : {}),
+          } : {};
 
           setInitialData({
             ...defaults,
+            ...prefillData,
             ...(paramAccId ? { tradingAccountId: paramAccId } : {}),
             ...(paramPair ? { pair: paramPair } : {}),
             ...(paramDirection ? { direction: paramDirection } : {}),
@@ -94,6 +130,7 @@ const QuickTradePage = () => {
             ...(paramTP ? { takeProfit: paramTP } : {}),
             ...(paramLot ? { lotSize: paramLot } : {}),
             ...(paramRisk ? { riskAmount: paramRisk } : {}),
+            ...(paramRR ? { riskRewardRatio: paramRR, isManualRiskReward: true } : {}),
           });
         }
       } catch (error) {

@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { getUtcWeekRange } = require('../utils/timezone');
 const { calculateSummary } = require('../services/analyticsService');
+const { resolveTradeRiskReward } = require('../utils/tradeCalculations');
 
 const writtenReviewFields = [
   'mainMistake',
@@ -162,6 +163,12 @@ const generateWeeklyReview = async (req, res) => {
       ? Number(((planKnown.filter((trade) => trade.followedPlan).length / planKnown.length) * 100).toFixed(1))
       : null;
     const discipline = calculateDisciplineScore(trades);
+    const weeklyRrValues = trades
+      .map((trade) => resolveTradeRiskReward(trade))
+      .filter((value) => Number.isFinite(value));
+    const weeklyAverageRiskReward = weeklyRrValues.length > 0
+      ? Number((weeklyRrValues.reduce((sum, val) => sum + val, 0) / weeklyRrValues.length).toFixed(2))
+      : (summary?.averageRiskRewardRatio ?? null);
     const scopeKey = getScopeKey(accountId);
 
     const automaticData = {
@@ -182,7 +189,7 @@ const generateWeeklyReview = async (req, res) => {
       expectancy: summary?.expectancy ?? 0,
       averageWin: summary?.averageWin ?? null,
       averageLoss: summary?.averageLoss ?? null,
-      averageRiskReward: summary?.averageRiskRewardRatio ?? null,
+      averageRiskReward: weeklyAverageRiskReward,
       bestTradeId: bestTrade?.id || null,
       worstTradeId: worstTrade?.id || null,
       mostBrokenRule,

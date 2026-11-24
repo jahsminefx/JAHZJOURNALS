@@ -145,4 +145,89 @@ test('resolveTradeRiskReward calculates realized and planned RR accurately', () 
     riskAmount: 200,
     profitLossAmount: 500,
   }), 2.5);
+
+  // Break-even SL moved to entry falls back to initialStopLoss for Daily/Weekly Review signed RR
+  assert.equal(resolveTradeRiskReward({
+    direction: 'BUY',
+    entryPrice: 1.1000,
+    stopLoss: 1.1000,
+    initialStopLoss: 1.0950,
+    takeProfit: 1.1150,
+  }), 3);
+
+  // Explicit manual 0 is preserved
+  assert.equal(resolveTradeRiskReward({
+    riskRewardRatio: 0,
+    isManualRiskReward: true,
+    direction: 'BUY',
+    entryPrice: 1.1000,
+    stopLoss: 1.0950,
+    takeProfit: 1.1150,
+  }), 0);
+});
+
+test('parseRiskRewardInput accepts valid formats and rejects negative or invalid values', () => {
+  const { parseRiskRewardInput, formatRiskReward } = require('../src/utils/tradeCalculations');
+
+  assert.deepEqual(parseRiskRewardInput(''), { valid: true, value: null });
+  assert.deepEqual(parseRiskRewardInput(null), { valid: true, value: null });
+  assert.deepEqual(parseRiskRewardInput('2.5'), { valid: true, value: 2.5 });
+  assert.deepEqual(parseRiskRewardInput('1:3'), { valid: true, value: 3 });
+  assert.deepEqual(parseRiskRewardInput('1 : 2.75'), { valid: true, value: 2.75 });
+  assert.deepEqual(parseRiskRewardInput('3.5R'), { valid: true, value: 3.5 });
+  assert.deepEqual(parseRiskRewardInput('0'), { valid: true, value: 0 });
+  assert.deepEqual(parseRiskRewardInput('1:0'), { valid: true, value: 0 });
+  assert.deepEqual(parseRiskRewardInput(0), { valid: true, value: 0 });
+
+  assert.equal(parseRiskRewardInput('-1').valid, false);
+  assert.equal(parseRiskRewardInput('1:-2').valid, false);
+  assert.equal(parseRiskRewardInput('abc').valid, false);
+  assert.equal(parseRiskRewardInput('150').valid, false);
+
+  assert.equal(formatRiskReward(0), '1 : 0');
+  assert.equal(formatRiskReward(2.5), '1 : 2.5');
+  assert.equal(formatRiskReward(null), 'N/A');
+  assert.equal(formatRiskReward(undefined, '—'), '—');
+});
+
+test('resolveTradePlannedRiskReward stays non-negative and falls back to initialStopLoss on BE trades', () => {
+  const { resolveTradePlannedRiskReward, isStopLossAtOrPastEntry } = require('../src/utils/tradeCalculations');
+
+  // Stop moved to entry -> uses initialStopLoss when available
+  assert.equal(isStopLossAtOrPastEntry('BUY', 1.1000, 1.1000), true);
+  assert.equal(resolveTradePlannedRiskReward({
+    direction: 'BUY',
+    entryPrice: 1.1000,
+    stopLoss: 1.1000,
+    initialStopLoss: 1.0950,
+    takeProfit: 1.1150,
+  }), 3);
+
+  // Stop moved to BE without initialStopLoss and without TP -> returns null rather than error
+  assert.equal(resolveTradePlannedRiskReward({
+    direction: 'BUY',
+    entryPrice: 1.1000,
+    stopLoss: 1.1000,
+    exitPrice: 1.1000,
+    profitLossAmount: 0,
+    result: 'BREAKEVEN',
+  }), null);
+
+  // Losing exit never produces a negative Trade.riskRewardRatio; falls back to TP if present or null
+  assert.equal(resolveTradePlannedRiskReward({
+    direction: 'BUY',
+    entryPrice: 1.1000,
+    stopLoss: 1.0950,
+    exitPrice: 1.0950,
+    profitLossAmount: -50,
+    riskAmount: 50,
+    result: 'LOSS',
+  }), null);
+
+  // Manual 0 on a BE trade is preserved
+  assert.equal(resolveTradePlannedRiskReward({
+    riskRewardRatio: 0,
+    isManualRiskReward: true,
+    result: 'BREAKEVEN',
+  }), 0);
 });

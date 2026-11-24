@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import SignedNumericInput from '../../common/SignedNumericInput';
 import { calculatePositionSize } from '../../../services/riskCalculatorService';
-import { Calculator } from 'lucide-react';
+import {
+  isStopLossAtOrPastEntry,
+  parseRiskRewardInput,
+  resolveTradePlannedRiskReward,
+} from '../../../utils/tradeCalculations';
+import { Calculator, Info, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const inputStyle = "mt-1.5 block w-full bg-surface-muted border border-border rounded-xl py-2.5 px-3.5 text-sm text-foreground focus:outline-none focus:border-emerald-500 focus:bg-surface transition-all shadow-sm";
@@ -12,6 +17,79 @@ const TradePriceRiskSection = ({ register, status, setValue, watch }) => {
   const entryPrice = watch('entryPrice');
   const stopLoss = watch('stopLoss');
   const takeProfit = watch('takeProfit');
+  const exitPrice = watch('exitPrice');
+  const riskAmount = watch('riskAmount');
+  const profitLossAmount = watch('profitLossAmount');
+  const initialStopLoss = watch('initialStopLoss');
+  const riskRewardRatio = watch('riskRewardRatio');
+  const isManualRiskReward = Boolean(watch('isManualRiskReward'));
+  const breakEvenActivated = Boolean(watch('breakEvenActivated'));
+
+  const rrValidation = parseRiskRewardInput(riskRewardRatio);
+  const stopAtBe = breakEvenActivated || isStopLossAtOrPastEntry(direction, entryPrice, stopLoss);
+  const isRREmpty = riskRewardRatio === '' || riskRewardRatio === null || riskRewardRatio === undefined;
+
+  const priceSig = JSON.stringify([
+    direction || '',
+    entryPrice ?? '',
+    stopLoss ?? '',
+    takeProfit ?? '',
+    status || '',
+    status === 'CLOSED' ? (exitPrice ?? '') : '',
+    riskAmount ?? '',
+    status === 'CLOSED' ? (profitLossAmount ?? '') : '',
+  ]);
+  const prevPriceSigRef = useRef(priceSig);
+  const mountedRef = useRef(false);
+
+  const computeAutoRR = () => resolveTradePlannedRiskReward({
+    direction,
+    entryPrice,
+    stopLoss,
+    initialStopLoss,
+    takeProfit,
+    exitPrice: status === 'CLOSED' ? exitPrice : null,
+    riskAmount,
+    profitLossAmount: status === 'CLOSED' ? profitLossAmount : null,
+  });
+
+  useEffect(() => {
+    const pricesChanged = mountedRef.current && prevPriceSigRef.current !== priceSig;
+    prevPriceSigRef.current = priceSig;
+    const isInitialMount = !mountedRef.current;
+    mountedRef.current = true;
+
+    if (isManualRiskReward) return;
+    if (isInitialMount && !isRREmpty) return;
+    if (!isInitialMount && !pricesChanged && !isRREmpty) return;
+
+    const autoRR = computeAutoRR();
+    const nextStr = autoRR !== null && autoRR !== undefined ? String(autoRR) : '';
+    if (String(riskRewardRatio ?? '') !== nextStr) {
+      setValue('riskRewardRatio', nextStr, { shouldDirty: pricesChanged });
+    }
+  }, [priceSig, isManualRiskReward]);
+
+  const handleResetToAuto = () => {
+    const autoRR = computeAutoRR();
+    setValue('isManualRiskReward', false, { shouldDirty: true });
+    setValue('riskRewardRatio', autoRR !== null && autoRR !== undefined ? String(autoRR) : '', { shouldDirty: true });
+  };
+
+  const handleRiskRewardChange = (e) => {
+    const val = e.target.value;
+    setValue('riskRewardRatio', val, { shouldDirty: true });
+    setValue('isManualRiskReward', val.trim() !== '', { shouldDirty: true });
+  };
+
+  const handleRiskRewardBlur = () => {
+    const trimmed = String(riskRewardRatio ?? '').trim();
+    if (!trimmed) return;
+    const parsed = parseRiskRewardInput(trimmed);
+    if (parsed.valid && parsed.value !== null && String(parsed.value) !== trimmed) {
+      setValue('riskRewardRatio', String(parsed.value), { shouldDirty: true });
+    }
+  };
 
   const handleAutoCalculatePositionSize = () => {
     if (!entryPrice || !stopLoss) {
@@ -91,6 +169,52 @@ const TradePriceRiskSection = ({ register, status, setValue, watch }) => {
             {status === 'PLANNED' ? 'Planned Risk Amount' : 'Risk Amount'} ($)
           </label>
           <input id="quick-risk-amount" type="number" step="0.01" inputMode="decimal" min="0" {...register('riskAmount')} className={inputStyle} />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1 gap-2">
+            <label htmlFor="quick-risk-reward" className="block text-xs font-bold uppercase tracking-wider text-muted">
+              Risk / Reward Ratio
+            </label>
+            {isManualRiskReward ? (
+              <button
+                type="button"
+                onClick={handleResetToAuto}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                title="Reset R:R back to automatic calculation"
+              >
+                <RotateCcw size={11} />
+                <span>Reset to Auto</span>
+              </button>
+            ) : (
+              <span className="text-[10px] font-semibold text-muted">Auto</span>
+            )}
+          </div>
+          <div className={`mt-1.5 flex items-center bg-surface-muted border rounded-xl overflow-hidden transition-all shadow-sm focus-within:bg-surface ${
+            !rrValidation.valid
+              ? 'border-rose-500 focus-within:border-rose-500'
+              : 'border-border focus-within:border-emerald-500'
+          }`}>
+            <span className="pl-3.5 pr-1.5 text-sm font-bold text-muted select-none shrink-0">1 :</span>
+            <input
+              id="quick-risk-reward"
+              type="text"
+              inputMode="decimal"
+              value={riskRewardRatio ?? ''}
+              onChange={handleRiskRewardChange}
+              onBlur={handleRiskRewardBlur}
+              placeholder="e.g. 2.5"
+              className="w-full bg-transparent py-2.5 pr-3.5 text-sm text-foreground focus:outline-none"
+            />
+          </div>
+          {!rrValidation.valid ? (
+            <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">{rrValidation.error}</p>
+          ) : stopAtBe && isRREmpty ? (
+            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300 flex items-center gap-1">
+              <Info size={12} className="shrink-0" />
+              <span>Stop loss is at break-even — enter your planned R:R above if needed.</span>
+            </p>
+          ) : null}
         </div>
 
         {status === 'CLOSED' && (

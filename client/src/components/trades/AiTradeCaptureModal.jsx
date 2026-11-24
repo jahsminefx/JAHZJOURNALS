@@ -31,6 +31,7 @@ import {
   Calendar,
   DollarSign,
   Tag,
+  RotateCcw,
   Smile,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -42,6 +43,9 @@ import {
   detectTradingSession,
   getTradingSessionLabel,
   resolveTradeRiskReward,
+  resolveTradePlannedRiskReward,
+  parseRiskRewardInput,
+  isStopLossAtOrPastEntry,
 } from '../../utils/tradeCalculations';
 
 const PROMPT_SUGGESTIONS = [
@@ -108,6 +112,8 @@ const INITIAL_TRADE_STATE = {
   notesBefore: '',
   notesAfter: '',
   externalId: '',
+  riskRewardRatio: '',
+  isManualRiskReward: false,
 };
 
 const AiTradeCaptureModal = ({
@@ -368,6 +374,8 @@ const AiTradeCaptureModal = ({
               draftId: `card_${Date.now()}_${idx}`,
               trade: {
                 ...item.candidateTrade,
+                riskRewardRatio: item.candidateTrade.riskRewardRatio ?? '',
+                isManualRiskReward: Boolean(item.candidateTrade.isManualRiskReward),
                 entryTime: toDateTimeLocal(item.candidateTrade.entryTime),
                 exitTime: toDateTimeLocal(item.candidateTrade.exitTime),
                 tradingAccountId: accId,
@@ -413,6 +421,8 @@ const AiTradeCaptureModal = ({
 
         const candidate = {
           ...resData.trade,
+          riskRewardRatio: resData.trade.riskRewardRatio ?? '',
+          isManualRiskReward: Boolean(resData.trade.isManualRiskReward),
           entryTime: toDateTimeLocal(resData.trade.entryTime || activeDraft.entryTime),
           exitTime: toDateTimeLocal(resData.trade.exitTime || activeDraft.exitTime),
           tradingAccountId: accId,
@@ -553,23 +563,22 @@ const AiTradeCaptureModal = ({
             if (p !== null) updatedTrade.pips = p;
           }
 
-          // Dynamically recalculate Risk/Reward Ratio
-          if (['entryPrice', 'stopLoss', 'takeProfit', 'direction', 'exitPrice'].includes(fieldKey)) {
-            const { riskRewardRatio: plannedRR } = calculateRiskReward(
-              updatedTrade.direction,
-              updatedTrade.entryPrice,
-              updatedTrade.stopLoss,
-              updatedTrade.takeProfit
-            );
-            const resolvedRR = plannedRR ?? resolveTradeRiskReward({
-              entryPrice: updatedTrade.entryPrice,
-              stopLoss: updatedTrade.stopLoss,
-              takeProfit: updatedTrade.takeProfit,
-              exitPrice: updatedTrade.exitPrice,
-              direction: updatedTrade.direction,
-              profitLossAmount: updatedTrade.profitLossAmount,
+          // Track manual R:R overrides or dynamically recalculate non-negative Risk/Reward Ratio
+          let nextFieldStatus = 'USER_CONFIRMED';
+          if (fieldKey === 'riskRewardRatio') {
+            const hasVal = String(value ?? '').trim() !== '';
+            updatedTrade.isManualRiskReward = hasVal;
+            nextFieldStatus = hasVal ? 'USER_CONFIRMED' : 'MISSING';
+          } else if (
+            ['entryPrice', 'stopLoss', 'takeProfit', 'direction', 'exitPrice', 'profitLossAmount', 'grossProfit'].includes(fieldKey) &&
+            !updatedTrade.isManualRiskReward
+          ) {
+            const resolvedRR = resolveTradePlannedRiskReward({
+              ...updatedTrade,
+              riskRewardRatio: null,
+              isManualRiskReward: false,
             });
-            if (resolvedRR !== null) updatedTrade.riskRewardRatio = resolvedRR;
+            updatedTrade.riskRewardRatio = resolvedRR !== null ? resolvedRR : '';
           }
 
           // Dynamically recalculate Session when entryTime changes
@@ -585,7 +594,39 @@ const AiTradeCaptureModal = ({
             trade: updatedTrade,
             fieldStatuses: {
               ...item.fieldStatuses,
-              [fieldKey]: 'USER_CONFIRMED',
+              [fieldKey]: nextFieldStatus,
+            },
+          };
+        });
+        return { ...msg, trades: updatedTrades };
+      })
+    );
+  };
+
+  const handleResetCardRiskReward = (msgId, draftId) => {
+    setIsDirty(true);
+    setChatMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== msgId || !msg.trades) return msg;
+        const updatedTrades = msg.trades.map((item) => {
+          if (item.draftId !== draftId) return item;
+          const autoRR = resolveTradePlannedRiskReward({
+            ...item.trade,
+            riskRewardRatio: null,
+            isManualRiskReward: false,
+          });
+          const updatedTrade = {
+            ...item.trade,
+            riskRewardRatio: autoRR !== null ? autoRR : '',
+            isManualRiskReward: false,
+          };
+          setActiveDraft(updatedTrade);
+          return {
+            ...item,
+            trade: updatedTrade,
+            fieldStatuses: {
+              ...item.fieldStatuses,
+              riskRewardRatio: autoRR !== null ? 'CONFIRMED' : 'MISSING',
             },
           };
         });
@@ -719,6 +760,12 @@ const AiTradeCaptureModal = ({
       return;
     }
 
+    const parsedRR = parseRiskRewardInput(trade.riskRewardRatio);
+    if (!parsedRR.valid) {
+      toast.error(parsedRR.error);
+      return;
+    }
+
     // Set card saving state
     setChatMessages((prev) =>
       prev.map((msg) => {
@@ -736,6 +783,8 @@ const AiTradeCaptureModal = ({
       const payload = {
         trade: {
           ...trade,
+          riskRewardRatio: parsedRR.value,
+          isManualRiskReward: Boolean(trade.isManualRiskReward && parsedRR.value !== null),
           entryTime: sanitizeDateForSave(trade.entryTime),
           exitTime: sanitizeDateForSave(trade.exitTime),
         },
@@ -797,15 +846,28 @@ const AiTradeCaptureModal = ({
       return;
     }
 
+    for (const item of unsavedTrades) {
+      const checkRR = parseRiskRewardInput(item.trade.riskRewardRatio);
+      if (!checkRR.valid) {
+        toast.error(`${item.trade.pair || 'Trade'}: ${checkRR.error}`);
+        return;
+      }
+    }
+
     const idempotencyKey = `ai_batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
     try {
       const payload = {
-        trades: unsavedTrades.map((t) => ({
-          ...t.trade,
-          entryTime: sanitizeDateForSave(t.trade.entryTime),
-          exitTime: sanitizeDateForSave(t.trade.exitTime),
-        })),
+        trades: unsavedTrades.map((t) => {
+          const parsedRR = parseRiskRewardInput(t.trade.riskRewardRatio);
+          return {
+            ...t.trade,
+            riskRewardRatio: parsedRR.value,
+            isManualRiskReward: Boolean(t.trade.isManualRiskReward && parsedRR.value !== null),
+            entryTime: sanitizeDateForSave(t.trade.entryTime),
+            exitTime: sanitizeDateForSave(t.trade.exitTime),
+          };
+        }),
       };
 
       const { data } = await api.post('/ai/trade-capture/confirm-save', payload, {
@@ -1743,15 +1805,80 @@ const AiTradeCaptureModal = ({
                                 </div>
 
                                 <div>
-                                  <div className="flex items-center justify-between mb-0.5">
-                                    <label className="text-[10px] font-bold text-muted">Target R:R</label>
-                                    {renderCertaintyBadge(fieldStatuses.riskRewardRatio)}
-                                  </div>
-                                  <div className="bg-surface border border-border rounded-lg px-2 py-1 text-xs font-black text-emerald-400">
-                                    {trade.riskRewardRatio !== null && trade.riskRewardRatio !== undefined && trade.riskRewardRatio !== ''
-                                      ? `1 : ${trade.riskRewardRatio}`
-                                      : '—'}
-                                  </div>
+                                  {(() => {
+                                    const rrValidation = parseRiskRewardInput(trade.riskRewardRatio);
+                                    const stopAtBe =
+                                      Boolean(trade.breakEvenActivated) ||
+                                      isStopLossAtOrPastEntry(trade.direction, trade.entryPrice, trade.stopLoss);
+                                    const isRREmpty =
+                                      trade.riskRewardRatio === null ||
+                                      trade.riskRewardRatio === undefined ||
+                                      String(trade.riskRewardRatio).trim() === '';
+                                    return (
+                                      <>
+                                        <div className="flex items-center justify-between mb-0.5 gap-1">
+                                          <label className="text-[10px] font-bold text-muted">Target R:R</label>
+                                          {trade.isManualRiskReward && !isSaved ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleResetCardRiskReward(msg.id, draftId)}
+                                              className="inline-flex items-center gap-0.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                                              title="Reset R:R to auto-calculation"
+                                            >
+                                              <RotateCcw size={10} />
+                                              <span>Auto</span>
+                                            </button>
+                                          ) : (
+                                            renderCertaintyBadge(fieldStatuses.riskRewardRatio)
+                                          )}
+                                        </div>
+                                        <div
+                                          className={`flex items-center bg-surface border rounded-lg px-2 py-1 text-xs font-black transition-colors ${
+                                            !rrValidation.valid
+                                              ? 'border-rose-500 text-rose-600 dark:text-rose-400'
+                                              : 'border-border focus-within:border-indigo-500 text-emerald-700 dark:text-emerald-400'
+                                          }`}
+                                        >
+                                          <span className="text-muted font-bold mr-1 select-none shrink-0">1 :</span>
+                                          <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={trade.riskRewardRatio ?? ''}
+                                            onChange={(e) =>
+                                              handleUpdateCardField(msg.id, draftId, 'riskRewardRatio', e.target.value)
+                                            }
+                                            onBlur={(e) => {
+                                              if (isSaved) return;
+                                              const trimmed = e.target.value.trim();
+                                              if (!trimmed) return;
+                                              const parsed = parseRiskRewardInput(trimmed);
+                                              if (parsed.valid && parsed.value !== null && String(parsed.value) !== trimmed) {
+                                                handleUpdateCardField(
+                                                  msg.id,
+                                                  draftId,
+                                                  'riskRewardRatio',
+                                                  String(parsed.value)
+                                                );
+                                              }
+                                            }}
+                                            disabled={isSaved}
+                                            placeholder="e.g. 2.5"
+                                            aria-label="Target Risk to Reward Ratio"
+                                            className="w-full min-w-0 bg-transparent font-black text-emerald-700 dark:text-emerald-400 placeholder:text-muted/60 placeholder:font-normal focus:outline-none"
+                                          />
+                                        </div>
+                                        {!rrValidation.valid ? (
+                                          <p className="mt-1 text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                                            Must be 0 or higher
+                                          </p>
+                                        ) : stopAtBe && isRREmpty && !isSaved ? (
+                                          <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-300 leading-tight">
+                                            SL at BE — enter your R:R before saving.
+                                          </p>
+                                        ) : null}
+                                      </>
+                                    );
+                                  })()}
                                 </div>
 
                                 <div>

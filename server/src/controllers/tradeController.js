@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const currencyService = require('../services/fx/currencyService');
 const { calculatePips } = require('../utils/pipCalculator');
+const { parseRiskRewardInput, resolveTradePlannedRiskReward } = require('../utils/tradeCalculations');
 const { classifyTrade } = require('../services/tradeClassificationService');
 const { buildAudienceSafeTradeSnapshot } = require('./cohortSharingController');
 
@@ -139,6 +140,7 @@ const createTrade = async (req, res) => {
       profitLossAmount,
       profitLossPercent,
       riskRewardRatio,
+      isManualRiskReward,
       pips,
       result,
       status,
@@ -201,6 +203,18 @@ const createTrade = async (req, res) => {
 
     const parseNum = (val) => (val !== undefined && val !== null && val !== '' && !Number.isNaN(Number(val))) ? parseFloat(val) : null;
 
+    const parsedRR = parseRiskRewardInput(riskRewardRatio);
+    if (!parsedRR.valid) {
+      return res.status(400).json({ message: parsedRR.error });
+    }
+
+    const parsedEntryPrice = parseNum(entryPrice);
+    const parsedStopLoss = parseNum(stopLoss);
+    const parsedTakeProfit = parseNum(takeProfit);
+    const parsedExitPrice = parseNum(exitPrice);
+    const parsedRiskAmount = parseNum(riskAmount);
+    const parsedProfitLoss = parseNum(profitLossAmount);
+
     const parsedPips = parseNum(pips);
     const computedPips = parsedPips !== null ? parsedPips : calculatePips({
       pair,
@@ -260,21 +274,39 @@ const createTrade = async (req, res) => {
       fxRateTimestamp = new Date();
     }
 
+    const hasExplicitManualRR = parsedRR.value !== null && (isManualRiskReward === undefined || isManualRiskReward === true || isManualRiskReward === 'true');
+    const finalRiskRewardRatio = parsedRR.value !== null
+      ? parsedRR.value
+      : resolveTradePlannedRiskReward({
+          direction,
+          entryPrice: parsedEntryPrice,
+          stopLoss: parsedStopLoss,
+          initialStopLoss: parsedStopLoss,
+          takeProfit: parsedTakeProfit,
+          exitPrice: parsedExitPrice,
+          riskAmount: parsedRiskAmount,
+          profitLossAmount: parsedProfitLoss,
+          result: classification.result,
+        });
+
     const trade = await prisma.trade.create({
       data: {
         tradingAccountId,
         pair: pair.toUpperCase().trim(),
         direction,
-        entryPrice: parseNum(entryPrice),
-        stopLoss: parseNum(stopLoss),
-        takeProfit: parseNum(takeProfit),
-        exitPrice: parseNum(exitPrice),
+        entryPrice: parsedEntryPrice,
+        stopLoss: parsedStopLoss,
+        initialStopLoss: parsedStopLoss,
+        takeProfit: parsedTakeProfit,
+        initialTakeProfit: parsedTakeProfit,
+        exitPrice: parsedExitPrice,
         lotSize: parseNum(lotSize),
-        riskAmount: parseNum(riskAmount),
+        riskAmount: parsedRiskAmount,
         rewardAmount: parseNum(rewardAmount),
-        profitLossAmount: parseNum(profitLossAmount),
+        profitLossAmount: parsedProfitLoss,
         profitLossPercent: parseNum(profitLossPercent),
-        riskRewardRatio: parseNum(riskRewardRatio),
+        riskRewardRatio: finalRiskRewardRatio,
+        isManualRiskReward: hasExplicitManualRR,
         pips: computedPips,
         result: classification.result,
         status: tradeStatus,
@@ -437,6 +469,7 @@ const updateTrade = async (req, res) => {
       profitLossAmount,
       profitLossPercent,
       riskRewardRatio,
+      isManualRiskReward,
       pips,
       result,
       status,
@@ -468,12 +501,19 @@ const updateTrade = async (req, res) => {
     } = req.body;
 
     const parseNum = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
+    const parseOptBool = (v) => (v === true || v === 'true' ? true : (v === false || v === 'false' ? false : undefined));
     const parseDate = (v) => {
       if (v === undefined) return undefined;
       if (!v) return null;
       const d = new Date(v);
       return Number.isNaN(d.getTime()) ? null : d;
     };
+
+    const hasRRInBody = riskRewardRatio !== undefined;
+    const parsedRR = hasRRInBody ? parseRiskRewardInput(riskRewardRatio) : { valid: true, value: null };
+    if (!parsedRR.valid) {
+      return res.status(400).json({ message: parsedRR.error });
+    }
 
     let targetAccountId = trade.tradingAccountId;
     if (tradingAccountId && String(tradingAccountId).trim() && tradingAccountId !== trade.tradingAccountId) {
@@ -491,6 +531,7 @@ const updateTrade = async (req, res) => {
     const finalStatus = status || trade.status;
     const finalDirection = direction ? String(direction).toUpperCase() : trade.direction;
     const finalStopLoss = stopLoss !== undefined ? parseNum(stopLoss) : trade.stopLoss;
+    const finalTakeProfit = takeProfit !== undefined ? parseNum(takeProfit) : trade.takeProfit;
     const finalLotSize = lotSize !== undefined ? parseNum(lotSize) : trade.lotSize;
     const finalRiskAmount = riskAmount !== undefined ? parseNum(riskAmount) : trade.riskAmount;
     const finalGrossProfit = grossProfit !== undefined ? parseNum(grossProfit) : trade.grossProfit;
@@ -570,6 +611,55 @@ const updateTrade = async (req, res) => {
       fxRateTimestamp = null;
     }
 
+    const parsedIsManualRR = parseOptBool(isManualRiskReward);
+    const shouldBackfillInitialSL = trade.initialStopLoss === null && finalStopLoss !== null && finalEntryPrice !== null && (
+      finalDirection === 'BUY' ? finalStopLoss < finalEntryPrice : finalStopLoss > finalEntryPrice
+    );
+    const effectiveInitialSL = trade.initialStopLoss ?? (shouldBackfillInitialSL ? finalStopLoss : null);
+
+    const rrInputForAuto = {
+      direction: finalDirection,
+      entryPrice: finalEntryPrice,
+      stopLoss: finalStopLoss,
+      initialStopLoss: effectiveInitialSL,
+      takeProfit: finalTakeProfit,
+      exitPrice: finalExitPrice,
+      riskAmount: finalRiskAmount,
+      profitLossAmount: finalProfitLoss,
+      result: classification.result,
+    };
+
+    let nextRiskRewardRatio = undefined;
+    let nextIsManualRiskReward = undefined;
+
+    if (hasRRInBody) {
+      if (parsedRR.value !== null) {
+        nextRiskRewardRatio = parsedRR.value;
+        nextIsManualRiskReward = parsedIsManualRR !== undefined ? parsedIsManualRR : true;
+      } else if (parsedIsManualRR === false) {
+        nextRiskRewardRatio = resolveTradePlannedRiskReward(rrInputForAuto);
+        nextIsManualRiskReward = false;
+      } else {
+        nextRiskRewardRatio = null;
+        nextIsManualRiskReward = false;
+      }
+    } else if (parsedIsManualRR === false) {
+      nextRiskRewardRatio = resolveTradePlannedRiskReward(rrInputForAuto);
+      nextIsManualRiskReward = false;
+    } else if (!trade.isManualRiskReward) {
+      const pricingModified =
+        entryPrice !== undefined ||
+        stopLoss !== undefined ||
+        takeProfit !== undefined ||
+        exitPrice !== undefined ||
+        direction !== undefined ||
+        riskAmount !== undefined ||
+        profitLossAmount !== undefined;
+      if (pricingModified) {
+        nextRiskRewardRatio = resolveTradePlannedRiskReward(rrInputForAuto);
+      }
+    }
+
     const updatedTrade = await prisma.trade.update({
       where: { id: req.params.id },
       data: {
@@ -578,6 +668,7 @@ const updateTrade = async (req, res) => {
         direction: finalDirection,
         entryPrice: finalEntryPrice,
         stopLoss: finalStopLoss,
+        ...(shouldBackfillInitialSL && { initialStopLoss: finalStopLoss }),
         takeProfit: takeProfit !== undefined ? parseNum(takeProfit) : undefined,
         exitPrice: finalExitPrice,
         lotSize: finalLotSize,
@@ -585,7 +676,8 @@ const updateTrade = async (req, res) => {
         rewardAmount: rewardAmount !== undefined ? parseNum(rewardAmount) : undefined,
         profitLossAmount: finalProfitLoss,
         profitLossPercent: profitLossPercent !== undefined ? parseNum(profitLossPercent) : undefined,
-        riskRewardRatio: riskRewardRatio !== undefined ? parseNum(riskRewardRatio) : undefined,
+        riskRewardRatio: nextRiskRewardRatio,
+        isManualRiskReward: nextIsManualRiskReward,
         pips: computedPips !== null ? computedPips : undefined,
         result: classification.result,
         status: finalStatus,

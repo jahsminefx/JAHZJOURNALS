@@ -1,9 +1,11 @@
+const hasValue = (value) => value !== undefined && value !== null && value !== '' && !Number.isNaN(Number(value));
+
 export const calculateRiskReward = (direction, entryPrice, stopLoss, takeProfit) => {
-  if (!entryPrice) return { riskDistance: null, rewardDistance: null, riskRewardRatio: null };
+  if (!hasValue(entryPrice)) return { riskDistance: null, rewardDistance: null, riskRewardRatio: null };
 
   const entry = Number.parseFloat(entryPrice);
-  const sl = stopLoss ? Number.parseFloat(stopLoss) : null;
-  const tp = takeProfit ? Number.parseFloat(takeProfit) : null;
+  const sl = hasValue(stopLoss) ? Number.parseFloat(stopLoss) : null;
+  const tp = hasValue(takeProfit) ? Number.parseFloat(takeProfit) : null;
 
   let riskDistance = null;
   let rewardDistance = null;
@@ -106,36 +108,183 @@ export const getTradingSessionLabel = (session, fallback = 'N/A') => {
   }
 };
 
+export const parseRiskRewardInput = (raw) => {
+  if (raw === null || raw === undefined) {
+    return { valid: true, value: null };
+  }
+  const str = String(raw).trim();
+  if (!str) {
+    return { valid: true, value: null };
+  }
+
+  const ratioMatch = str.match(/^1\s*:\s*([+-]?\d+(?:\.\d+)?|\.\d+)\s*r?$/i);
+  const rMatch = !ratioMatch ? str.match(/^([+-]?\d+(?:\.\d+)?|\.\d+)\s*r?$/i) : null;
+  const numericStr = ratioMatch ? ratioMatch[1] : (rMatch ? rMatch[1] : null);
+
+  if (numericStr === null) {
+    return {
+      valid: false,
+      value: null,
+      error: 'Risk/Reward ratio must be between 0 and 100 (e.g., 2.5 or 1:2.5).',
+    };
+  }
+
+  const num = Number(numericStr);
+  if (!Number.isFinite(num) || num < 0 || num > 100) {
+    return {
+      valid: false,
+      value: null,
+      error: 'Risk/Reward ratio must be between 0 and 100 (e.g., 2.5 or 1:2.5).',
+    };
+  }
+
+  const rounded = Number.parseFloat(num.toFixed(2));
+  return { valid: true, value: rounded === 0 ? 0 : rounded };
+};
+
+export const formatRiskReward = (value, fallback = 'N/A') => {
+  if (!hasValue(value)) return fallback;
+  const num = Number.parseFloat(Number(value).toFixed(2));
+  if (!Number.isFinite(num)) return fallback;
+  return `1 : ${num === 0 ? 0 : num}`;
+};
+
+export const isStopLossAtOrPastEntry = (direction, entryPrice, stopLoss) => {
+  if (!hasValue(entryPrice) || !hasValue(stopLoss)) return false;
+  const entry = Number.parseFloat(entryPrice);
+  const sl = Number.parseFloat(stopLoss);
+  const dir = String(direction || '').toUpperCase().trim();
+  if (!Number.isFinite(entry) || !Number.isFinite(sl) || !dir) return false;
+  const epsilon = 1e-6;
+  if (dir === 'BUY') return sl >= entry - epsilon;
+  if (dir === 'SELL') return sl <= entry + epsilon;
+  return false;
+};
+
+export const resolveEffectiveRiskStopLoss = (direction, entryPrice, stopLoss, initialStopLoss) => {
+  const dir = String(direction || '').toUpperCase().trim();
+  const entry = hasValue(entryPrice) ? Number.parseFloat(entryPrice) : null;
+  const sl = hasValue(stopLoss) ? Number.parseFloat(stopLoss) : null;
+  const initialSl = hasValue(initialStopLoss) ? Number.parseFloat(initialStopLoss) : null;
+
+  if (entry === null || !dir) {
+    return { stopLoss: null, riskDistance: null, usedInitialStopLoss: false };
+  }
+
+  if (sl !== null) {
+    const slDist = dir === 'BUY' ? (entry - sl) : (sl - entry);
+    if (slDist > 0) {
+      return { stopLoss: sl, riskDistance: slDist, usedInitialStopLoss: false };
+    }
+  }
+
+  if (initialSl !== null) {
+    const initDist = dir === 'BUY' ? (entry - initialSl) : (initialSl - entry);
+    if (initDist > 0) {
+      return { stopLoss: initialSl, riskDistance: initDist, usedInitialStopLoss: true };
+    }
+  }
+
+  return { stopLoss: null, riskDistance: null, usedInitialStopLoss: false };
+};
+
+export const resolveTradePlannedRiskReward = (trade) => {
+  if (!trade) return null;
+
+  if (hasValue(trade.riskRewardRatio)) {
+    const num = Number.parseFloat(Number(trade.riskRewardRatio).toFixed(2));
+    if (Number.isFinite(num) && num >= 0) {
+      const clean = num === 0 ? 0 : num;
+      if (trade.isManualRiskReward === true || clean > 0 || trade.result === 'BREAKEVEN') {
+        return clean;
+      }
+    }
+  }
+
+  const entry = hasValue(trade.entryPrice) ? Number.parseFloat(trade.entryPrice) : null;
+  const tp = hasValue(trade.takeProfit) ? Number.parseFloat(trade.takeProfit) : null;
+  const exit = hasValue(trade.exitPrice) ? Number.parseFloat(trade.exitPrice) : null;
+  const dir = String(trade.direction || '').toUpperCase().trim();
+
+  const { stopLoss: effectiveSl, riskDistance: effectiveRiskDistance } = resolveEffectiveRiskStopLoss(
+    dir,
+    entry,
+    trade.stopLoss,
+    trade.initialStopLoss
+  );
+
+  // 1. Planned RR from takeProfit and effective stopLoss (current SL, or initialStopLoss if SL moved to BE)
+  if (entry !== null && effectiveSl !== null && tp !== null) {
+    const { riskRewardRatio } = calculateRiskReward(dir, entry, effectiveSl, tp);
+    if (riskRewardRatio !== null && riskRewardRatio >= 0) {
+      return riskRewardRatio === 0 ? 0 : riskRewardRatio;
+    }
+  }
+
+  // 2. Non-negative realized RR from exitPrice and effective stopLoss
+  if (entry !== null && effectiveSl !== null && exit !== null && effectiveRiskDistance > 0) {
+    const rewardDistance = dir === 'BUY' ? (exit - entry) : (entry - exit);
+    if (rewardDistance >= 0) {
+      const ratio = Number.parseFloat((rewardDistance / effectiveRiskDistance).toFixed(2));
+      return ratio === 0 ? 0 : ratio;
+    }
+  }
+
+  // 3. Non-negative PnL to Dollar Risk
+  if (hasValue(trade.riskAmount) && Number.parseFloat(trade.riskAmount) > 0 && hasValue(trade.profitLossAmount)) {
+    const pnl = Number.parseFloat(trade.profitLossAmount);
+    if (pnl >= 0) {
+      const ratio = Number.parseFloat((pnl / Number.parseFloat(trade.riskAmount)).toFixed(2));
+      return ratio === 0 ? 0 : ratio;
+    }
+  }
+
+  return null;
+};
+
 export const resolveTradeRiskReward = (trade) => {
   if (!trade) return null;
+
+  if (trade.isManualRiskReward === true && hasValue(trade.riskRewardRatio)) {
+    const manualVal = Number.parseFloat(Number(trade.riskRewardRatio).toFixed(2));
+    if (Number.isFinite(manualVal)) {
+      return manualVal === 0 ? 0 : manualVal;
+    }
+  }
+
   if (trade.riskRewardRatio !== null && trade.riskRewardRatio !== undefined && !Number.isNaN(Number(trade.riskRewardRatio)) && Number(trade.riskRewardRatio) !== 0) {
     return Number(Number(trade.riskRewardRatio).toFixed(2));
   }
 
-  const entry = trade.entryPrice !== null && trade.entryPrice !== undefined && trade.entryPrice !== '' ? Number.parseFloat(trade.entryPrice) : null;
-  const sl = trade.stopLoss !== null && trade.stopLoss !== undefined && trade.stopLoss !== '' ? Number.parseFloat(trade.stopLoss) : null;
-  const tp = trade.takeProfit !== null && trade.takeProfit !== undefined && trade.takeProfit !== '' ? Number.parseFloat(trade.takeProfit) : null;
-  const exit = trade.exitPrice !== null && trade.exitPrice !== undefined && trade.exitPrice !== '' ? Number.parseFloat(trade.exitPrice) : null;
+  const entry = hasValue(trade.entryPrice) ? Number.parseFloat(trade.entryPrice) : null;
+  const tp = hasValue(trade.takeProfit) ? Number.parseFloat(trade.takeProfit) : null;
+  const exit = hasValue(trade.exitPrice) ? Number.parseFloat(trade.exitPrice) : null;
   const dir = String(trade.direction || '').toUpperCase().trim();
 
-  // 1. Realized RR from exitPrice and stopLoss
-  if (entry !== null && sl !== null && exit !== null && entry !== sl) {
-    const riskDistance = dir === 'BUY' ? (entry - sl) : (sl - entry);
-    if (riskDistance > 0) {
-      const rewardDistance = dir === 'BUY' ? (exit - entry) : (entry - exit);
-      return Number.parseFloat((rewardDistance / riskDistance).toFixed(2));
-    }
+  const { stopLoss: effectiveSl, riskDistance: effectiveRiskDistance } = resolveEffectiveRiskStopLoss(
+    dir,
+    entry,
+    trade.stopLoss,
+    trade.initialStopLoss
+  );
+
+  // 1. Realized RR from exitPrice and effective stopLoss
+  if (entry !== null && effectiveSl !== null && exit !== null && effectiveRiskDistance > 0) {
+    const rewardDistance = dir === 'BUY' ? (exit - entry) : (entry - exit);
+    const ratio = Number.parseFloat((rewardDistance / effectiveRiskDistance).toFixed(2));
+    return ratio === 0 ? 0 : ratio;
   }
 
-  // 2. Planned RR from takeProfit and stopLoss
-  if (entry !== null && sl !== null && tp !== null && entry !== sl) {
-    const { riskRewardRatio } = calculateRiskReward(dir, entry, sl, tp);
+  // 2. Planned RR from takeProfit and effective stopLoss
+  if (entry !== null && effectiveSl !== null && tp !== null) {
+    const { riskRewardRatio } = calculateRiskReward(dir, entry, effectiveSl, tp);
     if (riskRewardRatio !== null) return riskRewardRatio;
   }
 
   // 3. PnL to Dollar Risk
   if (trade.riskAmount && Number.parseFloat(trade.riskAmount) > 0 && trade.profitLossAmount !== null && trade.profitLossAmount !== undefined) {
-    return Number.parseFloat((Number.parseFloat(trade.profitLossAmount) / Number.parseFloat(trade.riskAmount)).toFixed(2));
+    const ratio = Number.parseFloat((Number.parseFloat(trade.profitLossAmount) / Number.parseFloat(trade.riskAmount)).toFixed(2));
+    return ratio === 0 ? 0 : ratio;
   }
 
   return null;

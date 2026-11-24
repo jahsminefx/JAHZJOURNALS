@@ -749,7 +749,7 @@ export default function DailyReviewPage() {
                             <span className="font-semibold text-foreground">
                               {t.resolvedRR > 0 ? `${t.resolvedRR}R` : `${t.resolvedRR}R`}
                             </span>
-                          ) : t.riskRewardRatio ? (
+                          ) : t.riskRewardRatio !== null && t.riskRewardRatio !== undefined && t.riskRewardRatio !== '' ? (
                             <span className="font-semibold text-foreground">
                               1:{t.riskRewardRatio}
                             </span>

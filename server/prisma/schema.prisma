@@ -688,6 +688,7 @@ model Trade {
   breakEvenEvidenceSource String?
   breakEvenEvidenceStatus String?
   isManualResultOverride  Boolean   @default(false)
+  isManualRiskReward      Boolean   @default(false)
   classificationSource    String?
   resultCalculatedAt      DateTime?
 

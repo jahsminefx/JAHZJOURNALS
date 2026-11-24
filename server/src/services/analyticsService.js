@@ -89,6 +89,7 @@ const calculateSummary = (trades = []) => {
   const breakEvenRateDecimal = safeDivide(breakevens.length, closedTrades.length);
   const beProtectedCount = trades.filter((t) => t.breakEvenActivated === true).length;
   const riskRewardValues = trades
+    .filter((trade) => trade.riskRewardRatio !== null && trade.riskRewardRatio !== undefined && trade.riskRewardRatio !== '')
     .map((trade) => Number(trade.riskRewardRatio))
     .filter((value) => Number.isFinite(value));
 
@@ -299,6 +300,7 @@ const calculateRiskRewardDistribution = (trades = []) => {
   ];
 
   trades.forEach((trade) => {
+    if (trade.riskRewardRatio === null || trade.riskRewardRatio === undefined || trade.riskRewardRatio === '') return;
     const value = Number(trade.riskRewardRatio);
     if (!Number.isFinite(value)) return;
     const bucket = buckets.find((item) => value >= item.min && value < item.max);

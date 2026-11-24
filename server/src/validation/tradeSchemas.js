@@ -16,6 +16,11 @@ const optionalBoolean = z.union([
   z.enum(['true', 'false']).transform((v) => v === 'true'),
   emptyValue,
 ]).optional();
+const optionalNonNegativeRiskReward = z.union([
+  z.number().min(0, 'Risk/Reward ratio cannot be negative').max(100, 'Risk/Reward ratio cannot exceed 100'),
+  z.string().regex(/^\s*(?:1\s*:\s*)?(\d+(?:\.\d+)?|\.\d+)\s*r?\s*$/i, 'Risk/Reward ratio must be 0 or greater (e.g., 2.5 or 1:2.5)'),
+  emptyValue,
+]).optional();
 const emotionIntensity = z.union([
   z.number(),
   z.string().regex(/^\d+$/).transform(Number),
@@ -44,6 +49,8 @@ const quickTradeSchema = baseTradeContextSchema.extend({
   exitPrice: optionalFloat,
   lotSize: optionalFloat,
   riskAmount: optionalFloat,
+  riskRewardRatio: optionalNonNegativeRiskReward,
+  isManualRiskReward: optionalBoolean,
   profitLossAmount: optionalFloat,
   result: z.enum(['OPEN', ...closedTradeResults]).optional(),
   

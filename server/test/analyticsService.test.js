@@ -85,3 +85,22 @@ test('emotion grouping separates associated trade count from log count', () => {
   assert.equal(grouped[0].associatedTradeCount, 1);
   assert.equal(grouped[0].emotionLogCount, 2);
 });
+
+test('calculateSummary and calculateRiskRewardDistribution exclude null R:R while preserving explicit 0', () => {
+  const { calculateRiskRewardDistribution } = require('../src/services/analyticsService');
+  const trades = [
+    makeTrade({ id: 'rr-2', result: 'WIN', profitLossAmount: 200, riskRewardRatio: 2.0, entryTime: '2026-01-01T10:00:00Z' }),
+    makeTrade({ id: 'rr-null', result: 'BREAKEVEN', profitLossAmount: 0, riskRewardRatio: null, entryTime: '2026-01-02T10:00:00Z' }),
+    makeTrade({ id: 'rr-zero', result: 'BREAKEVEN', profitLossAmount: 0, riskRewardRatio: 0, entryTime: '2026-01-03T10:00:00Z' }),
+  ];
+
+  // null trade must NOT dilute average or count in < 1R; explicit 0 DOES participate
+  const summary = calculateSummary(trades);
+  assert.equal(summary.averageRiskRewardRatio, 1.0);
+
+  const dist = calculateRiskRewardDistribution(trades);
+  const lt1Bucket = dist.find((b) => b.key === 'lt_1');
+  const twoToThreeBucket = dist.find((b) => b.key === '2_to_3');
+  assert.equal(lt1Bucket.count, 1, 'Only explicit 0 R:R trade should fall into < 1R, not null R:R');
+  assert.equal(twoToThreeBucket.count, 1);
+});

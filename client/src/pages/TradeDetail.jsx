@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Edit3, Image as ImageIcon, Trash2, Brain, Maximize2, Share2,
-  GraduationCap, AlertTriangle, CheckCircle2, MessageSquare, Send
+  GraduationCap, AlertTriangle, CheckCircle2, MessageSquare, Send, Check, X, RotateCcw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { resolveImageUrl } from '../utils/api';
@@ -12,7 +12,7 @@ import ImageModal from '../components/common/ImageModal';
 import ShareTradeModal from '../components/share/ShareTradeModal';
 import ShareTradeToCohortModal from '../components/share/ShareTradeToCohortModal';
 import TradeOutcomeBadge from '../components/trades/TradeOutcomeBadge';
-import { getTradingSessionLabel } from '../utils/tradeCalculations';
+import { formatRiskReward, getTradingSessionLabel, parseRiskRewardInput } from '../utils/tradeCalculations';
 import { ShieldCheck } from 'lucide-react';
 
 const TradeDetail = () => {
@@ -32,6 +32,76 @@ const TradeDetail = () => {
   const { user } = useAuth();
   const [replyTextMap, setReplyTextMap] = useState({});
   const [submittingReplyId, setSubmittingReplyId] = useState(null);
+  const [isEditingRR, setIsEditingRR] = useState(false);
+  const [rrInput, setRrInput] = useState('');
+  const [rrError, setRrError] = useState('');
+  const [savingRR, setSavingRR] = useState(false);
+
+  const startEditRR = () => {
+    setRrInput(
+      trade?.riskRewardRatio !== null && trade?.riskRewardRatio !== undefined
+        ? String(trade.riskRewardRatio)
+        : ''
+    );
+    setRrError('');
+    setIsEditingRR(true);
+  };
+
+  const cancelEditRR = () => {
+    setIsEditingRR(false);
+    setRrError('');
+  };
+
+  const saveRR = async () => {
+    const parsed = parseRiskRewardInput(rrInput);
+    if (!parsed.valid) {
+      setRrError(parsed.error);
+      return;
+    }
+    setSavingRR(true);
+    setRrError('');
+    try {
+      const { data } = await api.put(`/trades/${id}`, {
+        riskRewardRatio: parsed.value,
+        isManualRiskReward: parsed.value !== null,
+      });
+      setTrade((prev) => ({
+        ...prev,
+        riskRewardRatio: data.riskRewardRatio,
+        isManualRiskReward: data.isManualRiskReward,
+      }));
+      setIsEditingRR(false);
+      toast.success('Risk/Reward updated.');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update Risk/Reward.';
+      setRrError(msg);
+      toast.error(msg);
+    } finally {
+      setSavingRR(false);
+    }
+  };
+
+  const resetAutoRR = async () => {
+    setSavingRR(true);
+    setRrError('');
+    try {
+      const { data } = await api.put(`/trades/${id}`, {
+        riskRewardRatio: null,
+        isManualRiskReward: false,
+      });
+      setTrade((prev) => ({
+        ...prev,
+        riskRewardRatio: data.riskRewardRatio,
+        isManualRiskReward: data.isManualRiskReward,
+      }));
+      setIsEditingRR(false);
+      toast.success('Risk/Reward reset to auto.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reset Risk/Reward.');
+    } finally {
+      setSavingRR(false);
+    }
+  };
 
   const handleSendFeedbackReply = async (feedbackId) => {
     const text = (replyTextMap[feedbackId] || '').trim();
@@ -555,9 +625,23 @@ const TradeDetail = () => {
               <div className="flex justify-between"><span className="text-muted">Status</span><span className="font-medium text-foreground">{trade.status}</span></div>
               <div className="flex justify-between items-center"><span className="text-muted">Result</span><TradeOutcomeBadge trade={trade} /></div>
               {trade.breakEvenActivated && (
-                <div className="flex justify-between items-center text-xs bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 text-amber-400">
+                <div className="space-y-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 text-xs text-amber-700 dark:text-amber-400">
+                  <div className="flex justify-between items-center gap-2">
                   <span className="flex items-center gap-1 font-semibold"><ShieldCheck size={14} /> Protected at Break-Even</span>
                   <span className="font-mono text-muted-foreground">{trade.breakEvenPrice ? `@ ${trade.breakEvenPrice}` : (trade.breakEvenEvidenceSource || 'User Confirmed')}</span>
+                  </div>
+                  {(trade.riskRewardRatio === null || trade.riskRewardRatio === undefined) && !isEditingRR && (
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-500/20 text-[11px]">
+                      <span className="text-amber-800 dark:text-amber-300/90">SL moved to break-even — R:R is unset.</span>
+                      <button
+                        type="button"
+                        onClick={startEditRR}
+                        className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0"
+                      >
+                        Set R:R
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {(trade.grossProfit !== null && trade.grossProfit !== undefined || trade.commission !== null && trade.commission !== undefined) && (
@@ -568,7 +652,96 @@ const TradeDetail = () => {
                 </div>
               )}
               <div className="flex justify-between"><span className="text-muted">P/L</span><span className={`font-bold ${trade.profitLossAmount > 0 ? 'text-green-400' : trade.profitLossAmount < 0 ? 'text-red-400' : 'text-muted'}`}>{trade.profitLossAmount > 0 ? '+$' : '$'}{trade.profitLossAmount || 0}</span></div>
-              <div className="flex justify-between"><span className="text-muted">Risk/Reward</span><span className="font-medium text-foreground">{trade.riskRewardRatio || 'N/A'}</span></div>
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-muted">Risk/Reward</span>
+                  {!isEditingRR ? (
+                    <div className="flex items-center gap-2">
+                      {trade.isManualRiskReward && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20">
+                          Manual
+                        </span>
+                      )}
+                      <span className="font-medium text-foreground">{formatRiskReward(trade.riskRewardRatio)}</span>
+                      <button
+                        type="button"
+                        onClick={startEditRR}
+                        title="Edit Risk/Reward Ratio"
+                        aria-label="Edit Risk/Reward Ratio"
+                        className="p-1 rounded-md text-muted hover:text-foreground hover:bg-surface border border-transparent hover:border-border transition-colors"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <div className={`flex items-center bg-surface border rounded-lg px-2 py-1 text-xs font-semibold w-28 ${
+                        rrError ? 'border-rose-500' : 'border-border focus-within:border-emerald-500'
+                      }`}>
+                        <span className="text-muted mr-1 select-none">1 :</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={rrInput}
+                          onChange={(e) => {
+                            setRrInput(e.target.value);
+                            if (rrError) setRrError('');
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              saveRR();
+                            } else if (e.key === 'Escape') {
+                              e.preventDefault();
+                              cancelEditRR();
+                            }
+                          }}
+                          placeholder="2.5"
+                          disabled={savingRR}
+                          autoFocus
+                          aria-label="Risk Reward Ratio Value"
+                          className="w-full min-w-0 bg-transparent text-foreground focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={saveRR}
+                        disabled={savingRR}
+                        title="Save R:R"
+                        aria-label="Save R:R"
+                        className="p-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition disabled:opacity-50"
+                      >
+                        <Check size={13} />
+                      </button>
+                      {trade.isManualRiskReward && (
+                        <button
+                          type="button"
+                          onClick={resetAutoRR}
+                          disabled={savingRR}
+                          title="Reset to Auto"
+                          aria-label="Reset to Auto"
+                          className="p-1.5 rounded-lg bg-surface border border-border text-indigo-600 dark:text-indigo-400 hover:bg-surface-muted transition disabled:opacity-50"
+                        >
+                          <RotateCcw size={13} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={cancelEditRR}
+                        disabled={savingRR}
+                        title="Cancel"
+                        aria-label="Cancel R:R edit"
+                        className="p-1.5 rounded-lg bg-surface border border-border text-muted hover:text-foreground transition disabled:opacity-50"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {isEditingRR && rrError && (
+                  <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 text-right">{rrError}</p>
+                )}
+              </div>
               <div className="flex justify-between"><span className="text-muted">Risk Amount</span><span className="font-medium text-foreground">{trade.riskAmount || 'N/A'}</span></div>
               
               {/* SL / TP & Modification Details */}

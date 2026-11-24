@@ -4,7 +4,7 @@ const { encryptCredential, decryptCredential } = require('../utils/cryptoUtils')
 const { canCreateTrades, canConnectCloudSyncAccount, hasFeatureAccess } = require('../services/entitlementService');
 const { getEffectivePlanKey, buildLimitReachedPayload } = require('../config/plans');
 const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions, getAccountConnectionStatus, fetchAccountInformation } = require('../services/metaApiService');
-const { detectTradingSession, resolveTradeRiskReward } = require('../utils/tradeCalculations');
+const { detectTradingSession, resolveTradeRiskReward, resolveTradePlannedRiskReward } = require('../utils/tradeCalculations');
 const { calculatePips } = require('../utils/pipCalculator');
 const {
   classifyTrade,
@@ -273,7 +273,8 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
       exitTime: validExitTime,
       notesBefore: item.comment || 'Auto-Synced from MetaTrader Cloud Account',
     };
-    incomingTrade.riskRewardRatio = resolveTradeRiskReward(incomingTrade);
+    incomingTrade.riskRewardRatio = resolveTradePlannedRiskReward(incomingTrade);
+    incomingTrade.isManualRiskReward = false;
 
     // Cross-check with existing trades in JahzJournals DB
     const match = findMatchingTrade(incomingTrade, existingTrades);
@@ -282,13 +283,27 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
       skippedCount++;
       // Check if existing trade needs enrichment (closing open trade, adding ticket ID or exit details)
       const isClosingOpenTrade = (match.status === 'ACTIVE' || match.status === 'PLANNED') && incomingTrade.status === 'CLOSED';
+      const enrichedRR = match.isManualRiskReward
+        ? match.riskRewardRatio
+        : resolveTradePlannedRiskReward({
+            direction: match.direction || incomingTrade.direction,
+            entryPrice: match.entryPrice ?? incomingTrade.entryPrice,
+            stopLoss: incomingTrade.stopLoss ?? match.stopLoss,
+            initialStopLoss: match.initialStopLoss ?? incomingTrade.initialStopLoss,
+            takeProfit: match.takeProfit ?? incomingTrade.takeProfit,
+            exitPrice: incomingTrade.exitPrice ?? match.exitPrice,
+            riskAmount: match.riskAmount,
+            profitLossAmount: incomingTrade.profitLossAmount ?? match.profitLossAmount,
+            result: incomingTrade.result,
+          });
+      const shouldPopulateRR = !match.isManualRiskReward && match.riskRewardRatio === null && enrichedRR !== null;
       const needsUpdate = isClosingOpenTrade ||
         (!match.externalId && incomingTrade.externalId) ||
         (incomingTrade.exitPrice !== null && match.exitPrice === null) ||
         (incomingTrade.profitLossAmount !== null && match.profitLossAmount === null) ||
         (!match.session && session) ||
         (match.pips === null && pips !== null) ||
-        (match.riskRewardRatio === null && incomingTrade.riskRewardRatio !== null);
+        shouldPopulateRR;
 
       if (needsUpdate) {
         const effectiveGross = incomingTrade.grossProfit ?? match.grossProfit;
@@ -342,7 +357,7 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
             ...(incomingTrade.exitTime && { exitTime: incomingTrade.exitTime }),
             ...((!match.session && session) && { session }),
             ...((match.pips === null && pips !== null) && { pips }),
-            ...((match.riskRewardRatio === null && incomingTrade.riskRewardRatio !== null) && { riskRewardRatio: incomingTrade.riskRewardRatio }),
+            ...(shouldPopulateRR && { riskRewardRatio: enrichedRR }),
           },
           pnlDelta: (incomingTrade.profitLossAmount || 0) - (match.profitLossAmount || 0),
         });
