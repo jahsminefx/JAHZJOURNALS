@@ -7,12 +7,13 @@
 
 const FF_SCHEDULE_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 const TV_EVENTS_URL = 'https://economic-calendar.tradingview.com/events';
+const TV_COUNTRIES = 'US,EU,GB,JP,AU,CA,CH,NZ,CN,DE,FR,IT,ES,ZA,NG';
 
 const DEFAULT_FF_TTL_MS = 20 * 60 * 1000; // 20 minutes
 const DEFAULT_FF_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes minimum between FF requests (429 protection)
 
 const DEFAULT_TV_TTL_MS = 60 * 1000; // 60 seconds normal cache
-const DEFAULT_TV_COOLDOWN_MS = 4 * 1000; // 4 seconds minimum during active release window
+const DEFAULT_TV_COOLDOWN_MS = 2 * 1000; // 2 seconds minimum during active release window
 
 function normalizeCanonicalKey(country, title, dateIso) {
   const curr = String(country || 'ALL').trim().toUpperCase();
@@ -286,6 +287,133 @@ function createForexFactoryProvider() {
   });
 }
 
+async function fetchTradingViewEventsForRange({
+  fromIso,
+  toIso,
+  fetchImpl = globalThis.fetch,
+}) {
+  const url = `${TV_EVENTS_URL}?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}&countries=${TV_COUNTRIES}`;
+  const res = await fetchImpl(url, {
+    headers: {
+      Origin: 'https://www.tradingview.com',
+      Referer: 'https://www.tradingview.com/',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    },
+    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(7000) : undefined,
+  });
+
+  if (res.status === 429) {
+    const err = new Error('TradingView upstream rate limit (429)');
+    err.status = 429;
+    throw err;
+  }
+
+  if (!res.ok) {
+    const err = new Error(`TradingView HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+
+  const json = await res.json();
+  return Array.isArray(json.result) ? json.result : [];
+}
+
+/**
+ * Bounded LRU historical range cache with in-flight deduplication and 429 cooldown backoff.
+ */
+function createHistoricalRangeFetcher({
+  maxEntries = 40,
+  pastTtlMs = 15 * 60 * 1000,
+  currentTtlMs = 60 * 1000,
+} = {}) {
+  const cache = new Map();
+  const inflight = new Map();
+  let consecutiveErrors = 0;
+  let nextAllowedAttemptAt = 0;
+
+  function touchCacheEntry(key, entry) {
+    if (cache.has(key)) {
+      cache.delete(key);
+    } else if (cache.size >= maxEntries) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey !== undefined) {
+        cache.delete(oldestKey);
+      }
+    }
+    cache.set(key, entry);
+  }
+
+  return {
+    async fetch({
+      fromIso,
+      toIso,
+      force = false,
+      nowMs = Date.now(),
+      fetchImpl = globalThis.fetch,
+    } = {}) {
+      const key = `${fromIso}|${toIso}`;
+      const existingInflight = inflight.get(key);
+      if (existingInflight) {
+        const result = await existingInflight;
+        return { ...result, deduped: true };
+      }
+
+      const cached = cache.get(key);
+      const toMs = new Date(toIso).getTime();
+      const isClosedPastWindow = Number.isFinite(toMs) && toMs < nowMs - 24 * 60 * 60 * 1000;
+      const ttl = isClosedPastWindow ? pastTtlMs : currentTtlMs;
+
+      if (!force && cached && nowMs - cached.fetchedAt < ttl) {
+        touchCacheEntry(key, cached);
+        return { data: cached.data, fromCache: true, deduped: false, error: null };
+      }
+
+      if (nowMs < nextAllowedAttemptAt) {
+        return {
+          data: cached ? cached.data : [],
+          fromCache: Boolean(cached),
+          deduped: false,
+          error: 'TradingView historical fetch in cooldown backoff',
+        };
+      }
+
+      const promise = (async () => {
+        try {
+          const items = await fetchTradingViewEventsForRange({ fromIso, toIso, fetchImpl });
+          consecutiveErrors = 0;
+          nextAllowedAttemptAt = 0;
+          touchCacheEntry(key, { data: items, fetchedAt: nowMs });
+          return { data: items, fromCache: false, deduped: false, error: null };
+        } catch (err) {
+          consecutiveErrors += 1;
+          const is429 = err?.status === 429 || /429|rate limit/i.test(err?.message || '');
+          const cooldownMs = is429
+            ? 60 * 1000
+            : Math.min(5 * 60 * 1000, 5000 * Math.pow(2, Math.min(5, consecutiveErrors - 1)));
+          nextAllowedAttemptAt = nowMs + cooldownMs;
+          return {
+            data: cached ? cached.data : [],
+            fromCache: Boolean(cached),
+            deduped: false,
+            error: err?.message || 'Unknown historical provider error',
+          };
+        } finally {
+          inflight.delete(key);
+        }
+      })();
+
+      inflight.set(key, promise);
+      return await promise;
+    },
+    clear() {
+      cache.clear();
+      inflight.clear();
+      consecutiveErrors = 0;
+      nextAllowedAttemptAt = 0;
+    },
+  };
+}
+
 function createTradingViewProvider() {
   return new ManagedFeedProvider({
     name: 'tradingview-actuals',
@@ -297,47 +425,31 @@ function createTradingViewProvider() {
       const dayOfWeek = d.getUTCDay();
       const startOfWeek = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dayOfWeek - 1, 0, 0, 0));
       const endOfWeek = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + (8 - dayOfWeek), 23, 59, 59));
-      const countries = 'US,EU,GB,JP,AU,CA,CH,NZ,CN,DE,FR,IT,ES,ZA,NG';
-      const url = `${TV_EVENTS_URL}?from=${encodeURIComponent(startOfWeek.toISOString())}&to=${encodeURIComponent(endOfWeek.toISOString())}&countries=${countries}`;
-
-      const res = await fetchImpl(url, {
-        headers: {
-          Origin: 'https://www.tradingview.com',
-          Referer: 'https://www.tradingview.com/',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-        signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(7000) : undefined,
+      return fetchTradingViewEventsForRange({
+        fromIso: startOfWeek.toISOString(),
+        toIso: endOfWeek.toISOString(),
+        fetchImpl,
       });
-
-      if (res.status === 429) {
-        const err = new Error('TradingView upstream rate limit (429)');
-        err.status = 429;
-        throw err;
-      }
-
-      if (!res.ok) {
-        const err = new Error(`TradingView HTTP ${res.status}`);
-        err.status = res.status;
-        throw err;
-      }
-
-      const json = await res.json();
-      return Array.isArray(json.result) ? json.result : [];
     },
   });
 }
 
 const defaultScheduleProvider = createForexFactoryProvider();
 const defaultActualsProvider = createTradingViewProvider();
+const defaultHistoricalProvider = createHistoricalRangeFetcher();
 const defaultObservationStore = new ReleaseObservationStore();
 
 module.exports = {
+  TV_COUNTRIES,
   ManagedFeedProvider,
   ReleaseObservationStore,
   createForexFactoryProvider,
   createTradingViewProvider,
+  fetchTradingViewEventsForRange,
+  createHistoricalRangeFetcher,
   defaultScheduleProvider,
   defaultActualsProvider,
+  defaultHistoricalProvider,
   defaultObservationStore,
   normalizeCanonicalKey,
 };

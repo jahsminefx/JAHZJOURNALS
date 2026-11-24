@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
   getCalendarEvents,
+  streamCalendarUpdates,
   getUpcomingEvents,
   checkTradeNews,
   getAlertPreferences,
@@ -18,6 +19,7 @@ const {
 
 // Public calendar data endpoints (accessible to visitors without logging in & authenticated users)
 router.get('/', getCalendarEvents);
+router.get('/stream', streamCalendarUpdates);
 router.get('/upcoming', getUpcomingEvents);
 router.post('/check-trade-news', protect, checkTradeNews);
 

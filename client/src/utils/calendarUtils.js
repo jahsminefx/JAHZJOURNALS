@@ -26,6 +26,25 @@ export const CALENDAR_CATEGORIES = [
 
 export const ALLOWED_CATEGORY_IDS = CALENDAR_CATEGORIES.map((c) => c.id);
 export const ALLOWED_VIEWS = ['today', 'tomorrow', 'this_week', 'upcoming'];
+export const HISTORICAL_RANGES = ['yesterday', 'last_week', 'past_7_days', 'custom'];
+
+export function isHistoricalRange(range) {
+  return HISTORICAL_RANGES.includes(range);
+}
+
+/**
+ * Returns the Sunday-to-Saturday date key bounds for the previous calendar week.
+ */
+export function getLastWeekRangeKeys(todayKey) {
+  if (!todayKey) return { fromKey: '', toKey: '' };
+  const [y, m, d] = todayKey.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d, 12, 0, 0)).getUTCDay();
+  const thisWeekStartKey = addDaysToDateKey(todayKey, -dow);
+  return {
+    fromKey: addDaysToDateKey(thisWeekStartKey, -7),
+    toKey: addDaysToDateKey(thisWeekStartKey, -1),
+  };
+}
 
 export const DEFAULT_CALENDAR_PREFERENCES = {
   useDeviceTimezone: true,
@@ -289,9 +308,11 @@ export function formatDateGroupHeaderInZone(isoString, timeZone = 'UTC', nowMs =
 
   const eventKey = getDateKeyInZone(d, tz);
   const todayKey = getDateKeyInZone(nowMs, tz);
+  const yesterdayKey = addDaysToDateKey(todayKey, -1);
   const tomorrowKey = addDaysToDateKey(todayKey, 1);
 
   if (eventKey === todayKey) return `Today — ${formatted}`;
+  if (eventKey === yesterdayKey) return `Yesterday — ${formatted}`;
   if (eventKey === tomorrowKey) return `Tomorrow — ${formatted}`;
   return formatted;
 }
@@ -299,18 +320,45 @@ export function formatDateGroupHeaderInZone(isoString, timeZone = 'UTC', nowMs =
 /**
  * Checks whether an event belongs to the selected date range in the chosen IANA time zone.
  */
-export function isEventInSelectedRange(eventIso, range = 'this_week', timeZone = 'UTC', nowMs = Date.now()) {
+export function isEventInSelectedRange(
+  eventIso,
+  range = 'this_week',
+  timeZone = 'UTC',
+  nowMs = Date.now(),
+  customRange = null
+) {
   if (!eventIso) return false;
   const tz = isValidTimeZone(timeZone) ? timeZone : 'UTC';
   const evMs = new Date(eventIso).getTime();
   if (Number.isNaN(evMs)) return false;
 
+  const evKey = getDateKeyInZone(evMs, tz);
+  const todayKey = getDateKeyInZone(nowMs, tz);
+
   if (range === 'today') {
-    return getDateKeyInZone(evMs, tz) === getDateKeyInZone(nowMs, tz);
+    return evKey === todayKey;
+  }
+  if (range === 'yesterday') {
+    return evKey === addDaysToDateKey(todayKey, -1);
   }
   if (range === 'tomorrow') {
-    const todayKey = getDateKeyInZone(nowMs, tz);
-    return getDateKeyInZone(evMs, tz) === addDaysToDateKey(todayKey, 1);
+    return evKey === addDaysToDateKey(todayKey, 1);
+  }
+  if (range === 'last_week') {
+    const { fromKey, toKey } = getLastWeekRangeKeys(todayKey);
+    return evKey >= fromKey && evKey <= toKey;
+  }
+  if (range === 'past_7_days') {
+    const fromKey = addDaysToDateKey(todayKey, -7);
+    return evKey >= fromKey && evKey <= todayKey && evMs <= nowMs;
+  }
+  if (range === 'custom') {
+    const rawFrom = customRange?.from;
+    const rawTo = customRange?.to;
+    if (!rawFrom || !rawTo) return true;
+    const fromKey = rawFrom <= rawTo ? rawFrom : rawTo;
+    const toKey = rawFrom <= rawTo ? rawTo : rawFrom;
+    return evKey >= fromKey && evKey <= toKey;
   }
   if (range === 'upcoming') {
     return evMs >= nowMs;
@@ -827,6 +875,8 @@ export function areFiltersEqualToSavedPreferences(activeFilters = {}, savedPrefs
  */
 export function buildFilterSummaryText({
   range = 'this_week',
+  customFrom = '',
+  customTo = '',
   currencies = [],
   impacts = [],
   categories = [],
@@ -838,8 +888,18 @@ export function buildFilterSummaryText({
   const rangeLabel =
     range === 'today'
       ? 'Today'
+      : range === 'yesterday'
+      ? 'Yesterday'
       : range === 'tomorrow'
       ? 'Tomorrow'
+      : range === 'last_week'
+      ? 'Last Week'
+      : range === 'past_7_days'
+      ? 'Past 7 Days'
+      : range === 'custom'
+      ? customFrom && customTo
+        ? `${customFrom} to ${customTo}`
+        : 'Custom Dates'
       : range === 'upcoming'
       ? 'Upcoming'
       : 'This Week';
@@ -934,4 +994,52 @@ export function getAdaptiveRefreshPlan(events = [], nowMs = Date.now(), errorCou
     intervalMs: Math.min(600000, 120000 * backoffMult),
     reason: 'Standard background refresh',
   };
+}
+
+function getCanonicalMatchKey(ev) {
+  if (!ev || !ev.date) return '';
+  const curr = String(ev.country || 'ALL').trim().toUpperCase();
+  const cleanTitle = String(ev.title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const minuteBucket = new Date(ev.date).toISOString().slice(0, 16);
+  return `${curr}|${cleanTitle}|${minuteBucket}`;
+}
+
+/**
+ * Merges incoming SSE actuals updates into existing calendar events without mutating state.
+ */
+export function mergeLiveActualUpdates(existingEvents = [], updatedEvents = []) {
+  if (!Array.isArray(existingEvents) || !Array.isArray(updatedEvents) || updatedEvents.length === 0) {
+    return { events: existingEvents || [], updatedIds: [] };
+  }
+
+  const byId = new Map();
+  const byKey = new Map();
+
+  for (const upd of updatedEvents) {
+    if (!upd) continue;
+    if (upd.id) byId.set(upd.id, upd);
+    const key = getCanonicalMatchKey(upd);
+    if (key) byKey.set(key, upd);
+  }
+
+  const updatedIds = [];
+  const nextEvents = existingEvents.map((ev) => {
+    const match = (ev.id && byId.get(ev.id)) || byKey.get(getCanonicalMatchKey(ev));
+    if (!match) return ev;
+
+    updatedIds.push(ev.id || match.id);
+    return {
+      ...ev,
+      actual: match.actual ?? ev.actual,
+      forecast: match.forecast || ev.forecast,
+      previous: match.previous || ev.previous,
+      actualVsForecast: match.actualVsForecast ?? ev.actualVsForecast,
+      receivedAt: match.receivedAt || ev.receivedAt,
+      isRevised: typeof match.isRevised === 'boolean' ? match.isRevised : ev.isRevised,
+      previousActual: match.previousActual ?? ev.previousActual,
+      releaseState: match.releaseState || ev.releaseState,
+    };
+  });
+
+  return { events: nextEvents, updatedIds };
 }

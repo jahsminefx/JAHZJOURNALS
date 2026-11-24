@@ -2,11 +2,68 @@ const { getInstrumentConfig } = require('./instrumentService');
 const {
   defaultScheduleProvider,
   defaultActualsProvider,
+  defaultHistoricalProvider,
   defaultObservationStore,
+  normalizeCanonicalKey,
 } = require('./calendarProviders');
 
 let cachedMergedEvents = [];
 let lastMergedAt = 0;
+const actualUpdateListeners = new Set();
+
+function subscribeToActualUpdates(listener) {
+  if (typeof listener !== 'function') {
+    return () => {};
+  }
+  actualUpdateListeners.add(listener);
+  return () => {
+    actualUpdateListeners.delete(listener);
+  };
+}
+
+function buildEventActualSnapshotMap(events = []) {
+  const map = new Map();
+  for (const ev of events) {
+    if (!ev || !ev.date) continue;
+    map.set(normalizeCanonicalKey(ev.country, ev.title, ev.date), ev);
+  }
+  return map;
+}
+
+function emitActualChanges(prevMap, nextEvents, shouldEmit, nowMs) {
+  if (!shouldEmit || actualUpdateListeners.size === 0 || !prevMap || prevMap.size === 0) {
+    return;
+  }
+
+  const changedEvents = [];
+  for (const ev of nextEvents) {
+    const actualStr = ev?.actual ? String(ev.actual).trim() : '';
+    if (!actualStr) continue;
+    const prev = prevMap.get(normalizeCanonicalKey(ev.country, ev.title, ev.date));
+    const prevActual = prev?.actual ? String(prev.actual).trim() : '';
+    if (actualStr !== prevActual) {
+      changedEvents.push(ev);
+    }
+  }
+
+  if (changedEvents.length === 0) {
+    return;
+  }
+
+  const payload = {
+    type: 'actuals_updated',
+    syncedAt: new Date(nowMs).toISOString(),
+    updatedEvents: changedEvents,
+  };
+
+  for (const listener of actualUpdateListeners) {
+    try {
+      listener(payload);
+    } catch (err) {
+      console.warn('[CalendarService] Actual update listener error:', err?.message || err);
+    }
+  }
+}
 
 const EVENT_CATEGORIES = [
   { id: 'INFLATION', label: 'Inflation' },
@@ -676,9 +733,10 @@ function enrichEventMetadata(ev, nowMs = Date.now(), isLiveUpdate = false) {
  * Fetches events via provider interface + enriches with live actuals, categories, and release state
  */
 async function fetchCalendarEvents(forceRefresh = false, options = {}) {
-  const now = Date.now();
+  const now = options.nowMs || Date.now();
   const scheduleProvider = options.scheduleProvider || defaultScheduleProvider;
   const actualsProvider = options.actualsProvider || defaultActualsProvider;
+  const prevMap = buildEventActualSnapshotMap(cachedMergedEvents);
 
   // Detect active release window (-30s to +15m without actual) to automatically bypass normal 60s TV TTL
   const hasReleasingEventWithoutActual = cachedMergedEvents.some((ev) => {
@@ -733,6 +791,7 @@ async function fetchCalendarEvents(forceRefresh = false, options = {}) {
       );
     });
     lastMergedAt = now;
+    emitActualChanges(prevMap, cachedMergedEvents, hadPriorCache, now);
     return cachedMergedEvents;
   }
 
@@ -740,6 +799,7 @@ async function fetchCalendarEvents(forceRefresh = false, options = {}) {
   if (tvFallback.length > 0) {
     cachedMergedEvents = tvFallback.map((ev) => enrichEventMetadata(ev, now, hadPriorCache));
     lastMergedAt = now;
+    emitActualChanges(prevMap, cachedMergedEvents, hadPriorCache, now);
     return cachedMergedEvents;
   }
 
@@ -766,13 +826,203 @@ async function fetchCalendarEvents(forceRefresh = false, options = {}) {
   return cachedMergedEvents;
 }
 
+function isValidDateKey(str) {
+  if (typeof str !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return false;
+  }
+  const [y, m, d] = str.split('-').map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  return (
+    utc.getUTCFullYear() === y &&
+    utc.getUTCMonth() + 1 === m &&
+    utc.getUTCDate() === d
+  );
+}
+
 /**
- * Filters calendar events based on client query (with IANA timezone support and category filtering)
+ * Resolves calendar range queries including historical preset windows and clamped custom date ranges.
  */
-async function getEvents(query = {}) {
-  const allEvents = await fetchCalendarEvents(query.force === 'true');
-  const nowMs = Date.now();
+function resolveDateWindow(query = {}, timeZone = 'UTC', nowMs = Date.now()) {
+  const tz = isValidTimeZone(timeZone) ? timeZone : 'UTC';
+  const todayKey = getDatePartsInTimeZone(nowMs, tz).key;
+  const [y, m, d] = todayKey.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d, 12, 0, 0)).getUTCDay();
+  const requestedRange = String(
+    query.range || (query.from || query.to ? 'custom' : 'this_week')
+  ).trim();
+
+  if (requestedRange === 'yesterday') {
+    const yesterdayKey = addDaysToDateKey(todayKey, -1);
+    return {
+      range: 'yesterday',
+      fromKey: yesterdayKey,
+      toKey: yesterdayKey,
+      isHistorical: true,
+    };
+  }
+
+  if (requestedRange === 'last_week') {
+    const thisWeekStartKey = addDaysToDateKey(todayKey, -dow);
+    return {
+      range: 'last_week',
+      fromKey: addDaysToDateKey(thisWeekStartKey, -7),
+      toKey: addDaysToDateKey(thisWeekStartKey, -1),
+      isHistorical: true,
+    };
+  }
+
+  if (requestedRange === 'past_7_days') {
+    return {
+      range: 'past_7_days',
+      fromKey: addDaysToDateKey(todayKey, -7),
+      toKey: todayKey,
+      isHistorical: true,
+    };
+  }
+
+  const hasValidFrom = isValidDateKey(query.from);
+  const hasValidTo = isValidDateKey(query.to);
+  if (requestedRange === 'custom' || hasValidFrom || hasValidTo) {
+    let fromKey = hasValidFrom ? query.from : hasValidTo ? query.to : addDaysToDateKey(todayKey, -7);
+    let toKey = hasValidTo ? query.to : hasValidFrom ? query.from : todayKey;
+
+    if (fromKey > toKey) {
+      [fromKey, toKey] = [toKey, fromKey];
+    }
+
+    const minKey = addDaysToDateKey(todayKey, -365);
+    const maxKey = addDaysToDateKey(todayKey, 31);
+    if (fromKey < minKey) fromKey = minKey;
+    if (toKey < minKey) toKey = minKey;
+    if (toKey > maxKey) toKey = maxKey;
+    if (fromKey > maxKey) fromKey = maxKey;
+
+    const maxSpanTo = addDaysToDateKey(fromKey, 30);
+    if (toKey > maxSpanTo) {
+      toKey = maxSpanTo;
+    }
+
+    return {
+      range: 'custom',
+      fromKey,
+      toKey,
+      isHistorical: true,
+    };
+  }
+
+  return {
+    range: requestedRange || 'this_week',
+    fromKey: null,
+    toKey: null,
+    isHistorical: false,
+  };
+}
+
+/**
+ * Fetches past (or custom-window) calendar releases via TradingView history + current-week merge.
+ */
+async function fetchHistoricalCalendarEvents({
+  fromKey,
+  toKey,
+  timeZone = 'UTC',
+  force = false,
+  nowMs = Date.now(),
+  options = {},
+}) {
+  const tz = isValidTimeZone(timeZone) ? timeZone : 'UTC';
+  const fromIso = `${addDaysToDateKey(fromKey, -1)}T00:00:00.000Z`;
+  const toIso = `${addDaysToDateKey(toKey, 1)}T23:59:59.999Z`;
+
+  const historicalProvider = options.historicalProvider || defaultHistoricalProvider;
+  const histRes = await historicalProvider.fetch({
+    fromIso,
+    toIso,
+    force,
+    nowMs,
+    fetchImpl: options.fetchImpl,
+  });
+
+  const tvEvents = histRes?.data || [];
+  const historicalEnriched = buildEventsFromTvFallback(tvEvents).map((ev) =>
+    enrichEventMetadata(
+      {
+        ...ev,
+        provider: 'tradingview-history',
+      },
+      nowMs,
+      false
+    )
+  );
+
+  const todayKey = getDatePartsInTimeZone(nowMs, tz).key;
+  const [y, m, d] = todayKey.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d, 12, 0, 0)).getUTCDay();
+  const thisWeekStartKey = addDaysToDateKey(todayKey, -dow);
+
+  let merged = historicalEnriched;
+
+  if (toKey >= thisWeekStartKey) {
+    const currentWeekRaw = options.currentEvents
+      ? options.currentEvents
+      : await fetchCalendarEvents(false, options);
+    const currentNonFallback = currentWeekRaw.filter(
+      (ev) => !String(ev.id || '').startsWith('fallback-')
+    );
+
+    const coveredDates = new Set();
+    const currentKeys = new Set();
+    const inRangeCurrent = [];
+
+    for (const ev of currentNonFallback) {
+      const evKey = getDatePartsInTimeZone(ev.date, tz).key;
+      coveredDates.add(evKey);
+      currentKeys.add(normalizeCanonicalKey(ev.country, ev.title, ev.date));
+      if (evKey >= fromKey && evKey <= toKey) {
+        inRangeCurrent.push({
+          ...ev,
+          releaseState: computeEventReleaseState(ev, nowMs),
+        });
+      }
+    }
+
+    const filteredHistorical = historicalEnriched.filter((ev) => {
+      const evKey = getDatePartsInTimeZone(ev.date, tz).key;
+      if (evKey < fromKey || evKey > toKey) return false;
+      if (coveredDates.has(evKey)) return false;
+      if (currentKeys.has(normalizeCanonicalKey(ev.country, ev.title, ev.date))) return false;
+      return true;
+    });
+
+    merged = [...inRangeCurrent, ...filteredHistorical];
+  } else {
+    merged = historicalEnriched.filter((ev) => {
+      const evKey = getDatePartsInTimeZone(ev.date, tz).key;
+      return evKey >= fromKey && evKey <= toKey;
+    });
+  }
+
+  merged.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  return merged;
+}
+
+/**
+ * Filters calendar events based on client query (with IANA timezone support, past windows, and category filtering)
+ */
+async function getEvents(query = {}, options = {}) {
+  const nowMs = options.nowMs || Date.now();
   const timeZone = isValidTimeZone(query.timezone) ? query.timezone : 'UTC';
+  const dateWindow = resolveDateWindow(query, timeZone, nowMs);
+
+  const allEvents = dateWindow.isHistorical
+    ? await fetchHistoricalCalendarEvents({
+        fromKey: dateWindow.fromKey,
+        toKey: dateWindow.toKey,
+        timeZone,
+        force: query.force === 'true',
+        nowMs,
+        options,
+      })
+    : await fetchCalendarEvents(query.force === 'true', options);
 
   // Ensure releaseState is evaluated against current timestamp
   let filtered = allEvents.map((ev) => ({
@@ -819,15 +1069,19 @@ async function getEvents(query = {}) {
   }
 
   // Timezone-aware Range filter
-  if (query.range === 'today') {
-    const todayKey = getDatePartsInTimeZone(nowMs, timeZone).key;
-    filtered = filtered.filter((ev) => getDatePartsInTimeZone(ev.date, timeZone).key === todayKey);
-  } else if (query.range === 'tomorrow') {
-    const todayKey = getDatePartsInTimeZone(nowMs, timeZone).key;
-    const tomorrowKey = addDaysToDateKey(todayKey, 1);
-    filtered = filtered.filter((ev) => getDatePartsInTimeZone(ev.date, timeZone).key === tomorrowKey);
-  } else if (query.range === 'upcoming') {
-    filtered = filtered.filter((ev) => new Date(ev.date).getTime() >= nowMs || ev.releaseState?.isAwaiting);
+  if (dateWindow.range === 'past_7_days') {
+    filtered = filtered.filter((ev) => new Date(ev.date).getTime() <= nowMs);
+  } else if (!dateWindow.isHistorical) {
+    if (query.range === 'today') {
+      const todayKey = getDatePartsInTimeZone(nowMs, timeZone).key;
+      filtered = filtered.filter((ev) => getDatePartsInTimeZone(ev.date, timeZone).key === todayKey);
+    } else if (query.range === 'tomorrow') {
+      const todayKey = getDatePartsInTimeZone(nowMs, timeZone).key;
+      const tomorrowKey = addDaysToDateKey(todayKey, 1);
+      filtered = filtered.filter((ev) => getDatePartsInTimeZone(ev.date, timeZone).key === tomorrowKey);
+    } else if (query.range === 'upcoming') {
+      filtered = filtered.filter((ev) => new Date(ev.date).getTime() >= nowMs || ev.releaseState?.isAwaiting);
+    }
   }
 
   // Sort chronologically
@@ -940,6 +1194,8 @@ module.exports = {
   isValidTimeZone,
   getDatePartsInTimeZone,
   addDaysToDateKey,
+  resolveDateWindow,
+  fetchHistoricalCalendarEvents,
   fetchCalendarEvents,
   getEvents,
   getUpcomingHighImpactEvents,
@@ -947,4 +1203,6 @@ module.exports = {
   getCurrenciesForPair,
   getLastFetchedAt,
   getProviderHealth,
+  subscribeToActualUpdates,
+  getCachedEventsSnapshot: () => cachedMergedEvents,
 };

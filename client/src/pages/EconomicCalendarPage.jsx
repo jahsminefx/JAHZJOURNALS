@@ -40,7 +40,11 @@ import {
   formatTimeZoneBadge,
   formatEventTimeInZone,
   formatDateGroupHeaderInZone,
+  getDateKeyInZone,
+  addDaysToDateKey,
+  isHistoricalRange,
   isEventInSelectedRange,
+  mergeLiveActualUpdates,
   classifyEventCategoryClient,
   resolveWatchedCurrencies,
   getEventReleaseDisplay,
@@ -61,15 +65,18 @@ const QUICK_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD'
 const IMPACT_OPTIONS = [
   { id: 'High', label: 'High Impact', icon: Flame, colorClass: 'text-rose-400' },
   { id: 'Medium', label: 'Medium Impact', icon: AlertTriangle, colorClass: 'text-amber-400' },
-  { id: 'Low', label: 'Low Impact', colorClass: 'text-muted' },
+  { id: 'Low', label: 'Low Impact', icon: null, colorClass: 'text-muted' },
   { id: 'Holiday', label: 'Holidays', colorClass: 'text-sky-400' },
 ];
 
 const RANGE_TABS = [
-  { id: 'this_week', label: 'This Week' },
+  { id: 'last_week', label: 'Last Week' },
+  { id: 'yesterday', label: 'Yesterday' },
   { id: 'today', label: 'Today' },
   { id: 'tomorrow', label: 'Tomorrow' },
+  { id: 'this_week', label: 'This Week' },
   { id: 'upcoming', label: 'Upcoming Only' },
+  { id: 'custom', label: 'Custom Dates' },
 ];
 
 export default function EconomicCalendarPage() {
@@ -82,6 +89,8 @@ export default function EconomicCalendarPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const [pollErrorCount, setPollErrorCount] = useState(0);
+  const [streamConnected, setStreamConnected] = useState(false);
+  const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState(() => new Set());
 
   // Saved Preferences (synced to account when logged in, localStorage for guests)
   const [savedPrefs, setSavedPrefs] = useState(() => loadGuestCalendarPreferences());
@@ -91,6 +100,14 @@ export default function EconomicCalendarPage() {
 
   // Temporary Page Filter State (initialized from saved preferences)
   const [selectedRange, setSelectedRange] = useState(() => savedPrefs.defaultView || 'this_week');
+  const [customFrom, setCustomFrom] = useState(() => {
+    const initialTz = getEffectiveTimeZone(loadGuestCalendarPreferences());
+    return addDaysToDateKey(getDateKeyInZone(Date.now(), initialTz), -7);
+  });
+  const [customTo, setCustomTo] = useState(() => {
+    const initialTz = getEffectiveTimeZone(loadGuestCalendarPreferences());
+    return getDateKeyInZone(Date.now(), initialTz);
+  });
   const [selectedImpacts, setSelectedImpacts] = useState(() => savedPrefs.impacts || []);
   const [selectedCurrencies, setSelectedCurrencies] = useState(() => savedPrefs.currencies || []);
   const [selectedCategories, setSelectedCategories] = useState(() => savedPrefs.categories || []);
@@ -105,6 +122,19 @@ export default function EconomicCalendarPage() {
   const settingsTriggerRef = useRef(null);
   const activeFetchControllerRef = useRef(null);
   const hasLoadedPrefsRef = useRef(false);
+  const rawEventsRef = useRef([]);
+  const highlightTimersRef = useRef([]);
+
+  useEffect(() => {
+    rawEventsRef.current = rawEvents;
+  }, [rawEvents]);
+
+  useEffect(() => {
+    return () => {
+      highlightTimersRef.current.forEach((t) => clearTimeout(t));
+      highlightTimersRef.current = [];
+    };
+  }, []);
 
   // Guard calendar preferences access for authenticated users only
   const handleOpenSettings = useCallback((initialSection = 'timezone') => {
@@ -196,10 +226,23 @@ export default function EconomicCalendarPage() {
   }, [user, applyPreferencesToPageFilters]);
 
   const effectiveTimeZone = useMemo(() => getEffectiveTimeZone(savedPrefs), [savedPrefs]);
+  const todayKey = useMemo(
+    () => getDateKeyInZone(nowMs, effectiveTimeZone),
+    [nowMs, effectiveTimeZone]
+  );
+  const minAllowedDate = useMemo(() => addDaysToDateKey(todayKey, -365), [todayKey]);
+  const maxAllowedDate = useMemo(() => addDaysToDateKey(todayKey, 14), [todayKey]);
   const timeZoneBadge = useMemo(
     () => formatTimeZoneBadge(effectiveTimeZone, new Date(nowMs)),
     [effectiveTimeZone, nowMs]
   );
+
+  const isHistoricalView = isHistoricalRange(selectedRange);
+  const historicalQueryKey = isHistoricalView
+    ? selectedRange === 'custom'
+      ? `custom:${customFrom}:${customTo}`
+      : selectedRange
+    : 'current';
 
   // Fetch base feed with AbortController cancellation to avoid overlapping race conditions
   const fetchEvents = useCallback(async (isManual = false, isSilent = false) => {
@@ -218,6 +261,18 @@ export default function EconomicCalendarPage() {
     try {
       const params = new URLSearchParams();
       params.append('timezone', effectiveTimeZone);
+      if (historicalQueryKey !== 'current') {
+        if (historicalQueryKey.startsWith('custom:')) {
+          const [, fromVal, toVal] = historicalQueryKey.split(':');
+          params.append('range', 'custom');
+          if (fromVal && toVal) {
+            params.append('from', fromVal);
+            params.append('to', toVal);
+          }
+        } else {
+          params.append('range', historicalQueryKey);
+        }
+      }
       if (isManual || isSilent) params.append('force', 'true');
 
       const res = await api.get(`/calendar?${params.toString()}`, {
@@ -245,7 +300,7 @@ export default function EconomicCalendarPage() {
         setRefreshing(false);
       }
     }
-  }, [effectiveTimeZone]);
+  }, [effectiveTimeZone, historicalQueryKey]);
 
   useEffect(() => {
     fetchEvents(false, false);
@@ -256,18 +311,87 @@ export default function EconomicCalendarPage() {
     };
   }, [fetchEvents]);
 
-  // Adaptive Polling Scheduler (high-frequency 4s in release window, 15s medium, 120s normal, exponential backoff on failure)
+  // Adaptive Polling Fallback (paused while viewing historical past releases)
   const pollPlan = useMemo(
     () => getAdaptiveRefreshPlan(rawEvents, nowMs, pollErrorCount),
     [rawEvents, nowMs, pollErrorCount]
   );
 
   useEffect(() => {
+    if (isHistoricalView) return undefined;
     const timer = setTimeout(() => {
       fetchEvents(false, true);
     }, pollPlan.intervalMs);
     return () => clearTimeout(timer);
-  }, [pollPlan.intervalMs, lastSyncedAt, pollErrorCount, fetchEvents]);
+  }, [isHistoricalView, pollPlan.intervalMs, lastSyncedAt, pollErrorCount, fetchEvents]);
+
+  // Instant Server-Sent Events (SSE) subscription for real-time actual release arrivals
+  useEffect(() => {
+    if (
+      isHistoricalView ||
+      typeof window === 'undefined' ||
+      typeof window.EventSource === 'undefined'
+    ) {
+      setStreamConnected(false);
+      return undefined;
+    }
+
+    const baseUrl = (api.defaults.baseURL || '/api').replace(/\/$/, '');
+    const streamUrl = `${baseUrl}/calendar/stream`;
+    const eventSource = new window.EventSource(streamUrl, { withCredentials: true });
+
+    const handleConnected = () => {
+      setStreamConnected(true);
+    };
+
+    const handleActualsUpdated = (event) => {
+      try {
+        const payload = JSON.parse(event.data || '{}');
+        if (payload.syncedAt) {
+          setLastSyncedAt(payload.syncedAt);
+        }
+        if (Array.isArray(payload.updatedEvents) && payload.updatedEvents.length > 0) {
+          const { events: merged, updatedIds } = mergeLiveActualUpdates(
+            rawEventsRef.current,
+            payload.updatedEvents
+          );
+          if (updatedIds.length > 0) {
+            rawEventsRef.current = merged;
+            setRawEvents(merged);
+            setRecentlyUpdatedIds((prevSet) => {
+              const next = new Set(prevSet);
+              updatedIds.forEach((id) => next.add(id));
+              return next;
+            });
+            const clearTimer = setTimeout(() => {
+              setRecentlyUpdatedIds((prevSet) => {
+                const next = new Set(prevSet);
+                updatedIds.forEach((id) => next.delete(id));
+                return next;
+              });
+            }, 6000);
+            highlightTimersRef.current.push(clearTimer);
+          }
+        }
+      } catch {
+        // Ignore malformed stream frames cleanly
+      }
+    };
+
+    eventSource.onopen = handleConnected;
+    eventSource.addEventListener('connected', handleConnected);
+    eventSource.addEventListener('actuals_updated', handleActualsUpdated);
+    eventSource.onerror = () => {
+      setStreamConnected(false);
+    };
+
+    return () => {
+      eventSource.removeEventListener('connected', handleConnected);
+      eventSource.removeEventListener('actuals_updated', handleActualsUpdated);
+      eventSource.close();
+      setStreamConnected(false);
+    };
+  }, [isHistoricalView]);
 
   // Resolved currencies when Watched Pairs filter is active
   const activeWatchedPairs = useMemo(
@@ -278,6 +402,8 @@ export default function EconomicCalendarPage() {
     () => resolveWatchedCurrencies(activeWatchedPairs, savedPrefs.includeCorrelatedCurrencies),
     [activeWatchedPairs, savedPrefs.includeCorrelatedCurrencies]
   );
+
+  const effectiveShowCompleted = isHistoricalView ? true : showCompleted;
 
   // Client-side time-zone-aware & category-aware filtering (instant, zero flicker)
   const filteredEvents = useMemo(() => {
@@ -290,10 +416,15 @@ export default function EconomicCalendarPage() {
         releaseDisplay: getEventReleaseDisplay(ev, nowMs, effectiveTimeZone, savedPrefs.timeFormat),
       }))
       .filter((ev) => {
-        if (!isEventInSelectedRange(ev.date, selectedRange, effectiveTimeZone, nowMs)) {
+        if (
+          !isEventInSelectedRange(ev.date, selectedRange, effectiveTimeZone, nowMs, {
+            from: customFrom,
+            to: customTo,
+          })
+        ) {
           return false;
         }
-        if (!showCompleted && ev.releaseDisplay?.isCompleted) {
+        if (!effectiveShowCompleted && ev.releaseDisplay?.isCompleted) {
           return false;
         }
         if (selectedImpacts.length > 0 && !selectedImpacts.includes(ev.impact)) {
@@ -321,7 +452,9 @@ export default function EconomicCalendarPage() {
     effectiveTimeZone,
     savedPrefs.timeFormat,
     selectedRange,
-    showCompleted,
+    customFrom,
+    customTo,
+    effectiveShowCompleted,
     selectedImpacts,
     watchedPairsOnly,
     watchedCurrencies,
@@ -368,22 +501,26 @@ export default function EconomicCalendarPage() {
   const activeFilterState = useMemo(
     () => ({
       range: selectedRange,
+      customFrom,
+      customTo,
       currencies: selectedCurrencies,
       impacts: selectedImpacts,
       categories: selectedCategories,
       watchedPairsOnly,
       includeCorrelatedCurrencies: savedPrefs.includeCorrelatedCurrencies,
-      showCompleted,
+      showCompleted: effectiveShowCompleted,
       search,
     }),
     [
       selectedRange,
+      customFrom,
+      customTo,
       selectedCurrencies,
       selectedImpacts,
       selectedCategories,
       watchedPairsOnly,
       savedPrefs.includeCorrelatedCurrencies,
-      showCompleted,
+      effectiveShowCompleted,
       search,
     ]
   );
@@ -417,6 +554,12 @@ export default function EconomicCalendarPage() {
       search,
     ]
   );
+
+  const applyCustomDaysBack = (days) => {
+    setSelectedRange('custom');
+    setCustomFrom(addDaysToDateKey(todayKey, -days));
+    setCustomTo(todayKey);
+  };
 
   const handleResetTemporaryFilters = () => {
     setSelectedRange('this_week');
@@ -547,6 +690,15 @@ export default function EconomicCalendarPage() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Economic Calendar Feed</span>
             </span>
+            {streamConnected && !isHistoricalView && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                title="Real-time server stream connected for instant actual releases"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>Live Stream</span>
+              </span>
+            )}
             {lastSyncedAt && (
               <span className="text-[11px] text-muted">
                 &bull; Updated {formatLastSynced(lastSyncedAt)}
@@ -880,6 +1032,84 @@ export default function EconomicCalendarPage() {
           </div>
         </div>
 
+        {/* Custom Historical Date Range Picker (shown when Custom Dates tab is active) */}
+        {selectedRange === 'custom' && (
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2.5 border-t border-border/40 text-xs">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <label className="flex items-center gap-1.5 text-muted font-semibold">
+                <span>From:</span>
+                <input
+                  type="date"
+                  aria-label="Custom start date"
+                  value={customFrom}
+                  min={minAllowedDate}
+                  max={maxAllowedDate}
+                  onChange={(e) => {
+                    const nextFrom = e.target.value;
+                    if (!nextFrom) return;
+                    setCustomFrom(nextFrom);
+                    if (customTo && nextFrom > customTo) {
+                      setCustomTo(nextFrom);
+                    } else if (customTo && addDaysToDateKey(nextFrom, 30) < customTo) {
+                      setCustomTo(addDaysToDateKey(nextFrom, 30));
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-lg border border-border bg-background text-foreground font-mono text-xs focus:outline-none focus:border-emerald-500"
+                />
+              </label>
+
+              <label className="flex items-center gap-1.5 text-muted font-semibold">
+                <span>To:</span>
+                <input
+                  type="date"
+                  aria-label="Custom end date"
+                  value={customTo}
+                  min={customFrom || minAllowedDate}
+                  max={maxAllowedDate}
+                  onChange={(e) => {
+                    const nextTo = e.target.value;
+                    if (!nextTo) return;
+                    if (customFrom && addDaysToDateKey(customFrom, 30) < nextTo) {
+                      setCustomFrom(addDaysToDateKey(nextTo, -30));
+                    }
+                    setCustomTo(nextTo);
+                  }}
+                  className="px-2.5 py-1 rounded-lg border border-border bg-background text-foreground font-mono text-xs focus:outline-none focus:border-emerald-500"
+                />
+              </label>
+
+              <span className="text-[11px] text-muted/80">
+                Max 31-day window &bull; up to 1 year back
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[
+                { label: 'Past 7 Days', days: 7 },
+                { label: 'Past 14 Days', days: 14 },
+                { label: 'Past 30 Days', days: 30 },
+              ].map((preset) => {
+                const presetFrom = addDaysToDateKey(todayKey, -preset.days);
+                const active = customFrom === presetFrom && customTo === todayKey;
+                return (
+                  <button
+                    key={preset.days}
+                    type="button"
+                    onClick={() => applyCustomDaysBack(preset.days)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
+                      active
+                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-bold'
+                        : 'bg-surface border-border/70 text-muted hover:text-foreground hover:bg-surface-muted'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Row 2: Impact Filters (Multi-select + All toggle) */}
         <div className="flex items-center gap-1.5 flex-wrap pt-2.5 border-t border-border/40">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted mr-1.5 select-none">
@@ -938,15 +1168,25 @@ export default function EconomicCalendarPage() {
             <button
               type="button"
               onClick={() => setShowCompleted((v) => !v)}
-              aria-pressed={!showCompleted}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border flex items-center gap-1 transition cursor-pointer ${
-                !showCompleted
-                  ? 'bg-amber-500/15 border-amber-500/35 text-amber-400 font-bold'
-                  : 'bg-surface border-border/70 text-muted hover:text-foreground'
+              disabled={isHistoricalView}
+              aria-pressed={!effectiveShowCompleted}
+              title={isHistoricalView ? 'Completed releases are always shown in past views' : 'Toggle completed events visibility'}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border flex items-center gap-1 transition ${
+                isHistoricalView
+                  ? 'bg-surface border-border/50 text-muted/50 cursor-not-allowed opacity-70'
+                  : !showCompleted
+                  ? 'bg-amber-500/15 border-amber-500/35 text-amber-400 font-bold cursor-pointer'
+                  : 'bg-surface border-border/70 text-muted hover:text-foreground cursor-pointer'
               }`}
             >
               <EyeOff size={11} />
-              <span>{showCompleted ? 'Hide Completed' : 'Hiding Completed'}</span>
+              <span>
+                {isHistoricalView
+                  ? 'Showing Past Releases'
+                  : showCompleted
+                  ? 'Hide Completed'
+                  : 'Hiding Completed'}
+              </span>
             </button>
           </div>
         </div>
@@ -1251,7 +1491,10 @@ export default function EconomicCalendarPage() {
                         {/* 5. Actual */}
                         <div className={`text-right font-mono text-xs tabular-nums ${getActualColorClass(ev)}`}>
                           {ev.actual ? (
-                            <span title={ev.previousActual ? `Previously reported: ${ev.previousActual}` : undefined}>
+                            <span
+                              className={recentlyUpdatedIds.has(ev.id) ? 'bg-emerald-500/20 ring-1 ring-emerald-500/40 rounded px-1.5 py-0.5 transition-all' : undefined}
+                              title={ev.previousActual ? `Previously reported: ${ev.previousActual}` : undefined}
+                            >
                               {ev.actual}
                             </span>
                           ) : releaseDisplay?.state === 'AWAITING_RELEASE' ? (
@@ -1342,7 +1585,15 @@ export default function EconomicCalendarPage() {
                               <span>
                                 Actual:{' '}
                                 {ev.actual ? (
-                                  <strong className={getActualColorClass(ev)}>{ev.actual}</strong>
+                                  <strong
+                                    className={`${getActualColorClass(ev)} ${
+                                      recentlyUpdatedIds.has(ev.id)
+                                        ? 'bg-emerald-500/20 ring-1 ring-emerald-500/40 rounded px-1 py-0.5 transition-all'
+                                        : ''
+                                    }`}
+                                  >
+                                    {ev.actual}
+                                  </strong>
                                 ) : (
                                   <span className="text-amber-400 font-semibold">
                                     {releaseDisplay.actualText}

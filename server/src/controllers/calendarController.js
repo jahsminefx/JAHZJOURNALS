@@ -1,4 +1,5 @@
 const calendarService = require('../services/calendarService');
+const calendarRealtimeService = require('../services/calendarRealtimeService');
 const economicAlertService = require('../services/economicAlertService');
 const {
   SUPPORTED_FOREX_PAIRS,
@@ -14,11 +15,19 @@ const getCalendarEvents = async (req, res) => {
   try {
     const events = await calendarService.getEvents(req.query);
     const lastSyncedAt = calendarService.getLastFetchedAt();
+    const tz = calendarService.isValidTimeZone(req.query.timezone) ? req.query.timezone : 'UTC';
+    const meta = calendarService.resolveDateWindow(req.query, tz);
     res.json({
       success: true,
       count: events.length,
       lastSyncedAt: lastSyncedAt ? new Date(lastSyncedAt).toISOString() : null,
       providerHealth: calendarService.getProviderHealth(),
+      meta: {
+        range: meta.range,
+        from: meta.fromKey,
+        to: meta.toKey,
+        isHistorical: meta.isHistorical,
+      },
       data: events,
     });
   } catch (error) {
@@ -268,8 +277,15 @@ const sendTestAlert = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/calendar/stream
+ * Streams live Server-Sent Events whenever release actuals arrive or revise
+ */
+const streamCalendarUpdates = (req, res) => calendarRealtimeService.handleCalendarStream(req, res);
+
 module.exports = {
   getCalendarEvents,
+  streamCalendarUpdates,
   getUpcomingEvents,
   checkTradeNews,
   getAlertPreferences,
