@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, Plus, Wallet } from 'lucide-react';
+import { CalendarDays, Wallet } from 'lucide-react';
 import { DATE_RANGE_OPTIONS } from '../../utils/dashboard';
 import CustomSelect from '../common/CustomSelect';
 
@@ -12,8 +12,6 @@ const DashboardFilters = ({
   onAccountChange,
   onDateRangeChange,
   onCustomDateChange,
-  canRecordTransaction = false,
-  onRecordTransaction = null,
 }) => {
   const accountOptions = [
     { value: '', label: 'All Accounts' },
@@ -24,8 +22,8 @@ const DashboardFilters = ({
   ];
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-3 lg:w-auto lg:flex-row lg:items-start">
-      <div className="relative min-w-0 lg:w-64">
+    <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-start xl:w-auto">
+      <div className="relative w-full min-w-0 sm:w-56 xl:w-64">
         <CustomSelect
           id="dashboard-account-filter"
           aria-label="Filter trades by account"
@@ -37,8 +35,8 @@ const DashboardFilters = ({
         />
       </div>
 
-      <div className="min-w-0 space-y-2">
-        <div className="relative min-w-0 lg:w-72">
+      <div className="w-full min-w-0 sm:w-64 xl:w-72 space-y-2">
+        <div className="relative min-w-0">
           <CustomSelect
             id="dashboard-daterange-filter"
             aria-label="Filter trades by date range"
@@ -68,17 +66,6 @@ const DashboardFilters = ({
           </div>
         )}
       </div>
-
-      {canRecordTransaction && typeof onRecordTransaction === 'function' && (
-        <button
-          type="button"
-          onClick={onRecordTransaction}
-          className="inline-flex h-[42px] shrink-0 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition shadow-xs"
-        >
-          <Plus size={14} />
-          <span>Record transaction</span>
-        </button>
-      )}
     </div>
   );
 };

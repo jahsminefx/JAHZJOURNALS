@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowUpDown, Building2, Plus, Settings, ShieldCheck, Trash2, Wallet, Cloud, Sparkles, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowUpDown, Building2, Settings, ShieldCheck, Trash2, Wallet, Cloud, Sparkles, CheckCircle2, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { dialog } from '../components/common/dialog';
@@ -100,19 +100,6 @@ const AccountsList = () => {
 
         {/* Actions & View Switcher */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {txEnabled && accounts.length > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                setTxModalAccount(null);
-                setIsTxModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition shadow-xs"
-            >
-              <Plus size={14} />
-              <span>Record transaction</span>
-            </button>
-          )}
           <div className="flex items-center rounded-xl border border-border bg-surface-muted/60 p-1 text-xs font-bold">
           <button
             type="button"
@@ -343,10 +330,11 @@ const AccountsList = () => {
                                 setTxModalAccount(account);
                                 setIsTxModalOpen(true);
                               }}
-                              className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors"
+                              aria-label={`Record transaction for ${account.name}`}
+                              className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 rounded"
                             >
                               <ArrowUpDown size={13} />
-                              <span>Transactions</span>
+                              <span>Record transaction</span>
                             </button>
                           )}
                           <button

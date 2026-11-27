@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Activity, ShieldAlert, Target, TrendingDown, TrendingUp, Wallet, ArrowUpDown } from 'lucide-react';
+import { Activity, ArrowUpDown, ShieldAlert, Target, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import api from '../utils/api';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
-import RecordTransactionModal from '../components/accounts/RecordTransactionModal';
 import MetricCard from '../components/dashboard/MetricCard';
 import PerformanceCurveChart from '../components/dashboard/EquityCurveChart';
 import SessionEdgeChart from '../components/dashboard/SessionEdgeChart';
@@ -73,7 +72,6 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(!initialCached);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
 
   useEffect(() => {
     const nextParams = new URLSearchParams();
@@ -174,7 +172,10 @@ const Dashboard = () => {
   const summary = useMemo(() => dashboard?.summary || {}, [dashboard]);
   const outcomes = useMemo(() => dashboard?.tradeOutcomes || {}, [dashboard]);
   const cashFlow = useMemo(() => dashboard?.cashFlowSummary || null, [dashboard]);
-  const txEnabled = dashboard?.accountTransactionsEnabled !== false;
+  const selectedSingleAccount = useMemo(() => {
+    if (!accountId) return null;
+    return accounts.find((acc) => acc.id === accountId) || null;
+  }, [accountId, accounts]);
 
   const metricCards = useMemo(() => {
     const totalTrades = Number(summary.totalTrades || 0);
@@ -304,8 +305,6 @@ const Dashboard = () => {
         fxMetadata={dashboard?.fxMetadata}
         isMultiAccountNormalized={dashboard?.isMultiAccountNormalized}
         summary={summary}
-        canRecordTransaction={txEnabled && accounts.length > 0}
-        onRecordTransaction={() => setIsTxModalOpen(true)}
       />
 
       <AnnouncementBanner />
@@ -377,25 +376,16 @@ const Dashboard = () => {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {accountId && (
+                {selectedSingleAccount && (
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <Link
-                      to={`/accounts/${accountId}#account-transactions`}
+                      to={`/accounts/${selectedSingleAccount.id}#account-transactions`}
                       className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-muted transition"
                     >
                       View ledger
                     </Link>
-                  )}
-                  {txEnabled && accounts.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setIsTxModalOpen(true)}
-                      className="rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 transition"
-                    >
-                      Record transaction
-                    </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </section>
           )}
@@ -439,13 +429,6 @@ const Dashboard = () => {
           <DisciplineBanner />
         </>
       )}
-      <RecordTransactionModal
-        isOpen={isTxModalOpen}
-        onClose={() => setIsTxModalOpen(false)}
-        accounts={accounts}
-        defaultAccountId={accountId}
-        onSuccess={() => setRetryCount((count) => count + 1)}
-      />
     </div>
   );
 };

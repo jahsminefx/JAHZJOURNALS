@@ -18,6 +18,7 @@ test('Account Transactions UI avoids native dialogs/selects and wires required f
     formSrc,
     payoutLedgerSrc,
     dashSrc,
+    dashFiltersSrc,
     equityChartSrc,
     dailySrc,
     weeklySrc,
@@ -30,6 +31,7 @@ test('Account Transactions UI avoids native dialogs/selects and wires required f
     read('../src/components/accounts/RegularAccountForm.jsx'),
     read('../src/components/propfirm/PropFirmPayoutLedger.jsx'),
     read('../src/pages/Dashboard.jsx'),
+    read('../src/components/dashboard/DashboardFilters.jsx'),
     read('../src/components/dashboard/EquityCurveChart.jsx'),
     read('../src/pages/DailyReviewPage.jsx'),
     read('../src/pages/WeeklyReview.jsx'),
@@ -58,14 +60,24 @@ test('Account Transactions UI avoids native dialogs/selects and wires required f
   assert.match(panelSrc, /MT Sync · Read-only/);
   assert.match(panelSrc, /confirm-payout/);
   assert.match(panelSrc, /Mark as Payout/);
+  assert.match(panelSrc, /Record transaction/);
+  assert.match(panelSrc, /fixedAccount=\{account\}/);
 
   assert.match(detailSrc, /AccountTransactionsPanel/);
   assert.match(detailSrc, /Record transaction/);
+  assert.match(detailSrc, /whitespace-nowrap/);
   assert.match(listSrc, /RecordTransactionModal/);
-  assert.match(listSrc, /Transactions/);
+  assert.match(listSrc, /Record transaction/);
+  assert.match(listSrc, /fixedAccount=\{txModalAccount\}/);
+  assert.equal(listSrc.includes('setTxModalAccount(null);\n                setIsTxModalOpen(true)'), false, 'AccountsList should only launch transaction modal for a specific account');
   assert.match(formSrc, /Direct balance overwrites are disabled/);
 
-  assert.match(dashSrc, /RecordTransactionModal/);
+  assert.equal(dashSrc.includes('RecordTransactionModal'), false, 'Dashboard is strictly view-only and must not render transaction modal');
+  assert.equal(dashSrc.includes('Record transaction'), false, 'Dashboard must not show Record transaction button');
+  assert.equal(dashSrc.includes('Add cash flow'), false, 'Dashboard must remain view-only without Add cash flow button');
+  assert.match(dashSrc, /View ledger/);
+  assert.equal(dashFiltersSrc.includes('Record transaction'), false, 'DashboardFilters must not show Record transaction button');
+  assert.equal(dashFiltersSrc.includes('Add cash flow'), false, 'DashboardFilters must remain filters-only');
   assert.match(dashSrc, /Cash Flow &amp; Net Account Change/);
   assert.match(equityChartSrc, /opening_balance/);
   assert.match(equityChartSrc, /payout/);

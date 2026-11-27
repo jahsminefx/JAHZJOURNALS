@@ -284,10 +284,15 @@ const AccountDetail = () => {
     (account.mtAccountNumber && account.mtServerName)
   );
 
+  const handleOpenTransactionsModal = () => {
+    document.getElementById('account-transactions')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTxModalSignal((n) => n + 1);
+  };
+
   return (
     <div className="space-y-6 text-foreground">
-      <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface-muted p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface-muted p-6 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0 flex-1">
           <button type="button" onClick={() => navigate('/accounts')} className="mb-3 inline-flex items-center gap-2 text-sm text-muted hover:text-green-400">
             <ArrowLeft size={16} /> Back to accounts
           </button>
@@ -296,66 +301,68 @@ const AccountDetail = () => {
           <p className="mt-1 text-sm text-muted">{account.brokerName || account.propFirmAccount?.firmName || 'No broker or firm set'}</p>
         </div>
         {isPropFirm ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {txEnabled && (
               <button
                 type="button"
-                onClick={() => setTxModalSignal((n) => n + 1)}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition"
+                onClick={handleOpenTransactionsModal}
+                aria-label={`Record transaction for ${account.name}`}
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition"
               >
-                <ArrowUpDown size={16} />
+                <ArrowUpDown size={15} />
                 Record transaction
               </button>
             )}
             <a
               href="#mt-sync-section"
-              className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
+              className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-2 text-xs sm:text-sm font-bold transition-colors ${
                 isAccountSynced
                   ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
                   : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
               }`}
             >
-              {isAccountSynced ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+              {isAccountSynced ? <CheckCircle2 size={15} /> : <Clock size={15} />}
               {isAccountSynced ? 'Synced' : 'MT5 Sync (Coming Soon)'}
             </a>
-            <Link to={`/accounts/${account.id}/prop-firm/edit-account`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-bold text-foreground hover:bg-surface-muted">
-              <Settings size={16} />
+            <Link to={`/accounts/${account.id}/prop-firm/edit-account`} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border px-3.5 py-2 text-xs sm:text-sm font-bold text-foreground hover:bg-surface-muted">
+              <Settings size={15} />
               Edit Account
             </Link>
-            <Link to={`/accounts/${account.id}/prop-firm/edit-challenge-rules`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400">
-              <ShieldAlert size={16} />
+            <Link to={`/accounts/${account.id}/prop-firm/edit-challenge-rules`} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-green-500 px-3.5 py-2 text-xs sm:text-sm font-bold text-gray-900 hover:bg-green-400">
+              <ShieldAlert size={15} />
               Edit Challenge Rules
             </Link>
-            <Link to={`/accounts/${account.id}/prop-firm/advanced-settings`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-green-500/50 px-4 py-2 text-sm font-bold text-emerald-700 dark:text-green-300 hover:bg-green-500/10">
-              <SlidersHorizontal size={16} />
+            <Link to={`/accounts/${account.id}/prop-firm/advanced-settings`} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-green-500/50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 dark:text-green-300 hover:bg-green-500/10">
+              <SlidersHorizontal size={15} />
               Advanced Settings
             </Link>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {txEnabled && (
               <button
                 type="button"
-                onClick={() => setTxModalSignal((n) => n + 1)}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition"
+                onClick={handleOpenTransactionsModal}
+                aria-label={`Record transaction for ${account.name}`}
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition"
               >
-                <ArrowUpDown size={16} />
+                <ArrowUpDown size={15} />
                 Record transaction
               </button>
             )}
             <a
               href="#mt-sync-section"
-              className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
+              className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-2 text-xs sm:text-sm font-bold transition-colors ${
                 isAccountSynced
                   ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
                   : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
               }`}
             >
-              {isAccountSynced ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+              {isAccountSynced ? <CheckCircle2 size={15} /> : <Clock size={15} />}
               {isAccountSynced ? 'Synced' : 'MT5 Sync (Coming Soon)'}
             </a>
-            <Link to={`/accounts/${account.id}/edit`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-green-400">
-              <Settings size={16} />
+            <Link to={`/accounts/${account.id}/edit`} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-green-500 px-3.5 py-2 text-xs sm:text-sm font-bold text-gray-900 hover:bg-green-400">
+              <Settings size={15} />
               Edit account
             </Link>
           </div>

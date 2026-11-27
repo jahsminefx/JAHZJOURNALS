@@ -294,7 +294,8 @@ const AccountTransactionsPanel = ({
               setEditingTx(null);
               setModalOpen(true);
             }}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition shadow-xs"
+            aria-label={`Record transaction for ${account?.name || 'account'}`}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
           >
             <Plus size={15} />
             <span>Record transaction</span>
