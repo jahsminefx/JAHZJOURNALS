@@ -1,6 +1,10 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const propFirmRuleEngine = require('./propFirmRuleEngine');
+const { isAccountTransactionsEnabled } = require('../config/featureFlags');
+const { ensureOpeningBalanceBaseline } = require('./accountTransactionService');
+const { reconcileAccountBalance } = require('./accountBalanceService');
+const { roundMoney } = require('../utils/accountLedgerMath');
 
 /**
  * List all payouts for a prop firm account
@@ -82,7 +86,9 @@ async function requestPayout(tradingAccountId, userId, payload) {
 
   const startingBalance = Number(account.startingBalance || 0);
   const currentBalance = compliance.currentBalance;
-  const availableProfit = Math.max(0, currentBalance - startingBalance);
+  const availableProfit = compliance.cashFlowSummary?.availableProfitForPayout !== undefined
+    ? Number(compliance.cashFlowSummary.availableProfitForPayout)
+    : Math.max(0, currentBalance - startingBalance);
 
   if (amountRequested > availableProfit) {
     throw new Error(
@@ -124,32 +130,133 @@ async function requestPayout(tradingAccountId, userId, payload) {
  * Update payout status (e.g. approve, mark paid, reject, or upload certificate)
  */
 async function updatePayout(payoutId, userId, payload) {
-  const existing = await prisma.propFirmPayout.findFirst({
-    where: {
-      id: payoutId,
-      propFirmAccount: {
-        tradingAccount: { userId },
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.propFirmPayout.findFirst({
+      where: {
+        id: payoutId,
+        propFirmAccount: {
+          tradingAccount: { userId },
+        },
       },
-    },
+      include: {
+        accountTransaction: true,
+        propFirmAccount: {
+          include: {
+            tradingAccount: true,
+          },
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new Error('Payout record not found.');
+    }
+
+    const updated = await tx.propFirmPayout.update({
+      where: { id: payoutId },
+      data: {
+        ...(payload.status && { status: payload.status }),
+        ...(payload.scheduledDate && { scheduledDate: new Date(payload.scheduledDate) }),
+        ...(payload.processedDate && { processedDate: new Date(payload.processedDate) }),
+        ...(payload.transactionReference && { transactionReference: payload.transactionReference }),
+        ...(payload.certificateUrl && { certificateUrl: payload.certificateUrl }),
+        ...(payload.notes && { notes: payload.notes }),
+      },
+    });
+
+    const tradingAccount = existing.propFirmAccount?.tradingAccount;
+    const nextStatus = payload.status || existing.status;
+
+    if (tradingAccount && isAccountTransactionsEnabled({ id: userId })) {
+      if (nextStatus === 'PAID') {
+        await ensureOpeningBalanceBaseline(tx, tradingAccount);
+        const grossAmount = roundMoney(existing.amountRequested);
+        const occurredAt = payload.processedDate
+          ? new Date(payload.processedDate)
+          : (updated.processedDate || new Date());
+        const methodLabel = existing.paymentMethod || 'Prop-Firm';
+        const noteParts = [
+          `Prop-firm payout (${methodLabel})`,
+          `Gross: ${grossAmount.toFixed(2)} ${tradingAccount.currency || 'USD'}`,
+          `Trader Net (${existing.profitSplitPercent}%): ${Number(existing.netTraderPayout || 0).toFixed(2)}`,
+        ];
+        if (updated.transactionReference) noteParts.push(`Ref: ${updated.transactionReference}`);
+        if (updated.notes) noteParts.push(updated.notes);
+        const generatedNote = noteParts.join(' · ').slice(0, 500);
+
+        if (existing.accountTransaction) {
+          await tx.accountTransaction.update({
+            where: { id: existing.accountTransaction.id },
+            data: {
+              archivedAt: null,
+              archivedByUserId: null,
+              archiveReason: null,
+              amount: grossAmount,
+              signedAmount: roundMoney(-grossAmount),
+              occurredAt,
+              note: generatedNote,
+              editedAt: new Date(),
+            },
+          });
+        } else {
+          await tx.accountTransaction.create({
+            data: {
+              userId,
+              tradingAccountId: tradingAccount.id,
+              type: 'PAYOUT',
+              direction: 'OUTFLOW',
+              amount: grossAmount,
+              signedAmount: roundMoney(-grossAmount),
+              currency: tradingAccount.currency || 'USD',
+              occurredAt,
+              note: generatedNote,
+              idempotencyKey: `prop-payout:${existing.id}`,
+              linkedPropFirmPayoutId: existing.id,
+            },
+          });
+        }
+
+        await reconcileAccountBalance(tradingAccount.id, tx, { force: true });
+      } else if (
+        existing.accountTransaction
+        && !existing.accountTransaction.archivedAt
+        && (nextStatus === 'CANCELLED' || nextStatus === 'REJECTED')
+      ) {
+        const now = new Date();
+        const priorHistory = Array.isArray(existing.accountTransaction.editHistory)
+          ? existing.accountTransaction.editHistory
+          : [];
+        await tx.accountTransaction.update({
+          where: { id: existing.accountTransaction.id },
+          data: {
+            archivedAt: now,
+            archivedByUserId: userId,
+            archiveReason: `Prop-firm payout marked ${nextStatus}`,
+            editHistory: [
+              ...priorHistory,
+              {
+                action: 'ARCHIVE',
+                archivedAt: now.toISOString(),
+                archivedByUserId: userId,
+                reason: `Prop-firm payout marked ${nextStatus}`,
+                previous: {
+                  type: existing.accountTransaction.type,
+                  direction: existing.accountTransaction.direction,
+                  amount: roundMoney(existing.accountTransaction.amount),
+                  signedAmount: roundMoney(existing.accountTransaction.signedAmount),
+                  occurredAt: existing.accountTransaction.occurredAt?.toISOString?.() || existing.accountTransaction.occurredAt,
+                  note: existing.accountTransaction.note ?? null,
+                },
+              },
+            ],
+          },
+        });
+        await reconcileAccountBalance(tradingAccount.id, tx, { force: true });
+      }
+    }
+
+    return updated;
   });
-
-  if (!existing) {
-    throw new Error('Payout record not found.');
-  }
-
-  const updated = await prisma.propFirmPayout.update({
-    where: { id: payoutId },
-    data: {
-      ...(payload.status && { status: payload.status }),
-      ...(payload.scheduledDate && { scheduledDate: new Date(payload.scheduledDate) }),
-      ...(payload.processedDate && { processedDate: new Date(payload.processedDate) }),
-      ...(payload.transactionReference && { transactionReference: payload.transactionReference }),
-      ...(payload.certificateUrl && { certificateUrl: payload.certificateUrl }),
-      ...(payload.notes && { notes: payload.notes }),
-    },
-  });
-
-  return updated;
 }
 
 module.exports = {

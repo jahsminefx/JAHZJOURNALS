@@ -20,6 +20,10 @@ const {
 } = require('../services/propFirmAccountService');
 
 const sendPrismaError = (res, error, fallbackMessage) => {
+  if (error.statusCode) {
+    return res.status(error.statusCode).json({ message: error.message });
+  }
+
   if (error.code === 'P2002') {
     return res.status(400).json({ message: 'A record with these unique details already exists.' });
   }

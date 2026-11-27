@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DollarSign, Clock, CheckCircle2, AlertCircle, Plus, ArrowUpRight, ShieldCheck, FileText, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
+import CustomSelect from '../common/CustomSelect';
 
 const formatMoney = (value, currency = 'USD') => {
   const num = Number(value || 0);
@@ -64,7 +65,9 @@ const PropFirmPayoutLedger = ({ account, compliance, onPayoutUpdated }) => {
   const splitPercent = summary.profitSplitPercent ?? propFirm.profitSplitPercent ?? 80;
   const currentBalance = compliance?.currentBalance ?? account?.currentBalance ?? 0;
   const startingBalance = account?.startingBalance ?? 0;
-  const availableProfit = Math.max(0, currentBalance - startingBalance);
+  const availableProfit = compliance?.cashFlowSummary?.availableProfitForPayout !== undefined
+    ? Number(compliance.cashFlowSummary.availableProfitForPayout)
+    : Math.max(0, currentBalance - startingBalance);
 
   const numericAmount = Number(amountRequested) || 0;
   const estimatedNet = numericAmount * (splitPercent / 100);
@@ -313,18 +316,20 @@ const PropFirmPayoutLedger = ({ account, compliance, onPayoutUpdated }) => {
               </div>
 
               <div>
-                <label className="font-semibold text-muted block mb-1">Payment Method</label>
-                <select
+                <label htmlFor="payout-payment-method" className="font-semibold text-muted block mb-1">Payment Method</label>
+                <CustomSelect
+                  id="payout-payment-method"
+                  aria-label="Select payout payment method"
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-xs text-foreground focus:border-emerald-500 focus:outline-none"
-                >
-                  <option value="CRYPTO_USDT">Crypto (USDT TRC20 / ERC20)</option>
-                  <option value="BANK_WIRE">Bank Wire Transfer</option>
-                  <option value="DEEL">Deel</option>
-                  <option value="WISE">Wise</option>
-                  <option value="OTHER">Other Provider</option>
-                </select>
+                  onChange={(val) => setPaymentMethod(val)}
+                  options={[
+                    { value: 'CRYPTO_USDT', label: 'Crypto (USDT TRC20 / ERC20)' },
+                    { value: 'BANK_WIRE', label: 'Bank Wire Transfer' },
+                    { value: 'DEEL', label: 'Deel' },
+                    { value: 'WISE', label: 'Wise' },
+                    { value: 'OTHER', label: 'Other Provider' },
+                  ]}
+                />
               </div>
 
               <div>

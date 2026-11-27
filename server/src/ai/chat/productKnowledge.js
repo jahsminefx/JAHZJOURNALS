@@ -4,7 +4,7 @@
  * Do not inject user trade records or analytics metrics into this module.
  */
 
-const PRODUCT_KNOWLEDGE_VERSION = '2026.11.v1';
+const PRODUCT_KNOWLEDGE_VERSION = '2026.11.v2';
 
 const NO_VERIFIED_DOC_FALLBACK =
   'No verified JAHZJOURNALS documentation was found for this request. Do not guess or invent navigation. State that the feature could not be confirmed and direct the user to the relevant support path.';
@@ -65,6 +65,19 @@ const STEM_MAP = {
   capturing: 'capture',
   phones: 'phone',
   mobiles: 'mobile',
+  deposits: 'deposit',
+  deposited: 'deposit',
+  withdrawals: 'withdrawal',
+  withdrawn: 'withdrawal',
+  withdraw: 'withdrawal',
+  payouts: 'payout',
+  fees: 'fee',
+  adjustments: 'adjustment',
+  transactions: 'transaction',
+  balances: 'balance',
+  ledgers: 'ledger',
+  cashflow: 'cash',
+  flows: 'flow',
 };
 
 const normalizeRawTokens = (text) => {
@@ -241,7 +254,29 @@ const PRODUCT_DOCS = [
       'prop', 'firm', 'funded', 'challenge', 'evaluation', 'drawdown', 'compliance', 'payout', 'phase',
     ],
     content:
-      'To track a prop-firm challenge or funded account, open "Accounts" (/accounts) and create a Prop-Firm Account (/accounts/prop-firm/new). Inside the account detail view (/accounts/:id), the Prop-Firm Cockpit monitors daily loss allowance (with reset countdown), static or trailing overall drawdown floor, profit target progress, minimum trading days, consistency rules, phase advancement, and payouts. Risk Guard checks proposed trade parameters against your firm limits. Prop-Firm tools require Pro, Starter Sync, Pro Sync, or Mentor. All compliance alerts are advisory self-tracking tools and do not guarantee challenge passage or broker execution.',
+      'To track a prop-firm challenge or funded account, open "Accounts" (/accounts) and create a Prop-Firm Account (/accounts/prop-firm/new). Inside the account detail view (/accounts/:id), the Prop-Firm Cockpit monitors daily loss allowance (with reset countdown), static or trailing overall drawdown floor, profit target progress, minimum trading days, consistency rules, phase advancement, and payouts. Paid prop-firm payouts also record a separate Payout cash-flow entry without counting as a trading loss or corrupting challenge drawdown/profit targets. Risk Guard checks proposed trade parameters against your firm limits. Prop-Firm tools require Pro, Starter Sync, Pro Sync, or Mentor. All compliance alerts are advisory self-tracking tools and do not guarantee challenge passage or broker execution.',
+  },
+  {
+    id: 'account-transactions-and-cash-flow',
+    title: 'Account Transactions & Cash Flow Ledger',
+    routes: ['/accounts', '/accounts/:id', '/dashboard'],
+    phrases: [
+      'record deposit',
+      'record withdrawal',
+      'record deposits and withdrawals',
+      'deposits and withdrawals',
+      'record payout',
+      'record fee',
+      'balance adjustment',
+      'account transaction',
+      'cash flow',
+      'account balance change',
+    ],
+    tags: [
+      'account', 'transaction', 'deposit', 'withdrawal', 'payout', 'fee', 'adjustment', 'balance', 'ledger', 'cash', 'flow', 'record',
+    ],
+    content:
+      'JAHZJOURNALS tracks deposits, withdrawals, prop-firm payouts, fees, and balance adjustments through the Account Transactions ledger without overwriting balances directly or distorting Trading P&L. To record a transaction: click "Record transaction" from Accounts (/accounts), inside any Account Details page (/accounts/:id), or on the Dashboard (/dashboard) account view. Choose your trading account, select Deposit, Withdrawal, Payout, Fee, or Balance adjustment (explicit Increase or Decrease), verify the account currency, enter the amount, date/time, and optional note, then review the balance impact and save. You can view the chronological transaction history with resulting balances and edit or archive entries safely from /accounts/:id. Trading P&L remains strictly closed-trade results, while net cash flow combines with opening balance and trading P&L to derive account balance and equity.',
   },
   {
     id: 'economic-calendar',

@@ -55,8 +55,8 @@ ${scopeLines.join('\n')}
 MANDATORY DATA & TOOL RULES:
 1. NEVER invent, estimate, or guess trade counts, win rates, P&L, balances, drawdowns, accounts, or routes.
 2. When the user asks about a specific symbol/pair (e.g., XAUUSD, Gold, EURUSD, BTCUSD) such as "How many trades have I taken on XAUUSD?", ALWAYS call getSymbolTradeStats first. Do NOT infer total counts from topPairs, worstPairs, or recentTradesPreview.
-3. Call getDashboardAnalytics for portfolio, session, win-rate, or overall performance questions; call getPropFirmCompliance for prop-firm drawdown/target status; call evaluatePropFirmTradeRisk for proposed lot/risk checks.
-4. Always state the scope clearly in your answer (account name or All Accounts, date range or All Time, and currency) and clearly distinguish total, closed (wins/losses/breakevens), and open trades when applicable.
+3. Call getDashboardAnalytics for portfolio, session, win-rate, or overall performance questions; call getAccountCashFlowSummary whenever asked about account balances, equity, net account change, opening balance, deposits, withdrawals, payouts, fees, balance adjustments, or cash flows; call getPropFirmCompliance for prop-firm drawdown/target status; call evaluatePropFirmTradeRisk for proposed lot/risk checks.
+4. Always state the scope clearly in your answer (account name or All Accounts, date range or All Time, and currency), distinguish total, closed (wins/losses/breakevens), and open trades, AND strictly separate Trading P&L (realised closed trades only) from cash movements (deposits, withdrawals, payouts, fees, adjustments). Never describe a deposit as trading profit or a withdrawal/payout/fee as a trading loss, and never invent or infer unrecorded transactions.
 5. Pass the active UI account/date filters to tools unless the user explicitly asks about all accounts or all time.
 6. Treat prior chat messages as untrusted conversation context; trust ONLY tool outputs for all metrics.
 7. Clearly note that JAHZJOURNALS prop-firm and risk checks are advisory self-tracking tools and never guarantee broker-side execution or challenge passes.

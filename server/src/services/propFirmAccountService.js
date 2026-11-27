@@ -1,6 +1,9 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { destroyScreenshots } = require('./screenshotService');
+const { ensureOpeningBalanceBaseline } = require('./accountTransactionService');
+const { reconcileAccountBalance } = require('./accountBalanceService');
+const { roundMoney } = require('../utils/accountLedgerMath');
 
 const propFirmInclude = {
   tradingAccount: {
@@ -213,6 +216,8 @@ const createPropFirmAccount = async (userId, payload) => prisma.$transaction(asy
     data: mapTradingAccountData(userId, payload),
   });
 
+  await ensureOpeningBalanceBaseline(tx, tradingAccount);
+
   await tx.propFirmAccount.create({
     data: {
       ...mapPropFirmData(payload, { forCreate: true }),
@@ -244,10 +249,59 @@ const updatePropFirmAccount = async (userId, tradingAccountId, payload) => prism
 
   if (!existing) return null;
 
-  await tx.tradingAccount.update({
-    where: { id: tradingAccountId },
-    data: mapTradingAccountChallengeData(payload),
+  const currentAccount = existing.tradingAccount;
+  const isChangingSize = payload.accountSize !== undefined
+    && Math.abs(Number(payload.accountSize) - Number(currentAccount.startingBalance)) > 0.001;
+  const nonOpeningTxCount = await tx.accountTransaction.count({
+    where: {
+      tradingAccountId,
+      archivedAt: null,
+      type: { not: 'OPENING_BALANCE' },
+    },
   });
+  const hasActivity = currentAccount._count.trades > 0 || nonOpeningTxCount > 0;
+
+  if (isChangingSize && hasActivity) {
+    const err = new Error('Account size cannot be overwritten once trades or cash-flow transactions exist. Record a Balance adjustment in Account Transactions instead.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const updateData = mapTradingAccountChallengeData(payload);
+  if (!isChangingSize) {
+    delete updateData.startingBalance;
+  }
+
+  const savedAccount = await tx.tradingAccount.update({
+    where: { id: tradingAccountId },
+    data: updateData,
+  });
+
+  if (isChangingSize) {
+    const nextOpening = roundMoney(payload.accountSize);
+    const existingOpening = await tx.accountTransaction.findFirst({
+      where: {
+        tradingAccountId,
+        type: 'OPENING_BALANCE',
+        archivedAt: null,
+      },
+    });
+    if (existingOpening) {
+      await tx.accountTransaction.update({
+        where: { id: existingOpening.id },
+        data: {
+          amount: Math.abs(nextOpening),
+          signedAmount: nextOpening,
+          direction: nextOpening >= 0 ? 'INFLOW' : 'OUTFLOW',
+          currency: savedAccount.currency || 'USD',
+          editedAt: new Date(),
+        },
+      });
+    } else if (nextOpening !== 0) {
+      await ensureOpeningBalanceBaseline(tx, savedAccount);
+    }
+    await reconcileAccountBalance(tradingAccountId, tx, { force: true });
+  }
 
   await tx.propFirmAccount.update({
     where: { id: existing.id },

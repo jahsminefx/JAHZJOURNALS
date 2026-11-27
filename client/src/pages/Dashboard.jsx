@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Activity, ShieldAlert, Target, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { Activity, ShieldAlert, Target, TrendingDown, TrendingUp, Wallet, ArrowUpDown } from 'lucide-react';
 import api from '../utils/api';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
+import RecordTransactionModal from '../components/accounts/RecordTransactionModal';
 import MetricCard from '../components/dashboard/MetricCard';
 import PerformanceCurveChart from '../components/dashboard/EquityCurveChart';
 import SessionEdgeChart from '../components/dashboard/SessionEdgeChart';
@@ -72,6 +73,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(!initialCached);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
 
   useEffect(() => {
     const nextParams = new URLSearchParams();
@@ -171,35 +173,47 @@ const Dashboard = () => {
   const currency = dashboard?.currency || 'USD';
   const summary = useMemo(() => dashboard?.summary || {}, [dashboard]);
   const outcomes = useMemo(() => dashboard?.tradeOutcomes || {}, [dashboard]);
+  const cashFlow = useMemo(() => dashboard?.cashFlowSummary || null, [dashboard]);
+  const txEnabled = dashboard?.accountTransactionsEnabled !== false;
 
   const metricCards = useMemo(() => {
     const totalTrades = Number(summary.totalTrades || 0);
     const closedTrades = Number(summary.closedTrades || 0);
     const openTrades = Math.max(totalTrades - closedTrades, 0);
     const netProfitLoss = Number(summary.netProfitLoss || 0);
-    const returnPercentage = Number(summary.returnPercentage || 0);
+    const hasValidReturn = summary.returnPercentage !== null && summary.returnPercentage !== undefined && summary.returnMethod !== 'UNAVAILABLE';
+    const returnPercentage = hasValidReturn ? Number(summary.returnPercentage || 0) : null;
     const wins = Number(outcomes.wins || 0);
     const losses = Number(outcomes.losses || 0);
     const breakevens = Number(outcomes.breakevens || 0);
     const drawdownPercentage = Number(summary.maximumDrawdownPercentage || 0);
-    const startingBalance = Number(dashboard?.startingBalance || 0);
+    const startingBalance = Number(cashFlow?.openingBalance ?? dashboard?.startingBalance ?? 0);
     const curveBalance = dashboard?.performanceCurve?.summary?.currentBalance;
-    const currentBalance = Number.isFinite(Number(curveBalance)) && Number(curveBalance) !== 0
-      ? Number(curveBalance)
-      : startingBalance + netProfitLoss;
+    const currentBalance = cashFlow?.currentBalance !== undefined && cashFlow?.currentBalance !== null
+      ? Number(cashFlow.currentBalance)
+      : (Number.isFinite(Number(curveBalance)) && Number(curveBalance) !== 0
+        ? Number(curveBalance)
+        : startingBalance + netProfitLoss);
     const noClosedTradeText = 'Log your first closed trade to unlock analytics.';
     const netTone = netProfitLoss > 0 ? 'positive' : netProfitLoss < 0 ? 'negative' : 'neutral';
     const netStatus = netProfitLoss > 0 ? 'In profit' : netProfitLoss < 0 ? 'In loss' : 'Breakeven';
     const winRateText = closedTrades
       ? `${plural(wins, 'win')} | ${plural(losses, 'loss', 'losses')} | ${formatNumber(breakevens, 0)} BE`
       : noClosedTradeText;
-    const balanceDiff = currentBalance - startingBalance;
+    const balanceDiff = cashFlow?.netAccountChange !== undefined && cashFlow?.netAccountChange !== null
+      ? Number(cashFlow.netAccountChange)
+      : (currentBalance - startingBalance);
     const balanceTone = !startingBalance || Math.abs(balanceDiff) < 0.005
       ? 'blue'
       : balanceDiff > 0 ? 'positive' : 'negative';
     const balanceChangeText = startingBalance && Math.abs(balanceDiff) >= 0.005
       ? ` (${formatCurrency(balanceDiff, currency, { signDisplay: 'always' })})`
       : '';
+    const returnSupportText = !closedTrades
+      ? noClosedTradeText
+      : !hasValidReturn
+      ? `Capital-adjusted return unavailable · ${plural(closedTrades, 'closed trade')}`
+      : `${returnPercentage > 0 ? '+' : ''}${formatPercent(returnPercentage)} ${summary.returnMethod === 'TWR' ? 'TWR ' : ''}return · ${plural(closedTrades, 'closed trade')}`;
 
     return [
       {
@@ -210,7 +224,7 @@ const Dashboard = () => {
         status: accounts.length > 1 && !accountId ? 'All accounts' : null,
         statusTone: 'blue',
         supportingText: startingBalance
-          ? `Started at ${formatCurrency(startingBalance, currency)}${balanceChangeText}`
+          ? `Opened at ${formatCurrency(startingBalance, currency)}${balanceChangeText}`
           : 'Add a starting balance to track growth.',
         supportingTone: balanceTone === 'blue' ? null : balanceTone,
         icon: Wallet,
@@ -236,7 +250,7 @@ const Dashboard = () => {
         icon: Activity,
       },
       {
-        label: netProfitLoss < 0 ? 'Net Loss' : 'Net Profit',
+        label: netProfitLoss < 0 ? 'Trading Loss' : 'Trading P&L',
         value: closedTrades
           ? formatCurrency(netProfitLoss, currency, { signDisplay: netProfitLoss === 0 ? 'auto' : 'always' })
           : '--',
@@ -244,9 +258,7 @@ const Dashboard = () => {
         valueTone: closedTrades ? netTone : 'muted',
         status: closedTrades ? netStatus : null,
         statusTone: netTone,
-        supportingText: closedTrades
-          ? `${returnPercentage > 0 ? '+' : ''}${formatPercent(returnPercentage)} return · ${plural(closedTrades, 'closed trade')}`
-          : noClosedTradeText,
+        supportingText: returnSupportText,
         supportingTone: closedTrades && netTone !== 'neutral' ? netTone : null,
         icon: netProfitLoss < 0 ? TrendingDown : TrendingUp,
       },
@@ -257,11 +269,11 @@ const Dashboard = () => {
         valueTone: netTone,
         status: closedTrades && netTone !== 'neutral' ? (netTone === 'positive' ? 'In profit' : 'In loss') : null,
         statusTone: netTone,
-        supportingText: 'Largest peak-to-trough decline',
+        supportingText: 'Largest trading peak-to-trough decline',
         icon: ShieldAlert,
       },
     ];
-  }, [accountId, accounts.length, currency, dashboard, outcomes, summary]);
+  }, [accountId, accounts.length, cashFlow, currency, dashboard, outcomes, summary]);
 
   const handleDateRangeChange = (nextRange) => {
     setDateRange(nextRange);
@@ -292,6 +304,8 @@ const Dashboard = () => {
         fxMetadata={dashboard?.fxMetadata}
         isMultiAccountNormalized={dashboard?.isMultiAccountNormalized}
         summary={summary}
+        canRecordTransaction={txEnabled && accounts.length > 0}
+        onRecordTransaction={() => setIsTxModalOpen(true)}
       />
 
       <AnnouncementBanner />
@@ -330,6 +344,61 @@ const Dashboard = () => {
           <section className="grid min-w-0 gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {metricCards.map((card) => <MetricCard key={card.label} {...card} />)}
           </section>
+
+          {cashFlow && (cashFlow.hasCashFlowTransactions || accountId) && (
+            <section className="rounded-2xl border border-border bg-surface p-4 shadow-xs">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+                  <div className="flex items-center gap-2 font-bold text-foreground">
+                    <ArrowUpDown size={15} className="text-emerald-500" />
+                    <span>Cash Flow &amp; Net Account Change</span>
+                  </div>
+                  <span className="text-muted">
+                    Trading P&amp;L:{' '}
+                    <strong className={`font-mono ${Number(cashFlow.allTimeTradingPnl || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      {formatCurrency(cashFlow.allTimeTradingPnl || 0, currency, { signDisplay: Number(cashFlow.allTimeTradingPnl || 0) === 0 ? 'auto' : 'always' })}
+                    </strong>
+                  </span>
+                  <span className="text-muted">
+                    Net Cash Flow:{' '}
+                    <strong className={`font-mono ${Number(cashFlow.netCashFlow || 0) >= 0 ? 'text-sky-600 dark:text-sky-300' : 'text-amber-600 dark:text-amber-300'}`}>
+                      {formatCurrency(cashFlow.netCashFlow || 0, currency, { signDisplay: Number(cashFlow.netCashFlow || 0) === 0 ? 'auto' : 'always' })}
+                    </strong>
+                  </span>
+                  <span className="text-muted">
+                    Net Account Change:{' '}
+                    <strong className={`font-mono ${Number(cashFlow.netAccountChange || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      {formatCurrency(cashFlow.netAccountChange || 0, currency, { signDisplay: Number(cashFlow.netAccountChange || 0) === 0 ? 'auto' : 'always' })}
+                    </strong>
+                  </span>
+                  {(cashFlow.deposits > 0 || cashFlow.withdrawals > 0 || cashFlow.payouts > 0 || cashFlow.fees > 0 || cashFlow.adjustments !== 0) && (
+                    <span className="text-[11px] text-muted">
+                      (Deposits {formatCurrency(cashFlow.deposits, currency)} · Withdrawals {formatCurrency(cashFlow.withdrawals, currency)} · Payouts {formatCurrency(cashFlow.payouts, currency)} · Fees {formatCurrency(cashFlow.fees, currency)} · Adj {formatCurrency(cashFlow.adjustments, currency, { signDisplay: cashFlow.adjustments === 0 ? 'auto' : 'always' })})
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {accountId && (
+                    <Link
+                      to={`/accounts/${accountId}#account-transactions`}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-muted transition"
+                    >
+                      View ledger
+                    </Link>
+                  )}
+                  {txEnabled && accounts.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsTxModalOpen(true)}
+                      className="rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 transition"
+                    >
+                      Record transaction
+                    </button>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
 
           {accounts.length === 0 ? (
             <DashboardEmptyState type="accounts" />
@@ -370,6 +439,13 @@ const Dashboard = () => {
           <DisciplineBanner />
         </>
       )}
+      <RecordTransactionModal
+        isOpen={isTxModalOpen}
+        onClose={() => setIsTxModalOpen(false)}
+        accounts={accounts}
+        defaultAccountId={accountId}
+        onSuccess={() => setRetryCount((count) => count + 1)}
+      />
     </div>
   );
 };

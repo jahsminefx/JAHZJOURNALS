@@ -180,6 +180,38 @@ export const generatePerformancePdfReport = async ({
 
     y += 2 * (rowHeight + 4) + 6;
 
+    if (equityMetrics && (equityMetrics.hasCashFlowTransactions || Number(equityMetrics.netCashFlow || 0) !== 0)) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text('ACCOUNT CASH FLOW SUMMARY (SEPARATE FROM TRADING P&L)', 14, y);
+      y += 4;
+
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(14, y, pageWidth - 28, 18, 1.5, 1.5, 'FD');
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(30, 41, 59);
+      const cfLine1 = [
+        `Opening: ${formatCurrency(equityMetrics.openingBalance || 0, currency)}`,
+        `Deposits: ${formatCurrency(equityMetrics.deposits || 0, currency)}`,
+        `Withdrawals: ${formatCurrency(equityMetrics.withdrawals || 0, currency)}`,
+        `Payouts: ${formatCurrency(equityMetrics.payouts || 0, currency)}`,
+        `Fees: ${formatCurrency(equityMetrics.fees || 0, currency)}`,
+      ].join('  |  ');
+      const cfLine2 = [
+        `Adjustments: ${formatCurrency(equityMetrics.adjustments || 0, currency, { signDisplay: (equityMetrics.adjustments || 0) === 0 ? 'auto' : 'always' })}`,
+        `Net Cash Flow: ${formatCurrency(equityMetrics.netCashFlow || 0, currency, { signDisplay: (equityMetrics.netCashFlow || 0) === 0 ? 'auto' : 'always' })}`,
+        `Net Account Change: ${formatCurrency(equityMetrics.netAccountChange || 0, currency, { signDisplay: (equityMetrics.netAccountChange || 0) === 0 ? 'auto' : 'always' })}`,
+        `Current Balance: ${formatCurrency(equityMetrics.currentAccountBalance || 0, currency)}`,
+      ].join('  |  ');
+      doc.text(cfLine1, 18, y + 6.5);
+      doc.text(cfLine2, 18, y + 13);
+      y += 23;
+    }
+
     // Optional Chart Rendering
     if (chartElementRef && chartElementRef.current) {
       try {
@@ -326,6 +358,26 @@ export const generateWeeklyPdfReport = async ({ user, weeklyData, aiCoaching, cu
     });
 
     y += 22;
+
+    if (weeklyData?.cashFlow?.transactionCount > 0) {
+      const cf = weeklyData.cashFlow;
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(14, y, pageWidth - 28, 14, 1.5, 1.5, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text('WEEKLY ACCOUNT CASH FLOW (EXCLUDED FROM TRADING P&L)', 18, y + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(
+        `Deposits: ${formatCurrency(cf.deposits || 0, weeklyCurrency)}  |  Withdrawals: ${formatCurrency(cf.withdrawals || 0, weeklyCurrency)}  |  Payouts: ${formatCurrency(cf.payouts || 0, weeklyCurrency)}  |  Fees: ${formatCurrency(cf.fees || 0, weeklyCurrency)}  |  Net Cash Flow: ${formatCurrency(cf.netCashFlow || 0, weeklyCurrency, { signDisplay: (cf.netCashFlow || 0) === 0 ? 'auto' : 'always' })}`,
+        18,
+        y + 10.5
+      );
+      y += 18;
+    }
 
     // Safely Parse AI Coaching Data
     let parsedAi = aiCoaching;
@@ -668,6 +720,26 @@ export const generatePropFirmCompliancePdfReport = async ({
     });
 
     y += 2 * (rowHeight + 3) + 6;
+
+    if (compliance?.cashFlowSummary?.hasCashFlowTransactions) {
+      const pcf = compliance.cashFlowSummary;
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(14, y, pageWidth - 28, 13, 1.5, 1.5, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(15, 23, 42);
+      doc.text('TRADING PERFORMANCE VS PAYOUTS / CASH FLOW', 18, y + 4.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.2);
+      doc.setTextColor(51, 65, 85);
+      doc.text(
+        `Trading P&L: ${formatCurrency(pcf.realisedTradingPnl || 0, currency, { signDisplay: 'always' })}  |  Payouts: ${formatCurrency(pcf.payouts || 0, currency)}  |  Fees/Adj/Other Net Cash Flow: ${formatCurrency(pcf.netCashFlow || 0, currency, { signDisplay: 'always' })}  |  Cash Balance: ${formatCurrency(pcf.currentBalance || 0, currency)}`,
+        18,
+        y + 9.5
+      );
+      y += 16;
+    }
 
     // 3. Rule Compliance Verdict Banner
     doc.setFillColor(

@@ -11,6 +11,11 @@ const { getPropFirmComplianceReport } = require('../../services/propFirmRuleEngi
 const { evaluateProposedTrade } = require('../../services/propFirmRiskGuardService');
 const currencyService = require('../../services/fx/currencyService');
 const {
+  calculateAccountLedgerSummary,
+  summarizeCashFlowTransactions,
+  roundMoney,
+} = require('../../utils/accountLedgerMath');
+const {
   getTradeTimestamp,
   isClosedTrade,
   normalizeTradeResult,
@@ -338,6 +343,7 @@ const getChatDashboardAnalytics = async (
       isPropFirmAccount: a.isPropFirmAccount,
     })),
     summary: analyticsData.summary,
+    cashFlowSummary: analyticsData.cashFlowSummary || null,
     tradeOutcomes: analyticsData.tradeOutcomes,
     pairPerformance: analyticsData.pairPerformance,
     sessionPerformance: analyticsData.sessionPerformance,
@@ -353,7 +359,202 @@ const getChatDashboardAnalytics = async (
       account: t.tradingAccount?.name || null,
       date: (t.exitTime || t.entryTime || t.createdAt)?.toISOString().split('T')[0],
     })),
-    note: 'Use pairPerformance for all closed-trade pair counts or call getSymbolTradeStats for exact total/open/closed counts on a specific symbol.',
+    note: 'Use pairPerformance for all closed-trade pair counts or call getSymbolTradeStats for exact total/open/closed counts on a specific symbol. Call getAccountCashFlowSummary for detailed deposits, withdrawals, payouts, fees, and adjustments.',
+  };
+};
+
+/**
+ * Authoritative read-only cash-flow & account-balance breakdown scoped strictly to userId.
+ */
+const getAccountCashFlowSummary = async (
+  { userId, tradingAccountId = null, startDate = null, endDate = null, limit = 20 } = {},
+  db = defaultPrisma
+) => {
+  const filterCheck = await validateChatContextFilters(
+    { userId, tradingAccountId, startDate, endDate },
+    db
+  );
+  if (!filterCheck.valid) {
+    return {
+      error: true,
+      code: filterCheck.code,
+      message: filterCheck.message,
+    };
+  }
+
+  const accounts = await db.tradingAccount.findMany({
+    where: {
+      userId,
+      ...(filterCheck.account ? { id: filterCheck.account.id } : {}),
+    },
+    include: {
+      trades: {
+        select: {
+          id: true,
+          status: true,
+          result: true,
+          profitLossAmount: true,
+          entryTime: true,
+          exitTime: true,
+          createdAt: true,
+        },
+      },
+      accountTransactions: {
+        where: { archivedAt: null },
+        orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const distinctCurrencies = [...new Set(accounts.map((a) => a.currency || 'USD'))];
+  const isMultiCurrency = distinctCurrencies.length > 1;
+  const reportingCurrency = isMultiCurrency ? 'USD' : (distinctCurrencies[0] || filterCheck.account?.currency || 'USD');
+  const rateCache = new Map();
+
+  const getRate = async (src) => {
+    const code = src || 'USD';
+    if (code === reportingCurrency) return 1;
+    if (rateCache.has(code)) return rateCache.get(code);
+    try {
+      const conv = await currencyService.convertAmount(1, code, reportingCurrency);
+      const rate = conv?.convertedAmount ?? 1;
+      rateCache.set(code, rate);
+      return rate;
+    } catch {
+      rateCache.set(code, 1);
+      return 1;
+    }
+  };
+
+  let openingBalance = 0;
+  let realisedTradingPnl = 0;
+  let unrealisedPnl = 0;
+  let deposits = 0;
+  let withdrawals = 0;
+  let payouts = 0;
+  let fees = 0;
+  let adjustments = 0;
+  let netCashFlow = 0;
+  let accountBalance = 0;
+  let equity = 0;
+  let netAccountChange = 0;
+  let hasRecordedCashFlowTransactions = false;
+
+  const perAccountSummaries = [];
+  const allPeriodTransactions = [];
+  const allNonOpeningTx = [];
+
+  for (const account of accounts) {
+    const rate = await getRate(account.currency || 'USD');
+    const summary = calculateAccountLedgerSummary({
+      account,
+      trades: account.trades || [],
+      transactions: account.accountTransactions || [],
+    });
+
+    if (summary.hasCashFlowTransactions) {
+      hasRecordedCashFlowTransactions = true;
+    }
+
+    openingBalance += summary.openingBalance * rate;
+    realisedTradingPnl += summary.realisedTradingPnl * rate;
+    unrealisedPnl += summary.unrealisedPnl * rate;
+    deposits += summary.deposits * rate;
+    withdrawals += summary.withdrawals * rate;
+    payouts += summary.payouts * rate;
+    fees += summary.fees * rate;
+    adjustments += summary.adjustments * rate;
+    netCashFlow += summary.netCashFlow * rate;
+    accountBalance += summary.accountBalance * rate;
+    equity += summary.equity * rate;
+    netAccountChange += summary.netAccountChange * rate;
+
+    perAccountSummaries.push({
+      accountId: account.id,
+      accountName: account.name,
+      currency: account.currency || 'USD',
+      isPropFirmAccount: Boolean(account.isPropFirmAccount),
+      ...summary,
+    });
+
+    for (const tx of account.accountTransactions || []) {
+      if (tx.type === 'OPENING_BALANCE') continue;
+      const item = {
+        id: tx.id,
+        accountId: account.id,
+        accountName: account.name,
+        type: tx.type,
+        direction: tx.direction,
+        amount: roundMoney(Math.abs(Number(tx.amount ?? tx.signedAmount ?? 0))),
+        signedAmount: roundMoney(Number(tx.signedAmount ?? 0)),
+        currency: account.currency || tx.currency || 'USD',
+        occurredAt: tx.occurredAt instanceof Date ? tx.occurredAt.toISOString() : tx.occurredAt,
+        note: tx.note || null,
+      };
+      allNonOpeningTx.push(item);
+
+      if (filterCheck.parsedStart || filterCheck.parsedEnd) {
+        const ts = new Date(item.occurredAt);
+        const inStart = !filterCheck.parsedStart || ts >= filterCheck.parsedStart;
+        const inEnd = !filterCheck.parsedEnd || ts <= filterCheck.parsedEnd;
+        if (inStart && inEnd) {
+          allPeriodTransactions.push({
+            ...tx,
+            amount: roundMoney(item.amount * rate),
+            signedAmount: roundMoney(item.signedAmount * rate),
+          });
+        }
+      }
+    }
+  }
+
+  const maxItems = Math.min(Math.max(Number(limit) || 20, 1), 50);
+  const recentTransactions = allNonOpeningTx
+    .filter((item) => {
+      if (!filterCheck.parsedStart && !filterCheck.parsedEnd) return true;
+      const ts = new Date(item.occurredAt);
+      if (filterCheck.parsedStart && ts < filterCheck.parsedStart) return false;
+      if (filterCheck.parsedEnd && ts > filterCheck.parsedEnd) return false;
+      return true;
+    })
+    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+    .slice(0, maxItems);
+
+  const periodCashFlow = (filterCheck.parsedStart || filterCheck.parsedEnd)
+    ? summarizeCashFlowTransactions(allPeriodTransactions)
+    : null;
+
+  return {
+    scope: {
+      accountId: filterCheck.account?.id || null,
+      accountName: filterCheck.account?.name || 'All Accounts',
+      isAllAccounts: !filterCheck.account,
+      startDate: filterCheck.startDate || null,
+      endDate: filterCheck.endDate || null,
+      currency: reportingCurrency,
+      isMultiCurrencyNormalized: isMultiCurrency,
+    },
+    summary: {
+      openingBalance: roundMoney(openingBalance),
+      realisedTradingPnl: roundMoney(realisedTradingPnl),
+      unrealisedPnl: roundMoney(unrealisedPnl),
+      deposits: roundMoney(deposits),
+      withdrawals: roundMoney(withdrawals),
+      payouts: roundMoney(payouts),
+      fees: roundMoney(fees),
+      adjustments: roundMoney(adjustments),
+      netCashFlow: roundMoney(netCashFlow),
+      accountBalance: roundMoney(accountBalance),
+      equity: roundMoney(equity),
+      netAccountChange: roundMoney(netAccountChange),
+      hasRecordedCashFlowTransactions,
+    },
+    ...(periodCashFlow ? { periodCashFlow } : {}),
+    accounts: perAccountSummaries,
+    hasRecordedCashFlowTransactions,
+    recentTransactions,
+    note: 'Trading P&L reflects closed trades only. Account balance = opening balance + realised trading P&L + net cash flow (deposits - withdrawals - payouts - fees +/- adjustments). Never infer or invent transactions.',
   };
 };
 
@@ -484,6 +685,35 @@ const ANALYTICS_TOOL_DEFINITIONS = [
   {
     type: 'function',
     function: {
+      name: 'getAccountCashFlowSummary',
+      description:
+        'Get authoritative account balance, opening balance, Trading P&L, equity, net account change, and recorded cash-flow ledger entries (deposits, withdrawals, payouts, fees, adjustments) strictly scoped to the authenticated user and optional account/date range.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tradingAccountId: {
+            type: 'string',
+            description: 'Optional trading account ID to scope the query. Omit for All Accounts.',
+          },
+          startDate: {
+            type: 'string',
+            description: 'Optional inclusive start date (YYYY-MM-DD) for filtering transaction history.',
+          },
+          endDate: {
+            type: 'string',
+            description: 'Optional inclusive end date (YYYY-MM-DD) for filtering transaction history.',
+          },
+          limit: {
+            type: 'number',
+            description: 'Maximum recent transactions to return (default 20, max 50).',
+          },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'getPropFirmCompliance',
       description:
         'Get authoritative prop-firm compliance metrics (daily loss remaining, overall drawdown floor, profit target progress, minimum trading days, and rule warnings).',
@@ -547,6 +777,7 @@ module.exports = {
   validateChatContextFilters,
   getSymbolTradeStats,
   getChatDashboardAnalytics,
+  getAccountCashFlowSummary,
   getChatPropFirmCompliance,
   evaluateChatPropFirmRisk,
   ANALYTICS_TOOL_DEFINITIONS,

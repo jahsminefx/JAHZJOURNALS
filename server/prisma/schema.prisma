@@ -232,6 +232,20 @@ enum PropFirmPayoutStatus {
   CANCELLED
 }
 
+enum AccountTransactionType {
+  OPENING_BALANCE
+  DEPOSIT
+  WITHDRAWAL
+  PAYOUT
+  FEE
+  ADJUSTMENT
+}
+
+enum AccountTransactionDirection {
+  INFLOW
+  OUTFLOW
+}
+
 model User {
   id           String @id @default(uuid())
   name         String
@@ -317,9 +331,10 @@ model User {
   updatedAt             DateTime              @updatedAt
   subscriptionHistories SubscriptionHistory[]
   userBadges            UserBadge[]
-  dailyReviews          DailyReview[]
-  sharedTrades          SharedTrade[]
-  sharedDailyReviews    SharedDailyReview[]
+  dailyReviews                DailyReview[]
+  sharedTrades                SharedTrade[]
+  sharedDailyReviews          SharedDailyReview[]
+  accountTransactions         AccountTransaction[]
 
   @@index([timezone])
 }
@@ -457,11 +472,12 @@ model TradingAccount {
 
   isSharedWithMentor Boolean @default(true)
 
-  trades          Trade[]
-  weeklyReviews   WeeklyReview[]
-  dailyReviews    DailyReview[]
-  propFirmAccount PropFirmAccount?
-  tradingGoals    TradingGoal[]
+  trades              Trade[]
+  weeklyReviews       WeeklyReview[]
+  dailyReviews        DailyReview[]
+  propFirmAccount     PropFirmAccount?
+  tradingGoals        TradingGoal[]
+  accountTransactions AccountTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -603,12 +619,47 @@ model PropFirmPayout {
   balanceAtRequest       Float?
   notes                  String?
   certificateUrl         String?
+  accountTransaction     AccountTransaction?
 
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
   @@index([propFirmAccountId, requestDate])
   @@index([status])
+}
+
+model AccountTransaction {
+  id                   String                      @id @default(uuid())
+  user                 User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String
+  tradingAccount       TradingAccount              @relation(fields: [tradingAccountId], references: [id], onDelete: Cascade)
+  tradingAccountId     String
+  type                 AccountTransactionType
+  direction            AccountTransactionDirection
+  amount               Decimal                     @db.Decimal(18, 2)
+  signedAmount         Decimal                     @db.Decimal(18, 2)
+  currency             String                      @default("USD")
+  occurredAt           DateTime
+  note                 String?
+  idempotencyKey       String?
+  transferGroupId      String?
+  linkedPropFirmPayout PropFirmPayout?             @relation(fields: [linkedPropFirmPayoutId], references: [id], onDelete: SetNull)
+  linkedPropFirmPayoutId String?                   @unique
+  archivedAt           DateTime?
+  archivedByUserId     String?
+  archiveReason        String?
+  editedAt             DateTime?
+  editHistory          Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId])
+  @@index([tradingAccountId])
+  @@index([tradingAccountId, archivedAt, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([transferGroupId])
 }
 
 model TradingGoal {

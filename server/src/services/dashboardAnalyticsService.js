@@ -1,5 +1,10 @@
 const { PrismaClient } = require('@prisma/client');
 const currencyService = require('./fx/currencyService');
+const { isAccountTransactionsEnabled } = require('../config/featureFlags');
+const {
+  calculateAccountLedgerSummary,
+  summarizeCashFlowTransactions,
+} = require('../utils/accountLedgerMath');
 const {
   bucketByDate,
   buildPerformanceCurve,
@@ -98,6 +103,66 @@ const fetchTrades = (userId, accountIds) => prisma.trade.findMany({
   },
   orderBy: [{ exitTime: 'asc' }, { entryTime: 'asc' }, { createdAt: 'asc' }],
 });
+
+const fetchAccountTransactions = (userId, accountIds) => prisma.accountTransaction.findMany({
+  where: {
+    userId,
+    archivedAt: null,
+    ...(accountIds.length ? { tradingAccountId: { in: accountIds } } : {}),
+  },
+  include: {
+    tradingAccount: {
+      select: { id: true, name: true, currency: true },
+    },
+  },
+  orderBy: [{ occurredAt: 'asc' }, { createdAt: 'asc' }],
+});
+
+const getConversionRateCached = async (fromCurrency, toCurrency, rateCache) => {
+  const src = fromCurrency || 'USD';
+  const dst = toCurrency || 'USD';
+  if (src === dst) return 1;
+  const cacheKey = `${src}_${dst}`;
+  if (rateCache.has(cacheKey)) return rateCache.get(cacheKey);
+  const converted = await currencyService.convertAmount(1, src, dst);
+  const rate = converted.convertedAmount ?? 1;
+  rateCache.set(cacheKey, rate);
+  return rate;
+};
+
+const normalizeAccountsForAnalytics = async (accounts, targetCurrency) => {
+  const rateCache = new Map();
+  const normalized = [];
+  for (const account of accounts) {
+    const rate = await getConversionRateCached(account.currency || 'USD', targetCurrency, rateCache);
+    normalized.push({
+      ...account,
+      startingBalance: round(Number(account.startingBalance || 0) * rate, 2),
+      currentBalance: round(Number(account.currentBalance || 0) * rate, 2),
+    });
+  }
+  return normalized;
+};
+
+const normalizeTransactionsForAnalytics = async (transactions, targetCurrency) => {
+  const rateCache = new Map();
+  const normalized = [];
+  for (const tx of transactions) {
+    const accCurrency = tx.tradingAccount?.currency || tx.currency || 'USD';
+    const rate = await getConversionRateCached(accCurrency, targetCurrency, rateCache);
+    const rawAmount = Math.abs(Number(tx.amount ?? tx.signedAmount ?? 0));
+    const rawSigned = Number(tx.signedAmount ?? (tx.direction === 'OUTFLOW' ? -rawAmount : rawAmount));
+    normalized.push({
+      ...tx,
+      amount: round(rawAmount * rate, 2),
+      signedAmount: round(rawSigned * rate, 2),
+      nativeCurrency: accCurrency,
+      nativeAmount: rawAmount,
+      nativeSignedAmount: rawSigned,
+    });
+  }
+  return normalized;
+};
 
 /**
  * Normalizes starting balance across multi-currency accounts
@@ -602,7 +667,7 @@ const buildGoalProgress = async ({
   });
 };
 
-const buildDashboardAnalytics = async ({ userId, query }) => {
+const buildDashboardAnalytics = async ({ userId, user = null, query }) => {
   const accountId = hasValue(query.accountId) ? String(query.accountId) : null;
   const startDate = parseDate(query.startDate);
   const endDate = parseDate(query.endDate, true);
@@ -614,21 +679,68 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
   const isMultiAccount = !accountId && selectedAccounts.length > 1;
   const targetCurrency = isMultiAccount ? 'USD' : (selectedAccounts[0]?.currency || accounts[0]?.currency || 'USD');
 
-  const rawTrades = await fetchTrades(userId, accountIds);
-  const allTrades = await normalizeTradesForAnalytics(rawTrades, targetCurrency);
+  const [rawTrades, rawTransactions] = await Promise.all([
+    fetchTrades(userId, accountIds),
+    fetchAccountTransactions(userId, accountIds),
+  ]);
+  const [allTrades, normalizedTransactions, normalizedSelectedAccounts] = await Promise.all([
+    normalizeTradesForAnalytics(rawTrades, targetCurrency),
+    normalizeTransactionsForAnalytics(rawTransactions, targetCurrency),
+    normalizeAccountsForAnalytics(selectedAccounts, targetCurrency),
+  ]);
   const currentTrades = filterTradesByPeriod(allTrades, startDate, endDate);
   const previousTrades = previousPeriod ? filterTradesByPeriod(allTrades, previousPeriod.startDate, previousPeriod.endDate) : [];
-  
+  const allTimeEndTrades = endDate ? allTrades.filter((t) => getTradeTimestamp(t) <= endDate) : allTrades;
+  const transactionsUpToEnd = endDate
+    ? normalizedTransactions.filter((t) => new Date(t.occurredAt || t.createdAt) <= endDate)
+    : normalizedTransactions;
+  const periodTransactions = normalizedTransactions.filter((t) => {
+    const ts = new Date(t.occurredAt || t.createdAt);
+    if (startDate && ts < startDate) return false;
+    if (endDate && ts > endDate) return false;
+    return true;
+  });
+
   const startingBalance = await getNormalizedStartingBalance(selectedAccounts, targetCurrency);
   const currentSummary = calculateSummary(currentTrades, startingBalance);
   const equityCurve = calculateEquityCurve(currentTrades, startingBalance);
   const drawdown = calculateDrawdown(equityCurve, startingBalance);
   const performanceCurve = buildPerformanceCurve({
-    accounts: selectedAccounts,
+    accounts: normalizedSelectedAccounts,
     trades: allTrades,
+    fundingEvents: normalizedTransactions,
     startDate,
     endDate,
   });
+
+  // Derive ledger summary up to endDate safely in targetCurrency
+  const ledgerToEnd = calculateAccountLedgerSummary({
+    account: { startingBalance },
+    trades: allTimeEndTrades,
+    transactions: transactionsUpToEnd,
+  });
+  // If multiple accounts lacked explicit OPENING_BALANCE rows, use normalized startingBalance as baseline
+  const explicitOpeningSum = transactionsUpToEnd
+    .filter((t) => t.type === 'OPENING_BALANCE')
+    .reduce((sum, t) => sum + Number(t.signedAmount || 0), 0);
+  const effectiveOpening = transactionsUpToEnd.some((t) => t.type === 'OPENING_BALANCE')
+    ? round(
+      normalizedSelectedAccounts.reduce((accSum, acc) => {
+        const accOpening = transactionsUpToEnd.filter(
+          (t) => t.tradingAccountId === acc.id && t.type === 'OPENING_BALANCE'
+        );
+        if (accOpening.length > 0) {
+          return accSum + accOpening.reduce((s, t) => s + Number(t.signedAmount || 0), 0);
+        }
+        return accSum + Number(acc.startingBalance || 0);
+      }, 0)
+    )
+    : startingBalance;
+  const ledgerBalance = round(effectiveOpening + ledgerToEnd.realisedTradingPnl + ledgerToEnd.netCashFlow);
+  const ledgerEquity = round(ledgerBalance + ledgerToEnd.unrealisedPnl);
+  const ledgerNetChange = round(ledgerToEnd.realisedTradingPnl + ledgerToEnd.netCashFlow);
+  const periodCashFlow = summarizeCashFlowTransactions(periodTransactions);
+
   const previousSummary = calculateSummary(previousTrades, startingBalance);
   const previousDrawdown = calculateDrawdown(calculateEquityCurve(previousTrades, startingBalance), startingBalance);
   const comparison = previousPeriod
@@ -641,6 +753,10 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
   // Retrieve FX conversion metadata for status UI
   const fxDetails = await currencyService.getExchangeRateDetails(targetCurrency, 'USD');
 
+  const effectiveReturnPct = performanceCurve.summary.hasCashFlowEvents
+    ? performanceCurve.summary.timeWeightedReturnPercentage
+    : currentSummary.returnPercentage;
+
   return {
     filters: {
       accountId,
@@ -651,6 +767,7 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
         endDate: toDateInput(previousPeriod.endDate),
       } : null,
     },
+    accountTransactionsEnabled: isAccountTransactionsEnabled(user || { id: userId }),
     accounts: accounts.map((account) => ({
       id: account.id,
       name: account.name,
@@ -673,13 +790,33 @@ const buildDashboardAnalytics = async ({ userId, query }) => {
     },
     summary: {
       netProfitLoss: currentSummary.netProfitLoss,
-      returnPercentage: currentSummary.returnPercentage,
+      returnPercentage: effectiveReturnPct,
+      returnMethod: performanceCurve.summary.returnMethod,
       winRate: currentSummary.winRate,
       totalTrades: currentSummary.totalTrades,
       closedTrades: currentSummary.closedTrades,
       profitFactor: currentSummary.profitFactor,
       maximumDrawdown: drawdown.maximumDrawdown,
       maximumDrawdownPercentage: drawdown.maximumDrawdownPercentage,
+    },
+    cashFlowSummary: {
+      openingBalance: round(effectiveOpening),
+      realisedTradingPnl: currentSummary.netProfitLoss,
+      allTimeTradingPnl: ledgerToEnd.realisedTradingPnl,
+      unrealisedPnl: ledgerToEnd.unrealisedPnl,
+      deposits: ledgerToEnd.deposits,
+      withdrawals: ledgerToEnd.withdrawals,
+      payouts: ledgerToEnd.payouts,
+      fees: ledgerToEnd.fees,
+      adjustments: ledgerToEnd.adjustments,
+      netCashFlow: ledgerToEnd.netCashFlow,
+      currentBalance: ledgerBalance,
+      equity: ledgerEquity,
+      netAccountChange: ledgerNetChange,
+      periodCashFlow,
+      hasTransactions: ledgerToEnd.hasCashFlowTransactions || explicitOpeningSum !== 0,
+      hasCashFlowTransactions: ledgerToEnd.hasCashFlowTransactions,
+      currency: targetCurrency,
     },
     previousPeriodComparison: comparison,
     performanceCurve,

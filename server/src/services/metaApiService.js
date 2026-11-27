@@ -155,15 +155,78 @@ const provisionCloudAccount = async ({ platform, server, login, password, accoun
   }
 };
 
+const roundDealMoney = (val) => {
+  const rounded = Math.round((Number(val) || 0) * 100) / 100;
+  return Object.is(rounded, -0) ? 0 : rounded;
+};
+
+/**
+ * Extracts broker cash-flow balance events (DEAL_TYPE_BALANCE) from raw MetaApi history deals.
+ * Never invents synthetic transactions; skips zero-value or ID-less deals.
+ */
+const extractBalanceDealsFromRawDeals = (rawDeals = []) => {
+  if (!Array.isArray(rawDeals) || rawDeals.length === 0) return [];
+
+  const extracted = [];
+  for (const deal of rawDeals) {
+    if (!deal || String(deal.type || '').toUpperCase() !== 'DEAL_TYPE_BALANCE') {
+      continue;
+    }
+
+    const dealId = String(deal.id || deal.ticket || deal.orderId || '').trim();
+    if (!dealId) continue;
+
+    const rawAmount = roundDealMoney(
+      (Number(deal.profit ?? deal.amount ?? 0) || 0)
+      + (Number(deal.commission) || 0)
+      + (Number(deal.swap) || 0)
+    );
+    if (Math.abs(rawAmount) < 0.005) continue;
+
+    const parsedTime = deal.time ? new Date(deal.time) : null;
+    const time = parsedTime && !Number.isNaN(parsedTime.getTime())
+      ? parsedTime.toISOString()
+      : new Date().toISOString();
+
+    const comment = String(deal.comment || deal.brokerComment || '').trim() || null;
+
+    extracted.push({
+      dealId,
+      amount: rawAmount,
+      time,
+      comment,
+    });
+  }
+
+  extracted.sort((a, b) => {
+    const tDiff = new Date(a.time).getTime() - new Date(b.time).getTime();
+    if (tDiff !== 0) return tDiff;
+    return a.dealId.localeCompare(b.dealId);
+  });
+
+  return extracted;
+};
+
+const attachBalanceDeals = (trades = [], balanceDeals = []) => {
+  Object.defineProperty(trades, 'balanceDeals', {
+    value: Array.isArray(balanceDeals) ? balanceDeals : [],
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+  return trades;
+};
+
 /**
  * Fetch Account History Deals / Orders from MetaTrader
  * Groups MT5 entry and exit deals by positionId into complete, normalized trades.
+ * Attaches non-enumerable `balanceDeals` array for DEAL_TYPE_BALANCE events.
  * NEVER returns synthetic or fake trades.
  */
 const fetchAccountHistory = async (cloudAccountId, daysBack = 180) => {
   if (!cloudAccountId || cloudAccountId.startsWith('dev_cloud_')) {
     console.warn(`[MetaApi] Skipping fetchAccountHistory: Invalid or legacy cloudAccountId (${cloudAccountId})`);
-    return [];
+    return attachBalanceDeals([], []);
   }
 
   let token;
@@ -171,7 +234,7 @@ const fetchAccountHistory = async (cloudAccountId, daysBack = 180) => {
     token = getMetaApiToken();
   } catch (err) {
     console.error('[MetaApi] Cannot fetch history:', err.message);
-    return [];
+    return attachBalanceDeals([], []);
   }
 
   const queryRange = async (days) => {
@@ -207,8 +270,10 @@ const fetchAccountHistory = async (cloudAccountId, daysBack = 180) => {
     }
 
     if (!Array.isArray(rawDeals) || rawDeals.length === 0) {
-      return [];
+      return attachBalanceDeals([], []);
     }
+
+    const balanceDeals = extractBalanceDealsFromRawDeals(rawDeals);
 
     // Group MT5 deals by positionId to reconstruct full trade lifecycles (Entry + Exit)
     const positionsMap = new Map();
@@ -293,10 +358,10 @@ const fetchAccountHistory = async (cloudAccountId, daysBack = 180) => {
       });
     }
 
-    return completedTrades;
+    return attachBalanceDeals(completedTrades, balanceDeals);
   } catch (error) {
     console.error('MetaApi Fetch History Error:', error.response?.data || error.message);
-    return [];
+    return attachBalanceDeals([], []);
   }
 };
 
@@ -400,6 +465,7 @@ const removeCloudAccount = async (cloudAccountId) => {
 module.exports = {
   provisionCloudAccount,
   fetchAccountHistory,
+  extractBalanceDealsFromRawDeals,
   fetchOpenPositions,
   removeCloudAccount,
   getAccountConnectionStatus,

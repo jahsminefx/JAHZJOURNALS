@@ -304,8 +304,18 @@ const PropFirmCockpit = ({ account, onRefresh }) => {
               <p className={`mt-1 text-xs font-semibold ${
                 progress.currentProfitAmount >= 0 ? 'text-emerald-400' : 'text-rose-400'
               }`}>
-                {progress.currentProfitAmount >= 0 ? '+' : ''}{formatMoney(progress.currentProfitAmount, currency)} net P&L
+                {progress.currentProfitAmount >= 0 ? '+' : ''}{formatMoney(progress.currentProfitAmount, currency)} trading P&amp;L
               </p>
+              {compliance?.cashFlowSummary?.hasCashFlowTransactions && (
+                <p className="mt-1 text-[11px] text-muted">
+                  Net cash flow:{' '}
+                  <span className="font-mono font-semibold text-foreground">
+                    {compliance.cashFlowSummary.netCashFlow >= 0 ? '+' : ''}
+                    {formatMoney(compliance.cashFlowSummary.netCashFlow, currency)}
+                  </span>
+                  {compliance.cashFlowSummary.payouts > 0 && ` (${formatMoney(compliance.cashFlowSummary.payouts, currency)} paid out)`}
+                </p>
+              )}
             </div>
 
             {/* Peak High-Water Mark */}
@@ -641,7 +651,10 @@ const PropFirmCockpit = ({ account, onRefresh }) => {
         <PropFirmPayoutLedger
           account={account}
           compliance={compliance}
-          onPayoutUpdated={fetchCompliance}
+          onPayoutUpdated={() => {
+            fetchCompliance();
+            onRefresh?.();
+          }}
         />
       )}
     </div>

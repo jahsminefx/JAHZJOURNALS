@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, Wallet } from 'lucide-react';
+import { CalendarDays, Plus, Wallet } from 'lucide-react';
 import { DATE_RANGE_OPTIONS } from '../../utils/dashboard';
 import CustomSelect from '../common/CustomSelect';
 
@@ -12,6 +12,8 @@ const DashboardFilters = ({
   onAccountChange,
   onDateRangeChange,
   onCustomDateChange,
+  canRecordTransaction = false,
+  onRecordTransaction = null,
 }) => {
   const accountOptions = [
     { value: '', label: 'All Accounts' },
@@ -66,6 +68,17 @@ const DashboardFilters = ({
           </div>
         )}
       </div>
+
+      {canRecordTransaction && typeof onRecordTransaction === 'function' && (
+        <button
+          type="button"
+          onClick={onRecordTransaction}
+          className="inline-flex h-[42px] shrink-0 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition shadow-xs"
+        >
+          <Plus size={14} />
+          <span>Record transaction</span>
+        </button>
+      )}
     </div>
   );
 };

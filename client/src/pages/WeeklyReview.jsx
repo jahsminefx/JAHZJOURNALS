@@ -328,7 +328,7 @@ const WeeklyReview = () => {
                 </div>
 
                 <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Net P/L</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Trading P&amp;L</span>
                   <p className={`mt-2 text-2xl font-black tracking-tight ${netPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
                     {netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)}
                   </p>
@@ -341,6 +341,22 @@ const WeeklyReview = () => {
                   </p>
                 </div>
               </div>
+
+              {selectedReview?.cashFlow?.transactionCount > 0 && (
+                <div className="rounded-2xl border border-border bg-surface p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div>
+                    <span className="font-bold text-foreground">Weekly Account Cash Flow</span>{' '}
+                    <span className="text-muted">(Excluded from Trading P&amp;L and Discipline Score)</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 font-mono">
+                    <span className="text-muted">Deposits: <strong className="text-sky-600 dark:text-sky-300">{selectedReview.cashFlow.currency || 'USD'} {Number(selectedReview.cashFlow.deposits || 0).toFixed(2)}</strong></span>
+                    <span className="text-muted">Withdrawals: <strong className="text-amber-600 dark:text-amber-300">{selectedReview.cashFlow.currency || 'USD'} {Number(selectedReview.cashFlow.withdrawals || 0).toFixed(2)}</strong></span>
+                    <span className="text-muted">Payouts: <strong className="text-violet-600 dark:text-violet-300">{selectedReview.cashFlow.currency || 'USD'} {Number(selectedReview.cashFlow.payouts || 0).toFixed(2)}</strong></span>
+                    <span className="text-muted">Fees: <strong className="text-rose-600 dark:text-rose-300">{selectedReview.cashFlow.currency || 'USD'} {Number(selectedReview.cashFlow.fees || 0).toFixed(2)}</strong></span>
+                    <span className="text-muted">Net Cash Flow: <strong className="text-foreground">{Number(selectedReview.cashFlow.netCashFlow || 0) >= 0 ? '+' : ''}{Number(selectedReview.cashFlow.netCashFlow || 0).toFixed(2)} {selectedReview.cashFlow.currency || 'USD'}</strong></span>
+                  </div>
+                </div>
+              )}
 
               {/* JAHZ AI Weekly Coach Panel */}
               {aiInsight ? (

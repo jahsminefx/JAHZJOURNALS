@@ -5,6 +5,7 @@
  */
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { calculateAccountLedgerSummary, roundMoney } = require('../utils/accountLedgerMath');
 
 const COMPLIANCE_STATUS = {
   SAFE: 'SAFE',
@@ -209,18 +210,34 @@ const evaluatePropFirmCompliance = (account, referenceDate = new Date()) => {
 
   // 2. High-Water Mark & Closed Trades Analysis
   const trades = account.trades || [];
-  const closedTrades = trades.filter((t) => t.status === 'CLOSED');
+  const closedTrades = trades.filter((t) => t.status === 'CLOSED' || ['WIN', 'LOSS', 'BREAKEVEN'].includes(String(t.result || '').toUpperCase()));
+  const accountTransactions = account.accountTransactions || [];
+  const ledger = calculateAccountLedgerSummary({
+    account,
+    trades,
+    transactions: accountTransactions,
+  });
 
   const { highWaterMark, currentCalculatedBalance } = calculateHighWaterMark(
-    startingBalance,
+    ledger.openingBalance || startingBalance,
     closedTrades,
     propFirm.progressSnapshots || []
   );
 
-  // Effective current balance: preference to live recorded balance if available
-  const effectiveBalance = recordedBalance || currentCalculatedBalance;
+  // Separate cash balance (includes payouts/deposits/fees/adjustments) from trading performance balance
+  // (excludes cash flows so payouts never appear as trading losses or trigger false drawdown breaches).
+  const hasCashFlows = ledger.hasCashFlowTransactions;
+  const effectiveCashBalance = hasCashFlows
+    ? ledger.accountBalance
+    : (recordedBalance || currentCalculatedBalance);
+  const tradingPerformanceBalance = hasCashFlows
+    ? roundMoney(ledger.openingBalance + ledger.realisedTradingPnl)
+    : effectiveCashBalance;
+  const effectiveBalance = tradingPerformanceBalance;
   const latestSnapshot = (propFirm.progressSnapshots && propFirm.progressSnapshots[0]) || null;
-  const effectiveEquity = (latestSnapshot && latestSnapshot.equity) ? Number(latestSnapshot.equity) : effectiveBalance;
+  const effectiveEquity = (latestSnapshot && latestSnapshot.equity)
+    ? Number(latestSnapshot.equity)
+    : effectiveCashBalance;
 
   // 3. Overall Drawdown Calculation (Static vs Trailing)
   const isTrailing = String(propFirm.drawdownType).toUpperCase() === 'TRAILING';
@@ -389,10 +406,25 @@ const evaluatePropFirmCompliance = (account, referenceDate = new Date()) => {
     
     // Financial State
     startingBalance,
-    currentBalance: effectiveBalance,
+    currentBalance: effectiveCashBalance,
+    tradingPerformanceBalance,
     equity: effectiveEquity,
     currentTotalProfit,
     highWaterMark,
+    cashFlowSummary: {
+      openingBalance: ledger.openingBalance,
+      realisedTradingPnl: ledger.realisedTradingPnl,
+      deposits: ledger.deposits,
+      withdrawals: ledger.withdrawals,
+      payouts: ledger.payouts,
+      fees: ledger.fees,
+      adjustments: ledger.adjustments,
+      netCashFlow: ledger.netCashFlow,
+      currentBalance: effectiveCashBalance,
+      tradingPerformanceBalance,
+      availableProfitForPayout: Math.max(0, roundMoney(effectiveCashBalance - startingBalance)),
+      hasCashFlowTransactions: hasCashFlows,
+    },
     
     // Phase & Targets
     phase: {
@@ -559,6 +591,10 @@ const getPropFirmComplianceReport = async (arg1, arg2, referenceDate = new Date(
       },
       trades: {
         orderBy: { createdAt: 'desc' },
+      },
+      accountTransactions: {
+        where: { archivedAt: null },
+        orderBy: [{ occurredAt: 'asc' }, { createdAt: 'asc' }],
       },
     },
   });

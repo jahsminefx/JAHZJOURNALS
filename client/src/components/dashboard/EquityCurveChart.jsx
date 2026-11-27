@@ -27,10 +27,13 @@ const curveViews = [
 
 const eventLabels = {
   account_start: 'Account created',
+  opening_balance: 'Opening balance',
   period_start: 'Period start',
   period_end: 'Period end',
   deposit: 'Deposit',
   withdrawal: 'Withdrawal',
+  payout: 'Payout',
+  fee: 'Fee',
   trade: 'Closed trade',
   trade_win: 'Closed trade',
   trade_loss: 'Closed trade',
@@ -41,30 +44,36 @@ const eventLabels = {
 
 const eventColors = {
   account_start: '#64748b',
+  opening_balance: '#64748b',
   period_start: '#64748b',
   period_end: '#64748b',
   deposit: '#38bdf8',
   withdrawal: '#f59e0b',
+  payout: '#8b5cf6',
+  fee: '#f43f5e',
   trade_win: '#10b981',
   trade_loss: '#ef4444',
   trade_breakeven: '#94a3b8',
   trade: '#10b981',
   trade_day: '#10b981',
-  balance_adjustment: '#94a3b8',
+  balance_adjustment: '#6366f1',
 };
 
 const eventTextTones = {
   account_start: 'text-muted',
+  opening_balance: 'text-muted',
   period_start: 'text-muted',
   period_end: 'text-muted',
   deposit: 'text-sky-600 dark:text-sky-300',
   withdrawal: 'text-amber-600 dark:text-amber-300',
+  payout: 'text-violet-600 dark:text-violet-300',
+  fee: 'text-rose-600 dark:text-rose-300',
   trade_win: 'text-emerald-600 dark:text-emerald-300',
   trade_loss: 'text-red-600 dark:text-red-300',
   trade_breakeven: 'text-foreground',
   trade: 'text-emerald-600 dark:text-emerald-300',
   trade_day: 'text-emerald-600 dark:text-emerald-300',
-  balance_adjustment: 'text-foreground',
+  balance_adjustment: 'text-indigo-600 dark:text-indigo-300',
 };
 
 const eventTone = (point) => {
@@ -116,8 +125,11 @@ const getBalanceDomain = (points = []) => calculateYAxisDomain(points, { mode: '
 const EventDot = ({ cx, cy, payload, totalPoints = 0, isMobile = false }) => {
   if (cx === undefined || cy === undefined || !payload) return null;
 
-  const isFunding = payload.eventType === 'deposit'
+  const isFunding = payload.eventType === 'opening_balance'
+    || payload.eventType === 'deposit'
     || payload.eventType === 'withdrawal'
+    || payload.eventType === 'payout'
+    || payload.eventType === 'fee'
     || payload.eventType === 'balance_adjustment';
   const isBoundary = payload.eventType === 'account_start'
     || payload.eventType === 'period_start'
@@ -194,7 +206,12 @@ const PerformanceTooltip = ({ active, payload, view, currency }) => {
   const isCumulative = view === 'cumulativePnl';
   const eventType = String(point.eventType || '');
   const isTrade = eventType.startsWith('trade');
-  const isFunding = eventType === 'deposit' || eventType === 'withdrawal' || eventType === 'balance_adjustment';
+  const isFunding = eventType === 'opening_balance'
+    || eventType === 'deposit'
+    || eventType === 'withdrawal'
+    || eventType === 'payout'
+    || eventType === 'fee'
+    || eventType === 'balance_adjustment';
   const isBoundary = eventType === 'account_start' || eventType === 'period_start' || eventType === 'period_end';
   const changeAmount = Number(point.change || 0);
 
@@ -229,6 +246,14 @@ const PerformanceTooltip = ({ active, payload, view, currency }) => {
           <p className="font-semibold text-emerald-600 dark:text-emerald-300">
             Balance: {formatCurrency(point.value, currency)}
           </p>
+          {eventType === 'opening_balance' && (
+            <>
+              <p className={eventTone(point)}>Event: Opening balance</p>
+              <p className="text-muted">
+                Baseline: {formatCurrency(point.initialFundingAmount ?? point.change ?? point.value, currency)}
+              </p>
+            </>
+          )}
           {eventType === 'deposit' && (
             <>
               <p className={eventTone(point)}>
@@ -250,11 +275,30 @@ const PerformanceTooltip = ({ active, payload, view, currency }) => {
               </p>
             </>
           )}
+          {eventType === 'payout' && (
+            <>
+              <p className={eventTone(point)}>Event: {point.label || 'Payout'}</p>
+              <p className="text-violet-600 dark:text-violet-300">
+                Payout: {signedCurrency(point.change, currency)}
+              </p>
+            </>
+          )}
+          {eventType === 'fee' && (
+            <>
+              <p className={eventTone(point)}>Event: {point.label || 'Fee'}</p>
+              <p className="text-rose-600 dark:text-rose-300">
+                Fee: {signedCurrency(point.change, currency)}
+              </p>
+            </>
+          )}
           {eventType === 'balance_adjustment' && (
             <>
               <p className={eventTone(point)}>Event: {point.label || 'Balance adjustment'}</p>
-              <p className="text-muted">Adjustment: {signedCurrency(point.change, currency)}</p>
+              <p className="text-indigo-600 dark:text-indigo-300">Adjustment: {signedCurrency(point.change, currency)}</p>
             </>
+          )}
+          {isFunding && point.note && (
+            <p className="text-[11px] text-muted truncate max-w-[16rem]">Note: {point.note}</p>
           )}
           {isTrade && (
             <>
@@ -287,20 +331,27 @@ const PerformanceTooltip = ({ active, payload, view, currency }) => {
 
 const SummaryStrip = ({ view, summary = {}, currency }) => {
   const isCumulative = view === 'cumulativePnl';
+  const returnLabel = summary.returnMethod === 'TWR' ? 'Return (TWR)' : 'Return';
+  const returnUnavailable = summary.returnMethod === 'UNAVAILABLE' || summary.tradingReturnPercentage === null;
   const items = isCumulative
     ? [
       { label: 'Net P/L', value: signedCurrency(summary.netTradingPnl, currency), tone: Number(summary.netTradingPnl || 0) < 0 ? 'text-red-600 dark:text-red-300' : 'text-emerald-600 dark:text-emerald-300' },
-      { label: 'Return', value: signedPercent(summary.tradingReturnPercentage), tone: Number(summary.tradingReturnPercentage || 0) < 0 ? 'text-red-600 dark:text-red-300' : 'text-emerald-600 dark:text-emerald-300' },
+      { label: returnLabel, value: returnUnavailable ? '--' : signedPercent(summary.tradingReturnPercentage), tone: returnUnavailable ? 'text-muted' : Number(summary.tradingReturnPercentage || 0) < 0 ? 'text-red-600 dark:text-red-300' : 'text-emerald-600 dark:text-emerald-300' },
       { label: 'Closed trades', value: formatNumber(summary.closedTrades || 0, 0), tone: 'text-foreground' },
     ]
     : [
       { label: 'Total deposits', value: formatCurrency(summary.totalDeposits, currency), tone: Number(summary.totalDeposits || 0) > 0 ? 'text-sky-600 dark:text-sky-300' : 'text-muted' },
       { label: 'Total withdrawals', value: formatCurrency(summary.totalWithdrawals, currency), tone: Number(summary.totalWithdrawals || 0) > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-muted' },
+      ...(summary.payouts > 0 || summary.fees > 0 || summary.balanceAdjustments !== 0 ? [{
+        label: 'Net cash flow',
+        value: signedCurrency(summary.netCashFlow || 0, currency),
+        tone: Number(summary.netCashFlow || 0) >= 0 ? 'text-sky-600 dark:text-sky-300' : 'text-amber-600 dark:text-amber-300',
+      }] : []),
       { label: 'Current balance', value: formatCurrency(summary.currentBalance, currency), tone: Number(summary.currentBalance || 0) > 0 ? 'text-emerald-600 dark:text-emerald-300' : Number(summary.currentBalance || 0) < 0 ? 'text-red-600 dark:text-red-300' : 'text-foreground' },
     ];
 
   return (
-    <div className="mb-4 grid gap-2 text-xs sm:grid-cols-3">
+    <div className={`mb-4 grid gap-2 text-xs ${items.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
       {items.map((item) => (
         <div key={item.label} className="min-w-0 rounded-md border border-border bg-surface px-3 py-2">
           <p className="font-semibold text-muted">{item.label}</p>
@@ -372,6 +423,8 @@ const EquityCurveChart = ({
   const summary = data?.summary || {};
   const hasFinancialActivity = Number(summary.totalDeposits || 0) > 0
     || Number(summary.totalWithdrawals || 0) > 0
+    || Number(summary.payouts || 0) > 0
+    || Number(summary.fees || 0) > 0
     || Number(summary.closedTrades || 0) > 0
     || Number(summary.balanceAdjustments || 0) !== 0
     || points.length > 1;
@@ -546,9 +599,9 @@ const EquityCurveChart = ({
                   )}
                 </div>
               ) : (
-                <span>Reflects deposits, withdrawals, balance adjustments, and realized trading P/L.</span>
+                <span>Reflects deposits, withdrawals, payouts, fees, balance adjustments, and realized trading P/L.</span>
               )}
-              <div className="flex items-center gap-3 text-[11px]">
+              <div className="flex flex-wrap items-center gap-3 text-[11px]">
                 <span className="inline-flex items-center gap-1">
                   <span className="h-2 w-2 rounded-full bg-sky-400" aria-hidden="true" />
                   Deposit
@@ -556,6 +609,18 @@ const EquityCurveChart = ({
                 <span className="inline-flex items-center gap-1">
                   <span className="h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" />
                   Withdrawal
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-violet-500" aria-hidden="true" />
+                  Payout
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-rose-500" aria-hidden="true" />
+                  Fee
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-indigo-500" aria-hidden="true" />
+                  Adjustment
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />

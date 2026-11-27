@@ -10,6 +10,8 @@ const {
   groupTrades,
 } = require('../services/analyticsService');
 const { buildDashboardAnalytics } = require('../services/dashboardAnalyticsService');
+const currencyService = require('../services/fx/currencyService');
+const { calculateAccountLedgerSummary, roundMoney } = require('../utils/accountLedgerMath');
 
 const getUserTimezone = async (userId) => {
   const user = await prisma.user.findUnique({
@@ -68,7 +70,7 @@ const handleAnalyticsError = (res, error, fallbackMessage) => {
 
 const getDashboardAnalytics = async (req, res) => {
   try {
-    const dashboard = await buildDashboardAnalytics({ userId: req.user.id, query: req.query });
+    const dashboard = await buildDashboardAnalytics({ userId: req.user.id, user: req.user, query: req.query });
     res.set('Cache-Control', 'no-store');
     res.json(dashboard);
   } catch (error) {
@@ -132,25 +134,116 @@ const getEquityCurve = async (req, res) => {
 
     let selectedAccounts = [];
     if (accountId && account) {
-      selectedAccounts = [account];
+      const fullAccount = await prisma.tradingAccount.findFirst({
+        where: { id: accountId, userId },
+        select: { id: true, name: true, startingBalance: true, currentBalance: true, currency: true },
+      });
+      selectedAccounts = fullAccount ? [fullAccount] : [account];
     } else {
       selectedAccounts = await prisma.tradingAccount.findMany({
         where: { userId },
-        select: { id: true, name: true, startingBalance: true, currentBalance: true },
+        select: { id: true, name: true, startingBalance: true, currentBalance: true, currency: true },
       });
     }
 
-    const equityCurvePoints = calculateEquityCurve(trades, selectedAccounts);
+    const activeTransactions = await prisma.accountTransaction.findMany({
+      where: {
+        userId,
+        archivedAt: null,
+        ...(selectedAccounts.length ? { tradingAccountId: { in: selectedAccounts.map((a) => a.id) } } : {}),
+      },
+      include: {
+        tradingAccount: { select: { id: true, name: true, currency: true } },
+      },
+      orderBy: [{ occurredAt: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    const isMultiAccount = !accountId && selectedAccounts.length > 1;
+    const targetCurrency = isMultiAccount ? 'USD' : (selectedAccounts[0]?.currency || 'USD');
+
+    const normalizedAccounts = [];
+    const rateCache = new Map();
+    const getRate = async (src) => {
+      const code = src || 'USD';
+      if (code === targetCurrency) return 1;
+      if (rateCache.has(code)) return rateCache.get(code);
+      const conv = await currencyService.convertAmount(1, code, targetCurrency);
+      const rate = conv?.convertedAmount ?? 1;
+      rateCache.set(code, rate);
+      return rate;
+    };
+
+    for (const acc of selectedAccounts) {
+      const rate = await getRate(acc.currency);
+      normalizedAccounts.push({
+        ...acc,
+        startingBalance: roundMoney(Number(acc.startingBalance || 0) * rate),
+        currentBalance: roundMoney(Number(acc.currentBalance || 0) * rate),
+      });
+    }
+
+    const normalizedTrades = [];
+    for (const t of trades) {
+      const acc = selectedAccounts.find((a) => a.id === t.tradingAccountId);
+      const accCurrency = acc?.currency || 'USD';
+      let convertedPnl = Number(t.profitLossAmount || 0);
+      if (accCurrency !== targetCurrency) {
+        if (t.fxRateToReporting && targetCurrency === 'USD') {
+          convertedPnl *= Number(t.fxRateToReporting);
+        } else {
+          const rate = await getRate(accCurrency);
+          convertedPnl *= rate;
+        }
+      }
+      normalizedTrades.push({
+        ...t,
+        profitLossAmount: roundMoney(convertedPnl),
+      });
+    }
+
+    const normalizedTx = [];
+    for (const tx of activeTransactions) {
+      const accCurrency = tx.tradingAccount?.currency || tx.currency || 'USD';
+      const rate = await getRate(accCurrency);
+      normalizedTx.push({
+        ...tx,
+        amount: roundMoney(Math.abs(Number(tx.amount || 0)) * rate),
+        signedAmount: roundMoney(Number(tx.signedAmount || 0) * rate),
+      });
+    }
+
+    const equityCurvePoints = calculateEquityCurve(normalizedTrades, normalizedAccounts);
+    const ledger = calculateAccountLedgerSummary({
+      account: {
+        startingBalance: normalizedAccounts.reduce((sum, a) => sum + Number(a.startingBalance || 0), 0),
+      },
+      trades: normalizedTrades,
+      transactions: normalizedTx,
+    });
+    const tradingPnl = calculateSummary(normalizedTrades).netRealisedProfitLoss || 0;
 
     res.json({
       success: true,
       filters: req.query,
-      summary: calculateSummary(trades),
-      metrics: equityCurvePoints.metrics || {
-        totalDeposits: selectedAccounts.reduce((sum, a) => sum + Number(a.startingBalance || 0), 0),
-        totalWithdrawals: 0,
-        tradingPnl: calculateSummary(trades).netRealisedProfitLoss || 0,
-        currentAccountBalance: selectedAccounts.reduce((sum, a) => sum + Number(a.currentBalance || 0), 0),
+      currency: targetCurrency,
+      summary: calculateSummary(normalizedTrades),
+      metrics: {
+        openingBalance: ledger.openingBalance,
+        deposits: ledger.deposits,
+        withdrawals: ledger.withdrawals,
+        payouts: ledger.payouts,
+        fees: ledger.fees,
+        adjustments: ledger.adjustments,
+        netCashFlow: ledger.netCashFlow,
+        totalDeposits: roundMoney(ledger.openingBalance + ledger.deposits),
+        totalWithdrawals: roundMoney(ledger.withdrawals + ledger.payouts + ledger.fees),
+        tradingPnl,
+        netAccountChange: roundMoney(tradingPnl + ledger.netCashFlow),
+        currentAccountBalance: ledger.hasCashFlowTransactions
+          ? ledger.accountBalance
+          : roundMoney(normalizedAccounts.reduce((sum, a) => sum + Number(a.currentBalance || 0), 0)),
+        hasCashFlowTransactions: ledger.hasCashFlowTransactions,
+        currency: targetCurrency,
       },
       data: equityCurvePoints,
     });

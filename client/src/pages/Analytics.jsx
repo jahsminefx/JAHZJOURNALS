@@ -75,7 +75,8 @@ const Analytics = () => {
         equityMetrics,
         drawdown,
         filters,
-        breakdownData: performance?.data || []
+        breakdownData: performance?.data || [],
+        currency: equityMetrics?.currency || 'USD',
       });
       toast.success('PDF report exported successfully!', { id: 'pdf-gen' });
     } catch (err) {
@@ -688,31 +689,44 @@ const Analytics = () => {
                 </div>
 
                 {/* Compact Capital Summary Bar */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-5 p-3.5 rounded-xl border border-border/70 bg-surface-muted/60">
-                  <div>
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Total Deposits</span>
-                    <span className="text-sm font-bold font-mono text-foreground">
-                      ${Number(capitalMetrics.totalDeposits || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                <div className="mb-5 p-3.5 rounded-xl border border-border/70 bg-surface-muted/60 space-y-2">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                    <div>
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Opening + Deposits</span>
+                      <span className="text-sm font-bold font-mono text-foreground">
+                        ${Number(capitalMetrics.totalDeposits || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Outflows (W/P/F)</span>
+                      <span className="text-sm font-bold font-mono text-foreground">
+                        ${Number(capitalMetrics.totalWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Net Cash Flow</span>
+                      <span className={`text-sm font-bold font-mono ${Number(capitalMetrics.netCashFlow || 0) >= 0 ? 'text-sky-600 dark:text-sky-300' : 'text-amber-600 dark:text-amber-300'}`}>
+                        {Number(capitalMetrics.netCashFlow || 0) >= 0 ? '+' : '-'}${Math.abs(Number(capitalMetrics.netCashFlow || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Trading P/L</span>
+                      <span className={`text-sm font-bold font-mono ${Number(capitalMetrics.tradingPnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {Number(capitalMetrics.tradingPnl || 0) >= 0 ? '+' : ''}${Number(capitalMetrics.tradingPnl || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Current Balance</span>
+                      <span className="text-sm font-bold font-mono text-foreground">
+                        ${Number(capitalMetrics.currentAccountBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Total Withdrawals</span>
-                    <span className="text-sm font-bold font-mono text-foreground">
-                      ${Number(capitalMetrics.totalWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Trading P/L</span>
-                    <span className={`text-sm font-bold font-mono ${Number(capitalMetrics.tradingPnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {Number(capitalMetrics.tradingPnl || 0) >= 0 ? '+' : ''}${Number(capitalMetrics.tradingPnl || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">Current Balance</span>
-                    <span className="text-sm font-bold font-mono text-foreground">
-                      ${Number(capitalMetrics.currentAccountBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
+                  {capitalMetrics.hasCashFlowTransactions && (
+                    <p className="border-t border-border/50 pt-2 text-[11px] text-muted">
+                      Cash flow breakdown: Deposits ${Number(capitalMetrics.deposits || 0).toFixed(2)} · Withdrawals ${Number(capitalMetrics.withdrawals || 0).toFixed(2)} · Payouts ${Number(capitalMetrics.payouts || 0).toFixed(2)} · Fees ${Number(capitalMetrics.fees || 0).toFixed(2)} · Adjustments {Number(capitalMetrics.adjustments || 0) >= 0 ? '+' : ''}${Number(capitalMetrics.adjustments || 0).toFixed(2)} (excluded from Trading P&amp;L).
+                    </p>
+                  )}
                 </div>
 
                 {equityCurve.length === 0 ? (

@@ -663,6 +663,22 @@ export default function DailyReviewPage() {
             </div>
           </div>
 
+          {summaryData?.cashFlow?.transactionCount > 0 && (
+            <div className="rounded-2xl border border-border bg-surface p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div>
+                <span className="font-bold text-foreground">Account Cash Flow</span>{' '}
+                <span className="text-muted">(Excluded from Trading P&amp;L and Win Rate)</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 font-mono">
+                <span className="text-muted">Deposits: <strong className="text-sky-600 dark:text-sky-300">{formatCurrency(summaryData.cashFlow.deposits || 0, summaryData.cashFlow.currency || metrics?.currency || 'USD')}</strong></span>
+                <span className="text-muted">Withdrawals: <strong className="text-amber-600 dark:text-amber-300">{formatCurrency(summaryData.cashFlow.withdrawals || 0, summaryData.cashFlow.currency || metrics?.currency || 'USD')}</strong></span>
+                <span className="text-muted">Payouts: <strong className="text-violet-600 dark:text-violet-300">{formatCurrency(summaryData.cashFlow.payouts || 0, summaryData.cashFlow.currency || metrics?.currency || 'USD')}</strong></span>
+                <span className="text-muted">Fees: <strong className="text-rose-600 dark:text-rose-300">{formatCurrency(summaryData.cashFlow.fees || 0, summaryData.cashFlow.currency || metrics?.currency || 'USD')}</strong></span>
+                <span className="text-muted">Net Cash Flow: <strong className="text-foreground">{formatCurrency(summaryData.cashFlow.netCashFlow || 0, summaryData.cashFlow.currency || metrics?.currency || 'USD', { signDisplay: summaryData.cashFlow.netCashFlow === 0 ? 'auto' : 'always' })}</strong></span>
+              </div>
+            </div>
+          )}
+
           {/* Section 1: Trades Executed Today */}
           <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

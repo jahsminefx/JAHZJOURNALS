@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Briefcase, Settings, ShieldAlert, ShieldCheck, SlidersHorizontal, Trophy, Cloud, CheckCircle2, Clock, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowUpDown, Briefcase, Settings, ShieldAlert, ShieldCheck, SlidersHorizontal, Trophy, Cloud, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import MTSyncSettings from '../components/accounts/MTSyncSettings';
+import AccountTransactionsPanel from '../components/accounts/AccountTransactionsPanel';
 import PropFirmCockpit from '../components/propfirm/PropFirmCockpit';
 import { useAuth } from '../context/useAuth';
 import { hasFeature } from '../utils/planHelpers';
@@ -39,27 +40,44 @@ const ProgressBar = ({ label, value, tone = 'green' }) => {
   );
 };
 
-const RegularAccountDetail = ({ account }) => (
-  <div className="space-y-6">
-    <div className="grid gap-4 md:grid-cols-4">
-      <MetricCard label="Current balance" value={formatMoney(account.currentBalance, account.currency)} />
-      <MetricCard label="Starting balance" value={formatMoney(account.startingBalance, account.currency)} />
-      <MetricCard label="Default risk" value={`${account.riskPerTradePercent ?? account.defaultRiskPercent ?? 0}%`} />
-      <MetricCard label="Max daily loss" value={`${account.maxDailyLossPercent ?? 0}%`} tone="yellow" />
-    </div>
-    <div className="rounded-xl border border-border bg-surface-muted p-6">
-      <h3 className="text-lg font-bold text-foreground">Account details</h3>
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <p className="text-sm text-muted">Broker: <span className="font-semibold text-foreground">{account.brokerName || 'Not set'}</span></p>
-        <p className="text-sm text-muted">Type: <span className="font-semibold text-foreground">{enumLabel(account.accountType) || 'Not set'}</span></p>
-        <p className="text-sm text-muted">Platform: <span className="font-semibold text-foreground">{enumLabel(account.platform) || 'Not set'}</span></p>
-        <p className="text-sm text-muted">Max trades/day: <span className="font-semibold text-foreground">{account.maxTradesPerDay ?? 'Not set'}</span></p>
-        <p className="text-sm text-muted">Max losses/day: <span className="font-semibold text-foreground">{account.maxLossesPerDay ?? 'Not set'}</span></p>
+const RegularAccountDetail = ({ account }) => {
+  const ledger = account.ledgerSummary;
+  const tradingPnl = ledger ? Number(ledger.realisedTradingPnl || 0) : (Number(account.currentBalance || 0) - Number(account.startingBalance || 0));
+  const netCashFlow = ledger ? Number(ledger.netCashFlow || 0) : 0;
+  const openingBal = ledger ? Number(ledger.openingBalance ?? account.startingBalance ?? 0) : Number(account.startingBalance || 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-4">
+        <MetricCard label="Current balance" value={formatMoney(account.currentBalance, account.currency)} />
+        <MetricCard label="Opening balance" value={formatMoney(openingBal, account.currency)} />
+        <MetricCard
+          label="Trading P&L"
+          value={`${tradingPnl > 0 ? '+' : ''}${formatMoney(tradingPnl, account.currency)}`}
+          tone={tradingPnl < 0 ? 'red' : 'green'}
+        />
+        <MetricCard
+          label="Net cash flow"
+          value={`${netCashFlow > 0 ? '+' : ''}${formatMoney(netCashFlow, account.currency)}`}
+          tone={netCashFlow < 0 ? 'yellow' : 'green'}
+        />
       </div>
-      {account.notes && <p className="mt-5 rounded-lg bg-surface p-4 text-sm leading-6 text-muted">{account.notes}</p>}
+      <div className="rounded-xl border border-border bg-surface-muted p-6">
+        <h3 className="text-lg font-bold text-foreground">Account details</h3>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <p className="text-sm text-muted">Broker: <span className="font-semibold text-foreground">{account.brokerName || 'Not set'}</span></p>
+          <p className="text-sm text-muted">Type: <span className="font-semibold text-foreground">{enumLabel(account.accountType) || 'Not set'}</span></p>
+          <p className="text-sm text-muted">Platform: <span className="font-semibold text-foreground">{enumLabel(account.platform) || 'Not set'}</span></p>
+          <p className="text-sm text-muted">Default risk: <span className="font-semibold text-foreground">{account.riskPerTradePercent ?? account.defaultRiskPercent ?? 0}%</span></p>
+          <p className="text-sm text-muted">Max daily loss: <span className="font-semibold text-foreground">{account.maxDailyLossPercent ?? 0}%</span></p>
+          <p className="text-sm text-muted">Max trades/day: <span className="font-semibold text-foreground">{account.maxTradesPerDay ?? 'Not set'}</span></p>
+          <p className="text-sm text-muted">Max losses/day: <span className="font-semibold text-foreground">{account.maxLossesPerDay ?? 'Not set'}</span></p>
+        </div>
+        {account.notes && <p className="mt-5 rounded-lg bg-surface p-4 text-sm leading-6 text-muted">{account.notes}</p>}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const PropFirmAccountDetail = ({ account }) => {
   const propFirm = account.propFirmAccount;
@@ -227,10 +245,12 @@ const PropFirmAccountDetail = ({ account }) => {
 const AccountDetail = () => {
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [txModalSignal, setTxModalSignal] = useState(0);
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const hasPropFirmPro = hasFeature(user, 'propFirmAccess');
+  const txEnabled = account?.accountTransactionsEnabled !== false;
 
   useEffect(() => {
     const fetchAccount = async () => {
@@ -276,7 +296,17 @@ const AccountDetail = () => {
           <p className="mt-1 text-sm text-muted">{account.brokerName || account.propFirmAccount?.firmName || 'No broker or firm set'}</p>
         </div>
         {isPropFirm ? (
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-wrap gap-2">
+            {txEnabled && (
+              <button
+                type="button"
+                onClick={() => setTxModalSignal((n) => n + 1)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition"
+              >
+                <ArrowUpDown size={16} />
+                Record transaction
+              </button>
+            )}
             <a
               href="#mt-sync-section"
               className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
@@ -302,7 +332,17 @@ const AccountDetail = () => {
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-wrap gap-2">
+            {txEnabled && (
+              <button
+                type="button"
+                onClick={() => setTxModalSignal((n) => n + 1)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition"
+              >
+                <ArrowUpDown size={16} />
+                Record transaction
+              </button>
+            )}
             <a
               href="#mt-sync-section"
               className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors ${
@@ -390,6 +430,17 @@ const AccountDetail = () => {
         )
       ) : (
         <RegularAccountDetail account={account} />
+      )}
+
+      {txEnabled && (
+        <AccountTransactionsPanel
+          id="account-transactions"
+          account={account}
+          externalModalSignal={txModalSignal}
+          onUpdated={() => {
+            api.get(`/accounts/${id}`).then(({ data }) => setAccount(data)).catch(console.error);
+          }}
+        />
       )}
 
       {/* MetaTrader Live Sync Settings */}

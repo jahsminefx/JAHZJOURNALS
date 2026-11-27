@@ -20,12 +20,24 @@ const {
 } = require('../controllers/mtCloudSyncController');
 const { protect } = require('../middleware/authMiddleware');
 const { checkAccountLimit, checkMt5SyncAllowed } = require('../middleware/subscriptionGate');
+const { requireAccountTransactionsEnabled } = require('../config/featureFlags');
+const {
+  getTransactionsFeatureStatus,
+  getGlobalTransactions,
+} = require('../controllers/accountTransactionController');
+const accountTransactionRoutes = require('./accountTransactionRoutes');
 const propFirmAccountRoutes = require('./propFirmAccountRoutes');
 
 router.use('/prop-firm', propFirmAccountRoutes);
 
+// Account Transactions global endpoints (must be registered before '/:id')
+router.get('/transactions/status', protect, getTransactionsFeatureStatus);
+router.get('/transactions', protect, requireAccountTransactionsEnabled, getGlobalTransactions);
+
 // 1-Click Auto-Connect & Auto-Create Trading Account directly from MetaTrader
 router.post('/cloud-sync/auto-connect', protect, checkAccountLimit, checkMt5SyncAllowed, autoConnectCloudSync);
+
+router.use('/:accountId/transactions', accountTransactionRoutes);
 
 router.post('/:id/sync-token', protect, checkMt5SyncAllowed, generateSyncToken);
 router.delete('/:id/sync-token', protect, revokeSyncToken);

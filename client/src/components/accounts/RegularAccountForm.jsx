@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { TextInput, SelectInput, CurrencyInput, PercentageInput } from './FormControls';
 import { SUPPORTED_CURRENCIES } from '../../services/currencyConversionService';
@@ -17,7 +18,16 @@ const defaultValues = {
   notes: '',
 };
 
-const RegularAccountForm = ({ initialValues, isSaving, onSubmit, onCancel, submitLabel = 'Save Account' }) => {
+const RegularAccountForm = ({
+  initialValues,
+  isEditMode = false,
+  accountId = null,
+  hasActivity = false,
+  isSaving,
+  onSubmit,
+  onCancel,
+  submitLabel = 'Save Account',
+}) => {
   const { register, handleSubmit } = useForm({
     defaultValues: {
       ...defaultValues,
@@ -28,6 +38,9 @@ const RegularAccountForm = ({ initialValues, isSaving, onSubmit, onCancel, submi
       ...(initialValues || {}),
     },
   });
+
+  const displayCurrency = initialValues?.currency || 'USD';
+  const displayCurrentBalance = Number(initialValues?.currentBalance ?? initialValues?.startingBalance ?? 0);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -43,8 +56,45 @@ const RegularAccountForm = ({ initialValues, isSaving, onSubmit, onCancel, submi
           <option value="BROKER_FUNDED">Broker-funded</option>
           <option value="OTHER">Other</option>
         </SelectInput>
-        <CurrencyInput label="Starting balance" required {...register('startingBalance')} placeholder="1000" />
-        <CurrencyInput label="Current balance" {...register('currentBalance')} placeholder="Leave empty if it matches your starting balance" />
+        <CurrencyInput
+          label={isEditMode ? 'Opening balance' : 'Starting balance'}
+          required
+          disabled={isEditMode && hasActivity}
+          description={
+            isEditMode && hasActivity
+              ? 'Locked once trades or cash-flow entries exist. Record a Balance adjustment in Account Transactions instead.'
+              : 'Sets the initial opening balance baseline for this account.'
+          }
+          {...register('startingBalance')}
+          placeholder="1000"
+        />
+        {isEditMode ? (
+          <div className="rounded-xl border border-border bg-surface p-4 text-sm">
+            <span className="font-medium text-foreground block">Current balance (Ledger-derived)</span>
+            <p className="mt-1.5 font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
+              {displayCurrentBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} {displayCurrency}
+            </p>
+            <p className="mt-1 text-xs text-muted leading-relaxed">
+              Direct balance overwrites are disabled.{' '}
+              {accountId && (
+                <Link
+                  to={`/accounts/${accountId}#account-transactions`}
+                  className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                >
+                  Record a Deposit, Withdrawal, Fee, or Balance adjustment
+                </Link>
+              )}
+              .
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-surface p-4 text-sm">
+            <span className="font-medium text-foreground block">Opening ledger baseline</span>
+            <p className="mt-1.5 text-xs text-muted leading-relaxed">
+              Current balance starts at your Starting balance. Add subsequent deposits, withdrawals, fees, or adjustments from Account Transactions.
+            </p>
+          </div>
+        )}
         <SelectInput label="Currency" {...register('currency')}>
           {SUPPORTED_CURRENCIES.map((c) => (
             <option key={c.code} value={c.code}>

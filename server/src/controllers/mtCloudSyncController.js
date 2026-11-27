@@ -3,7 +3,9 @@ const prisma = new PrismaClient();
 const { encryptCredential, decryptCredential } = require('../utils/cryptoUtils');
 const { canCreateTrades, canConnectCloudSyncAccount, hasFeatureAccess } = require('../services/entitlementService');
 const { getEffectivePlanKey, buildLimitReachedPayload } = require('../config/plans');
-const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions, getAccountConnectionStatus, fetchAccountInformation } = require('../services/metaApiService');
+const { provisionCloudAccount, removeCloudAccount, fetchAccountHistory, fetchOpenPositions, getAccountConnectionStatus, fetchAccountInformation, extractBalanceDealsFromRawDeals } = require('../services/metaApiService');
+const { isAccountTransactionsEnabled } = require('../config/featureFlags');
+const { syncMetaTraderBalanceDeals } = require('../services/accountTransactionService');
 const { detectTradingSession, resolveTradeRiskReward, resolveTradePlannedRiskReward } = require('../utils/tradeCalculations');
 const { calculatePips } = require('../utils/pipCalculator');
 const {
@@ -18,6 +20,22 @@ const getNum = (val) => {
   if (val === null || val === undefined || val === '' || val === 'null') return null;
   const n = Number(String(val).replace(/[^0-9.-]+/g, ''));
   return isNaN(n) ? null : n;
+};
+
+const runPostSyncBalanceImport = async ({ account, balanceDeals, liveBalance }) => {
+  if (!isAccountTransactionsEnabled({ id: account.userId }) || !Array.isArray(balanceDeals) || balanceDeals.length === 0) {
+    return { importedCount: 0, skippedCount: 0 };
+  }
+  try {
+    return await syncMetaTraderBalanceDeals({
+      accountId: account.id,
+      balanceDeals,
+      liveBalance,
+    });
+  } catch (err) {
+    console.error('[MT Cloud Sync] Error importing DEAL_TYPE_BALANCE entries:', err);
+    return { importedCount: 0, skippedCount: 0 };
+  }
 };
 
 /**
@@ -132,6 +150,13 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
     fetchOpenPositions(cloudId).catch(() => []),
   ]);
 
+  const balanceDeals = Array.isArray(historyDeals?.balanceDeals)
+    ? historyDeals.balanceDeals
+    : extractBalanceDealsFromRawDeals(historyDeals || []);
+  const liveBalance = (accountInfo && typeof accountInfo.balance === 'number')
+    ? Math.round(accountInfo.balance * 100) / 100
+    : null;
+
   // Merge & Deduplicate by ticket (History deals take precedence over open positions)
   const tradeMap = new Map();
   for (const t of historyDeals || []) {
@@ -159,7 +184,14 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
         },
       });
     }
-    return { success: true, importedCount: 0, skippedCount: 0, message: 'No trades found in MT account. Balance synced.' };
+    const balanceSyncResult = await runPostSyncBalanceImport({ account, balanceDeals, liveBalance });
+    return {
+      success: true,
+      importedCount: 0,
+      skippedCount: 0,
+      importedBalanceCount: balanceSyncResult.importedCount,
+      message: 'No trades found in MT account. Balance synced.',
+    };
   }
 
   // Fetch existing trades to cross-check
@@ -378,9 +410,6 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
   }
 
   const now = new Date();
-  const liveBalance = (accountInfo && typeof accountInfo.balance === 'number')
-    ? Math.round(accountInfo.balance * 100) / 100
-    : null;
 
   if (pendingNewTrades.length === 0 && tradesToEnrich.length === 0) {
     const updateData = {
@@ -400,11 +429,14 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
       data: updateData,
     });
 
+    const balanceSyncResult = await runPostSyncBalanceImport({ account, balanceDeals, liveBalance });
+
     return {
       success: true,
       importedCount: 0,
       enrichedCount: 0,
       skippedCount,
+      importedBalanceCount: balanceSyncResult.importedCount,
       currentBalance: liveBalance ?? account.currentBalance,
       message: 'All trades are up to date and account balance is synchronized with MetaTrader.',
     };
@@ -469,6 +501,7 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
 
   const { reconcileAccountBalance } = require('../services/accountBalanceService');
   await reconcileAccountBalance(account.id);
+  const balanceSyncResult = await runPostSyncBalanceImport({ account, balanceDeals, liveBalance });
 
   // Automatically evaluate Strategy Risk Guard rules across all tiers
   if (pendingNewTrades.length > 0) {
@@ -530,6 +563,7 @@ const syncAccountTrades = async (accountId, { isCronJob = false } = {}) => {
     importedCount: pendingNewTrades.length,
     enrichedCount: tradesToEnrich.length,
     skippedCount,
+    importedBalanceCount: balanceSyncResult.importedCount,
     currentBalance: liveBalance ?? undefined,
     message: `Cross-check complete! ${pendingNewTrades.length} new trades added${tradesToEnrich.length > 0 ? `, ${tradesToEnrich.length} existing trades updated` : ''} (${skippedCount} duplicates matched). Balance synchronized with MetaTrader.`,
   };

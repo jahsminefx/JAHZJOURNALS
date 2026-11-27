@@ -398,7 +398,8 @@ export const prepareAccountBalanceDisplayPoints = (points = []) => {
   }
 
   const firstDepositIndex = safePoints.findIndex(
-    (point) => point?.eventType === 'deposit' && Number(point?.change ?? point?.value ?? 0) > 0,
+    (point) => point?.eventType === 'opening_balance'
+      || (point?.eventType === 'deposit' && Number(point?.change ?? point?.value ?? 0) > 0),
   );
   if (firstDepositIndex < 0) return safePoints;
 
@@ -411,7 +412,7 @@ export const prepareAccountBalanceDisplayPoints = (points = []) => {
     const leadInMax = leadInValues.length ? Math.max(...leadInValues) : 0;
     const startsUnfunded = Number(firstPoint?.value || 0) === 0
       && leadInMax <= Math.max(0, firstDepositAmount * 0.15)
-      && !leadIn.some((p) => p?.eventType === 'deposit');
+      && !leadIn.some((p) => p?.eventType === 'deposit' || p?.eventType === 'opening_balance');
     if (!startsUnfunded) return safePoints;
   }
 
@@ -424,7 +425,8 @@ export const prepareAccountBalanceDisplayPoints = (points = []) => {
       const candidate = safePoints[i];
       const candidateTime = new Date(candidate?.date).getTime();
       if (candidateTime !== firstDepositTime) break;
-      const isSameMomentInit = (candidate?.eventType === 'deposit' && candidate?.source === 'startingBalance')
+      const isSameMomentInit = (candidate?.eventType === 'opening_balance')
+        || (candidate?.eventType === 'deposit' && candidate?.source === 'startingBalance')
         || (candidate?.eventType === 'account_start' && Number(candidate?.change || 0) === 0);
       if (!isSameMomentInit) break;
       startIndex = i;
@@ -438,7 +440,9 @@ export const prepareAccountBalanceDisplayPoints = (points = []) => {
     ...basePoint,
     isInitialFundingStart: true,
     initialFundingAmount: roundClean(combinedInitialFunding || Number(basePoint.change ?? basePoint.value ?? 0)),
-    label: basePoint.source === 'startingBalance' ? 'Initial funding' : (basePoint.label || 'Initial deposit'),
+    label: basePoint.eventType === 'opening_balance'
+      ? 'Opening balance'
+      : (basePoint.source === 'startingBalance' ? 'Initial funding' : (basePoint.label || 'Initial deposit')),
   };
 
   if (sliced.length === 1) {
@@ -477,7 +481,14 @@ export const detectInitialDepositJump = (points = []) => {
   }
 
   const fundingPoints = safePoints.filter(
-    (point) => point?.eventType === 'deposit' || point?.eventType === 'withdrawal' || point?.eventType === 'balance_adjustment',
+    (point) => (
+      point?.eventType === 'opening_balance'
+      || point?.eventType === 'deposit'
+      || point?.eventType === 'withdrawal'
+      || point?.eventType === 'payout'
+      || point?.eventType === 'fee'
+      || point?.eventType === 'balance_adjustment'
+    ),
   );
 
   if (safePoints[0]?.isInitialFundingStart) {
@@ -499,7 +510,8 @@ export const detectInitialDepositJump = (points = []) => {
   }
 
   let initialDepositIndex = safePoints.findIndex(
-    (point) => point?.eventType === 'deposit' && point?.source === 'startingBalance',
+    (point) => point?.eventType === 'opening_balance'
+      || (point?.eventType === 'deposit' && point?.source === 'startingBalance'),
   );
   if (initialDepositIndex < 0) {
     initialDepositIndex = safePoints.findIndex((point) => point?.eventType === 'deposit');

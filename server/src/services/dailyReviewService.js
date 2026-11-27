@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 const { normalizeTradeResult, detectTradingSession, resolveTradeRiskReward, getTradingSessionLabel } = require('../utils/tradeCalculations');
 const { calculatePips } = require('../utils/pipCalculator');
 const currencyService = require('./fx/currencyService');
+const { summarizeCashFlowTransactions, roundMoney } = require('../utils/accountLedgerMath');
 
 const hasValue = (val) => val !== undefined && val !== null && val !== '';
 const round = (val, decimals = 2) => (val === null || val === undefined ? null : Number(Number(val).toFixed(decimals)));
@@ -319,6 +320,58 @@ const getDailyReviewSummary = async ({ userId, date, accountId, timezone = 'UTC'
     },
   });
 
+  // Fetch active non-opening cash-flow transactions strictly separated from trading P&L
+  const rawDayTransactions = prisma.accountTransaction?.findMany
+    ? await prisma.accountTransaction.findMany({
+        where: {
+          userId,
+          archivedAt: null,
+          type: { not: 'OPENING_BALANCE' },
+          ...(accountId ? { tradingAccountId: accountId } : {}),
+          occurredAt: { gte: startOfDay, lte: endOfDay },
+        },
+        include: {
+          tradingAccount: { select: { id: true, name: true, currency: true } },
+        },
+        orderBy: { occurredAt: 'asc' },
+      })
+    : [];
+
+  const normalizedCashFlowTx = [];
+  for (const tx of rawDayTransactions) {
+    const accCurrency = tx.tradingAccount?.currency || tx.currency || 'USD';
+    const rawAmount = Math.abs(Number(tx.amount ?? tx.signedAmount ?? 0));
+    const rawSigned = Number(tx.signedAmount ?? (tx.direction === 'OUTFLOW' ? -rawAmount : rawAmount));
+    let convertedAmount = rawAmount;
+    let convertedSigned = rawSigned;
+
+    if (isMultiAccount && accCurrency !== 'USD') {
+      const conv = await currencyService.convertToReportingCurrency(rawSigned, accCurrency);
+      if (conv?.convertedAmount !== null && conv?.convertedAmount !== undefined) {
+        convertedSigned = roundMoney(conv.convertedAmount);
+        convertedAmount = roundMoney(Math.abs(convertedSigned));
+      }
+    }
+
+    normalizedCashFlowTx.push({
+      id: tx.id,
+      tradingAccountId: tx.tradingAccountId,
+      accountName: tx.tradingAccount?.name || null,
+      type: tx.type,
+      direction: tx.direction,
+      amount: convertedAmount,
+      signedAmount: convertedSigned,
+      currency: reportingCurrency,
+      nativeAmount: roundMoney(rawAmount),
+      nativeSignedAmount: roundMoney(rawSigned),
+      nativeCurrency: accCurrency,
+      occurredAt: tx.occurredAt ? tx.occurredAt.toISOString() : null,
+      note: tx.note || null,
+    });
+  }
+
+  const cashFlowSummary = summarizeCashFlowTransactions(normalizedCashFlowTx);
+
   return {
     dateStr,
     reviewDate,
@@ -326,6 +379,12 @@ const getDailyReviewSummary = async ({ userId, date, accountId, timezone = 'UTC'
     selectedAccount,
     trades: enrichedTrades,
     metrics: deterministicMetrics,
+    cashFlow: {
+      ...cashFlowSummary,
+      currency: reportingCurrency,
+      isMultiAccount,
+      transactions: normalizedCashFlowTx,
+    },
     review,
   };
 };

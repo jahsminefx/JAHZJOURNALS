@@ -118,9 +118,12 @@ const calculateDrawdown = (equityCurve = [], startingBalance = 0) => {
 
 const eventPriority = {
   account_start: 0,
+  opening_balance: 0,
   period_start: 0,
   deposit: 1,
   withdrawal: 2,
+  payout: 2,
+  fee: 2,
   trade: 3,
   trade_win: 3,
   trade_loss: 3,
@@ -172,40 +175,96 @@ const getCurveEndDate = ({ startDate, endDate, events = [], now = new Date() }) 
   return new Date(startDate.getTime() + 1);
 };
 
-const buildInitialDepositEvents = (accounts = []) => accounts
-  .map((account, index) => {
-    const amount = Number(account.startingBalance || 0);
-    if (!amount) return null;
-    const date = getAccountStartDate(account);
-    return {
-      accountId: account.id,
-      accountName: account.name,
-      date: date.toISOString(),
-      eventType: 'deposit',
-      label: 'Deposit',
-      change: round(Math.abs(amount)),
-      source: 'startingBalance',
-      sequence: index,
-    };
-  })
-  .filter(Boolean);
+const buildInitialDepositEvents = (accounts = [], normalizedFundingEvents = []) => {
+  const accountsWithOpening = new Set(
+    normalizedFundingEvents
+      .filter((event) => event.eventType === 'opening_balance' && event.accountId)
+      .map((event) => event.accountId),
+  );
+
+  return accounts
+    .map((account, index) => {
+      if (accountsWithOpening.has(account.id)) return null;
+      const amount = Number(account.startingBalance || 0);
+      if (!amount) return null;
+      const date = getAccountStartDate(account);
+      return {
+        accountId: account.id,
+        accountName: account.name,
+        date: date.toISOString(),
+        eventType: 'deposit',
+        label: 'Deposit',
+        change: round(Math.abs(amount)),
+        source: 'startingBalance',
+        sequence: index,
+      };
+    })
+    .filter(Boolean);
+};
 
 const normalizeFundingEvents = (fundingEvents = []) => fundingEvents
   .map((event, index) => {
-    const date = toDate(event.date || event.createdAt || event.recordedAt);
-    const rawAmount = Number(event.amount ?? event.change ?? 0);
-    if (!date || !rawAmount) return null;
+    if (!event || event.archivedAt) return null;
+    const date = toDate(event.occurredAt || event.date || event.createdAt || event.recordedAt);
+    const hasSignedAmount = event.signedAmount !== undefined && event.signedAmount !== null;
+    const rawSigned = hasSignedAmount
+      ? Number(event.signedAmount)
+      : Number(event.amount ?? event.change ?? 0);
+    const rawAmount = Number(event.amount ?? event.change ?? rawSigned);
+    if (!date || (!rawAmount && !rawSigned)) return null;
 
-    const type = event.eventType || event.type || (rawAmount < 0 ? 'withdrawal' : 'deposit');
-    const isWithdrawal = type === 'withdrawal';
+    const rawType = String(event.eventType || event.type || '').trim();
+    const upperType = rawType.toUpperCase();
+    const dir = String(event.direction || '').toUpperCase();
+
+    let eventType = 'deposit';
+    let label = 'Deposit';
+    let change = round(Math.abs(rawAmount));
+
+    if (upperType === 'OPENING_BALANCE') {
+      eventType = 'opening_balance';
+      label = 'Opening balance';
+      change = hasSignedAmount
+        ? round(rawSigned)
+        : round(dir === 'OUTFLOW' || rawAmount < 0 ? -Math.abs(rawAmount) : Math.abs(rawAmount));
+    } else if (upperType === 'WITHDRAWAL') {
+      eventType = 'withdrawal';
+      label = 'Withdrawal';
+      change = round(-Math.abs(rawAmount));
+    } else if (upperType === 'PAYOUT') {
+      eventType = 'payout';
+      label = 'Payout';
+      change = round(-Math.abs(rawAmount));
+    } else if (upperType === 'FEE') {
+      eventType = 'fee';
+      label = 'Fee';
+      change = round(-Math.abs(rawAmount));
+    } else if (upperType === 'ADJUSTMENT' || rawType === 'balance_adjustment') {
+      eventType = 'balance_adjustment';
+      label = 'Balance adjustment';
+      change = hasSignedAmount
+        ? round(rawSigned)
+        : round(dir === 'OUTFLOW' || rawAmount < 0 ? -Math.abs(rawAmount) : Math.abs(rawAmount));
+    } else if (upperType === 'DEPOSIT' || (!rawType && rawAmount > 0)) {
+      eventType = 'deposit';
+      label = 'Deposit';
+      change = round(Math.abs(rawAmount));
+    } else if (rawAmount < 0) {
+      eventType = 'withdrawal';
+      label = 'Withdrawal';
+      change = round(-Math.abs(rawAmount));
+    }
+
     return {
+      transactionId: event.id || event.transactionId || null,
       accountId: event.accountId || event.tradingAccountId || null,
-      accountName: event.accountName || null,
+      accountName: event.accountName || event.tradingAccount?.name || null,
       date: date.toISOString(),
-      eventType: isWithdrawal ? 'withdrawal' : 'deposit',
-      label: isWithdrawal ? 'Withdrawal' : 'Deposit',
-      change: round(isWithdrawal ? -Math.abs(rawAmount) : Math.abs(rawAmount)),
-      source: event.source || 'fundingEvent',
+      eventType,
+      label,
+      change,
+      note: event.note || null,
+      source: event.source || (event.id ? 'accountTransaction' : 'fundingEvent'),
       sequence: index,
     };
   })
@@ -410,10 +469,129 @@ const summarizeFunding = (fundingEvents = [], startDate = null, endDate = null) 
   .filter((event) => isWithinPeriod(toDate(event.date), startDate, endDate))
   .reduce((totals, event) => {
     const change = Number(event.change || 0);
-    if (change > 0) totals.totalDeposits += change;
-    if (change < 0) totals.totalWithdrawals += Math.abs(change);
+    const type = event.eventType;
+    if (type === 'opening_balance') {
+      totals.openingBalance += change;
+      if (change > 0) totals.totalDeposits += change;
+    } else if (type === 'deposit') {
+      if (event.source === 'startingBalance') {
+        totals.openingBalance += Math.abs(change);
+      } else {
+        totals.deposits += Math.abs(change);
+      }
+      totals.totalDeposits += Math.abs(change);
+    } else if (type === 'withdrawal') {
+      totals.withdrawals += Math.abs(change);
+      totals.totalWithdrawals += Math.abs(change);
+    } else if (type === 'payout') {
+      totals.payouts += Math.abs(change);
+    } else if (type === 'fee') {
+      totals.fees += Math.abs(change);
+    } else if (type === 'balance_adjustment') {
+      totals.adjustments += change;
+    }
     return totals;
-  }, { totalDeposits: 0, totalWithdrawals: 0 });
+  }, {
+    openingBalance: 0,
+    deposits: 0,
+    withdrawals: 0,
+    payouts: 0,
+    fees: 0,
+    adjustments: 0,
+    totalDeposits: 0,
+    totalWithdrawals: 0,
+  });
+
+const calculateTimeWeightedReturn = ({
+  tradeEvents = [],
+  fundingEvents = [],
+  startDate = null,
+  endDate = null,
+}) => {
+  const periodTrades = tradeEvents.filter((event) => isWithinPeriod(toDate(event.date), startDate, endDate));
+  const combined = sortCurveEvents([
+    ...fundingEvents,
+    ...tradeEvents,
+  ]).filter((event) => !endDate || toDate(event.date) <= endDate);
+
+  const isNonOpeningCashFlow = (event) => (
+    event.eventType === 'deposit' && event.source !== 'startingBalance'
+  )
+    || event.eventType === 'withdrawal'
+    || event.eventType === 'payout'
+    || event.eventType === 'fee'
+    || event.eventType === 'balance_adjustment';
+
+  const hasMidPeriodCashFlow = combined.some(
+    (event) => isNonOpeningCashFlow(event) && isWithinPeriod(toDate(event.date), startDate, endDate),
+  );
+
+  if (periodTrades.length === 0) {
+    return {
+      value: 0,
+      method: hasMidPeriodCashFlow ? 'TWR' : 'SIMPLE',
+    };
+  }
+
+  let runningCapital = 0;
+  let subPeriodStartCapital = 0;
+  let subPeriodTradePnl = 0;
+  let subPeriodHasTrades = false;
+  let compoundFactor = 1;
+  let unavailable = false;
+
+  for (const event of combined) {
+    const evDate = toDate(event.date);
+    const inPeriod = isWithinPeriod(evDate, startDate, endDate);
+    const change = Number(event.change || 0);
+    const isTrade = String(event.eventType || '').startsWith('trade');
+
+    if (!inPeriod) {
+      // Strictly before startDate (already filtered > endDate out above)
+      runningCapital += change;
+      subPeriodStartCapital = runningCapital;
+      continue;
+    }
+
+    if (isTrade) {
+      runningCapital += change;
+      subPeriodTradePnl += change;
+      subPeriodHasTrades = true;
+      continue;
+    }
+
+    // Capital/funding event inside period: close any active sub-period before updating capital
+    if (subPeriodHasTrades) {
+      if (subPeriodStartCapital <= 0) {
+        unavailable = true;
+        break;
+      }
+      compoundFactor *= 1 + (subPeriodTradePnl / subPeriodStartCapital);
+      subPeriodTradePnl = 0;
+      subPeriodHasTrades = false;
+    }
+
+    runningCapital += change;
+    subPeriodStartCapital = runningCapital;
+  }
+
+  if (!unavailable && subPeriodHasTrades) {
+    if (subPeriodStartCapital <= 0) {
+      unavailable = true;
+    } else {
+      compoundFactor *= 1 + (subPeriodTradePnl / subPeriodStartCapital);
+    }
+  }
+
+  if (unavailable || !Number.isFinite(compoundFactor)) {
+    return { value: null, method: 'UNAVAILABLE' };
+  }
+
+  return {
+    value: round((compoundFactor - 1) * 100, 2),
+    method: hasMidPeriodCashFlow ? 'TWR' : 'SIMPLE',
+  };
+};
 
 const buildPerformanceCurve = ({
   accounts = [],
@@ -425,9 +603,10 @@ const buildPerformanceCurve = ({
 } = {}) => {
   const normalizedStartDate = toDate(startDate);
   const normalizedEndDate = toDate(endDate);
+  const normalizedIncomingFunding = normalizeFundingEvents(fundingEvents);
   const knownFundingEvents = sortCurveEvents([
-    ...buildInitialDepositEvents(accounts),
-    ...normalizeFundingEvents(fundingEvents),
+    ...buildInitialDepositEvents(accounts, normalizedIncomingFunding),
+    ...normalizedIncomingFunding,
   ]);
   const tradeEvents = sortCurveEvents(getClosedTradeEvents(trades));
   const balanceAdjustmentEvents = sortCurveEvents(buildBalanceAdjustmentEvents({
@@ -457,30 +636,59 @@ const buildPerformanceCurve = ({
   const periodTradeEvents = tradeEvents.filter((event) => isWithinPeriod(toDate(event.date), normalizedStartDate, normalizedEndDate));
   const netTradingPnl = periodTradeEvents.reduce((total, event) => total + Number(event.tradePnl || 0), 0);
   const fundingSummary = summarizeFunding(knownFundingEvents, null, normalizedEndDate);
-  const balanceAdjustments = balanceAdjustmentEvents
+  const syntheticAdjustments = balanceAdjustmentEvents
     .filter((event) => isWithinPeriod(toDate(event.date), null, normalizedEndDate))
     .reduce((total, event) => total + Number(event.change || 0), 0);
+  const totalAdjustments = fundingSummary.adjustments + syntheticAdjustments;
+  const netCashFlow = round(
+    fundingSummary.deposits
+    - fundingSummary.withdrawals
+    - fundingSummary.payouts
+    - fundingSummary.fees
+    + totalAdjustments,
+  );
   const netDeposits = fundingSummary.totalDeposits - fundingSummary.totalWithdrawals;
   const currentBalance = accountBalance[accountBalance.length - 1]?.value || 0;
+  const netAccountChange = round(netTradingPnl + netCashFlow);
+  const twr = calculateTimeWeightedReturn({
+    tradeEvents,
+    fundingEvents: knownFundingEvents,
+    startDate: normalizedStartDate,
+    endDate: normalizedEndDate,
+  });
+  const simpleReturnPct = netDeposits > 0 ? round((netTradingPnl / netDeposits) * 100, 2) : 0;
 
   return {
     cumulativePnl,
     accountBalance,
     summary: {
       netTradingPnl: round(netTradingPnl),
-      tradingReturnPercentage: netDeposits ? round((netTradingPnl / netDeposits) * 100, 2) : 0,
+      tradingReturnPercentage: twr.method === 'TWR' ? twr.value : simpleReturnPct,
+      timeWeightedReturnPercentage: twr.value,
+      returnMethod: twr.method,
       closedTrades: periodTradeEvents.length,
+      openingBalance: round(fundingSummary.openingBalance),
+      deposits: round(fundingSummary.deposits),
+      withdrawals: round(fundingSummary.withdrawals),
+      payouts: round(fundingSummary.payouts),
+      fees: round(fundingSummary.fees),
+      adjustments: round(totalAdjustments),
+      netCashFlow,
+      netAccountChange,
       totalDeposits: round(fundingSummary.totalDeposits),
       totalWithdrawals: round(fundingSummary.totalWithdrawals),
       currentBalance: round(currentBalance),
       netDeposits: round(netDeposits),
-      balanceAdjustments: round(balanceAdjustments),
+      balanceAdjustments: round(totalAdjustments),
+      hasCashFlowEvents: normalizedIncomingFunding.some((event) => event.eventType !== 'opening_balance'),
     },
     metadata: {
       usesStartingBalanceAsInitialDeposit: true,
       usesCurrentBalanceReconciliation: balanceAdjustmentEvents.length > 0,
       hasTransactionHistory: fundingEvents.length > 0,
-      withdrawalHistoryAvailable: fundingEvents.some((event) => (event.eventType || event.type) === 'withdrawal' || Number(event.amount ?? event.change ?? 0) < 0),
+      withdrawalHistoryAvailable: normalizedIncomingFunding.some((event) => (
+        event.eventType === 'withdrawal' || event.eventType === 'payout' || event.eventType === 'fee'
+      )),
     },
   };
 };
@@ -522,5 +730,7 @@ module.exports = {
   calculateDrawdown,
   buildPerformanceCurve,
   calculatePeriodComparison,
+  calculateTimeWeightedReturn,
+  normalizeFundingEvents,
   bucketByDate,
 };

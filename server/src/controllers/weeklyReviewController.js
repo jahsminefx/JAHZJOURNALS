@@ -3,6 +3,8 @@ const prisma = new PrismaClient();
 const { getUtcWeekRange } = require('../utils/timezone');
 const { calculateSummary } = require('../services/analyticsService');
 const { resolveTradeRiskReward } = require('../utils/tradeCalculations');
+const currencyService = require('../services/fx/currencyService');
+const { summarizeCashFlowTransactions, roundMoney } = require('../utils/accountLedgerMath');
 
 const writtenReviewFields = [
   'mainMistake',
@@ -24,9 +26,82 @@ const getUserTimezone = async (userId) => {
 const getScopeKey = (accountId) => accountId || 'all';
 
 const getReviewInclude = {
-  tradingAccount: { select: { id: true, name: true } },
+  tradingAccount: { select: { id: true, name: true, currency: true } },
   bestTrade: { select: { id: true, pair: true, profitLossAmount: true } },
   worstTrade: { select: { id: true, pair: true, profitLossAmount: true } },
+};
+
+const getWeeklyCashFlowSummary = async ({ userId, accountId = null, weekStartDate, weekEndDate, fallbackCurrency = 'USD' }) => {
+  if (!prisma.accountTransaction?.findMany || !weekStartDate || !weekEndDate) {
+    return {
+      deposits: 0,
+      withdrawals: 0,
+      payouts: 0,
+      fees: 0,
+      adjustments: 0,
+      netCashFlow: 0,
+      transactionCount: 0,
+      currency: fallbackCurrency,
+      transactions: [],
+    };
+  }
+
+  const rows = await prisma.accountTransaction.findMany({
+    where: {
+      userId,
+      archivedAt: null,
+      type: { not: 'OPENING_BALANCE' },
+      ...(accountId ? { tradingAccountId: accountId } : {}),
+      occurredAt: { gte: new Date(weekStartDate), lte: new Date(weekEndDate) },
+    },
+    include: {
+      tradingAccount: { select: { id: true, name: true, currency: true } },
+    },
+    orderBy: { occurredAt: 'asc' },
+  });
+
+  const isMultiAccount = !accountId;
+  const reportingCurrency = isMultiAccount ? 'USD' : (rows[0]?.tradingAccount?.currency || fallbackCurrency || 'USD');
+  const normalized = [];
+
+  for (const tx of rows) {
+    const accCurrency = tx.tradingAccount?.currency || tx.currency || 'USD';
+    const rawAmount = Math.abs(Number(tx.amount ?? tx.signedAmount ?? 0));
+    const rawSigned = Number(tx.signedAmount ?? (tx.direction === 'OUTFLOW' ? -rawAmount : rawAmount));
+    let convertedSigned = rawSigned;
+    let convertedAmount = rawAmount;
+
+    if (accCurrency !== reportingCurrency) {
+      const conv = await currencyService.convertAmount(rawSigned, accCurrency, reportingCurrency);
+      if (conv?.convertedAmount !== null && conv?.convertedAmount !== undefined) {
+        convertedSigned = roundMoney(conv.convertedAmount);
+        convertedAmount = roundMoney(Math.abs(convertedSigned));
+      }
+    }
+
+    normalized.push({
+      id: tx.id,
+      tradingAccountId: tx.tradingAccountId,
+      accountName: tx.tradingAccount?.name || null,
+      type: tx.type,
+      direction: tx.direction,
+      amount: convertedAmount,
+      signedAmount: convertedSigned,
+      currency: reportingCurrency,
+      nativeAmount: roundMoney(rawAmount),
+      nativeSignedAmount: roundMoney(rawSigned),
+      nativeCurrency: accCurrency,
+      occurredAt: tx.occurredAt ? tx.occurredAt.toISOString() : null,
+      note: tx.note || null,
+    });
+  }
+
+  const summary = summarizeCashFlowTransactions(normalized);
+  return {
+    ...summary,
+    currency: reportingCurrency,
+    transactions: normalized,
+  };
 };
 
 const calculateMostCommon = (items) => {
@@ -115,7 +190,20 @@ const getWeeklyReviews = async (req, res) => {
       prisma.weeklyReview.count({ where }),
     ]);
 
-    res.json({ success: true, page, limit, total, data: reviews });
+    const enrichedReviews = await Promise.all(
+      reviews.map(async (review) => ({
+        ...review,
+        cashFlow: await getWeeklyCashFlowSummary({
+          userId: req.user.id,
+          accountId: review.tradingAccountId || null,
+          weekStartDate: review.weekStartDate,
+          weekEndDate: review.weekEndDate,
+          fallbackCurrency: review.tradingAccount?.currency || 'USD',
+        }),
+      })),
+    );
+
+    res.json({ success: true, page, limit, total, data: enrichedReviews });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'We couldn\'t retrieve your weekly reflections.' });
@@ -132,9 +220,11 @@ const generateWeeklyReview = async (req, res) => {
       return res.status(400).json({ message: 'Please provide a valid start date for this week.' });
     }
 
+    let selectedAccountCurrency = 'USD';
     if (accountId) {
       const account = await prisma.tradingAccount.findFirst({ where: { id: accountId, userId: req.user.id } });
       if (!account) return res.status(404).json({ message: 'We couldn\'t find that trading account.' });
+      selectedAccountCurrency = account.currency || 'USD';
     }
 
     const trades = await prisma.trade.findMany({
@@ -221,13 +311,24 @@ const generateWeeklyReview = async (req, res) => {
         include: getReviewInclude,
       });
 
+    const cashFlow = await getWeeklyCashFlowSummary({
+      userId: req.user.id,
+      accountId: accountId || null,
+      weekStartDate: range.start,
+      weekEndDate: range.end,
+      fallbackCurrency: review.tradingAccount?.currency || selectedAccountCurrency,
+    });
+
     res.status(existingReview ? 200 : 201).json({
       success: true,
       regenerated: Boolean(existingReview),
       message: existingReview
         ? 'Weekly review recalculated. Written reflections were preserved.'
         : 'Weekly review generated successfully.',
-      data: review,
+      data: {
+        ...review,
+        cashFlow,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -249,7 +350,18 @@ const getWeeklyReviewById = async (req, res) => {
       return res.status(404).json({ message: 'We couldn\'t find that weekly reflection.' });
     }
 
-    res.json(review);
+    const cashFlow = await getWeeklyCashFlowSummary({
+      userId: req.user.id,
+      accountId: review.tradingAccountId || null,
+      weekStartDate: review.weekStartDate,
+      weekEndDate: review.weekEndDate,
+      fallbackCurrency: review.tradingAccount?.currency || 'USD',
+    });
+
+    res.json({
+      ...review,
+      cashFlow,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'We hit a snag finding your weekly reflection.' });

@@ -19,6 +19,11 @@ const mapAccountToForm = (account) => ({
   maxTradesPerDay: account.maxTradesPerDay ?? '',
   maxLossesPerDay: account.maxLossesPerDay ?? '',
   notes: account.notes || '',
+  hasActivity: Boolean(
+    account.ledgerSummary?.hasCashFlowTransactions
+    || (account.trades && account.trades.length > 0)
+    || Number(account.ledgerSummary?.realisedTradingPnl || 0) !== 0
+  ),
 });
 
 const AccountForm = () => {
@@ -56,10 +61,15 @@ const AccountForm = () => {
     setIsSaving(true);
     try {
       if (isEditMode) {
-        await api.put(`/accounts/${id}`, data);
+        const { currentBalance, hasActivity, ...editablePayload } = data;
+        if (initialValues?.hasActivity) {
+          delete editablePayload.startingBalance;
+        }
+        await api.put(`/accounts/${id}`, editablePayload);
         toast.success('Regular account updated');
       } else {
-        await api.post('/accounts', data);
+        const { currentBalance, hasActivity, ...createPayload } = data;
+        await api.post('/accounts', createPayload);
         toast.success('Regular account created');
       }
       navigate('/accounts');
@@ -84,6 +94,9 @@ const AccountForm = () => {
         ) : (
           <RegularAccountForm
             initialValues={initialValues}
+            isEditMode={isEditMode}
+            accountId={id}
+            hasActivity={Boolean(initialValues?.hasActivity)}
             isSaving={isSaving}
             onSubmit={onSubmit}
             onCancel={() => navigate(-1)}

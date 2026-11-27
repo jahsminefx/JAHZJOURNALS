@@ -10,6 +10,7 @@ const {
   EVIDENCE_SOURCES,
   EVIDENCE_STATUS,
 } = require('../services/tradeClassificationService');
+const { reconcileAccountBalance } = require('../services/accountBalanceService');
 
 const parseTradeCsv = (buffer) => {
   return new Promise((resolve, reject) => {
@@ -501,11 +502,8 @@ const importTrades = async (req, res) => {
         }
       }
 
-      if (netProfitLoss !== 0) {
-        await tx.tradingAccount.update({
-          where: { id: account.id },
-          data: { currentBalance: { increment: netProfitLoss } }
-        });
+      if (netProfitLoss !== 0 || newTrades.length > 0 || tradesToEnrich.length > 0) {
+        await reconcileAccountBalance(account.id, tx);
       }
     });
 

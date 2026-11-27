@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { reconcileAccountBalance } = require('../services/accountBalanceService');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { canCreateTrades } = require('../services/entitlementService');
@@ -412,6 +413,10 @@ const handleMtSyncWebhook = async (req, res) => {
 
         updatedCount++;
       }
+    }
+
+    if (processedCount > 0 || updatedCount > 0) {
+      await reconcileAccountBalance(account.id);
     }
 
     return res.status(200).json({

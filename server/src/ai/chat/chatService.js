@@ -21,6 +21,7 @@ const {
   validateChatContextFilters,
   getSymbolTradeStats,
   getChatDashboardAnalytics,
+  getAccountCashFlowSummary,
   getChatPropFirmCompliance,
   evaluateChatPropFirmRisk,
   ANALYTICS_TOOL_DEFINITIONS,
@@ -363,6 +364,17 @@ const handleChatV2 = async (req, res, deps = {}) => {
                   tradingAccountId: args.tradingAccountId ?? validatedContext?.account?.id ?? null,
                   startDate: args.startDate ?? validatedContext?.startDate ?? null,
                   endDate: args.endDate ?? validatedContext?.endDate ?? null,
+                },
+                prisma
+              );
+            } else if (toolName === 'getAccountCashFlowSummary') {
+              toolResult = await getAccountCashFlowSummary(
+                {
+                  userId: req.user.id,
+                  tradingAccountId: args.tradingAccountId ?? validatedContext?.account?.id ?? null,
+                  startDate: args.startDate ?? validatedContext?.startDate ?? null,
+                  endDate: args.endDate ?? validatedContext?.endDate ?? null,
+                  limit: args.limit,
                 },
                 prisma
               );

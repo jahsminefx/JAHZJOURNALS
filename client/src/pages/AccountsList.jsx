@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Building2, Settings, ShieldCheck, Trash2, Wallet, Cloud, Sparkles, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowUpDown, Building2, Plus, Settings, ShieldCheck, Trash2, Wallet, Cloud, Sparkles, CheckCircle2, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { dialog } from '../components/common/dialog';
 import AccountTypeCard from '../components/accounts/AccountTypeCard';
 import MTCloudSyncModal from '../components/accounts/MTCloudSyncModal';
+import RecordTransactionModal from '../components/accounts/RecordTransactionModal';
 import PropFirmCommandCenter from '../components/propfirm/PropFirmCommandCenter';
 import { useAuth } from '../context/useAuth';
 import { hasFeature } from '../utils/planHelpers';
@@ -23,8 +24,11 @@ const AccountsList = () => {
   const [loading, setLoading] = useState(!cachedAccounts);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [selectedSyncAccount, setSelectedSyncAccount] = useState(null);
+  const [txModalAccount, setTxModalAccount] = useState(null);
+  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('ALL'); // 'ALL' | 'COMMAND_CENTER'
   const hasPropFirmPro = hasFeature(user, 'propFirmAccess');
+  const txEnabled = accounts.length > 0 ? accounts[0]?.accountTransactionsEnabled !== false : false;
 
   const planKey = (user?.subscriptionPlan || 'FREE').toUpperCase();
   const isAllowedSync =
@@ -94,8 +98,22 @@ const AccountsList = () => {
           <p className="text-xs sm:text-sm text-muted mt-1">Manage your active broker connections, prop-firm challenges, and personal journal accounts.</p>
         </div>
 
-        {/* View Switcher */}
-        <div className="flex items-center rounded-xl border border-border bg-surface-muted/60 p-1 text-xs font-bold">
+        {/* Actions & View Switcher */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {txEnabled && accounts.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setTxModalAccount(null);
+                setIsTxModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition shadow-xs"
+            >
+              <Plus size={14} />
+              <span>Record transaction</span>
+            </button>
+          )}
+          <div className="flex items-center rounded-xl border border-border bg-surface-muted/60 p-1 text-xs font-bold">
           <button
             type="button"
             onClick={() => setViewMode('ALL')}
@@ -122,6 +140,7 @@ const AccountsList = () => {
               <span className="ml-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-400">PRO</span>
             )}
           </button>
+        </div>
         </div>
       </div>
 
@@ -287,6 +306,18 @@ const AccountsList = () => {
                               {Number(account.currentBalance || 0).toLocaleString()} <span className="text-xs font-semibold">{account.currency}</span>
                             </span>
                           </div>
+                          {account.ledgerSummary && (
+                            <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
+                              <span className="text-muted">Trading P&amp;L / Cash Flow</span>
+                              <span className="font-mono font-semibold text-foreground">
+                                {Number(account.ledgerSummary.realisedTradingPnl || 0) >= 0 ? '+' : ''}
+                                {Number(account.ledgerSummary.realisedTradingPnl || 0).toLocaleString()}
+                                {' / '}
+                                {Number(account.ledgerSummary.netCashFlow || 0) >= 0 ? '+' : ''}
+                                {Number(account.ledgerSummary.netCashFlow || 0).toLocaleString()} {account.currency}
+                              </span>
+                            </div>
+                          )}
                           {propFirmDetails?.phases?.length > 0 && (
                             <div className="flex items-center justify-between pt-1 border-t border-border/40">
                               <span className="text-muted">Phase Progress</span>
@@ -297,7 +328,7 @@ const AccountsList = () => {
                       </Link>
 
                       <div className="flex items-center justify-between border-t border-border/70 px-5 py-3 text-xs bg-surface-muted/20 rounded-b-2xl">
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-3">
                           <Link
                             to={editPath}
                             className="inline-flex items-center gap-1 font-semibold text-muted hover:text-foreground transition-colors"
@@ -305,6 +336,19 @@ const AccountsList = () => {
                             <Settings size={13} />
                             <span>Settings</span>
                           </Link>
+                          {txEnabled && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTxModalAccount(account);
+                                setIsTxModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors"
+                            >
+                              <ArrowUpDown size={13} />
+                              <span>Transactions</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => {
@@ -349,6 +393,19 @@ const AccountsList = () => {
         account={selectedSyncAccount}
         accountId={selectedSyncAccount?.id}
         onConnected={() => {
+          fetchAccounts();
+        }}
+      />
+
+      <RecordTransactionModal
+        isOpen={isTxModalOpen}
+        onClose={() => {
+          setIsTxModalOpen(false);
+          setTxModalAccount(null);
+        }}
+        accounts={accounts}
+        fixedAccount={txModalAccount}
+        onSuccess={() => {
           fetchAccounts();
         }}
       />
